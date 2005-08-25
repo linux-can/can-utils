@@ -41,7 +41,7 @@ void print_usage(char *prg)
 			" -r, --receive         work as receiver\n"
 			" -l  --loop=COUNT      send COUNT messages\n"
 			" -q  --quit            quit if a wrong sequence is encountered\n"
-                        " -v, --verbose         be verbose\n"
+                        " -v, --verbose         be verbose (twice to be even more verbose\n"
 			" -h  --help            this help\n"
 			"     --version         print version information and exit\n",
 				prg, PF_CAN, SOCK_RAW, CAN_PROTO_RAW);
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 'v':
-				verbose = 1;
+				verbose++;
 				break;
 
 			case VERSION_OPTION:
@@ -160,7 +160,7 @@ int main(int argc, char **argv)
 					sequence_init = 0;
 					sequence = frame.payload.data[0];
 				}
-				if(verbose)
+				if(verbose>1)
 					printf("received frame. sequence number: %d\n",sequence);
 				if( frame.payload.data[0] != sequence) {
 					printf("received wrong sequence count. expected: %d, got: %d\n",
@@ -169,6 +169,8 @@ int main(int argc, char **argv)
 						exit(1);
 					sequence = frame.payload.data[0];
 				}
+				if(verbose && !sequence)
+					printf("sequence wrap around\n");
 				sequence++;
 			}
 		}
@@ -177,16 +179,16 @@ int main(int argc, char **argv)
 		frame.can_id = 2;
 		frame.payload.data[0] = 0;
 		while ((infinite || loopcount--) && running) {
-			if(verbose)
+			if(verbose>1)
 				printf("sending frame. sequence number: %d\n",sequence);
+			if(verbose && !sequence)
+				printf("sequence wrap around\n");
 			if( write(s, &frame, sizeof(frame)) < 0) {
 				perror("write");
 				break;
 			}
 			(unsigned char)frame.payload.data[0]++;
 			sequence++;
-//			printf("%d %d\n",sequence,(unsigned char)frame.payload.data[0]);
-//			usleep(10000);
 		}
 	}
 	return 0;
