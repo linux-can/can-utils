@@ -158,16 +158,16 @@ int main(int argc, char **argv)
 			} else {
 				if( sequence_init ) {
 					sequence_init = 0;
-					sequence = frame.payload.data[0];
+					sequence = frame.payload.data_u8[0];
 				}
 				if(verbose>1)
 					printf("received frame. sequence number: %d\n",sequence);
-				if( frame.payload.data[0] != sequence) {
+				if( frame.payload.data_u8[0] != sequence) {
 					printf("received wrong sequence count. expected: %d, got: %d\n",
-						frame.payload.data[0], sequence);
+						frame.payload.data_u8[0], sequence);
 					if(quit)
 						exit(1);
-					sequence = frame.payload.data[0];
+					sequence = frame.payload.data_u8[0];
 				}
 				if(verbose && !sequence)
 					printf("sequence wrap around\n");
