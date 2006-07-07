@@ -38,28 +38,16 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 #  DAMAGE.
 #
-#  Send feedback to <llcf@volkswagen.de>
+#  Send feedback to <socketcan-users@lists.berlios.de>
 
 CFLAGS    = -O2 -Wall -Wno-parentheses -I../kernel/2.4/can -fno-strict-aliasing
 
-PROGRAMS_GPL = 	candump		\
-		can-sniffer
+PROGRAMS = candump can-sniffer
 
-PROGRAMS_VW = 	tpdump		\
-		tp20-sniffer	\
-		mcnet-vit-emu	\
-		mcnet-sniffer	\
-		pq35speed
-
-default: all-gpl
-
-all: all-gpl all-vw
-
-all-gpl: $(PROGRAMS_GPL)
-all-vw:  $(PROGRAMS_VW)
+all: $(PROGRAMS)
 
 clean:
-	rm -f $(PROGRAMS_GPL) $(PROGRAMS_VW)
+	rm -f $(PROGRAMS)
 
 distclean:
-	rm -f $(PROGRAMS_GPL) $(PROGRAMS_VW) *~
+	rm -f $(PROGRAMS) *~
