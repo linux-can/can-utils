@@ -60,9 +60,11 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/uio.h>
+#include <net/if.h>
 
-#include "af_can.h"
-#include "raw.h"
+#include <linux/can.h>
+#include <linux/can/raw.h>
+
 #include "terminal.h"
 
 #define USE_RECVFROM /* use read() or recvfrom() syscall */
@@ -87,7 +89,7 @@ const char anichar[MAXANI] = {'|', '/', '-', '\\', '|', '/', '-', '\\'};
 
 extern int optind, opterr, optopt;
 
-static int	running = 1;
+static volatile int running = 1;
 
 void print_usage(char *prg)
 {

@@ -40,7 +40,8 @@
 #
 #  Send feedback to <socketcan-users@lists.berlios.de>
 
-CFLAGS    = -O2 -Wall -Wno-parentheses -I../kernel/2.4/can -fno-strict-aliasing
+CFLAGS    = -O2 -Wall -Wno-parentheses -I../kernel/2.6/include \
+	    -fno-strict-aliasing
 
 PROGRAMS = candump can-sniffer
 
