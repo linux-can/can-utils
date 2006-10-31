@@ -48,7 +48,7 @@ PROGRAMS = candump can-sniffer cansend
 all: $(PROGRAMS)
 
 clean:
-	rm -f $(PROGRAMS)
+	rm -f $(PROGRAMS) *.o
 
 distclean:
 	rm -f $(PROGRAMS) *~

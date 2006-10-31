@@ -3,7 +3,7 @@
  */
 
 /*
- * cansend.c - simple command line tool to send CAN-frames via CAN_RAW sockets
+ * lib.h - library include for command line tools
  *
  * Copyright (c) 2002-2005 Volkswagen Group Electronic Research
  * All rights reserved.
