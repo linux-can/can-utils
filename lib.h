@@ -68,19 +68,48 @@ int parse_canframe(char *cs, struct can_frame *cf);
  * 123#1122334455667788 -> standard CAN-Id = 0x123, dlc = 8
  * 123#11.22.33.44.55.66.77.88 -> standard CAN-Id = 0x123, dlc = 8
  * 123#11.2233.44556677.88 -> standard CAN-Id = 0x123, dlc = 8
+ * 32345678#112233 -> error frame with CAN_ERR_FLAG (0x2000000) set
+ *
+ * Simple facts on this compact ASCII CAN frame representation:
+ *
+ * - 3 digits: standard frame format
+ * - 8 digits: extendend frame format OR error frame
+ * - 8 digits with CAN_ERR_FLAG (0x2000000) set: error frame
+ * - an error frame is never a RTR frame
+ * 
+ */
+
+void fprint_canframe(FILE *stream , struct can_frame *cf, char *eol, int sep);
+void sprint_canframe(char *buf , struct can_frame *cf, int sep);
+/*
+ * Creates a CAN frame hexadecimal output in compact format.
+ * The CAN data[] is seperated by '.' when sep != 0.
+ *
+ * 12345678#112233 -> exended CAN-Id = 0x12345678, dlc = 3, data, sep = 0
+ * 12345678#R -> exended CAN-Id = 0x12345678, RTR
+ * 123#11.22.33.44.55.66.77.88 -> standard CAN-Id = 0x123, dlc = 8, sep = 1
+ * 32345678#112233 -> error frame with CAN_ERR_FLAG (0x2000000) set
+ *
+ * Examples:
+ *
+ * fprint_canframe(stdout, &frame, "\n", 0); // with eol to STDOUT
+ * fprint_canframe(stderr, &frame, NULL, 0); // no eol to STDERR
  *
  */
 
-void fprint_canframe(FILE *stream , struct can_frame *cf, char *eol);
+void fprint_long_canframe(FILE *stream , struct can_frame *cf, char *eol, int ascii);
+void sprint_long_canframe(char *buf , struct can_frame *cf, int ascii);
 /*
  * Creates a CAN frame hexadecimal output in user readable format.
  *
  * 12345678  [3] 11 22 33 -> exended CAN-Id = 0x12345678, dlc = 3, data
  * 12345678  [0] remote request -> exended CAN-Id = 0x12345678, RTR
+ * 14B0DC51  [8] 4A 94 E8 2A EC 58 55 62   'J..*.XUb' -> (with ASCII output)
+ * 20001111  [7] C6 23 7B 32 69 98 3C      ERRORFRAME -> (CAN_ERR_FLAG set)
  *
  * Examples:
  *
- * fprint_canframe(stdout, &frame, "\n"); // with eol to STDOUT
- * fprint_canframe(stderr, &frame, NULL); // no eol to STDERR
+ * fprint_long_canframe(stdout, &frame, "\n", 0); // with eol to STDOUT
+ * fprint_long_canframe(stderr, &frame, NULL, 0); // no eol to STDERR
  *
  */

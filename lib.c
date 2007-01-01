@@ -52,10 +52,15 @@
 #include <sys/socket.h> /* for sa_family_t */
 #include <linux/can.h>
 
+#include "lib.h"
+
 #define CANID_DELIM '#'
 #define DATA_SEPERATOR '.'
 
-static int asc2nibble(char c){
+#define MAX_CANFRAME      "12345678#01.23.45.67.89.AB.CD.EF"
+#define MAX_LONG_CANFRAME "12345678  [8] 01 23 45 67 89 AB CD EF   '........'"
+
+static int asc2nibble(char c) {
 
     if ((c >= '0') && (c <= '9'))
 	return c - '0';
@@ -69,7 +74,7 @@ static int asc2nibble(char c){
     return 16; /* error */
 }
 
-int parse_canframe(char *cs, struct can_frame *cf){
+int parse_canframe(char *cs, struct can_frame *cf) {
     /* documentation see lib.h */
 
     int i, idx, dlc, len, tmp;
@@ -85,17 +90,18 @@ int parse_canframe(char *cs, struct can_frame *cf){
     if (!((cs[3] == CANID_DELIM) || (cs[8] == CANID_DELIM)))
 	return 1;
 
-    if (cs[8] == CANID_DELIM) {
+    if (cs[8] == CANID_DELIM) { /* 8 digits */
 
 	idx = 9;
-	cf->can_id = CAN_EFF_FLAG;
 	for (i=0; i<8; i++){
 	    if ((tmp = asc2nibble(cs[i])) > 0x0F)
 		return 1;
 	    cf->can_id |= (tmp << (7-i)*4);
 	}
+	if (!(cf->can_id & CAN_ERR_FLAG)) /* 8 digits but no errorframe?  */
+	    cf->can_id |= CAN_EFF_FLAG;   /* then it is an extended frame */
 
-    } else {
+    } else { /* 3 digits */
 
 	idx = 4;
 	for (i=0; i<3; i++){
@@ -132,24 +138,96 @@ int parse_canframe(char *cs, struct can_frame *cf){
     return 0;
 }
 
-void fprint_canframe(FILE *stream , struct can_frame *cf, char *eol){
+void fprint_canframe(FILE *stream , struct can_frame *cf, char *eol, int sep) {
     /* documentation see lib.h */
 
-    int i;
+    char buf[sizeof(MAX_CANFRAME)+1]; /* max length */
 
-    if (cf->can_id & CAN_EFF_FLAG)
-	fprintf(stream, "%8X  ", cf->can_id & CAN_EFF_MASK);
-    else
-	fprintf(stream, "%3X  ", cf->can_id & CAN_SFF_MASK);
-
-    fprintf(stream, "[%d] ", cf->can_dlc);
-
-    for (i = 0; i < cf->can_dlc; i++) {
-	fprintf(stream, "%02X ", cf->data[i]);
-    }
-    if (cf->can_id & CAN_RTR_FLAG)
-	fprintf(stream, "remote request");
+    sprint_canframe(buf, cf, sep);
+    fprintf(stream, "%s", buf);
     if (eol)
 	fprintf(stream, "%s", eol);
+}
+
+void sprint_canframe(char *buf , struct can_frame *cf, int sep) {
+    /* documentation see lib.h */
+
+    int i,offset;
+
+    if (cf->can_id & CAN_ERR_FLAG) {
+	sprintf(buf, "%08X#", cf->can_id & (CAN_ERR_MASK|CAN_ERR_FLAG));
+	offset = 9;
+    } else if (cf->can_id & CAN_EFF_FLAG) {
+	sprintf(buf, "%08X#", cf->can_id & CAN_EFF_MASK);
+	offset = 9;
+    } else {
+	sprintf(buf, "%03X#", cf->can_id & CAN_SFF_MASK);
+	offset = 4;
+    }
+
+    if (cf->can_id & CAN_RTR_FLAG) /* there are no ERR frames with RTR */
+	sprintf(buf+offset, "R");
+    else
+	for (i = 0; i < cf->can_dlc; i++) {
+	    sprintf(buf+offset, "%02X", cf->data[i]);
+	    offset += 2;
+	    if (sep && (i+1 < cf->can_dlc))
+		sprintf(buf+offset++, ".");
+	}
+
+
+}
+
+void fprint_long_canframe(FILE *stream , struct can_frame *cf, char *eol, int ascii) {
+    /* documentation see lib.h */
+
+    char buf[sizeof(MAX_LONG_CANFRAME)+1]; /* max length */
+
+    sprint_long_canframe(buf, cf, ascii);
+    fprintf(stream, "%s", buf);
+    if (eol)
+	fprintf(stream, "%s", eol);
+}
+
+void sprint_long_canframe(char *buf , struct can_frame *cf, int ascii) {
+    /* documentation see lib.h */
+
+    int i, offset;
+
+    if (cf->can_id & CAN_ERR_FLAG) {
+	sprintf(buf, "%8X  ", cf->can_id & (CAN_ERR_MASK|CAN_ERR_FLAG));
+	offset = 10;
+    } else if (cf->can_id & CAN_EFF_FLAG) {
+	sprintf(buf, "%8X  ", cf->can_id & CAN_EFF_MASK);
+	offset = 10;
+    } else {
+	sprintf(buf, "%3X  ", cf->can_id & CAN_SFF_MASK);
+	offset = 5;
+    }
+
+    sprintf(buf+offset, "[%d]", cf->can_dlc);
+    offset += 3;
+
+    if (cf->can_id & CAN_RTR_FLAG) /* there are no ERR frames with RTR */
+	sprintf(buf+offset, " remote request");
+    else {
+	for (i = 0; i < cf->can_dlc; i++) {
+	    sprintf(buf+offset, " %02X", cf->data[i]);
+	    offset += 3;
+	}
+	if (cf->can_id & CAN_ERR_FLAG)
+	    sprintf(buf+offset, "%*s", 3*(8-cf->can_dlc)+13, "ERRORFRAME");
+	else if (ascii) {
+	    sprintf(buf+offset, "%*s", 3*(8-cf->can_dlc)+4, "'");
+	    offset += 3*(8-cf->can_dlc)+4;
+
+	    for (i = 0; i < cf->can_dlc; i++)
+		if ((cf->data[i] > 0x1F) && (cf->data[i] < 0x7F))
+		    buf[offset++] = cf->data[i];
+		else
+		    buf[offset++] = '.';
+	    sprintf(buf+offset, "'");
+	} 
+    }
 }
 

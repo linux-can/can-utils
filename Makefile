@@ -43,7 +43,7 @@
 CFLAGS    = -O2 -Wall -Wno-parentheses -I../kernel/2.6/include \
 	    -fno-strict-aliasing
 
-PROGRAMS = candump can-sniffer cansend
+PROGRAMS = candump can-sniffer cansend cangen log2long log2asc
 
 all: $(PROGRAMS)
 
@@ -51,8 +51,16 @@ clean:
 	rm -f $(PROGRAMS) *.o
 
 distclean:
-	rm -f $(PROGRAMS) *~
+	rm -f $(PROGRAMS) *.o *~
 
-cansend.o: lib.h
+cansend.o:  lib.h
+cangen.o:   lib.h
+candump.o:  lib.h
+log2long.o: lib.h
+log2asc.o:  lib.h
 
-cansend: cansend.o lib.o
+cansend:  cansend.o  lib.o
+cangen:   cangen.o   lib.o
+candump:  candump.o  lib.o
+log2long: log2long.o lib.o
+log2asc:  log2asc.o  lib.o

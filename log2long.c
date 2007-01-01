@@ -3,9 +3,9 @@
  */
 
 /*
- * cansend.c - simple command line tool to send CAN-frames via CAN_RAW sockets
+ * log2long.c - convert compact CAN frame representation into user readable
  *
- * Copyright (c) 2002-2005 Volkswagen Group Electronic Research
+ * Copyright (c) 2002-2007 Volkswagen Group Electronic Research
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,71 +47,25 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 
 #include <net/if.h>
-#include <sys/ioctl.h>
-
 #include <linux/can.h>
-#include <linux/can/raw.h>
 
 #include "lib.h"
 
 int main(int argc, char **argv)
 {
-    int s; /* can raw socket */ 
-    int nbytes;
-    struct sockaddr_can addr;
-    struct can_frame frame;
-    struct ifreq ifr;
+    char buf[100], timestamp[100], device[100], ascframe[100];
+    struct can_frame cf;
 
-    /* check command line options */
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s <device> <can_frame>.\n", argv[0]);
-        return 1;
+    while (fgets(buf, 99, stdin)) {
+	if (sscanf(buf, "%s %s %s", timestamp, device, ascframe) != 3)
+	    return 1;
+	if (parse_canframe(ascframe, &cf))
+	    return 1;
+	sprint_long_canframe(ascframe, &cf, 1); /* with ASCII output */
+	printf("%s  %s  %s\n", timestamp, device, ascframe);
     }
-
-    /* parse CAN frame */
-    if (parse_canframe(argv[2], &frame)){
-	fprintf(stderr, "\nWrong CAN-frame format!\n\n");
-	fprintf(stderr, "Try: <can_id>#{R|data}\n");
-	fprintf(stderr, "can_id can have 3 (SFF) or 8 (EFF) hex chars\n");
-	fprintf(stderr, "data has 0 to 8 hex-values that can (optionally)");
-	fprintf(stderr, " be seperated by '.'\n\n");
-	fprintf(stderr, "e.g. 5A1#11.2233.44556677.88 / 123#DEADBEEF / ");
-	fprintf(stderr, "5AA# /\n     1F334455#1122334455667788 / 123#R ");
-	fprintf(stderr, "for remote transmission request.\n\n");
-	return 1;
-    }
-
-    /* open socket */
-    if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
-      perror("socket");
-      return 1;
-    }
-
-    strcpy(ifr.ifr_name, argv[1]);
-    ioctl(s, SIOCGIFINDEX, &ifr);
-
-    addr.can_family = AF_CAN;
-    addr.can_ifindex = ifr.ifr_ifindex;
-
-    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-      perror("bind");
-      return 1;
-    }
-
-    /* send frame */
-    if ((nbytes = write(s, &frame, sizeof(frame))) != sizeof(frame)) {
-      perror("write");
-      return 1;
-    }
-
-    //fprint_long_canframe(stdout, &frame, "\n", 0);
-
-    close(s);
 
     return 0;
 }
