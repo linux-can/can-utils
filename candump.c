@@ -465,7 +465,7 @@ int main(int argc, char **argv)
 		    continue;
 		}
 		      
-		printf(" %s",(color>2)?col_on[idx]:"");
+		printf(" %s", (color>2)?col_on[idx]:"");
 
 		switch (timestamp) {
 
@@ -508,13 +508,13 @@ int main(int argc, char **argv)
 		    break;
 		}
 
-		printf(" %s",(color && (color<3))?col_on[idx]:"");
+		printf(" %s", (color && (color<3))?col_on[idx]:"");
 		printf("%*s", max_devname_len, devname[idx]);
-		printf("%s  ",(color<2)?col_off:"");
+		printf("%s  ", (color==1)?col_off:"");
 
 		fprint_long_canframe(stdout, &frame, NULL, ascii);
 
-		printf("%s",(color>1)?col_off:"");
+		printf("%s", (color>1)?col_off:"");
 		printf("\n");
 	    }
 	    fflush(stdout);
