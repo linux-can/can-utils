@@ -107,6 +107,7 @@ void print_usage(char *prg)
     fprintf(stderr, "         -s <level>  (silent mode - 1: animation 2: nothing)\n");
     fprintf(stderr, "         -b <can>    (bridge mode - send received frames to <can>)\n");
     fprintf(stderr, "         -l          (log CAN-frames into file)\n");
+    fprintf(stderr, "         -L          (use log file format on stdout)\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "When using more than one CAN interface the options\n");
     fprintf(stderr, "m/v/i/e have comma seperated values e.g. '-m 0,7FF,0'\n");
@@ -172,6 +173,7 @@ int main(int argc, char **argv)
     unsigned char color = 0;
     unsigned char ascii = 0;
     unsigned char log = 0;
+    unsigned char logfrmt = 0;
     int opt, ret;
     int currmax = 1; /* we assume at least one can bus ;-) */
     struct sockaddr_can addr;
@@ -188,7 +190,7 @@ int main(int argc, char **argv)
 
     last_tv.tv_sec = 0; /* init */
 
-    while ((opt = getopt(argc, argv, "m:v:i:e:t:cas:b:l")) != -1) {
+    while ((opt = getopt(argc, argv, "m:v:i:e:t:cas:b:lL")) != -1) {
 	switch (opt) {
 	case 'm':
 	    i = sscanf(optarg, "%x,%x,%x,%x,%x,%x",
@@ -274,6 +276,10 @@ int main(int argc, char **argv)
 	    
 	case 'l':
 	    log = 1;
+	    break;
+
+	case 'L':
+	    logfrmt = 1;
 	    break;
 
 	default:
@@ -441,7 +447,7 @@ int main(int argc, char **argv)
 		    }
 		}
 		    
-		if (timestamp || log)
+		if (timestamp || log || logfrmt)
 		    if (ioctl(s[i], SIOCGSTAMP, &tv) < 0)
 			perror("SIOCGSTAMP");
 
@@ -451,10 +457,17 @@ int main(int argc, char **argv)
 		if (log) {
 		    /* log CAN frame with absolute timestamp & device */
 		    fprintf(logfile, "(%ld.%06ld) ", tv.tv_sec, tv.tv_usec);
-		    fprintf(logfile, "%*s", max_devname_len, devname[idx]);
-		    fprintf(logfile, " ");
+		    fprintf(logfile, "%*s ", max_devname_len, devname[idx]);
 		    /* without seperator as logfile use-case is parsing */
 		    fprint_canframe(logfile, &frame, "\n", 0);
+		}
+
+		if (logfrmt) {
+		    /* print CAN frame in log file style to stdout */
+		    printf("(%ld.%06ld) ", tv.tv_sec, tv.tv_usec);
+		    printf("%*s ", max_devname_len, devname[idx]);
+		    fprint_canframe(stdout, &frame, "\n", 0);
+		    continue; /* no other output to stdout */
 		}
 
 		if (silent){
@@ -462,7 +475,7 @@ int main(int argc, char **argv)
 			printf("%c\b", anichar[silentani%=MAXANI]);
 			silentani++;
 		    }
-		    continue;
+		    continue; /* no other output to stdout */
 		}
 		      
 		printf(" %s", (color>2)?col_on[idx]:"");
