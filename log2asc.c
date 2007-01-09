@@ -64,6 +64,7 @@ void print_usage(char *prg)
     fprintf(stderr, "Usage: %s [can-interfaces]\n", prg);
     fprintf(stderr, "Options: -I <infile>  (default stdin)\n");
     fprintf(stderr, "         -O <outfile> (default stdout)\n");
+    fprintf(stderr, "         -4 (reduce decimal place to 4 digits)\n");
     fprintf(stderr, "         -n (set newline to cr/lf - default lf)\n");
 }
 
@@ -75,9 +76,9 @@ int main(int argc, char **argv)
     static struct timeval tv, start_tv;
     FILE *infile = stdin;
     FILE *outfile = stdout;
-    static int maxdev, devno, i, crlf, opt;
+    static int maxdev, devno, i, crlf, d4, opt;
 
-    while ((opt = getopt(argc, argv, "I:O:n")) != -1) {
+    while ((opt = getopt(argc, argv, "I:O:4n")) != -1) {
 	switch (opt) {
 	case 'I':
 	    infile = fopen(optarg, "r");
@@ -97,6 +98,10 @@ int main(int argc, char **argv)
 
 	case 'n':
 	    crlf = 1;
+	    break;
+
+	case '4':
+	    d4 = 1;
 	    break;
 
 	default:
@@ -148,7 +153,11 @@ int main(int argc, char **argv)
 		tv.tv_sec--, tv.tv_usec += 1000000;
 	    if (tv.tv_sec < 0)
 		tv.tv_sec = tv.tv_usec = 0;
-	    fprintf(outfile, "%4ld.%04ld ", tv.tv_sec, tv.tv_usec/100);
+
+	    if (d4)
+		fprintf(outfile, "%4ld.%04ld ", tv.tv_sec, tv.tv_usec/100);
+	    else
+		fprintf(outfile, "%4ld.%06ld ", tv.tv_sec, tv.tv_usec);
 
 	    fprintf(outfile, "%-2d ", devno); /* channel number left aligned */
 
