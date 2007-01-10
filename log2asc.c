@@ -162,7 +162,7 @@ int main(int argc, char **argv)
 	    fprintf(outfile, "%-2d ", devno); /* channel number left aligned */
 
 	    if (cf.can_id & CAN_ERR_FLAG)
-		fprintf(outfile, "(errorframe)");
+		fprintf(outfile, "ErrorFrame");
 	    else {
 		sprintf(id, "%X%c", cf.can_id & CAN_EFF_MASK,
 			(cf.can_id & CAN_EFF_FLAG)?'x':' ');
