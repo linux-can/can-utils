@@ -43,12 +43,15 @@
 CFLAGS    = -O2 -Wall -Wno-parentheses -I../kernel/2.6/include \
 	    -fno-strict-aliasing
 
-PROGRAMS = candump can-sniffer cansend canplayer cangen log2long log2asc asc2log
+PROGRAMS = candump cansniffer cansend canplayer cangen log2long log2asc asc2log
 
 all: $(PROGRAMS)
 
 clean:
 	rm -f $(PROGRAMS) *.o
+
+install:
+	cp -f $(PROGRAMS) /usr/local/bin
 
 distclean:
 	rm -f $(PROGRAMS) *.o *~
