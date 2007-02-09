@@ -97,6 +97,7 @@ static volatile int running = 1;
 void print_usage(char *prg)
 {
     fprintf(stderr, "Usage: %s [can-interfaces]\n", prg);
+    fprintf(stderr, "  (use CTRL-C to terminate %s)\n", prg);
     fprintf(stderr, "Options: -m <mask>   (default 0x00000000)\n");
     fprintf(stderr, "         -v <value>  (default 0x00000000)\n");
     fprintf(stderr, "         -i <0|1>    (inv_filter)\n");
@@ -402,7 +403,6 @@ int main(int argc, char **argv)
     while (running) {
 
 	FD_ZERO(&rdfs);
-	FD_SET(0, &rdfs);
 	for (i=0; i<currmax; i++)
 	    FD_SET(s[i], &rdfs);
 
@@ -410,11 +410,6 @@ int main(int argc, char **argv)
 	    //perror("select");
 	    running = 0;
 	    continue;
-	}
-
-	if (FD_ISSET(0, &rdfs)) {
-	    running = 0; /* stop with input from stdin */
-	    getchar();
 	}
 
 	for (i=0; i<currmax; i++) {  /* check all CAN RAW sockets */
