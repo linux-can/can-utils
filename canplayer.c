@@ -62,6 +62,7 @@
 #include "lib.h"
 
 #define DEFAULT_GAP 1 /* ms */
+#define DEFAULT_LOOPS 1 /* only one replay */
 #define CHANNELS 20   /* anyone using more than 20 CAN interfaces at a time? */
 #define BUFSZ 100     /* for one line in the logfile */
 
@@ -78,6 +79,10 @@ void print_usage(char *prg)
 {
     fprintf(stderr, "\nUsage: %s <options> [interface assignment]*\n\n", prg);
     fprintf(stderr, "Options:              -I <infile>  (default stdin)\n");
+    fprintf(stderr, "                      -l <num>     "
+	    "(process input file <num> times)\n"
+	    "                                   "
+	    "(Use 'i' for infinite loop - default: %d)\n", DEFAULT_LOOPS);
     fprintf(stderr, "                      -t           (ignore timestamps: "
 	    "send frames immediately)\n");
     fprintf(stderr, "                      -g <ms>      (gap in milli "
@@ -213,12 +218,14 @@ int main(int argc, char **argv)
     FILE *infile = stdin;
     unsigned long gap = DEFAULT_GAP; 
     int use_timestamps = 1;
-    static int verbose, opt, loops;
+    static int verbose, opt, delay_loops;
+    static int infinite_loops = 0;
+    static int loops = DEFAULT_LOOPS;
     int assignments; /* assignments defined on the commandline */
     int txidx;       /* sendto() interface index */
-    int nbytes, i, j;
+    int eof, nbytes, i, j;
 
-    while ((opt = getopt(argc, argv, "I:tg:v")) != -1) {
+    while ((opt = getopt(argc, argv, "I:l:tg:v")) != -1) {
 	switch (opt) {
 	case 'I':
 	    infile = fopen(optarg, "r");
@@ -226,6 +233,16 @@ int main(int argc, char **argv)
 		perror("infile");
 		return 1;
 	    }
+	    break;
+
+	case 'l':
+	    if (optarg[0] == 'i')
+		infinite_loops = 1;
+	    else
+		if (!(loops = atoi(optarg))) {
+		    fprintf(stderr, "Invalid argument for option -l !\n");
+		    return 1;
+		}
 	    break;
 
 	case 't':
@@ -248,6 +265,17 @@ int main(int argc, char **argv)
     }
 
     assignments = argc - optind; /* find real number of user assignments */
+
+    if (infile == stdin) { /* no jokes with stdin */
+	infinite_loops = 0;
+	loops = 1;
+    }
+
+    if (verbose > 1) /* use -v -v to see this */
+	if (infinite_loops)
+	    printf("infinite_loops\n");
+	else
+	    printf("%d loops\n", loops);
 
     sleep_ts.tv_sec  =  gap / 1000;
     sleep_ts.tv_nsec = (gap % 1000) * 1000000;
@@ -293,94 +321,110 @@ int main(int argc, char **argv)
 	}
     }
 
-    if (!fgets(buf, BUFSZ-1, infile)) /* read first frame from logfile */
-	goto out; /* nothing to read */
+    while (infinite_loops || loops--) {
 
-    if (sscanf(buf, "(%ld.%ld) %s %s", &log_tv.tv_sec, &log_tv.tv_usec,
-	       device, ascframe) != 4)
-	return 1;
+	if (infile != stdin)
+	    rewind(infile); /* for each loop */
 
-    if (use_timestamps) { /* throttle sending due to logfile timestamps */
+	if (verbose > 1) /* use -v -v to see this */
+	    printf (">>>>>>>>> start reading file. remaining loops = %d\n", loops);
 
-	gettimeofday(&today_tv, NULL);
+	if (!fgets(buf, BUFSZ-1, infile)) /* read first frame from logfile */
+	    goto out; /* nothing to read */
 
-	/* omit crazy comparations with negative diff_tv */
-	if (timeval_compare(&today_tv, &log_tv) < 1) {
-	    fprintf(stderr, "logfile timestamps newer than time of day!\n");
+	eof = 0;
+
+	if (sscanf(buf, "(%ld.%ld) %s %s", &log_tv.tv_sec, &log_tv.tv_usec,
+		   device, ascframe) != 4)
 	    return 1;
-	}
 
-	/* create diff_tv so that log_tv + diff_tv = today_tv */
-	diff_tv.tv_sec  = today_tv.tv_sec  - log_tv.tv_sec;
-	diff_tv.tv_usec = today_tv.tv_usec - log_tv.tv_usec;
-	if (diff_tv.tv_usec < 0)
-	    diff_tv.tv_sec--, diff_tv.tv_usec += 1000000;
-    }
+	if (use_timestamps) { /* throttle sending due to logfile timestamps */
 
-    while (1) {
+	    gettimeofday(&today_tv, NULL);
 
-	while ((!use_timestamps) ||
-	       (frames_to_send(&today_tv, &diff_tv, &log_tv) < 0)) {
-
-	    /* log_tv/device/ascframe are valid here */
-
-	    if (strlen(device) >= IFNAMSIZ) {
-		fprintf(stderr, "log interface name '%s' too long!", device);
+	    /* omit crazy comparations with negative diff_tv */
+	    if (timeval_compare(&today_tv, &log_tv) < 1) {
+		fprintf(stderr, "logfile timestamps newer than time of day!\n");
 		return 1;
 	    }
 
-	    txidx = get_txidx(device); /* get ifindex for sending the frame */
- 
-	    if ((!txidx) && (!assignments)) {
-		/* ifindex not found and no user assignments */
-		/* => assign this device automatically       */
-		if (add_assignment("auto", s, device, device, verbose))
-		    return 1;
-		txidx = get_txidx(device);
-	    }
-
-	    if (txidx) { /* only send to valid CAN devices */
-
-		if (parse_canframe(ascframe, &frame)) {
-		    fprintf(stderr, "wrong CAN frame format: '%s'!", ascframe);
-		    return 1;
-		}
-
-		addr.can_family  = AF_CAN;
-		addr.can_ifindex = txidx; /* send via this interface */
- 
-		nbytes = sendto(s, &frame, sizeof(struct can_frame), 0,
-				(struct sockaddr*)&addr, sizeof(addr));
-
-		if (nbytes != sizeof(struct can_frame)) {
-		    perror("sendto");
-		    return 1;
-		}
-
-		if (verbose) {
-		    printf("%s (%s) ", get_txname(device), device);
-		    fprint_long_canframe(stdout, &frame, "\n", 1);
-		}
-	    }
-
-	    /* read next frame from logfile */
-	    if (!fgets(buf, BUFSZ-1, infile))
-		goto out; /* nothing to read */
-
-	    if (sscanf(buf, "(%ld.%ld) %s %s", &log_tv.tv_sec, &log_tv.tv_usec,
-		       device, ascframe) != 4)
-		return 1;
-
-	    if (use_timestamps) /* save a syscall if possible */
-		gettimeofday(&today_tv, NULL);
+	    /* create diff_tv so that log_tv + diff_tv = today_tv */
+	    diff_tv.tv_sec  = today_tv.tv_sec  - log_tv.tv_sec;
+	    diff_tv.tv_usec = today_tv.tv_usec - log_tv.tv_usec;
+	    if (diff_tv.tv_usec < 0)
+		diff_tv.tv_sec--, diff_tv.tv_usec += 1000000;
 	}
 
-	if (nanosleep(&sleep_ts, NULL))
-	    return 1;
+	while (!eof) {
 
-	loops++; /* private statistics */
-	gettimeofday(&today_tv, NULL);
-    }
+	    while ((!use_timestamps) ||
+		   (frames_to_send(&today_tv, &diff_tv, &log_tv) < 0)) {
+
+		/* log_tv/device/ascframe are valid here */
+
+		if (strlen(device) >= IFNAMSIZ) {
+		    fprintf(stderr, "log interface name '%s' too long!", device);
+		    return 1;
+		}
+
+		txidx = get_txidx(device); /* get ifindex for sending the frame */
+ 
+		if ((!txidx) && (!assignments)) {
+		    /* ifindex not found and no user assignments */
+		    /* => assign this device automatically       */
+		    if (add_assignment("auto", s, device, device, verbose))
+			return 1;
+		    txidx = get_txidx(device);
+		}
+
+		if (txidx) { /* only send to valid CAN devices */
+
+		    if (parse_canframe(ascframe, &frame)) {
+			fprintf(stderr, "wrong CAN frame format: '%s'!", ascframe);
+			return 1;
+		    }
+
+		    addr.can_family  = AF_CAN;
+		    addr.can_ifindex = txidx; /* send via this interface */
+ 
+		    nbytes = sendto(s, &frame, sizeof(struct can_frame), 0,
+				    (struct sockaddr*)&addr, sizeof(addr));
+
+		    if (nbytes != sizeof(struct can_frame)) {
+			perror("sendto");
+			return 1;
+		    }
+
+		    if (verbose) {
+			printf("%s (%s) ", get_txname(device), device);
+			fprint_long_canframe(stdout, &frame, "\n", 1);
+		    }
+		}
+
+		/* read next frame from logfile */
+		if (!fgets(buf, BUFSZ-1, infile)) {
+		    eof = 1; /* this file is completely processed */
+		    break;
+		}
+
+		if (sscanf(buf, "(%ld.%ld) %s %s", &log_tv.tv_sec, &log_tv.tv_usec,
+			   device, ascframe) != 4)
+		    return 1;
+
+		if (use_timestamps) /* save a syscall if possible */
+		    gettimeofday(&today_tv, NULL);
+
+	    } /* while frames_to_send ... */
+
+	    if (nanosleep(&sleep_ts, NULL))
+		return 1;
+
+	    delay_loops++; /* private statistics */
+	    gettimeofday(&today_tv, NULL);
+
+	} /* while (!eof) */
+
+    } /* while (infinite_loops || loops--) */
 
  out:
 
@@ -388,7 +432,7 @@ int main(int argc, char **argv)
     fclose(infile);
 
     if (verbose > 1) /* use -v -v to see this */
-	printf("%d loops\n", loops);
+	printf("%d delay_loops\n", delay_loops);
 
     return 0;
 }
