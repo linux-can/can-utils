@@ -43,7 +43,8 @@
 CFLAGS    = -O2 -Wall -Wno-parentheses -I../kernel/2.6/include \
 	    -fno-strict-aliasing
 
-PROGRAMS = candump cansniffer cansend canplayer cangen log2long log2asc asc2log
+PROGRAMS = candump cansniffer cansend canplayer cangen\
+	   log2long log2asc asc2log slcan_attach
 
 all: $(PROGRAMS)
 
