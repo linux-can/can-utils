@@ -52,25 +52,33 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <sys/ioctl.h>
+#include <linux/tty.h>   /* thanks for cleanup since 2.6.21 */
+//#include <asm/termios.h> /* ldiscs for each arch up to 2.6.20 */
 
+#ifndef N_SLCAN
 #define N_SLCAN 16 /* bad hack until it's not inside the Kernel */
+#endif
 
 void usage(char *name)
 {
-	fprintf(stderr, "Usage: %s [-d] tty\n", name);
+	fprintf(stderr, "Usage: %s [-d] [-l ldisc] tty\n", name);
 	exit(1);
 }
 
 int main(int argc, char **argv)
 {
 	int fd;
-	int ldisc;
+	int ldisc = N_SLCAN; /* default */
 	int detach = 0;
 	char *tty;
 	int opt;
 
-	while ((opt = getopt(argc, argv, "d")) != -1) {
+	while ((opt = getopt(argc, argv, "l:d")) != -1) {
 		switch (opt) {
+		case 'l':
+			ldisc = atoi(optarg);
+			break;
+
 		case 'd':
 			detach = 1;
 			break;
@@ -90,7 +98,9 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	ldisc = detach ? N_TTY : N_SLCAN;
+	if (detach)
+		ldisc = N_TTY;
+
 	if (ioctl (fd, TIOCSETD, &ldisc) < 0) {
 		perror("ioctl");
 		exit(1);
