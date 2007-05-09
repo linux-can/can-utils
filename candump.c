@@ -189,7 +189,8 @@ int main(int argc, char **argv)
     signal(SIGHUP, sigterm);
     signal(SIGINT, sigterm);
 
-    last_tv.tv_sec = 0; /* init */
+    last_tv.tv_sec  = 0;
+    last_tv.tv_usec = 0;
 
     while ((opt = getopt(argc, argv, "m:v:i:e:t:cas:b:lL")) != -1) {
 	switch (opt) {
