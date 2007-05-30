@@ -107,6 +107,7 @@ void print_usage(char *prg)
     fprintf(stderr, "         -a          (enable additional ASCII output)\n");
     fprintf(stderr, "         -s <level>  (silent mode - 1: animation 2: nothing)\n");
     fprintf(stderr, "         -b <can>    (bridge mode - send received frames to <can>)\n");
+    fprintf(stderr, "         -B <can>    (bridge mode - like '-b' with disabled loopback)\n");
     fprintf(stderr, "         -l          (log CAN-frames into file)\n");
     fprintf(stderr, "         -L          (use log file format on stdout)\n");
     fprintf(stderr, "\n");
@@ -192,7 +193,7 @@ int main(int argc, char **argv)
     last_tv.tv_sec  = 0;
     last_tv.tv_usec = 0;
 
-    while ((opt = getopt(argc, argv, "m:v:i:e:t:cas:b:lL")) != -1) {
+    while ((opt = getopt(argc, argv, "m:v:i:e:t:cas:b:B:lL")) != -1) {
 	switch (opt) {
 	case 'm':
 	    i = sscanf(optarg, "%x,%x,%x,%x,%x,%x",
@@ -249,6 +250,7 @@ int main(int argc, char **argv)
 	    break;
 
 	case 'b':
+	case 'B':
 	    if (strlen(optarg) >= IFNAMSIZ) {
 		printf("Name of CAN device '%s' is too long!\n\n", optarg);
 		return 1;
@@ -267,6 +269,12 @@ int main(int argc, char **argv)
 		if (!addr.can_ifindex) {
 		    perror("invalid bridge interface");
 		    return 1;
+		}
+
+		if (opt == 'B') {
+		    int loopback = 0;
+
+		    setsockopt(bridge, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &loopback, sizeof(loopback));
 		}
 
 		if (bind(bridge, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -463,7 +471,7 @@ int main(int argc, char **argv)
 		    printf("(%ld.%06ld) ", tv.tv_sec, tv.tv_usec);
 		    printf("%*s ", max_devname_len, devname[idx]);
 		    fprint_canframe(stdout, &frame, "\n", 0);
-		    continue; /* no other output to stdout */
+		    goto out_fflush; /* no other output to stdout */
 		}
 
 		if (silent){
@@ -471,7 +479,7 @@ int main(int argc, char **argv)
 			printf("%c\b", anichar[silentani%=MAXANI]);
 			silentani++;
 		    }
-		    continue; /* no other output to stdout */
+		    goto out_fflush; /* no other output to stdout */
 		}
 		      
 		printf(" %s", (color>2)?col_on[idx]:"");
@@ -526,6 +534,8 @@ int main(int argc, char **argv)
 		printf("%s", (color>1)?col_off:"");
 		printf("\n");
 	    }
+
+out_fflush:
 	    fflush(stdout);
 	}
     }
