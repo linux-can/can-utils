@@ -198,8 +198,10 @@ int main(int argc, char **argv)
     addr.can_family = AF_CAN;
 
     strcpy(ifr.ifr_name, argv[optind]);
-    if (ioctl(s, SIOCGIFINDEX, &ifr) < 0)
+    if (ioctl(s, SIOCGIFINDEX, &ifr) < 0) {
 	perror("SIOCGIFINDEX");
+	return 1;
+    }
     addr.can_ifindex = ifr.ifr_ifindex;
 
     /* disable default receive filter on this RAW socket */
