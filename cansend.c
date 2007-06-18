@@ -92,11 +92,20 @@ int main(int argc, char **argv)
       return 1;
     }
 
-    strcpy(ifr.ifr_name, argv[1]);
-    ioctl(s, SIOCGIFINDEX, &ifr);
-
     addr.can_family = AF_CAN;
+
+    strcpy(ifr.ifr_name, argv[1]);
+    if (ioctl(s, SIOCGIFINDEX, &ifr) < 0) {
+      perror("SIOCGIFINDEX");
+      return 1;
+    }
     addr.can_ifindex = ifr.ifr_ifindex;
+
+    /* disable default receive filter on this RAW socket */
+    /* This is obsolete as we do not read from the socket at all, but for */
+    /* this reason we can remove the receive list in the Kernel to save a */
+    /* little (really a very little!) CPU usage.                          */
+    setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
 
     if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
       perror("bind");
