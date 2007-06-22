@@ -77,19 +77,21 @@ void print_usage(char *prg)
 {
     fprintf(stderr, "\n%s: generate random CAN frames\n\n", prg);
     fprintf(stderr, "Usage: %s [can-interface]\n", prg);
-    fprintf(stderr, "Options: -g <ms>       (gap in milli seconds)  "
+    fprintf(stderr, "Options: -g <ms>       (gap in milli seconds)   "
 	    "default: %d\n", DEFAULT_GAP);
-    fprintf(stderr, "         -e            (extended frame mode)   "
+    fprintf(stderr, "         -e            (extended frame mode)    "
 	    "default: standard frame format \n");
-    fprintf(stderr, "         -I            (fixed CAN ID)          "
+    fprintf(stderr, "         -I            (fixed CAN ID)           "
 	    "default: 0x123\n");
-    fprintf(stderr, "         -D            (fixed CAN Data)        "
+    fprintf(stderr, "         -D            (fixed CAN Data)         "
 	    "default: 01 23 45 67 89 AB CD EF\n");
-    fprintf(stderr, "         -L            (fixed CAN DLC)         "
+    fprintf(stderr, "         -L            (fixed CAN DLC)          "
 	    "default: 8\n");
-    fprintf(stderr, "         -f <canframe> (other fixed CAN frame) "
+    fprintf(stderr, "         -f <canframe> (other fixed CAN frame)  "
 	    "default: 123#0123456789ABCDEF\n");
-    fprintf(stderr, "         -v            (verbose)               "
+    fprintf(stderr, "         -l            (local loopback disable) "
+	    "default: loopback\n");
+    fprintf(stderr, "         -v            (verbose)                "
 	    "default: don't print sent frames\n");
 }
 
@@ -106,6 +108,7 @@ int main(int argc, char **argv)
     unsigned char fix_data = 0;
     unsigned char fix_dlc = 0;
     unsigned char default_frame = 1;
+    unsigned char loopback_disable = 0;
     unsigned char verbose = 0;
 
     int opt;
@@ -122,7 +125,7 @@ int main(int argc, char **argv)
     signal(SIGHUP, sigterm);
     signal(SIGINT, sigterm);
 
-    while ((opt = getopt(argc, argv, "g:eIDLf:v")) != -1) {
+    while ((opt = getopt(argc, argv, "g:eIDLf:lv")) != -1) {
 	switch (opt) {
 	case 'g':
 	    gap = strtoul(optarg, NULL, 10);
@@ -154,6 +157,10 @@ int main(int argc, char **argv)
 
 	case 'v':
 	    verbose = 1;
+	    break;
+
+	case 'l':
+	    loopback_disable = 1;
 	    break;
 
 	default:
@@ -209,6 +216,13 @@ int main(int argc, char **argv)
     /* this reason we can remove the receive list in the Kernel to save a */
     /* little (really a very little!) CPU usage.                          */
     setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
+
+    if (loopback_disable) {
+	int loopback = 0;
+
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK,
+		   &loopback, sizeof(loopback));
+    }
 
     if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 	perror("bind");
