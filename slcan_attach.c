@@ -56,7 +56,7 @@
 //#include <asm/termios.h> /* ldiscs for each arch up to 2.6.20 */
 
 #ifndef N_SLCAN
-#define N_SLCAN 16 /* bad hack until it's not inside the Kernel */
+#define N_SLCAN 17 /* bad hack until it's not inside the Kernel */
 #endif
 
 void usage(char *name)
