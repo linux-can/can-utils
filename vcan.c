@@ -9,6 +9,8 @@
  * otherwise use strace, or feel free to add the code before this
  * whole thing is dumped to the bit bucket.
  *
+ * Parts of this code were taken from the iproute source.
+ *
  * urs
  */
 
