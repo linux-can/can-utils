@@ -508,7 +508,7 @@ int handle_timeo(int fd, long currcms){
 	char startline[80];
 	printf("%s%s", CLR_SCREEN, CSR_HOME);
 	snprintf(startline, 79, "< can-sniffer parameters: l=%ld h=%ld t=%ld >", loop, hold, timeout);
-	printf("%s%*s",STARTLINESTR, 79-strlen(STARTLINESTR), startline); 
+	printf("%s%*s",STARTLINESTR, 79-(int)strlen(STARTLINESTR), startline);
 	force_redraw = 1;
 	clearscreen = 0;
     }
