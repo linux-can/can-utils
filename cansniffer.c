@@ -580,6 +580,7 @@ void print_snifline(int id){
 
     long diffsec  = sniftab[id].currstamp.tv_sec  - sniftab[id].laststamp.tv_sec;
     long diffusec = sniftab[id].currstamp.tv_usec - sniftab[id].laststamp.tv_usec;
+    int dlc_diff  = sniftab[id].last.can_dlc - sniftab[id].current.can_dlc;
     int i,j;
 
     if (diffusec < 0)
@@ -612,6 +613,16 @@ void print_snifline(int id){
 	    if (binary_gap)
 		putchar(' ');
 	}
+
+	/*
+	 * when the can_dlc decreased (dlc_diff > 0),
+	 * we need to blank the former data printout
+	 */
+	for (i=0; i<dlc_diff; i++) {
+	    printf("        ");
+	    if (binary_gap)
+		putchar(' ');
+	}
     }
     else {
 
@@ -633,6 +644,13 @@ void print_snifline(int id){
 		    putchar(sniftab[id].current.data[i]);
 	    else
 		putchar('.');
+
+	/*
+	 * when the can_dlc decreased (dlc_diff > 0),
+	 * we need to blank the former data printout
+	 */
+	for (i=0; i<dlc_diff; i++)
+	    putchar(' ');
     }
 
     putchar('\n');
