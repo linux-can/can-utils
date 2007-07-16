@@ -123,6 +123,7 @@ static long timeout = TIMEOUT;
 static long hold = HOLD;
 static long loop = LOOP;
 static unsigned char binary = 0;
+static unsigned char binary_gap = 0;
 static unsigned char color  = 0;
 
 void rx_setup (int fd, int id);
@@ -141,6 +142,7 @@ void print_usage(char *prg)
 	"\n"
 	"q<ENTER>       - quit\n"
 	"b<ENTER>       - toggle binary / HEX-ASCII output\n"
+	"B<ENTER>       - toggle binary with gap / HEX-ASCII output (exceeds 80 chars!)\n"
 	"c<ENTER>       - toggle color mode\n"
 	"#<ENTER>       - notch currently marked/changed bits (can be used repeatedly)\n"
 	"*<ENTER>       - clear notched marked\n"
@@ -169,6 +171,7 @@ void print_usage(char *prg)
     fprintf(stderr, "         -q         (quiet - all IDs deactivated)\n");
     fprintf(stderr, "         -r <name>  (read %sname from file)\n", SETFNAME);
     fprintf(stderr, "         -b         (start with binary mode)\n");
+    fprintf(stderr, "         -B         (start with binary mode with gap - exceeds 80 chars!)\n");
     fprintf(stderr, "         -c         (color changes)\n");
     fprintf(stderr, "         -t <time>  (timeout for ID display [x100ms] default: %d)\n", TIMEOUT);
     fprintf(stderr, "         -h <time>  (hold marker on changes [x100ms] default: %d)\n", HOLD);
@@ -206,7 +209,7 @@ int main(int argc, char **argv)
     for (i=0; i < 2048 ;i++) /* default: check all CAN-IDs */
 	do_set(i, ENABLE);
 
-    while ((opt = getopt(argc, argv, "m:v:r:t:h:l:qbc")) != -1) {
+    while ((opt = getopt(argc, argv, "m:v:r:t:h:l:qbBc")) != -1) {
 	switch (opt) {
 	case 'm':
 	    sscanf(optarg, "%x", &mask);
@@ -238,6 +241,12 @@ int main(int argc, char **argv)
 
 	case 'b':
 	    binary = 1;
+	    binary_gap = 0;
+	    break;
+
+	case 'B':
+	    binary = 1;
+	    binary_gap = 1;
 	    break;
 
 	case 'c':
@@ -424,7 +433,17 @@ int handle_keyb(int fd){
 	running = 0;
 	break;
 
+    case 'B' :
+	binary_gap = 1;
+	if (binary)
+	    binary = 0;
+	else
+	    binary = 1;
+
+	break;
+
     case 'b' :
+	binary_gap = 0;
 	if (binary)
 	    binary = 0;
 	else
@@ -576,8 +595,8 @@ void print_snifline(int id){
 
     if (binary) {
 
-	for (i=0; i<sniftab[id].current.can_dlc; i++)
-	    for (j=7; j>=0; j--)
+	for (i=0; i<sniftab[id].current.can_dlc; i++) {
+	    for (j=7; j>=0; j--) {
 		if ((color) && (sniftab[id].marker.data[i] & 1<<j) &&
 		    (!(sniftab[id].notch.data[i] & 1<<j)))
 		    if (sniftab[id].current.data[i] & 1<<j)
@@ -589,6 +608,10 @@ void print_snifline(int id){
 			putchar('1');
 		    else
 			putchar('0');
+	    }
+	    if (binary_gap)
+		putchar(' ');
+	}
     }
     else {
 
