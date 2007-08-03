@@ -63,7 +63,6 @@ int main(int argc, char **argv)
     } req;
     struct sockaddr_nl nladdr;
     struct rtattr *linkinfo;
-    int i;
 
 #ifdef OBSOLETE
     fprintf(stderr, "This program is a temporary hack and is now obsolete.\n"
@@ -112,12 +111,16 @@ int main(int argc, char **argv)
     sendto(s, &req, req.n.nlmsg_len, 0,
 	   (struct sockaddr*)&nladdr, sizeof(nladdr));
 #else
-    for (i = 0; i < req.n.nlmsg_len; i++) {
-	printf(" %02x", ((unsigned char*)&req)[i]);
-	if (i % 16 == 15)
-	    putchar('\n');
+    {
+	int i;
+
+	for (i = 0; i < req.n.nlmsg_len; i++) {
+	    printf(" %02x", ((unsigned char*)&req)[i]);
+	    if (i % 16 == 15)
+		putchar('\n');
+	}
+	putchar('\n');
     }
-    putchar('\n');
 #endif
     close(s);
 
