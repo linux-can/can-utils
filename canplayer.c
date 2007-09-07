@@ -87,6 +87,8 @@ void print_usage(char *prg)
 	    "send frames immediately)\n");
     fprintf(stderr, "                      -g <ms>      (gap in milli "
 	    "seconds - default: %d ms)\n", DEFAULT_GAP);
+    fprintf(stderr, "                      -s <s>      (skip gaps in "
+	    "timestamps > 's' seconds)\n");
     fprintf(stderr, "                      -x           (disable local "
 	    "loopback of sent CAN frames)\n");
     fprintf(stderr, "                      -v           (verbose: print "
@@ -113,6 +115,14 @@ static inline int timeval_compare(struct timeval *lhs, struct timeval *rhs)
     return lhs->tv_usec - rhs->tv_usec;
 }
 
+static inline void create_diff_tv(struct timeval *today, struct timeval *diff,
+				  struct timeval *log) {
+
+    /* create diff_tv so that log_tv + diff_tv = today_tv */
+    diff->tv_sec  = today->tv_sec  - log->tv_sec;
+    diff->tv_usec = today->tv_usec - log->tv_usec;
+}
+
 static inline int frames_to_send(struct timeval *today, struct timeval *diff,
 				 struct timeval *log)
 {
@@ -126,6 +136,11 @@ static inline int frames_to_send(struct timeval *today, struct timeval *diff,
     if (cmp.tv_usec > 1000000) {
 	cmp.tv_usec -= 1000000;
 	cmp.tv_sec++;
+    }
+
+    if (cmp.tv_usec < 0) {
+	cmp.tv_usec += 1000000;
+	cmp.tv_sec--;
     }
 
     return timeval_compare(&cmp, today);
@@ -214,13 +229,13 @@ int main(int argc, char **argv)
     static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ];
     struct sockaddr_can addr;
     static struct can_frame frame;
-    static struct timeval today_tv, log_tv, diff_tv;
+    static struct timeval today_tv, log_tv, last_log_tv, diff_tv;
     struct timespec sleep_ts;
     int s; /* CAN_RAW socket */
     FILE *infile = stdin;
     unsigned long gap = DEFAULT_GAP; 
     int use_timestamps = 1;
-    static int verbose, opt, delay_loops;
+    static int verbose, opt, delay_loops, skipgap;
     static int loopback_disable = 0;
     static int infinite_loops = 0;
     static int loops = DEFAULT_LOOPS;
@@ -228,7 +243,7 @@ int main(int argc, char **argv)
     int txidx;       /* sendto() interface index */
     int eof, nbytes, i, j;
 
-    while ((opt = getopt(argc, argv, "I:l:tg:xv")) != -1) {
+    while ((opt = getopt(argc, argv, "I:l:tg:s:xv")) != -1) {
 	switch (opt) {
 	case 'I':
 	    infile = fopen(optarg, "r");
@@ -254,6 +269,14 @@ int main(int argc, char **argv)
 
 	case 'g':
 	    gap = strtoul(optarg, NULL, 10);
+	    break;
+
+	case 's':
+	    skipgap = strtoul(optarg, NULL, 10);
+	    if (skipgap < 1) {
+		fprintf(stderr, "Invalid argument for option -s !\n");
+		return 1;
+	    }
 	    break;
 
 	case 'x':
@@ -355,18 +378,8 @@ int main(int argc, char **argv)
 	if (use_timestamps) { /* throttle sending due to logfile timestamps */
 
 	    gettimeofday(&today_tv, NULL);
-
-	    /* omit crazy comparations with negative diff_tv */
-	    if (timeval_compare(&today_tv, &log_tv) < 1) {
-		fprintf(stderr, "logfile timestamps newer than time of day!\n");
-		return 1;
-	    }
-
-	    /* create diff_tv so that log_tv + diff_tv = today_tv */
-	    diff_tv.tv_sec  = today_tv.tv_sec  - log_tv.tv_sec;
-	    diff_tv.tv_usec = today_tv.tv_usec - log_tv.tv_usec;
-	    if (diff_tv.tv_usec < 0)
-		diff_tv.tv_sec--, diff_tv.tv_usec += 1000000;
+	    create_diff_tv(&today_tv, &diff_tv, &log_tv);
+	    last_log_tv = log_tv;
 	}
 
 	while (!eof) {
@@ -425,8 +438,17 @@ int main(int argc, char **argv)
 			   device, ascframe) != 4)
 		    return 1;
 
-		if (use_timestamps) /* save a syscall if possible */
+		if (use_timestamps) {
 		    gettimeofday(&today_tv, NULL);
+
+		    /* test for logfile timestamps jumping backwards OR      */
+		    /* if the user likes to skip long gaps in the timestamps */
+		    if ((last_log_tv.tv_sec > log_tv.tv_sec) ||
+			(skipgap && abs(last_log_tv.tv_sec - log_tv.tv_sec) > skipgap))
+			create_diff_tv(&today_tv, &diff_tv, &log_tv);
+
+		    last_log_tv = log_tv;
+		}
 
 	    } /* while frames_to_send ... */
 
