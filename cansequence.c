@@ -1,3 +1,5 @@
+#include <can_config.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -12,8 +14,9 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 
-#include <socket-can/can.h>
-#include <can_config.h>
+#include <linux/can.h>
+#include <linux/can/raw.h>
+#include <linux/can/ioctl.h>
 
 extern int optind, opterr, optopt;
 
@@ -37,14 +40,14 @@ void print_usage(char *prg)
                         "Options:\n"
 	                " -f, --family=FAMILY   Protocol family (default PF_CAN = %d)\n"
                         " -t, --type=TYPE       Socket type, see man 2 socket (default SOCK_RAW = %d)\n"
-                        " -p, --protocol=PROTO  CAN protocol (default CAN_PROTO_RAW = %d)\n"
+                        " -p, --protocol=PROTO  CAN protocol (default CAN_RAW = %d)\n"
 			" -r, --receive         work as receiver\n"
 			" -l  --loop=COUNT      send COUNT messages\n"
 			" -q  --quit            quit if a wrong sequence is encountered\n"
                         " -v, --verbose         be verbose (twice to be even more verbose\n"
 			" -h  --help            this help\n"
 			"     --version         print version information and exit\n",
-				prg, PF_CAN, SOCK_RAW, CAN_PROTO_RAW);
+				prg, PF_CAN, SOCK_RAW, CAN_RAW);
 }
 
 void sigterm(int signo)
@@ -54,7 +57,7 @@ void sigterm(int signo)
 
 int main(int argc, char **argv)
 {
-	int family = PF_CAN, type = SOCK_RAW, proto = CAN_PROTO_RAW;
+	int family = PF_CAN, type = SOCK_RAW, proto = CAN_RAW;
 	int opt;
 	struct sockaddr_can addr;
 	struct can_frame frame;
@@ -143,7 +146,6 @@ int main(int argc, char **argv)
 	strncpy(ifr.ifr_name, argv[optind], sizeof(ifr.ifr_name));
 	ioctl(s, SIOCGIFINDEX, &ifr);
 	addr.can_ifindex = ifr.ifr_ifindex;
-	addr.can_id = CAN_FLAG_ALL;
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
@@ -156,18 +158,18 @@ int main(int argc, char **argv)
 				perror("read");
 				return 1;
 			} else {
-				if( sequence_init ) {
+				if (sequence_init) {
 					sequence_init = 0;
-					sequence = frame.payload.data_u8[0];
+					sequence = frame.data[0];
 				}
-				if(verbose>1)
+				if (verbose>1)
 					printf("received frame. sequence number: %d\n",sequence);
-				if( frame.payload.data_u8[0] != sequence) {
+				if (frame.data[0] != sequence) {
 					printf("received wrong sequence count. expected: %d, got: %d\n",
-						frame.payload.data_u8[0], sequence);
+						frame.data[0], sequence);
 					if(quit)
 						exit(1);
-					sequence = frame.payload.data_u8[0];
+					sequence = frame.data[0];
 				}
 				if(verbose && !sequence)
 					printf("sequence wrap around\n");
@@ -177,17 +179,17 @@ int main(int argc, char **argv)
 	} else {
 		frame.can_dlc = 1;
 		frame.can_id = 2;
-		frame.payload.data[0] = 0;
+		frame.data[0] = 0;
 		while ((infinite || loopcount--) && running) {
-			if(verbose>1)
+			if (verbose>1)
 				printf("sending frame. sequence number: %d\n",sequence);
-			if(verbose && !sequence)
+			if (verbose && !sequence)
 				printf("sequence wrap around\n");
-			if( write(s, &frame, sizeof(frame)) < 0) {
+			if (write(s, &frame, sizeof(frame)) < 0) {
 				perror("write");
 				break;
 			}
-			(unsigned char)frame.payload.data[0]++;
+			(unsigned char)frame.data[0]++;
 			sequence++;
 		}
 	}
