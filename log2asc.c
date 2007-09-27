@@ -12,8 +12,7 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions, the following disclaimer and
- *    the referenced file 'COPYING'.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
@@ -23,8 +22,8 @@
  *
  * Alternatively, provided that this notice is retained in full, this
  * software may be distributed under the terms of the GNU General
- * Public License ("GPL") version 2 as distributed in the 'COPYING'
- * file from the main directory of the linux kernel source.
+ * Public License ("GPL") version 2, in which case the provisions of the
+ * GPL apply INSTEAD OF those given above.
  *
  * The provided data structures and external interfaces from this code
  * are not restricted to be used by modules with a GPL compatible license.
