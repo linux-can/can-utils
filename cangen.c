@@ -88,8 +88,8 @@ void print_usage(char *prg)
 	    "default: 8\n");
     fprintf(stderr, "         -f <canframe> (other fixed CAN frame) "
 	    "default: 123#0123456789ABCDEF\n");
-    fprintf(stderr, "         -x            (disable echo)      "
-	    "default: standard echo\n");
+    fprintf(stderr, "         -x            (disable loopback)      "
+	    "default: standard loopback\n");
     fprintf(stderr, "         -v            (verbose)               "
 	    "default: don't print sent frames\n");
 }
@@ -107,7 +107,7 @@ int main(int argc, char **argv)
     unsigned char fix_data = 0;
     unsigned char fix_dlc = 0;
     unsigned char default_frame = 1;
-    unsigned char echo_disable = 0;
+    unsigned char loopback_disable = 0;
     unsigned char verbose = 0;
 
     int opt;
@@ -159,7 +159,7 @@ int main(int argc, char **argv)
 	    break;
 
 	case 'x':
-	    echo_disable = 1;
+	    loopback_disable = 1;
 	    break;
 
 	default:
@@ -216,11 +216,11 @@ int main(int argc, char **argv)
     /* little (really a very little!) CPU usage.                          */
     setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
 
-    if (echo_disable) {
-	int echo = 0;
+    if (loopback_disable) {
+	int loopback = 0;
 
-	setsockopt(s, SOL_CAN_RAW, CAN_RAW_ECHO,
-		   &echo, sizeof(echo));
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK,
+		   &loopback, sizeof(loopback));
     }
 
     if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {

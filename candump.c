@@ -106,7 +106,7 @@ void print_usage(char *prg)
     fprintf(stderr, "         -a          (enable additional ASCII output)\n");
     fprintf(stderr, "         -s <level>  (silent mode - 1: animation 2: nothing)\n");
     fprintf(stderr, "         -b <can>    (bridge mode - send received frames to <can>)\n");
-    fprintf(stderr, "         -B <can>    (bridge mode - like '-b' with disabled echo)\n");
+    fprintf(stderr, "         -B <can>    (bridge mode - like '-b' with disabled loopback)\n");
     fprintf(stderr, "         -l          (log CAN-frames into file)\n");
     fprintf(stderr, "         -L          (use log file format on stdout)\n");
     fprintf(stderr, "\n");
@@ -271,9 +271,9 @@ int main(int argc, char **argv)
 		}
 
 		if (opt == 'B') {
-		    int echo = 0;
+		    int loopback = 0;
 
-		    setsockopt(bridge, SOL_CAN_RAW, CAN_RAW_ECHO, &echo, sizeof(echo));
+		    setsockopt(bridge, SOL_CAN_RAW, CAN_RAW_LOOPBACK, &loopback, sizeof(loopback));
 		}
 
 		if (bind(bridge, (struct sockaddr *)&addr, sizeof(addr)) < 0) {

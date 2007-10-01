@@ -89,7 +89,7 @@ void print_usage(char *prg)
     fprintf(stderr, "                      -s <s>      (skip gaps in "
 	    "timestamps > 's' seconds)\n");
     fprintf(stderr, "                      -x           (disable local "
-	    "echo of sent CAN frames)\n");
+	    "loopback of sent CAN frames)\n");
     fprintf(stderr, "                      -v           (verbose: print "
 	    "sent CAN frames)\n\n");
     fprintf(stderr, "Interface assignment:  0..n assignments like "
@@ -235,7 +235,7 @@ int main(int argc, char **argv)
     unsigned long gap = DEFAULT_GAP; 
     int use_timestamps = 1;
     static int verbose, opt, delay_loops, skipgap;
-    static int echo_disable = 0;
+    static int loopback_disable = 0;
     static int infinite_loops = 0;
     static int loops = DEFAULT_LOOPS;
     int assignments; /* assignments defined on the commandline */
@@ -279,7 +279,7 @@ int main(int argc, char **argv)
 	    break;
 
 	case 'x':
-	    echo_disable = 1;
+	    loopback_disable = 1;
 	    break;
 
 	case 'v':
@@ -321,11 +321,11 @@ int main(int argc, char **argv)
     /* disable unneeded default receive filter on this RAW socket */
     setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
 
-    if (echo_disable) {
-	int echo = 0;
+    if (loopback_disable) {
+	int loopback = 0;
 
-	setsockopt(s, SOL_CAN_RAW, CAN_RAW_ECHO,
-		   &echo, sizeof(echo));
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK,
+		   &loopback, sizeof(loopback));
     }
 
     if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
