@@ -71,6 +71,7 @@
 #define U64_DATA(p) (*(unsigned long long*)(p)->data)
 
 #define SETFNAME "sniffset."
+#define ANYDEV   "any"
 
 /* flags */
 
@@ -175,6 +176,7 @@ void print_usage(char *prg)
     fprintf(stderr, "         -t <time>  (timeout for ID display [x100ms] default: %d)\n", TIMEOUT);
     fprintf(stderr, "         -h <time>  (hold marker on changes [x100ms] default: %d)\n", HOLD);
     fprintf(stderr, "         -l <time>  (loop time (display) [x100ms] default: %d)\n", LOOP);
+    fprintf(stderr, "Use interface name '%s' to receive from all can-interfaces\n", ANYDEV);
     fprintf(stderr, "\n");
     fprintf(stderr, "%s", manual);
 }
@@ -290,12 +292,20 @@ int main(int argc, char **argv)
     }
 
     addr.can_family = AF_CAN;
-    strcpy(ifr.ifr_name, argv[optind]);
-    ioctl(s, SIOCGIFINDEX, &ifr);
-    addr.can_ifindex = ifr.ifr_ifindex;
+
+    if (strcmp(ANYDEV, argv[optind])) {
+	strcpy(ifr.ifr_name, argv[optind]);
+	if (ioctl(s, SIOCGIFINDEX, &ifr) < 0) {
+	    perror("SIOCGIFINDEX");
+	    exit(1);
+	}
+	addr.can_ifindex = ifr.ifr_ifindex;
+    }
+    else
+	addr.can_ifindex = 0; /* any can interface */
 
     if (connect(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-	perror("bind");
+	perror("connect");
 	return 1;
     }
 
