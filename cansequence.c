@@ -166,7 +166,7 @@ int main(int argc, char **argv)
 					printf("received frame. sequence number: %d\n",sequence);
 				if (frame.data[0] != sequence) {
 					printf("received wrong sequence count. expected: %d, got: %d\n",
-						frame.data[0], sequence);
+						sequence, frame.data[0]);
 					if(quit)
 						exit(1);
 					sequence = frame.data[0];
