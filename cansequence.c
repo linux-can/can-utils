@@ -163,7 +163,7 @@ int main(int argc, char **argv)
 					sequence = frame.data[0];
 				}
 				if (verbose>1)
-					printf("received frame. sequence number: %d\n",sequence);
+					printf("received frame. sequence number: %d\n", frame.data[0]);
 				if (frame.data[0] != sequence) {
 					printf("received wrong sequence count. expected: %d, got: %d\n",
 						sequence, frame.data[0]);
