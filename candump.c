@@ -79,7 +79,7 @@
 #define MAGENTA ATTBOLD FGMAGENTA
 #define CYAN    ATTBOLD FGCYAN
 
-const char col_on [MAXDEV][19] = {BOLD, MAGENTA, GREEN, BLUE, CYAN, RED};
+const char col_on [MAXDEV][19] = {BLUE, RED, GREEN, BOLD, MAGENTA, CYAN};
 const char col_off [] = ATTRESET;
 
 static char devname[MAXDEV][IFNAMSIZ+1];
@@ -132,12 +132,21 @@ int idx2dindex(int ifidx, int socket) {
 
     /* create new interface index cache entry */
 
+    /* remove index cache zombies first */
+    for (i=0; i < MAXDEV; i++) {
+	if (dindex[i]) {
+	    ifr.ifr_ifindex = dindex[i];
+	    if (ioctl(socket, SIOCGIFNAME, &ifr) < 0)
+		dindex[i] = 0;
+	}
+    }
+
     for (i=0; i < MAXDEV; i++)
 	if (!dindex[i]) /* free entry */
 	    break;
 
     if (i == MAXDEV) {
-	printf("BUG in interface index cache! MAXDEV?\n");
+	printf("Interface index cache only supports %d interfaces.\n", MAXDEV);
 	exit(1);
     }
 
