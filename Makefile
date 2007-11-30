@@ -45,7 +45,7 @@ CFLAGS    = -O2 -Wall -Wno-parentheses -I../kernel/2.6/include \
 	    -DPF_CAN=29 \
 	    -DAF_CAN=PF_CAN
 
-PROGRAMS = candump cansniffer cansend canplayer cangen\
+PROGRAMS = candump cansniffer cansend canplayer canlogserver cangen\
 	   log2long log2asc asc2log slcan_attach vcan
 
 all: $(PROGRAMS)
@@ -59,18 +59,20 @@ install:
 distclean:
 	rm -f $(PROGRAMS) *.o *~
 
-cansend.o:   lib.h
-cangen.o:    lib.h
-candump.o:   lib.h
-canplayer.o: lib.h
-log2long.o:  lib.h
-log2asc.o:   lib.h
-asc2log.o:   lib.h
+cansend.o:	lib.h
+cangen.o:	lib.h
+candump.o:	lib.h
+canplayer.o:	lib.h
+canlogserver.o:	lib.h
+log2long.o:	lib.h
+log2asc.o:	lib.h
+asc2log.o:	lib.h
 
-cansend:   cansend.o   lib.o
-cangen:    cangen.o    lib.o
-candump:   candump.o   lib.o
-canplayer: canplayer.o lib.o
-log2long:  log2long.o  lib.o
-log2asc:   log2asc.o   lib.o
-asc2log:   asc2log.o   lib.o
+cansend:	cansend.o	lib.o
+cangen:		cangen.o	lib.o
+candump:	candump.o	lib.o
+canplayer:	canplayer.o	lib.o
+canlogserver:	canlogserver.o	lib.o
+log2long:	log2long.o	lib.o
+log2asc:	log2asc.o	lib.o
+asc2log:	asc2log.o	lib.o
