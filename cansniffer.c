@@ -173,7 +173,7 @@ void print_usage(char *prg)
     fprintf(stderr, "         -b         (start with binary mode)\n");
     fprintf(stderr, "         -B         (start with binary mode with gap - exceeds 80 chars!)\n");
     fprintf(stderr, "         -c         (color changes)\n");
-    fprintf(stderr, "         -t <time>  (timeout for ID display [x100ms] default: %d)\n", TIMEOUT);
+    fprintf(stderr, "         -t <time>  (timeout for ID display [x100ms] default: %d, 0 = OFF)\n", TIMEOUT);
     fprintf(stderr, "         -h <time>  (hold marker on changes [x100ms] default: %d)\n", HOLD);
     fprintf(stderr, "         -l <time>  (loop time (display) [x100ms] default: %d)\n", LOOP);
     fprintf(stderr, "Use interface name '%s' to receive from all can-interfaces\n", ANYDEV);
@@ -516,7 +516,7 @@ int handle_bcm(int fd, long currcms){
     sniftab[id].current = bmsg.frame;
     U64_DATA(&sniftab[id].marker) |= 
 	U64_DATA(&sniftab[id].current) ^ U64_DATA(&sniftab[id].last);
-    sniftab[id].timeout = currcms + timeout;
+    sniftab[id].timeout = (timeout)?(currcms + timeout):0;
 
     if (is_clr(id, DISPLAY))
 	clearscreen = 1; /* new entry -> new drawing */
@@ -570,7 +570,7 @@ int handle_timeo(int fd, long currcms){
 		    else
 			printf("%s", CSR_DOWN); /* skip my line */
 
-		if (sniftab[i].timeout < currcms) {
+		if (sniftab[i].timeout && sniftab[i].timeout < currcms) {
 		    do_clr(i, DISPLAY);
 		    do_clr(i, UPDATE);
 		    clearscreen = 1; /* removed entry -> new drawing next time */
