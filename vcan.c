@@ -26,8 +26,9 @@
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 
-//#include <linux/if_link.h>
+#include <linux/if_link.h>
 
+#if 0
 #define IFLA_LINKINFO 18
 
 enum
@@ -38,6 +39,7 @@ enum
     IFLA_INFO_XSTATS,
     __IFLA_INFO_MAX,
 };
+#endif
 
 #define NLMSG_TAIL(nmsg) \
         ((struct rtattr *)(((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
@@ -88,7 +90,7 @@ int main(int argc, char **argv)
 
 	linkinfo = NLMSG_TAIL(&req.n);
 	addattr_l(&req.n, sizeof(req), IFLA_LINKINFO, NULL, 0);
-	addattr_l(&req.n, sizeof(req), IFLA_INFO_NAME, "vcan", strlen("vcan"));
+	addattr_l(&req.n, sizeof(req), IFLA_INFO_KIND, "vcan", strlen("vcan"));
 	linkinfo->rta_len = (void*)NLMSG_TAIL(&req.n) - (void*)linkinfo;
 
     } else if (strcmp(cmd, "delete") == 0) {
