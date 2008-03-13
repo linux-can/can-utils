@@ -95,11 +95,11 @@ static volatile int running = 1;
 
 void print_usage(char *prg)
 {
-    fprintf(stderr, "Usage: %s [can-interfaces]\n", prg);
-    fprintf(stderr, "  (use CTRL-C to terminate %s)\n", prg);
-    fprintf(stderr, "Options: -m <mask>   (default 0x00000000)\n");
-    fprintf(stderr, "         -v <value>  (default 0x00000000)\n");
-    fprintf(stderr, "         -i <0|1>    (inv_filter)\n");
+    fprintf(stderr, "\nUsage: %s [options] <CAN interface>+\n", prg);
+    fprintf(stderr, "  (use CTRL-C to terminate %s)\n\n", prg);
+    fprintf(stderr, "Options: -m <mask>   (ID filter mask.  Default 0x00000000) *\n");
+    fprintf(stderr, "         -v <value>  (ID filter value. Default 0x00000000) *\n");
+    fprintf(stderr, "         -i <0|1>    (invert the specified ID filter) *\n");
     fprintf(stderr, "         -e <emask>  (mask for error frames)\n");
     fprintf(stderr, "         -t <type>   (timestamp: Absolute/Delta/Zero)\n");
     fprintf(stderr, "         -c          (color mode)\n");
@@ -110,9 +110,12 @@ void print_usage(char *prg)
     fprintf(stderr, "         -l          (log CAN-frames into file)\n");
     fprintf(stderr, "         -L          (use log file format on stdout)\n");
     fprintf(stderr, "\n");
+    fprintf(stderr, "* The CAN ID filter matches, when ...\n");
+    fprintf(stderr, "       <received_can_id> & mask == value & mask\n");
+    fprintf(stderr, "\n");
     fprintf(stderr, "When using more than one CAN interface the options\n");
     fprintf(stderr, "m/v/i/e have comma seperated values e.g. '-m 0,7FF,0'\n");
-    fprintf(stderr, "Use interface name '%s' to receive from all can-interfaces\n", ANYDEV);
+    fprintf(stderr, "\nUse interface name '%s' to receive from all CAN interfaces.\n\n", ANYDEV);
 }
 
 void sigterm(int signo)
