@@ -208,7 +208,7 @@ int main(int argc, char **argv)
     last_tv.tv_sec  = 0;
     last_tv.tv_usec = 0;
 
-    while ((opt = getopt(argc, argv, "m:v:i:e:p:")) != -1) {
+    while ((opt = getopt(argc, argv, "m:v:i:e:p:?")) != -1) {
 
 	switch (opt) {
 	case 'm':
@@ -246,7 +246,6 @@ int main(int argc, char **argv)
 	    port = atoi(optarg);
 	    break;
 	default:
-	    fprintf(stderr, "Unknown option %c\n", opt);
 	    print_usage(basename(argv[0]));
 	    exit(1);
 	    break;

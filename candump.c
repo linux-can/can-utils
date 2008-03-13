@@ -204,7 +204,7 @@ int main(int argc, char **argv)
     last_tv.tv_sec  = 0;
     last_tv.tv_usec = 0;
 
-    while ((opt = getopt(argc, argv, "m:v:i:e:t:cas:b:B:lL")) != -1) {
+    while ((opt = getopt(argc, argv, "m:v:i:e:t:cas:b:B:lL?")) != -1) {
 	switch (opt) {
 	case 'm':
 	    i = sscanf(optarg, "%x,%x,%x,%x,%x,%x",
@@ -304,7 +304,6 @@ int main(int argc, char **argv)
 	    break;
 
 	default:
-	    fprintf(stderr, "Unknown option %c\n", opt);
 	    print_usage(basename(argv[0]));
 	    exit(1);
 	    break;
