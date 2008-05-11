@@ -103,7 +103,8 @@ void print_usage(char *prg)
     fprintf(stderr, "'i'        => increment values\n");
     fprintf(stderr, "<hexvalue> => fix value using <hexvalue>\n\n");
     fprintf(stderr, "When incrementing the CAN data the data length code "
-	    "minimum is set to 1.\n\n");
+	    "minimum is set to 1.\n");
+    fprintf(stderr, "CAN IDs and data content are given and expected in hexadecimal values.\n\n");
     fprintf(stderr, "Examples:\n");
     fprintf(stderr, "%s vcan0 -g 4 -I 42A -L 1 -D i -v -v   ", prg);
     fprintf(stderr, "(fixed CAN ID and length, inc. data)\n");
