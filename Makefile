@@ -46,7 +46,7 @@ CFLAGS    = -O2 -Wall -Wno-parentheses -I../kernel/2.6/include \
 	    -DAF_CAN=PF_CAN
 
 PROGRAMS = candump cansniffer cansend canplayer canlogserver cangen\
-	   log2long log2asc asc2log slcan_attach vcan
+	   canbusload log2long log2asc asc2log slcan_attach vcan
 
 all: $(PROGRAMS)
 
@@ -64,6 +64,7 @@ cangen.o:	lib.h
 candump.o:	lib.h
 canplayer.o:	lib.h
 canlogserver.o:	lib.h
+canbusload.o:	lib.h
 log2long.o:	lib.h
 log2asc.o:	lib.h
 asc2log.o:	lib.h
