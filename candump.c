@@ -102,6 +102,7 @@ void print_usage(char *prg)
     fprintf(stderr, "  (use CTRL-C to terminate %s)\n\n", prg);
     fprintf(stderr, "Options: -t <type>   (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
     fprintf(stderr, "         -c          (increment color mode level)\n");
+    fprintf(stderr, "         -i          (binary output - may exceed 80 chars/line)\n");
     fprintf(stderr, "         -a          (enable additional ASCII output)\n");
     fprintf(stderr, "         -s <level>  (silent mode - 1: animation 2: completely silent)\n");
     fprintf(stderr, "         -b <can>    (bridge mode - send received frames to <can>)\n");
@@ -187,7 +188,7 @@ int main(int argc, char **argv)
     unsigned char silent = 0;
     unsigned char silentani = 0;
     unsigned char color = 0;
-    unsigned char ascii = 0;
+    unsigned char view = 0;
     unsigned char log = 0;
     unsigned char logfrmt = 0;
     int opt, ret;
@@ -209,7 +210,7 @@ int main(int argc, char **argv)
     last_tv.tv_sec  = 0;
     last_tv.tv_usec = 0;
 
-    while ((opt = getopt(argc, argv, "t:cas:b:B:lLh?")) != -1) {
+    while ((opt = getopt(argc, argv, "t:cias:b:B:lLh?")) != -1) {
 	switch (opt) {
 	case 't':
 	    timestamp = optarg[0];
@@ -225,8 +226,12 @@ int main(int argc, char **argv)
 	    color++;
 	    break;
 
+	case 'i':
+	    view |= CANLIB_VIEW_BINARY;
+	    break;
+
 	case 'a':
-	    ascii = 1;
+	    view |= CANLIB_VIEW_ASCII;
 	    break;
 
 	case 's':
@@ -544,7 +549,7 @@ int main(int argc, char **argv)
 		printf("%*s", max_devname_len, devname[idx]);
 		printf("%s  ", (color==1)?col_off:"");
 
-		fprint_long_canframe(stdout, &frame, NULL, ascii);
+		fprint_long_canframe(stdout, &frame, NULL, view);
 
 		printf("%s", (color>1)?col_off:"");
 		printf("\n");

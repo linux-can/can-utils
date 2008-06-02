@@ -96,8 +96,11 @@ void sprint_canframe(char *buf , struct can_frame *cf, int sep);
  *
  */
 
-void fprint_long_canframe(FILE *stream , struct can_frame *cf, char *eol, int ascii);
-void sprint_long_canframe(char *buf , struct can_frame *cf, int ascii);
+#define CANLIB_VIEW_ASCII	0x1
+#define CANLIB_VIEW_BINARY	0x2
+
+void fprint_long_canframe(FILE *stream , struct can_frame *cf, char *eol, int view);
+void sprint_long_canframe(char *buf , struct can_frame *cf, int view);
 /*
  * Creates a CAN frame hexadecimal output in user readable format.
  *

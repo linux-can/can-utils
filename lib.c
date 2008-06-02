@@ -57,7 +57,7 @@
 #define DATA_SEPERATOR '.'
 
 #define MAX_CANFRAME      "12345678#01.23.45.67.89.AB.CD.EF"
-#define MAX_LONG_CANFRAME "12345678  [8] 01 23 45 67 89 AB CD EF   '........'"
+#define MAX_LONG_CANFRAME "12345678  [8] 10101010 10101010 10101010 10101010 10101010 10101010 10101010 10101010   '........'"
 
 static int asc2nibble(char c) {
 
@@ -177,21 +177,21 @@ void sprint_canframe(char *buf , struct can_frame *cf, int sep) {
 
 }
 
-void fprint_long_canframe(FILE *stream , struct can_frame *cf, char *eol, int ascii) {
+void fprint_long_canframe(FILE *stream , struct can_frame *cf, char *eol, int view) {
     /* documentation see lib.h */
 
     char buf[sizeof(MAX_LONG_CANFRAME)+1]; /* max length */
 
-    sprint_long_canframe(buf, cf, ascii);
+    sprint_long_canframe(buf, cf, view);
     fprintf(stream, "%s", buf);
     if (eol)
 	fprintf(stream, "%s", eol);
 }
 
-void sprint_long_canframe(char *buf , struct can_frame *cf, int ascii) {
+void sprint_long_canframe(char *buf , struct can_frame *cf, int view) {
     /* documentation see lib.h */
 
-    int i, offset;
+    int i, j, dlen, offset;
 
     if (cf->can_id & CAN_ERR_FLAG) {
 	sprintf(buf, "%8X  ", cf->can_id & (CAN_ERR_MASK|CAN_ERR_FLAG));
@@ -207,26 +207,41 @@ void sprint_long_canframe(char *buf , struct can_frame *cf, int ascii) {
     sprintf(buf+offset, "[%d]", cf->can_dlc);
     offset += 3;
 
-    if (cf->can_id & CAN_RTR_FLAG) /* there are no ERR frames with RTR */
+    if (cf->can_id & CAN_RTR_FLAG) { /* there are no ERR frames with RTR */
 	sprintf(buf+offset, " remote request");
-    else {
+	return;
+    }
+
+    if (view & CANLIB_VIEW_BINARY) {
+	dlen = 9; /* _10101010 */
+	for (i = 0; i < cf->can_dlc; i++) {
+	    buf[offset++] = ' ';
+	    for (j = 7; j >= 0; j--)
+		buf[offset++] = (1<<j & cf->data[i])?'1':'0';
+	}
+	buf[offset] = 0; /* terminate string */
+    } else {
+	dlen = 3; /* _AA */
 	for (i = 0; i < cf->can_dlc; i++) {
 	    sprintf(buf+offset, " %02X", cf->data[i]);
-	    offset += 3;
+	    offset += dlen;
 	}
-	if (cf->can_id & CAN_ERR_FLAG)
-	    sprintf(buf+offset, "%*s", 3*(8-cf->can_dlc)+13, "ERRORFRAME");
-	else if (ascii) {
-	    sprintf(buf+offset, "%*s", 3*(8-cf->can_dlc)+4, "'");
-	    offset += 3*(8-cf->can_dlc)+4;
-
-	    for (i = 0; i < cf->can_dlc; i++)
-		if ((cf->data[i] > 0x1F) && (cf->data[i] < 0x7F))
-		    buf[offset++] = cf->data[i];
-		else
-		    buf[offset++] = '.';
-	    sprintf(buf+offset, "'");
-	} 
     }
+
+    if (cf->can_id & CAN_ERR_FLAG)
+	sprintf(buf+offset, "%*s", dlen*(8-cf->can_dlc)+13, "ERRORFRAME");
+    else if (view & CANLIB_VIEW_ASCII) {
+	j = dlen*(8-cf->can_dlc)+4;
+	sprintf(buf+offset, "%*s", j, "'");
+	offset += j;
+
+	for (i = 0; i < cf->can_dlc; i++)
+	    if ((cf->data[i] > 0x1F) && (cf->data[i] < 0x7F))
+		buf[offset++] = cf->data[i];
+	    else
+		buf[offset++] = '.';
+
+	sprintf(buf+offset, "'");
+    } 
 }
 
