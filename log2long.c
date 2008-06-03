@@ -54,17 +54,17 @@
 
 int main(int argc, char **argv)
 {
-    char buf[100], timestamp[100], device[100], ascframe[100];
-    struct can_frame cf;
+	char buf[100], timestamp[100], device[100], ascframe[100];
+	struct can_frame cf;
 
-    while (fgets(buf, 99, stdin)) {
-	if (sscanf(buf, "%s %s %s", timestamp, device, ascframe) != 3)
-	    return 1;
-	if (parse_canframe(ascframe, &cf))
-	    return 1;
-	sprint_long_canframe(ascframe, &cf, 1); /* with ASCII output */
-	printf("%s  %s  %s\n", timestamp, device, ascframe);
-    }
+	while (fgets(buf, 99, stdin)) {
+		if (sscanf(buf, "%s %s %s", timestamp, device, ascframe) != 3)
+			return 1;
+		if (parse_canframe(ascframe, &cf))
+			return 1;
+		sprint_long_canframe(ascframe, &cf, 1); /* with ASCII output */
+		printf("%s  %s  %s\n", timestamp, device, ascframe);
+	}
 
-    return 0;
+	return 0;
 }

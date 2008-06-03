@@ -80,306 +80,306 @@ static unsigned long long enobufs_count;
 
 void print_usage(char *prg)
 {
-    fprintf(stderr, "\n%s: generate CAN frames\n\n", prg);
-    fprintf(stderr, "Usage: %s [options] <CAN interface>\n", prg);
-    fprintf(stderr, "Options: -g <ms>       (gap in milli seconds "
-	    "- default: %d ms)\n", DEFAULT_GAP);
-    fprintf(stderr, "         -e            (generate extended frame mode "
-	    "(EFF) CAN frames)\n");
-    fprintf(stderr, "         -I <mode>     (CAN ID"
-	    " generation mode - see below)\n");
-    fprintf(stderr, "         -L <mode>     (CAN data length code (dlc)"
-	    " generation mode - see below)\n");
-    fprintf(stderr, "         -D <mode>     (CAN data (payload)"
-	    " generation mode - see below)\n");
-    fprintf(stderr, "         -i            (ignore -ENOBUFS return values on"
-	    " write() syscalls)\n");
-    fprintf(stderr, "         -x            (disable local loopback of "
-	    "generated CAN frames)\n");
-    fprintf(stderr, "         -v            (increment verbose level for "
-	    "printing sent CAN frames)\n\n");
-    fprintf(stderr, "Generation modes:\n");
-    fprintf(stderr, "'r'        => random values (default)\n");
-    fprintf(stderr, "'i'        => increment values\n");
-    fprintf(stderr, "<hexvalue> => fix value using <hexvalue>\n\n");
-    fprintf(stderr, "When incrementing the CAN data the data length code "
-	    "minimum is set to 1.\n");
-    fprintf(stderr, "CAN IDs and data content are given and expected in hexadecimal values.\n\n");
-    fprintf(stderr, "Examples:\n");
-    fprintf(stderr, "%s vcan0 -g 4 -I 42A -L 1 -D i -v -v   ", prg);
-    fprintf(stderr, "(fixed CAN ID and length, inc. data)\n");
-    fprintf(stderr, "%s vcan0 -e -L i -v -v -v              ", prg);
-    fprintf(stderr, "(generate EFF frames, incr. length)\n");
-    fprintf(stderr, "%s vcan0 -D 11223344DEADBEEF -L 8      ", prg);
-    fprintf(stderr, "(fixed CAN data payload and length)\n");
-    fprintf(stderr, "%s vcan0 -g 0 -i -x                    ", prg);
-    fprintf(stderr, "(full load test ignoring -ENOBUFS)\n");
-    fprintf(stderr, "%s vcan0                               ", prg);
-    fprintf(stderr, "(my favourite default :)\n\n");
+	fprintf(stderr, "\n%s: generate CAN frames\n\n", prg);
+	fprintf(stderr, "Usage: %s [options] <CAN interface>\n", prg);
+	fprintf(stderr, "Options: -g <ms>       (gap in milli seconds "
+		"- default: %d ms)\n", DEFAULT_GAP);
+	fprintf(stderr, "         -e            (generate extended frame mode "
+		"(EFF) CAN frames)\n");
+	fprintf(stderr, "         -I <mode>     (CAN ID"
+		" generation mode - see below)\n");
+	fprintf(stderr, "         -L <mode>     (CAN data length code (dlc)"
+		" generation mode - see below)\n");
+	fprintf(stderr, "         -D <mode>     (CAN data (payload)"
+		" generation mode - see below)\n");
+	fprintf(stderr, "         -i            (ignore -ENOBUFS return values on"
+		" write() syscalls)\n");
+	fprintf(stderr, "         -x            (disable local loopback of "
+		"generated CAN frames)\n");
+	fprintf(stderr, "         -v            (increment verbose level for "
+		"printing sent CAN frames)\n\n");
+	fprintf(stderr, "Generation modes:\n");
+	fprintf(stderr, "'r'        => random values (default)\n");
+	fprintf(stderr, "'i'        => increment values\n");
+	fprintf(stderr, "<hexvalue> => fix value using <hexvalue>\n\n");
+	fprintf(stderr, "When incrementing the CAN data the data length code "
+		"minimum is set to 1.\n");
+	fprintf(stderr, "CAN IDs and data content are given and expected in hexadecimal values.\n\n");
+	fprintf(stderr, "Examples:\n");
+	fprintf(stderr, "%s vcan0 -g 4 -I 42A -L 1 -D i -v -v   ", prg);
+	fprintf(stderr, "(fixed CAN ID and length, inc. data)\n");
+	fprintf(stderr, "%s vcan0 -e -L i -v -v -v              ", prg);
+	fprintf(stderr, "(generate EFF frames, incr. length)\n");
+	fprintf(stderr, "%s vcan0 -D 11223344DEADBEEF -L 8      ", prg);
+	fprintf(stderr, "(fixed CAN data payload and length)\n");
+	fprintf(stderr, "%s vcan0 -g 0 -i -x                    ", prg);
+	fprintf(stderr, "(full load test ignoring -ENOBUFS)\n");
+	fprintf(stderr, "%s vcan0                               ", prg);
+	fprintf(stderr, "(my favourite default :)\n\n");
 }
 
 void sigterm(int signo)
 {
-    running = 0;
+	running = 0;
 }
 
 int main(int argc, char **argv)
 {
-    unsigned long gap = DEFAULT_GAP; 
-    unsigned char ignore_enobufs = 0;
-    unsigned char extended = 0;
-    unsigned char id_mode = MODE_RANDOM;
-    unsigned char data_mode = MODE_RANDOM;
-    unsigned char dlc_mode = MODE_RANDOM;
-    unsigned char loopback_disable = 0;
-    unsigned char verbose = 0;
-    uint64_t incdata = 0;
+	unsigned long gap = DEFAULT_GAP; 
+	unsigned char ignore_enobufs = 0;
+	unsigned char extended = 0;
+	unsigned char id_mode = MODE_RANDOM;
+	unsigned char data_mode = MODE_RANDOM;
+	unsigned char dlc_mode = MODE_RANDOM;
+	unsigned char loopback_disable = 0;
+	unsigned char verbose = 0;
+	uint64_t incdata = 0;
 
-    int opt;
-    int s; /* socket */
+	int opt;
+	int s; /* socket */
 
-    struct sockaddr_can addr;
-    static struct can_frame frame;
-    int nbytes;
-    int i;
-    struct ifreq ifr;
+	struct sockaddr_can addr;
+	static struct can_frame frame;
+	int nbytes;
+	int i;
+	struct ifreq ifr;
 
-    struct timespec ts;
+	struct timespec ts;
 
-    signal(SIGTERM, sigterm);
-    signal(SIGHUP, sigterm);
-    signal(SIGINT, sigterm);
+	signal(SIGTERM, sigterm);
+	signal(SIGHUP, sigterm);
+	signal(SIGINT, sigterm);
 
-    while ((opt = getopt(argc, argv, "ig:eI:L:D:xvh?")) != -1) {
-	switch (opt) {
+	while ((opt = getopt(argc, argv, "ig:eI:L:D:xvh?")) != -1) {
+		switch (opt) {
 
-	case 'i':
-	    ignore_enobufs = 1;
-	    break;
+		case 'i':
+			ignore_enobufs = 1;
+			break;
 
-	case 'g':
-	    gap = strtoul(optarg, NULL, 10);
-	    break;
+		case 'g':
+			gap = strtoul(optarg, NULL, 10);
+			break;
 
-	case 'e':
-	    extended = 1;
-	    break;
+		case 'e':
+			extended = 1;
+			break;
 
-	case 'I':
-	    if (optarg[0] == 'r') {
-		id_mode = MODE_RANDOM;
-	    } else if (optarg[0] == 'i') {
-		id_mode = MODE_INCREMENT;
-	    } else {
-		id_mode = MODE_FIX;
-		frame.can_id = strtoul(optarg, NULL, 16);
-	    }
-	    break;
+		case 'I':
+			if (optarg[0] == 'r') {
+				id_mode = MODE_RANDOM;
+			} else if (optarg[0] == 'i') {
+				id_mode = MODE_INCREMENT;
+			} else {
+				id_mode = MODE_FIX;
+				frame.can_id = strtoul(optarg, NULL, 16);
+			}
+			break;
 
-	case 'L':
-	    if (optarg[0] == 'r') {
-		dlc_mode = MODE_RANDOM;
-	    } else if (optarg[0] == 'i') {
-		dlc_mode = MODE_INCREMENT;
-	    } else {
-		dlc_mode = MODE_FIX;
-		frame.can_dlc = atoi(optarg)%9;
-	    }
-	    break;
+		case 'L':
+			if (optarg[0] == 'r') {
+				dlc_mode = MODE_RANDOM;
+			} else if (optarg[0] == 'i') {
+				dlc_mode = MODE_INCREMENT;
+			} else {
+				dlc_mode = MODE_FIX;
+				frame.can_dlc = atoi(optarg)%9;
+			}
+			break;
 
-	case 'D':
-	    if (optarg[0] == 'r') {
-		data_mode = MODE_RANDOM;
-	    } else if (optarg[0] == 'i') {
-		data_mode = MODE_INCREMENT;
-	    } else {
-		data_mode = MODE_FIX;
-		incdata = strtoull(optarg, NULL, 16);
-		for (i=0; i<8 ;i++)
-		    frame.data[i] = (incdata >> (7-i)*8) & 0xFFULL;
-	    }
-	    break;
+		case 'D':
+			if (optarg[0] == 'r') {
+				data_mode = MODE_RANDOM;
+			} else if (optarg[0] == 'i') {
+				data_mode = MODE_INCREMENT;
+			} else {
+				data_mode = MODE_FIX;
+				incdata = strtoull(optarg, NULL, 16);
+				for (i=0; i<8 ;i++)
+					frame.data[i] = (incdata >> (7-i)*8) & 0xFFULL;
+			}
+			break;
 
-	case 'v':
-	    verbose++;
-	    break;
+		case 'v':
+			verbose++;
+			break;
 
-	case 'x':
-	    loopback_disable = 1;
-	    break;
+		case 'x':
+			loopback_disable = 1;
+			break;
 
-	case '?':
-	case 'h':
-	default:
-	    print_usage(basename(argv[0]));
-	    return 1;
-	    break;
+		case '?':
+		case 'h':
+		default:
+			print_usage(basename(argv[0]));
+			return 1;
+			break;
+		}
 	}
-    }
 
-    if (optind == argc) {
-	print_usage(basename(argv[0]));
-	return 1;
-    }
+	if (optind == argc) {
+		print_usage(basename(argv[0]));
+		return 1;
+	}
 
-    ts.tv_sec = gap / 1000;
-    ts.tv_nsec = (gap % 1000) * 1000000;
+	ts.tv_sec = gap / 1000;
+	ts.tv_nsec = (gap % 1000) * 1000000;
 
 
-    if (id_mode == MODE_FIX) {
+	if (id_mode == MODE_FIX) {
 
-	/* recognize obviously missing commandline option */
-	if ((frame.can_id > 0x7FF) && !extended) {
-	    printf("The given CAN-ID is greater than 0x7FF and "
-		   "the '-e' option is not set.\n");
-	    return 1;
+		/* recognize obviously missing commandline option */
+		if ((frame.can_id > 0x7FF) && !extended) {
+			printf("The given CAN-ID is greater than 0x7FF and "
+			       "the '-e' option is not set.\n");
+			return 1;
+		}
+
+		if (extended)
+			frame.can_id &= CAN_EFF_MASK;
+		else
+			frame.can_id &= CAN_SFF_MASK;
 	}
 
 	if (extended)
-	    frame.can_id &= CAN_EFF_MASK;
-	else
-	    frame.can_id &= CAN_SFF_MASK;
-    }
+		frame.can_id |=  CAN_EFF_FLAG;
 
-    if (extended)
-	    frame.can_id |=  CAN_EFF_FLAG;
-
-    if ((data_mode == MODE_INCREMENT) && !frame.can_dlc)
-	frame.can_dlc = 1; /* min dlc value for incr. data */
-
-    if (strlen(argv[optind]) >= IFNAMSIZ) {
-	printf("Name of CAN device '%s' is too long!\n\n", argv[optind]);
-	return 1;
-    }
-
-    if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
-	perror("socket");
-	return 1;
-    }
-
-    addr.can_family = AF_CAN;
-
-    strcpy(ifr.ifr_name, argv[optind]);
-    if (ioctl(s, SIOCGIFINDEX, &ifr) < 0) {
-	perror("SIOCGIFINDEX");
-	return 1;
-    }
-    addr.can_ifindex = ifr.ifr_ifindex;
-
-    /* disable default receive filter on this RAW socket */
-    /* This is obsolete as we do not read from the socket at all, but for */
-    /* this reason we can remove the receive list in the Kernel to save a */
-    /* little (really a very little!) CPU usage.                          */
-    setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
-
-    if (loopback_disable) {
-	int loopback = 0;
-
-	setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK,
-		   &loopback, sizeof(loopback));
-    }
-
-    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-	perror("bind");
-	return 1;
-    }
-
-    while (running) {
-
-	if (id_mode == MODE_RANDOM) {
-
-	    frame.can_id = random();
-
-	    if (extended) {
-		frame.can_id &= CAN_EFF_MASK;
-		frame.can_id |= CAN_EFF_FLAG;
-	    } else
-		frame.can_id &= CAN_SFF_MASK;
-	}
-
-	if (dlc_mode == MODE_RANDOM) {
-
-	    frame.can_dlc = random() & 0xF;
-
-	    if (frame.can_dlc & 8)
-		frame.can_dlc = 8; /* for about 50% of the frames */
-
-	    if ((data_mode == MODE_INCREMENT) && !frame.can_dlc)
+	if ((data_mode == MODE_INCREMENT) && !frame.can_dlc)
 		frame.can_dlc = 1; /* min dlc value for incr. data */
-	}
 
-	if (data_mode == MODE_RANDOM) {
-
-	    /* that's what the 64 bit alignment of data[] is for ... :) */
-	    *(unsigned long*)(&frame.data[0]) = random();
-	    *(unsigned long*)(&frame.data[4]) = random();
-	}
-
-	if (verbose) {
-
-	    printf("  %s  ", argv[optind]);
-
-	    if (verbose > 1)
-		fprint_long_canframe(stdout, &frame, "\n", (verbose > 2)?1:0);
-	    else
-		fprint_canframe(stdout, &frame, "\n", 1);
-	}
-
-	nbytes = write(s, &frame, sizeof(struct can_frame));
-	if (nbytes < 0) {
-	    if (errno != ENOBUFS) {
-		perror("write");
+	if (strlen(argv[optind]) >= IFNAMSIZ) {
+		printf("Name of CAN device '%s' is too long!\n\n", argv[optind]);
 		return 1;
-	    }
-	    if (!ignore_enobufs) {
-		perror("write");
-		return 1;
-	    }
-	    enobufs_count++;
-
-	} else if (nbytes < sizeof(struct can_frame)) {
-	    fprintf(stderr, "write: incomplete CAN frame\n");
-	    return 1;
 	}
 
-	if (gap) /* gap == 0 => performance test :-] */
-	    if (nanosleep(&ts, NULL))
+	if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
+		perror("socket");
 		return 1;
+	}
+
+	addr.can_family = AF_CAN;
+
+	strcpy(ifr.ifr_name, argv[optind]);
+	if (ioctl(s, SIOCGIFINDEX, &ifr) < 0) {
+		perror("SIOCGIFINDEX");
+		return 1;
+	}
+	addr.can_ifindex = ifr.ifr_ifindex;
+
+	/* disable default receive filter on this RAW socket */
+	/* This is obsolete as we do not read from the socket at all, but for */
+	/* this reason we can remove the receive list in the Kernel to save a */
+	/* little (really a very little!) CPU usage.                          */
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
+
+	if (loopback_disable) {
+		int loopback = 0;
+
+		setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK,
+			   &loopback, sizeof(loopback));
+	}
+
+	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+		perror("bind");
+		return 1;
+	}
+
+	while (running) {
+
+		if (id_mode == MODE_RANDOM) {
+
+			frame.can_id = random();
+
+			if (extended) {
+				frame.can_id &= CAN_EFF_MASK;
+				frame.can_id |= CAN_EFF_FLAG;
+			} else
+				frame.can_id &= CAN_SFF_MASK;
+		}
+
+		if (dlc_mode == MODE_RANDOM) {
+
+			frame.can_dlc = random() & 0xF;
+
+			if (frame.can_dlc & 8)
+				frame.can_dlc = 8; /* for about 50% of the frames */
+
+			if ((data_mode == MODE_INCREMENT) && !frame.can_dlc)
+				frame.can_dlc = 1; /* min dlc value for incr. data */
+		}
+
+		if (data_mode == MODE_RANDOM) {
+
+			/* that's what the 64 bit alignment of data[] is for ... :) */
+			*(unsigned long*)(&frame.data[0]) = random();
+			*(unsigned long*)(&frame.data[4]) = random();
+		}
+
+		if (verbose) {
+
+			printf("  %s  ", argv[optind]);
+
+			if (verbose > 1)
+				fprint_long_canframe(stdout, &frame, "\n", (verbose > 2)?1:0);
+			else
+				fprint_canframe(stdout, &frame, "\n", 1);
+		}
+
+		nbytes = write(s, &frame, sizeof(struct can_frame));
+		if (nbytes < 0) {
+			if (errno != ENOBUFS) {
+				perror("write");
+				return 1;
+			}
+			if (!ignore_enobufs) {
+				perror("write");
+				return 1;
+			}
+			enobufs_count++;
+
+		} else if (nbytes < sizeof(struct can_frame)) {
+			fprintf(stderr, "write: incomplete CAN frame\n");
+			return 1;
+		}
+
+		if (gap) /* gap == 0 => performance test :-] */
+			if (nanosleep(&ts, NULL))
+				return 1;
 		    
-	if (id_mode == MODE_INCREMENT) {
+		if (id_mode == MODE_INCREMENT) {
 
-	    frame.can_id++;
+			frame.can_id++;
 
-	    if (extended) {
-		frame.can_id &= CAN_EFF_MASK;
-		frame.can_id |= CAN_EFF_FLAG;
-	    } else
-		frame.can_id &= CAN_SFF_MASK;
+			if (extended) {
+				frame.can_id &= CAN_EFF_MASK;
+				frame.can_id |= CAN_EFF_FLAG;
+			} else
+				frame.can_id &= CAN_SFF_MASK;
+		}
+
+		if (dlc_mode == MODE_INCREMENT) {
+
+			frame.can_dlc++;
+			frame.can_dlc %= 9;
+
+			if ((data_mode == MODE_INCREMENT) && !frame.can_dlc)
+				frame.can_dlc = 1; /* min dlc value for incr. data */
+		}
+
+		if (data_mode == MODE_INCREMENT) {
+
+			incdata++;
+
+			for (i=0; i<8 ;i++)
+				frame.data[i] = (incdata >> i*8) & 0xFFULL;
+		}
 	}
 
-	if (dlc_mode == MODE_INCREMENT) {
+	if (enobufs_count)
+		printf("\nCounted %llu ENOBUFS return values on write().\n\n",
+		       enobufs_count);
 
-	    frame.can_dlc++;
-	    frame.can_dlc %= 9;
+	close(s);
 
-	    if ((data_mode == MODE_INCREMENT) && !frame.can_dlc)
-		frame.can_dlc = 1; /* min dlc value for incr. data */
-	}
-
-	if (data_mode == MODE_INCREMENT) {
-
-	    incdata++;
-
-	    for (i=0; i<8 ;i++)
-		frame.data[i] = (incdata >> i*8) & 0xFFULL;
-	}
-    }
-
-    if (enobufs_count)
-	printf("\nCounted %llu ENOBUFS return values on write().\n\n",
-	       enobufs_count);
-
-    close(s);
-
-    return 0;
+	return 0;
 }

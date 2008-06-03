@@ -66,9 +66,9 @@
 #define BUFSZ 100     /* for one line in the logfile */
 
 struct assignment {
-    char txif[IFNAMSIZ];
-    int  txifidx;
-    char rxif[IFNAMSIZ];
+	char txif[IFNAMSIZ];
+	int  txifidx;
+	char rxif[IFNAMSIZ];
 };
 static struct assignment asgn[CHANNELS];
 
@@ -76,28 +76,28 @@ extern int optind, opterr, optopt;
 
 void print_usage(char *prg)
 {
-    fprintf(stderr, "\nUsage: %s <options> [interface assignment]*\n\n", prg);
-    fprintf(stderr, "Options:              -I <infile>  (default stdin)\n");
-    fprintf(stderr, "                      -l <num>     "
-	    "(process input file <num> times)\n"
-	    "                                   "
-	    "(Use 'i' for infinite loop - default: %d)\n", DEFAULT_LOOPS);
-    fprintf(stderr, "                      -t           (ignore timestamps: "
-	    "send frames immediately)\n");
-    fprintf(stderr, "                      -g <ms>      (gap in milli "
-	    "seconds - default: %d ms)\n", DEFAULT_GAP);
-    fprintf(stderr, "                      -s <s>      (skip gaps in "
-	    "timestamps > 's' seconds)\n");
-    fprintf(stderr, "                      -x           (disable local "
-	    "loopback of sent CAN frames)\n");
-    fprintf(stderr, "                      -v           (verbose: print "
-	    "sent CAN frames)\n\n");
-    fprintf(stderr, "Interface assignment:  0..n assignments like "
-	    "<write-if>=<log-if>\n");
-    fprintf(stderr, "e.g. vcan2=can0 ( send frames received from can0 on "
-	    "vcan2 )\n");
-    fprintf(stderr, "No assignments => send frames to the interface(s) they "
-	    "had been received from.\n\n");
+	fprintf(stderr, "\nUsage: %s <options> [interface assignment]*\n\n", prg);
+	fprintf(stderr, "Options:              -I <infile>  (default stdin)\n");
+	fprintf(stderr, "                      -l <num>     "
+		"(process input file <num> times)\n"
+		"                                   "
+		"(Use 'i' for infinite loop - default: %d)\n", DEFAULT_LOOPS);
+	fprintf(stderr, "                      -t           (ignore timestamps: "
+		"send frames immediately)\n");
+	fprintf(stderr, "                      -g <ms>      (gap in milli "
+		"seconds - default: %d ms)\n", DEFAULT_GAP);
+	fprintf(stderr, "                      -s <s>      (skip gaps in "
+		"timestamps > 's' seconds)\n");
+	fprintf(stderr, "                      -x           (disable local "
+		"loopback of sent CAN frames)\n");
+	fprintf(stderr, "                      -v           (verbose: print "
+		"sent CAN frames)\n\n");
+	fprintf(stderr, "Interface assignment:  0..n assignments like "
+		"<write-if>=<log-if>\n");
+	fprintf(stderr, "e.g. vcan2=can0 ( send frames received from can0 on "
+		"vcan2 )\n");
+	fprintf(stderr, "No assignments => send frames to the interface(s) they "
+		"had been received from.\n\n");
 }
 
 /* copied from /usr/src/linux/include/linux/time.h ...
@@ -107,367 +107,367 @@ void print_usage(char *prg)
  */
 static inline int timeval_compare(struct timeval *lhs, struct timeval *rhs)
 {
-    if (lhs->tv_sec < rhs->tv_sec)
-	return -1;
-    if (lhs->tv_sec > rhs->tv_sec)
-	return 1;
-    return lhs->tv_usec - rhs->tv_usec;
+	if (lhs->tv_sec < rhs->tv_sec)
+		return -1;
+	if (lhs->tv_sec > rhs->tv_sec)
+		return 1;
+	return lhs->tv_usec - rhs->tv_usec;
 }
 
 static inline void create_diff_tv(struct timeval *today, struct timeval *diff,
 				  struct timeval *log) {
 
-    /* create diff_tv so that log_tv + diff_tv = today_tv */
-    diff->tv_sec  = today->tv_sec  - log->tv_sec;
-    diff->tv_usec = today->tv_usec - log->tv_usec;
+	/* create diff_tv so that log_tv + diff_tv = today_tv */
+	diff->tv_sec  = today->tv_sec  - log->tv_sec;
+	diff->tv_usec = today->tv_usec - log->tv_usec;
 }
 
 static inline int frames_to_send(struct timeval *today, struct timeval *diff,
 				 struct timeval *log)
 {
-    /* return value <0 when log + diff < today */
+	/* return value <0 when log + diff < today */
 
-    struct timeval cmp;
+	struct timeval cmp;
 
-    cmp.tv_sec  = log->tv_sec  + diff->tv_sec;
-    cmp.tv_usec = log->tv_usec + diff->tv_usec;
+	cmp.tv_sec  = log->tv_sec  + diff->tv_sec;
+	cmp.tv_usec = log->tv_usec + diff->tv_usec;
 
-    if (cmp.tv_usec > 1000000) {
-	cmp.tv_usec -= 1000000;
-	cmp.tv_sec++;
-    }
+	if (cmp.tv_usec > 1000000) {
+		cmp.tv_usec -= 1000000;
+		cmp.tv_sec++;
+	}
 
-    if (cmp.tv_usec < 0) {
-	cmp.tv_usec += 1000000;
-	cmp.tv_sec--;
-    }
+	if (cmp.tv_usec < 0) {
+		cmp.tv_usec += 1000000;
+		cmp.tv_sec--;
+	}
 
-    return timeval_compare(&cmp, today);
+	return timeval_compare(&cmp, today);
 }
 
 int get_txidx(char *logif_name) {
 
-    int i;
+	int i;
 
-    for (i=0; i<CHANNELS; i++) {
-	if (asgn[i].rxif[0] == 0) /* end of table content */
-	    break;
-	if (strcmp(asgn[i].rxif, logif_name) == 0) /* found device name */
-	    break;
-    }
+	for (i=0; i<CHANNELS; i++) {
+		if (asgn[i].rxif[0] == 0) /* end of table content */
+			break;
+		if (strcmp(asgn[i].rxif, logif_name) == 0) /* found device name */
+			break;
+	}
 
-    if ((i == CHANNELS) || (asgn[i].rxif[0] == 0))
-	return 0; /* not found */
+	if ((i == CHANNELS) || (asgn[i].rxif[0] == 0))
+		return 0; /* not found */
 
-    return asgn[i].txifidx; /* return interface index */
+	return asgn[i].txifidx; /* return interface index */
 }
 
 char *get_txname(char *logif_name) {
 
-    int i;
+	int i;
 
-    for (i=0; i<CHANNELS; i++) {
-	if (asgn[i].rxif[0] == 0) /* end of table content */
-	    break;
-	if (strcmp(asgn[i].rxif, logif_name) == 0) /* found device name */
-	    break;
-    }
+	for (i=0; i<CHANNELS; i++) {
+		if (asgn[i].rxif[0] == 0) /* end of table content */
+			break;
+		if (strcmp(asgn[i].rxif, logif_name) == 0) /* found device name */
+			break;
+	}
 
-    if ((i == CHANNELS) || (asgn[i].rxif[0] == 0))
-	return 0; /* not found */
+	if ((i == CHANNELS) || (asgn[i].rxif[0] == 0))
+		return 0; /* not found */
 
-    return asgn[i].txif; /* return interface name */
+	return asgn[i].txif; /* return interface name */
 }
 
 int add_assignment(char *mode, int socket, char *txname, char *rxname,
 		   int verbose) {
 
-    struct ifreq ifr;
-    int i;
+	struct ifreq ifr;
+	int i;
 
-    /* find free entry */
-    for (i=0; i<CHANNELS; i++) {
-	if (asgn[i].txif[0] == 0)
-	    break;
-    }
+	/* find free entry */
+	for (i=0; i<CHANNELS; i++) {
+		if (asgn[i].txif[0] == 0)
+			break;
+	}
 
-    if (i == CHANNELS) {
-	fprintf(stderr, "Assignment table exceeded!\n");
-	return 1;
-    }
+	if (i == CHANNELS) {
+		fprintf(stderr, "Assignment table exceeded!\n");
+		return 1;
+	}
 
-    if (strlen(txname) >= IFNAMSIZ) {
-	fprintf(stderr, "write-if interface name '%s' too long!", txname);
-	return 1;
-    }
-    strcpy(asgn[i].txif, txname);
+	if (strlen(txname) >= IFNAMSIZ) {
+		fprintf(stderr, "write-if interface name '%s' too long!", txname);
+		return 1;
+	}
+	strcpy(asgn[i].txif, txname);
 
-    if (strlen(rxname) >= IFNAMSIZ) {
-	fprintf(stderr, "log-if interface name '%s' too long!", rxname);
-	return 1;
-    }
-    strcpy(asgn[i].rxif, rxname);
+	if (strlen(rxname) >= IFNAMSIZ) {
+		fprintf(stderr, "log-if interface name '%s' too long!", rxname);
+		return 1;
+	}
+	strcpy(asgn[i].rxif, rxname);
 
-    strcpy(ifr.ifr_name, txname);
-    if (ioctl(socket, SIOCGIFINDEX, &ifr) < 0) {
-	perror("SIOCGIFINDEX");
-	fprintf(stderr, "write-if interface name '%s' is wrong!\n", txname);
-	return 1;
-    }
-    asgn[i].txifidx = ifr.ifr_ifindex;
+	strcpy(ifr.ifr_name, txname);
+	if (ioctl(socket, SIOCGIFINDEX, &ifr) < 0) {
+		perror("SIOCGIFINDEX");
+		fprintf(stderr, "write-if interface name '%s' is wrong!\n", txname);
+		return 1;
+	}
+	asgn[i].txifidx = ifr.ifr_ifindex;
 
-    if (verbose > 1) /* use -v -v to see this */
-	printf("added %s assignment: log-if=%s write-if=%s write-if-idx=%d\n",
-	       mode, asgn[i].rxif, asgn[i].txif, asgn[i].txifidx);
+	if (verbose > 1) /* use -v -v to see this */
+		printf("added %s assignment: log-if=%s write-if=%s write-if-idx=%d\n",
+		       mode, asgn[i].rxif, asgn[i].txif, asgn[i].txifidx);
 
-    return 0;
+	return 0;
 }
 
 int main(int argc, char **argv)
 {
-    static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ];
-    struct sockaddr_can addr;
-    static struct can_frame frame;
-    static struct timeval today_tv, log_tv, last_log_tv, diff_tv;
-    struct timespec sleep_ts;
-    int s; /* CAN_RAW socket */
-    FILE *infile = stdin;
-    unsigned long gap = DEFAULT_GAP; 
-    int use_timestamps = 1;
-    static int verbose, opt, delay_loops, skipgap;
-    static int loopback_disable = 0;
-    static int infinite_loops = 0;
-    static int loops = DEFAULT_LOOPS;
-    int assignments; /* assignments defined on the commandline */
-    int txidx;       /* sendto() interface index */
-    int eof, nbytes, i, j;
+	static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ];
+	struct sockaddr_can addr;
+	static struct can_frame frame;
+	static struct timeval today_tv, log_tv, last_log_tv, diff_tv;
+	struct timespec sleep_ts;
+	int s; /* CAN_RAW socket */
+	FILE *infile = stdin;
+	unsigned long gap = DEFAULT_GAP; 
+	int use_timestamps = 1;
+	static int verbose, opt, delay_loops, skipgap;
+	static int loopback_disable = 0;
+	static int infinite_loops = 0;
+	static int loops = DEFAULT_LOOPS;
+	int assignments; /* assignments defined on the commandline */
+	int txidx;       /* sendto() interface index */
+	int eof, nbytes, i, j;
 
-    while ((opt = getopt(argc, argv, "I:l:tg:s:xv")) != -1) {
-	switch (opt) {
-	case 'I':
-	    infile = fopen(optarg, "r");
-	    if (!infile) {
-		perror("infile");
-		return 1;
-	    }
-	    break;
+	while ((opt = getopt(argc, argv, "I:l:tg:s:xv")) != -1) {
+		switch (opt) {
+		case 'I':
+			infile = fopen(optarg, "r");
+			if (!infile) {
+				perror("infile");
+				return 1;
+			}
+			break;
 
-	case 'l':
-	    if (optarg[0] == 'i')
-		infinite_loops = 1;
-	    else
-		if (!(loops = atoi(optarg))) {
-		    fprintf(stderr, "Invalid argument for option -l !\n");
-		    return 1;
+		case 'l':
+			if (optarg[0] == 'i')
+				infinite_loops = 1;
+			else
+				if (!(loops = atoi(optarg))) {
+					fprintf(stderr, "Invalid argument for option -l !\n");
+					return 1;
+				}
+			break;
+
+		case 't':
+			use_timestamps = 0;
+			break;
+
+		case 'g':
+			gap = strtoul(optarg, NULL, 10);
+			break;
+
+		case 's':
+			skipgap = strtoul(optarg, NULL, 10);
+			if (skipgap < 1) {
+				fprintf(stderr, "Invalid argument for option -s !\n");
+				return 1;
+			}
+			break;
+
+		case 'x':
+			loopback_disable = 1;
+			break;
+
+		case 'v':
+			verbose++;
+			break;
+
+		default:
+			print_usage(basename(argv[0]));
+			return 1;
+			break;
 		}
-	    break;
-
-	case 't':
-	    use_timestamps = 0;
-	    break;
-
-	case 'g':
-	    gap = strtoul(optarg, NULL, 10);
-	    break;
-
-	case 's':
-	    skipgap = strtoul(optarg, NULL, 10);
-	    if (skipgap < 1) {
-		fprintf(stderr, "Invalid argument for option -s !\n");
-		return 1;
-	    }
-	    break;
-
-	case 'x':
-	    loopback_disable = 1;
-	    break;
-
-	case 'v':
-	    verbose++;
-	    break;
-
-	default:
-	    print_usage(basename(argv[0]));
-	    return 1;
-	    break;
 	}
-    }
 
-    assignments = argc - optind; /* find real number of user assignments */
+	assignments = argc - optind; /* find real number of user assignments */
 
-    if (infile == stdin) { /* no jokes with stdin */
-	infinite_loops = 0;
-	loops = 1;
-    }
-
-    if (verbose > 1) /* use -v -v to see this */
-	if (infinite_loops)
-	    printf("infinite_loops\n");
-	else
-	    printf("%d loops\n", loops);
-
-    sleep_ts.tv_sec  =  gap / 1000;
-    sleep_ts.tv_nsec = (gap % 1000) * 1000000;
-
-    /* open socket */
-    if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
-	perror("socket");
-	return 1;
-    }
-
-    addr.can_family  = AF_CAN;
-    addr.can_ifindex = 0;
-
-    /* disable unneeded default receive filter on this RAW socket */
-    setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
-
-    if (loopback_disable) {
-	int loopback = 0;
-
-	setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK,
-		   &loopback, sizeof(loopback));
-    }
-
-    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-	perror("bind");
-	return 1;
-    }
-
-    if (assignments) {
-	/* add & check user assginments from commandline */
-	for (i=0; i<assignments; i++) {
-	    if (strlen(argv[optind+i]) >= BUFSZ) {
-		fprintf(stderr, "Assignment too long!\n");
-		print_usage(basename(argv[0]));
-		return 1;
-	    }
-	    strcpy(buf, argv[optind+i]);
-	    for (j=0; j<BUFSZ; j++) { /* find '=' in assignment */
-		if (buf[j] == '=')
-		    break;
-	    }
-	    if (buf[j] != '=') {
-		fprintf(stderr, "'=' missing in assignment!\n");
-		print_usage(basename(argv[0]));
-		return 1;
-	    }
-	    buf[j] = 0; /* cut string in two pieces */
-	    if (add_assignment("user", s, &buf[0], &buf[j+1], verbose))
-		return 1;
+	if (infile == stdin) { /* no jokes with stdin */
+		infinite_loops = 0;
+		loops = 1;
 	}
-    }
-
-    while (infinite_loops || loops--) {
-
-	if (infile != stdin)
-	    rewind(infile); /* for each loop */
 
 	if (verbose > 1) /* use -v -v to see this */
-	    printf (">>>>>>>>> start reading file. remaining loops = %d\n", loops);
+		if (infinite_loops)
+			printf("infinite_loops\n");
+		else
+			printf("%d loops\n", loops);
 
-	if (!fgets(buf, BUFSZ-1, infile)) /* read first frame from logfile */
-	    goto out; /* nothing to read */
+	sleep_ts.tv_sec  =  gap / 1000;
+	sleep_ts.tv_nsec = (gap % 1000) * 1000000;
 
-	eof = 0;
-
-	if (sscanf(buf, "(%ld.%ld) %s %s", &log_tv.tv_sec, &log_tv.tv_usec,
-		   device, ascframe) != 4)
-	    return 1;
-
-	if (use_timestamps) { /* throttle sending due to logfile timestamps */
-
-	    gettimeofday(&today_tv, NULL);
-	    create_diff_tv(&today_tv, &diff_tv, &log_tv);
-	    last_log_tv = log_tv;
+	/* open socket */
+	if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
+		perror("socket");
+		return 1;
 	}
 
-	while (!eof) {
+	addr.can_family  = AF_CAN;
+	addr.can_ifindex = 0;
 
-	    while ((!use_timestamps) ||
-		   (frames_to_send(&today_tv, &diff_tv, &log_tv) < 0)) {
+	/* disable unneeded default receive filter on this RAW socket */
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
 
-		/* log_tv/device/ascframe are valid here */
+	if (loopback_disable) {
+		int loopback = 0;
 
-		if (strlen(device) >= IFNAMSIZ) {
-		    fprintf(stderr, "log interface name '%s' too long!", device);
-		    return 1;
+		setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK,
+			   &loopback, sizeof(loopback));
+	}
+
+	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+		perror("bind");
+		return 1;
+	}
+
+	if (assignments) {
+		/* add & check user assginments from commandline */
+		for (i=0; i<assignments; i++) {
+			if (strlen(argv[optind+i]) >= BUFSZ) {
+				fprintf(stderr, "Assignment too long!\n");
+				print_usage(basename(argv[0]));
+				return 1;
+			}
+			strcpy(buf, argv[optind+i]);
+			for (j=0; j<BUFSZ; j++) { /* find '=' in assignment */
+				if (buf[j] == '=')
+					break;
+			}
+			if (buf[j] != '=') {
+				fprintf(stderr, "'=' missing in assignment!\n");
+				print_usage(basename(argv[0]));
+				return 1;
+			}
+			buf[j] = 0; /* cut string in two pieces */
+			if (add_assignment("user", s, &buf[0], &buf[j+1], verbose))
+				return 1;
 		}
+	}
 
-		txidx = get_txidx(device); /* get ifindex for sending the frame */
- 
-		if ((!txidx) && (!assignments)) {
-		    /* ifindex not found and no user assignments */
-		    /* => assign this device automatically       */
-		    if (add_assignment("auto", s, device, device, verbose))
-			return 1;
-		    txidx = get_txidx(device);
-		}
+	while (infinite_loops || loops--) {
 
-		if (txidx) { /* only send to valid CAN devices */
+		if (infile != stdin)
+			rewind(infile); /* for each loop */
 
-		    if (parse_canframe(ascframe, &frame)) {
-			fprintf(stderr, "wrong CAN frame format: '%s'!", ascframe);
-			return 1;
-		    }
+		if (verbose > 1) /* use -v -v to see this */
+			printf (">>>>>>>>> start reading file. remaining loops = %d\n", loops);
 
-		    addr.can_family  = AF_CAN;
-		    addr.can_ifindex = txidx; /* send via this interface */
- 
-		    nbytes = sendto(s, &frame, sizeof(struct can_frame), 0,
-				    (struct sockaddr*)&addr, sizeof(addr));
+		if (!fgets(buf, BUFSZ-1, infile)) /* read first frame from logfile */
+			goto out; /* nothing to read */
 
-		    if (nbytes != sizeof(struct can_frame)) {
-			perror("sendto");
-			return 1;
-		    }
-
-		    if (verbose) {
-			printf("%s (%s) ", get_txname(device), device);
-			fprint_long_canframe(stdout, &frame, "\n", 1);
-		    }
-		}
-
-		/* read next frame from logfile */
-		if (!fgets(buf, BUFSZ-1, infile)) {
-		    eof = 1; /* this file is completely processed */
-		    break;
-		}
+		eof = 0;
 
 		if (sscanf(buf, "(%ld.%ld) %s %s", &log_tv.tv_sec, &log_tv.tv_usec,
 			   device, ascframe) != 4)
-		    return 1;
+			return 1;
 
-		if (use_timestamps) {
-		    gettimeofday(&today_tv, NULL);
+		if (use_timestamps) { /* throttle sending due to logfile timestamps */
 
-		    /* test for logfile timestamps jumping backwards OR      */
-		    /* if the user likes to skip long gaps in the timestamps */
-		    if ((last_log_tv.tv_sec > log_tv.tv_sec) ||
-			(skipgap && abs(last_log_tv.tv_sec - log_tv.tv_sec) > skipgap))
+			gettimeofday(&today_tv, NULL);
 			create_diff_tv(&today_tv, &diff_tv, &log_tv);
-
-		    last_log_tv = log_tv;
+			last_log_tv = log_tv;
 		}
 
-	    } /* while frames_to_send ... */
+		while (!eof) {
 
-	    if (nanosleep(&sleep_ts, NULL))
-		return 1;
+			while ((!use_timestamps) ||
+			       (frames_to_send(&today_tv, &diff_tv, &log_tv) < 0)) {
 
-	    delay_loops++; /* private statistics */
-	    gettimeofday(&today_tv, NULL);
+				/* log_tv/device/ascframe are valid here */
 
-	} /* while (!eof) */
+				if (strlen(device) >= IFNAMSIZ) {
+					fprintf(stderr, "log interface name '%s' too long!", device);
+					return 1;
+				}
 
-    } /* while (infinite_loops || loops--) */
+				txidx = get_txidx(device); /* get ifindex for sending the frame */
+ 
+				if ((!txidx) && (!assignments)) {
+					/* ifindex not found and no user assignments */
+					/* => assign this device automatically       */
+					if (add_assignment("auto", s, device, device, verbose))
+						return 1;
+					txidx = get_txidx(device);
+				}
 
- out:
+				if (txidx) { /* only send to valid CAN devices */
 
-    close(s);
-    fclose(infile);
+					if (parse_canframe(ascframe, &frame)) {
+						fprintf(stderr, "wrong CAN frame format: '%s'!", ascframe);
+						return 1;
+					}
 
-    if (verbose > 1) /* use -v -v to see this */
-	printf("%d delay_loops\n", delay_loops);
+					addr.can_family  = AF_CAN;
+					addr.can_ifindex = txidx; /* send via this interface */
+ 
+					nbytes = sendto(s, &frame, sizeof(struct can_frame), 0,
+							(struct sockaddr*)&addr, sizeof(addr));
 
-    return 0;
+					if (nbytes != sizeof(struct can_frame)) {
+						perror("sendto");
+						return 1;
+					}
+
+					if (verbose) {
+						printf("%s (%s) ", get_txname(device), device);
+						fprint_long_canframe(stdout, &frame, "\n", 1);
+					}
+				}
+
+				/* read next frame from logfile */
+				if (!fgets(buf, BUFSZ-1, infile)) {
+					eof = 1; /* this file is completely processed */
+					break;
+				}
+
+				if (sscanf(buf, "(%ld.%ld) %s %s", &log_tv.tv_sec, &log_tv.tv_usec,
+					   device, ascframe) != 4)
+					return 1;
+
+				if (use_timestamps) {
+					gettimeofday(&today_tv, NULL);
+
+					/* test for logfile timestamps jumping backwards OR      */
+					/* if the user likes to skip long gaps in the timestamps */
+					if ((last_log_tv.tv_sec > log_tv.tv_sec) ||
+					    (skipgap && abs(last_log_tv.tv_sec - log_tv.tv_sec) > skipgap))
+						create_diff_tv(&today_tv, &diff_tv, &log_tv);
+
+					last_log_tv = log_tv;
+				}
+
+			} /* while frames_to_send ... */
+
+			if (nanosleep(&sleep_ts, NULL))
+				return 1;
+
+			delay_loops++; /* private statistics */
+			gettimeofday(&today_tv, NULL);
+
+		} /* while (!eof) */
+
+	} /* while (infinite_loops || loops--) */
+
+out:
+
+	close(s);
+	fclose(infile);
+
+	if (verbose > 1) /* use -v -v to see this */
+		printf("%d delay_loops\n", delay_loops);
+
+	return 0;
 }

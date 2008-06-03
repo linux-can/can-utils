@@ -33,15 +33,15 @@
 
 enum
 {
-    IFLA_INFO_UNSPEC,
-    IFLA_INFO_NAME,
-    IFLA_INFO_DATA,
-    IFLA_INFO_XSTATS,
-    __IFLA_INFO_MAX,
+	IFLA_INFO_UNSPEC,
+	IFLA_INFO_NAME,
+	IFLA_INFO_DATA,
+	IFLA_INFO_XSTATS,
+	__IFLA_INFO_MAX,
 };
 #endif
 
-#define NLMSG_TAIL(nmsg) \
+#define NLMSG_TAIL(nmsg)						\
         ((struct rtattr *)(((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 
 int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
@@ -49,101 +49,101 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 
 void usage()
 {
-    fprintf(stderr, "Usage: vcan create\n"
-		    "       vcan delete iface\n");
-    exit(1);
+	fprintf(stderr, "Usage: vcan create\n"
+		"       vcan delete iface\n");
+	exit(1);
 }
 
 int main(int argc, char **argv)
 {
-    int s;
-    char *cmd, *dev;
-    struct {
-	struct nlmsghdr  n;
-	struct ifinfomsg i;
-	char             buf[1024];
-    } req;
-    struct sockaddr_nl nladdr;
-    struct rtattr *linkinfo;
+	int s;
+	char *cmd, *dev;
+	struct {
+		struct nlmsghdr  n;
+		struct ifinfomsg i;
+		char             buf[1024];
+	} req;
+	struct sockaddr_nl nladdr;
+	struct rtattr *linkinfo;
 
 #ifdef OBSOLETE
-    fprintf(stderr, "This program is a temporary hack and is now obsolete.\n"
-	    "Please use ip(8) instead, i.e.\n"
-	    "    ip link add type vcan       or\n"
-	    "    ip link delete iface\n");
-    exit(1);
+	fprintf(stderr, "This program is a temporary hack and is now obsolete.\n"
+		"Please use ip(8) instead, i.e.\n"
+		"    ip link add type vcan       or\n"
+		"    ip link delete iface\n");
+	exit(1);
 #endif
-    if (argc < 2)
-	usage();
-    cmd = argv[1];
+	if (argc < 2)
+		usage();
+	cmd = argv[1];
 
-    s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 
-    memset(&req, 0, sizeof(req));
+	memset(&req, 0, sizeof(req));
 
-    if (strcmp(cmd, "create") == 0) {
-	req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(struct ifinfomsg));
-	req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL;
-	req.n.nlmsg_type  = RTM_NEWLINK;
-	req.n.nlmsg_seq   = 0;
-	req.i.ifi_family  = AF_UNSPEC;
+	if (strcmp(cmd, "create") == 0) {
+		req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+		req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL;
+		req.n.nlmsg_type  = RTM_NEWLINK;
+		req.n.nlmsg_seq   = 0;
+		req.i.ifi_family  = AF_UNSPEC;
 
-	linkinfo = NLMSG_TAIL(&req.n);
-	addattr_l(&req.n, sizeof(req), IFLA_LINKINFO, NULL, 0);
-	addattr_l(&req.n, sizeof(req), IFLA_INFO_KIND, "vcan", strlen("vcan"));
-	linkinfo->rta_len = (void*)NLMSG_TAIL(&req.n) - (void*)linkinfo;
+		linkinfo = NLMSG_TAIL(&req.n);
+		addattr_l(&req.n, sizeof(req), IFLA_LINKINFO, NULL, 0);
+		addattr_l(&req.n, sizeof(req), IFLA_INFO_KIND, "vcan", strlen("vcan"));
+		linkinfo->rta_len = (void*)NLMSG_TAIL(&req.n) - (void*)linkinfo;
 
-    } else if (strcmp(cmd, "delete") == 0) {
-	if (argc < 3)
-	    usage();
-	dev = argv[2];
-	req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(struct ifinfomsg));
-	req.n.nlmsg_flags = NLM_F_REQUEST;
-	req.n.nlmsg_type  = RTM_DELLINK;
-	req.i.ifi_family  = AF_UNSPEC;
-	req.i.ifi_index   = if_nametoindex(dev);
-    } else
-	usage();
+	} else if (strcmp(cmd, "delete") == 0) {
+		if (argc < 3)
+			usage();
+		dev = argv[2];
+		req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+		req.n.nlmsg_flags = NLM_F_REQUEST;
+		req.n.nlmsg_type  = RTM_DELLINK;
+		req.i.ifi_family  = AF_UNSPEC;
+		req.i.ifi_index   = if_nametoindex(dev);
+	} else
+		usage();
 
-    memset(&nladdr, 0, sizeof(nladdr));
-    nladdr.nl_family = AF_NETLINK;
-    nladdr.nl_pid    = 0;
-    nladdr.nl_groups = 0;
+	memset(&nladdr, 0, sizeof(nladdr));
+	nladdr.nl_family = AF_NETLINK;
+	nladdr.nl_pid    = 0;
+	nladdr.nl_groups = 0;
 #if 1
-    sendto(s, &req, req.n.nlmsg_len, 0,
-	   (struct sockaddr*)&nladdr, sizeof(nladdr));
+	sendto(s, &req, req.n.nlmsg_len, 0,
+	       (struct sockaddr*)&nladdr, sizeof(nladdr));
 #else
-    {
-	int i;
+	{
+		int i;
 
-	for (i = 0; i < req.n.nlmsg_len; i++) {
-	    printf(" %02x", ((unsigned char*)&req)[i]);
-	    if (i % 16 == 15)
+		for (i = 0; i < req.n.nlmsg_len; i++) {
+			printf(" %02x", ((unsigned char*)&req)[i]);
+			if (i % 16 == 15)
+				putchar('\n');
+		}
 		putchar('\n');
 	}
-	putchar('\n');
-    }
 #endif
-    close(s);
+	close(s);
 
-    return 0;
+	return 0;
 }
 
 int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	      int alen)
 {
-    int len = RTA_LENGTH(alen);
-    struct rtattr *rta;
+	int len = RTA_LENGTH(alen);
+	struct rtattr *rta;
 
-    if (NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len) > maxlen) {
-	fprintf(stderr, "addattr_l ERROR: message exceeded bound of %d\n",
-		maxlen);
-	return -1;
-    }
-    rta = NLMSG_TAIL(n);
-    rta->rta_type = type;
-    rta->rta_len = len;
-    memcpy(RTA_DATA(rta), data, alen);
-    n->nlmsg_len = NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len);
-    return 0;
+	if (NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len) > maxlen) {
+		fprintf(stderr, "addattr_l ERROR: message exceeded bound of %d\n",
+			maxlen);
+		return -1;
+	}
+	rta = NLMSG_TAIL(n);
+	rta->rta_type = type;
+	rta->rta_len = len;
+	memcpy(RTA_DATA(rta), data, alen);
+	n->nlmsg_len = NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len);
+	return 0;
 }
