@@ -55,7 +55,10 @@
 //#include <asm/termios.h> /* ldiscs for each arch up to 2.6.20 */
 
 #ifndef N_SLCAN
-#define N_SLCAN 17 /* bad hack until it's not inside the Kernel */
+#error Your kernel includes do not provide the needed line discipline.
+#error This is a normal behaviour for Kernel versions < v2.6.25 .
+#error You might update or patch your kernel OR you can just ignore
+#error this compilation failure if you do not need the slcan driver.
 #endif
 
 void usage(char *name)

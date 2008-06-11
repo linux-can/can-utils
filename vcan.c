@@ -28,17 +28,12 @@
 
 #include <linux/if_link.h>
 
-#if 0
-#define IFLA_LINKINFO 18
-
-enum
-{
-	IFLA_INFO_UNSPEC,
-	IFLA_INFO_NAME,
-	IFLA_INFO_DATA,
-	IFLA_INFO_XSTATS,
-	__IFLA_INFO_MAX,
-};
+#ifndef IFLA_LINKINFO
+#error Your kernel includes do not provide the needed netlink interface function.
+#error This is a normal behaviour for Kernel versions < v2.6.24 .
+#error You don't need this tool for Kernel versions < v2.6.24 anyway, as
+#error the number of vcan driver instances can be defined as a vcan.ko module
+#error commandline parameter (default = 4) in older Kernels.
 #endif
 
 #define NLMSG_TAIL(nmsg)						\

@@ -40,13 +40,15 @@
 #
 #  Send feedback to <socketcan-users@lists.berlios.de>
 
+MAKEFLAGS = -k
+
 CFLAGS    = -O2 -Wall -Wno-parentheses -I../kernel/2.6/include \
 	    -fno-strict-aliasing \
 	    -DPF_CAN=29 \
 	    -DAF_CAN=PF_CAN
 
 PROGRAMS = candump cansniffer cansend canplayer canlogserver cangen\
-	   canbusload log2long log2asc asc2log slcan_attach vcan
+	   canbusload log2long log2asc asc2log vcan slcan_attach
 
 all: $(PROGRAMS)
 
