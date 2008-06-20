@@ -57,7 +57,7 @@ int hexstring2candata(char *arg, struct can_frame *cf);
 /*
  * Converts a given ASCII hex string to values in the can_frame data[].
  *
- * A valid ASCII hex string consists of and even number of up to 16 chars.
+ * A valid ASCII hex string consists of an even number of up to 16 chars.
  * Leading zeros '00' in the ASCII hex string are interpreted.
  *
  * Examples:
