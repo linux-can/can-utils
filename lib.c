@@ -59,7 +59,7 @@
 #define MAX_CANFRAME      "12345678#01.23.45.67.89.AB.CD.EF"
 #define MAX_LONG_CANFRAME "12345678  [8] 10101010 10101010 10101010 10101010 10101010 10101010 10101010 10101010   '........'"
 
-static int asc2nibble(char c) {
+unsigned char asc2nibble(char c) {
 
 	if ((c >= '0') && (c <= '9'))
 		return c - '0';
@@ -73,10 +73,38 @@ static int asc2nibble(char c) {
 	return 16; /* error */
 }
 
+int hexstring2candata(char *arg, struct can_frame *cf) {
+
+	int len = strlen(arg);
+	int i;
+	unsigned char tmp;
+
+	if (!len || len%2 || len > 16)
+		return 1;
+
+	for (i=0; i < len/2; i++) {
+
+		tmp = asc2nibble(*(arg+(2*i)));
+		if (tmp > 0x0F)
+			return 1;
+
+		cf->data[i] = (tmp << 4);
+
+		tmp = asc2nibble(*(arg+(2*i)+1));
+		if (tmp > 0x0F)
+			return 1;
+
+		cf->data[i] |= tmp;
+	}
+
+	return 0;
+}
+
 int parse_canframe(char *cs, struct can_frame *cf) {
 	/* documentation see lib.h */
 
-	int i, idx, dlc, len, tmp;
+	int i, idx, dlc, len;
+	unsigned char tmp;
 
 	len = strlen(cs);
 	//printf("'%s' len %d\n", cs, len);

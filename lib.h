@@ -45,6 +45,34 @@
  *
  */
 
+unsigned char asc2nibble(char c);
+/*
+ * Returns the decimal value of a given ASCII hex character.
+ *
+ * While 0..9, a..f, A..F are valid ASCII hex characters.
+ * On invalid characters the value 16 is returned for error handling.
+ */
+
+int hexstring2candata(char *arg, struct can_frame *cf);
+/*
+ * Converts a given ASCII hex string to values in the can_frame data[].
+ *
+ * A valid ASCII hex string consists of and even number of up to 16 chars.
+ * Leading zeros '00' in the ASCII hex string are interpreted.
+ *
+ * Examples:
+ *
+ * "1234"   => data[0] = 0x12, data[1] = 0x34
+ * "001234" => data[0] = 0x00, data[1] = 0x12, data[2] = 0x34
+ *
+ * Return values:
+ * 0 = success
+ * 1 = error (in length or the given characters are no ASCII hex characters)
+ *
+ * Remark: The not written data[] elements remain unchanged.
+ *
+ */
+
 int parse_canframe(char *cs, struct can_frame *cf);
 /*
  * Transfers a valid ASCII string decribing a CAN frame into struct can_frame.
