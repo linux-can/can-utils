@@ -194,9 +194,10 @@ int main(int argc, char **argv)
 				data_mode = MODE_INCREMENT;
 			} else {
 				data_mode = MODE_FIX;
-				incdata = strtoull(optarg, NULL, 16);
-				for (i=0; i<8 ;i++)
-					frame.data[i] = (incdata >> (7-i)*8) & 0xFFULL;
+				if (hexstring2candata(optarg, &frame)) {
+					printf ("wrong fix data definition\n");
+					return 1;
+				}
 			}
 			break;
 
@@ -224,7 +225,6 @@ int main(int argc, char **argv)
 
 	ts.tv_sec = gap / 1000;
 	ts.tv_nsec = (gap % 1000) * 1000000;
-
 
 	if (id_mode == MODE_FIX) {
 
