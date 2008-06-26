@@ -346,7 +346,7 @@ int main(int argc, char **argv)
 				if (buf[j] == '=')
 					break;
 			}
-			if (buf[j] != '=') {
+			if ((j == BUFSZ) || (buf[j] != '=')) {
 				fprintf(stderr, "'=' missing in assignment!\n");
 				print_usage(basename(argv[0]));
 				return 1;
