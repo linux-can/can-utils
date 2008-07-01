@@ -180,6 +180,7 @@ void sprint_canframe(char *buf , struct can_frame *cf, int sep) {
 	/* documentation see lib.h */
 
 	int i,offset;
+	int dlc = (cf->can_dlc > 8)? 8 : cf->can_dlc;
 
 	if (cf->can_id & CAN_ERR_FLAG) {
 		sprintf(buf, "%08X#", cf->can_id & (CAN_ERR_MASK|CAN_ERR_FLAG));
@@ -195,10 +196,10 @@ void sprint_canframe(char *buf , struct can_frame *cf, int sep) {
 	if (cf->can_id & CAN_RTR_FLAG) /* there are no ERR frames with RTR */
 		sprintf(buf+offset, "R");
 	else
-		for (i = 0; i < cf->can_dlc; i++) {
+		for (i = 0; i < dlc; i++) {
 			sprintf(buf+offset, "%02X", cf->data[i]);
 			offset += 2;
-			if (sep && (i+1 < cf->can_dlc))
+			if (sep && (i+1 < dlc))
 				sprintf(buf+offset++, ".");
 		}
 
@@ -220,6 +221,7 @@ void sprint_long_canframe(char *buf , struct can_frame *cf, int view) {
 	/* documentation see lib.h */
 
 	int i, j, dlen, offset;
+	int dlc = (cf->can_dlc > 8)? 8 : cf->can_dlc;
 
 	if (cf->can_id & CAN_ERR_FLAG) {
 		sprintf(buf, "%8X  ", cf->can_id & (CAN_ERR_MASK|CAN_ERR_FLAG));
@@ -232,7 +234,7 @@ void sprint_long_canframe(char *buf , struct can_frame *cf, int view) {
 		offset = 5;
 	}
 
-	sprintf(buf+offset, "[%d]", cf->can_dlc);
+	sprintf(buf+offset, "[%d]", dlc);
 	offset += 3;
 
 	if (cf->can_id & CAN_RTR_FLAG) { /* there are no ERR frames with RTR */
@@ -242,7 +244,7 @@ void sprint_long_canframe(char *buf , struct can_frame *cf, int view) {
 
 	if (view & CANLIB_VIEW_BINARY) {
 		dlen = 9; /* _10101010 */
-		for (i = 0; i < cf->can_dlc; i++) {
+		for (i = 0; i < dlc; i++) {
 			buf[offset++] = ' ';
 			for (j = 7; j >= 0; j--)
 				buf[offset++] = (1<<j & cf->data[i])?'1':'0';
@@ -250,20 +252,20 @@ void sprint_long_canframe(char *buf , struct can_frame *cf, int view) {
 		buf[offset] = 0; /* terminate string */
 	} else {
 		dlen = 3; /* _AA */
-		for (i = 0; i < cf->can_dlc; i++) {
+		for (i = 0; i < dlc; i++) {
 			sprintf(buf+offset, " %02X", cf->data[i]);
 			offset += dlen;
 		}
 	}
 
 	if (cf->can_id & CAN_ERR_FLAG)
-		sprintf(buf+offset, "%*s", dlen*(8-cf->can_dlc)+13, "ERRORFRAME");
+		sprintf(buf+offset, "%*s", dlen*(8-dlc)+13, "ERRORFRAME");
 	else if (view & CANLIB_VIEW_ASCII) {
-		j = dlen*(8-cf->can_dlc)+4;
+		j = dlen*(8-dlc)+4;
 		sprintf(buf+offset, "%*s", j, "'");
 		offset += j;
 
-		for (i = 0; i < cf->can_dlc; i++)
+		for (i = 0; i < dlc; i++)
 			if ((cf->data[i] > 0x1F) && (cf->data[i] < 0x7F))
 				buf[offset++] = cf->data[i];
 			else
