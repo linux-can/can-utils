@@ -387,6 +387,7 @@ int main(int argc, char **argv)
 					eff = checkeff(ptr, nptr);
  					rfilter[numfilter].can_id |= eff;
  					rfilter[numfilter].can_mask |= eff;
+ 					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
 					numfilter++;
 				} else if (sscanf(ptr, "%lx~%lx",
 						  (long unsigned int *)
@@ -397,6 +398,7 @@ int main(int argc, char **argv)
 					eff = checkeff(ptr, nptr);
  					rfilter[numfilter].can_id |= eff;
  					rfilter[numfilter].can_mask |= eff;
+ 					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
 					numfilter++;
 				} else if (sscanf(ptr, "#%lx",
 						  (long unsigned int *)&err_mask) != 1) { 
