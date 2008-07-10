@@ -174,6 +174,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -b         (start with binary mode)\n");
 	fprintf(stderr, "         -B         (start with binary mode with gap - exceeds 80 chars!)\n");
 	fprintf(stderr, "         -c         (color changes)\n");
+	fprintf(stderr, "         -f         (filter on CAN-ID only)\n");
 	fprintf(stderr, "         -t <time>  (timeout for ID display [x100ms] default: %d, 0 = OFF)\n", TIMEOUT);
 	fprintf(stderr, "         -h <time>  (hold marker on changes [x100ms] default: %d)\n", HOLD);
 	fprintf(stderr, "         -l <time>  (loop time (display) [x100ms] default: %d)\n", LOOP);
