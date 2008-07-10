@@ -118,13 +118,14 @@ extern int optind, opterr, optopt;
 
 static int running = 1;
 static int clearscreen = 1;
-static int notch = 0;
+static int notch;
+static int filter_id_only;
 static long timeout = TIMEOUT;
 static long hold = HOLD;
 static long loop = LOOP;
-static unsigned char binary = 0;
-static unsigned char binary_gap = 0;
-static unsigned char color  = 0;
+static unsigned char binary;
+static unsigned char binary_gap;
+static unsigned char color;
 
 void rx_setup (int fd, int id);
 void rx_delete (int fd, int id);
@@ -195,7 +196,6 @@ int main(int argc, char **argv)
 	long currcms = 0;
 	long lastcms = 0;
 	unsigned char quiet = 0;
-
 	int opt, ret;
 	struct timeval timeo, start_tv, tv;
 	struct sockaddr_can addr;
@@ -210,7 +210,7 @@ int main(int argc, char **argv)
 	for (i=0; i < 2048 ;i++) /* default: check all CAN-IDs */
 		do_set(i, ENABLE);
 
-	while ((opt = getopt(argc, argv, "m:v:r:t:h:l:qbBc")) != -1) {
+	while ((opt = getopt(argc, argv, "m:v:r:t:h:l:qbBcf")) != -1) {
 		switch (opt) {
 		case 'm':
 			sscanf(optarg, "%x", &mask);
@@ -252,6 +252,10 @@ int main(int argc, char **argv)
 
 		case 'c':
 			color = 1;
+			break;
+
+		case 'f':
+			filter_id_only = 1;
 			break;
 
 		case '?':
@@ -370,6 +374,9 @@ void rx_setup (int fd, int id){
 	txmsg.msg_head.ival2.tv_usec = 0;
 	txmsg.msg_head.nframes = 1;
 	U64_DATA(&txmsg.frame) = (__u64) 0xFFFFFFFFFFFFFFFFULL;
+
+	if (filter_id_only)
+		txmsg.msg_head.flags |= RX_FILTER_ID;
 
 	if (write(fd, &txmsg, sizeof(txmsg)) < 0)
 		perror("write");
