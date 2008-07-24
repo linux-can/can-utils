@@ -60,11 +60,10 @@
 
 #include "lib.h"
 
-#define DEFAULT_GAP 1 /* ms */
-#define DEFAULT_LOOPS 1 /* only one replay */
-#define CHANNELS 20   /* anyone using more than 20 CAN interfaces at a time? */
-#define BUFSZ 100     /* for one line in the logfile */
-#define COMMENT '#'
+#define DEFAULT_GAP	1	/* ms */
+#define DEFAULT_LOOPS	1	/* only one replay */
+#define CHANNELS	20	/* anyone using more than 20 CAN interfaces at a time? */
+#define BUFSZ		400	/* for one line in the logfile */
 
 struct assignment {
 	char txif[IFNAMSIZ];
@@ -99,8 +98,8 @@ void print_usage(char *prg)
 		"vcan2 )\n");
 	fprintf(stderr, "No assignments => send frames to the interface(s) they "
 		"had been received from.\n\n");
-	fprintf(stderr, "Lines in the logfile beginning with '%c' are ignored."
-		"\n\n", COMMENT);
+	fprintf(stderr, "Lines in the logfile not beginning with '(' (start of "
+		"timestamp) are ignored.\n\n");
 }
 
 /* copied from /usr/src/linux/include/linux/time.h ...
@@ -370,8 +369,12 @@ int main(int argc, char **argv)
 			printf (">>>>>>>>> start reading file. remaining loops = %d\n", loops);
 
 		/* read first non-comment frame from logfile */
-		while ((fret = fgets(buf, BUFSZ-1, infile)) != NULL && buf[0] == COMMENT)
-			;
+		while ((fret = fgets(buf, BUFSZ-1, infile)) != NULL && buf[0] != '(') {
+			if (strlen(buf) >= BUFSZ-2) {
+				fprintf(stderr, "comment line too long for input buffer\n");
+				return 1;
+			}
+		}
 
 		if (!fret)
 			goto out; /* nothing to read */
@@ -436,8 +439,12 @@ int main(int argc, char **argv)
 				}
 
 				/* read next non-comment frame from logfile */
-				while ((fret = fgets(buf, BUFSZ-1, infile)) != NULL && buf[0] == COMMENT)
-					;
+				while ((fret = fgets(buf, BUFSZ-1, infile)) != NULL && buf[0] != '(') {
+					if (strlen(buf) >= BUFSZ-2) {
+						fprintf(stderr, "comment line too long for input buffer\n");
+						return 1;
+					}
+				}
 
 				if (!fret) {
 					eof = 1; /* this file is completely processed */
