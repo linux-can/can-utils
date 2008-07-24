@@ -64,6 +64,7 @@
 #define DEFAULT_LOOPS 1 /* only one replay */
 #define CHANNELS 20   /* anyone using more than 20 CAN interfaces at a time? */
 #define BUFSZ 100     /* for one line in the logfile */
+#define COMMENT '#'
 
 struct assignment {
 	char txif[IFNAMSIZ];
@@ -98,6 +99,8 @@ void print_usage(char *prg)
 		"vcan2 )\n");
 	fprintf(stderr, "No assignments => send frames to the interface(s) they "
 		"had been received from.\n\n");
+	fprintf(stderr, "Lines in the logfile beginning with '%c' are ignored."
+		"\n\n", COMMENT);
 }
 
 /* copied from /usr/src/linux/include/linux/time.h ...
@@ -241,6 +244,7 @@ int main(int argc, char **argv)
 	int assignments; /* assignments defined on the commandline */
 	int txidx;       /* sendto() interface index */
 	int eof, nbytes, i, j;
+	char *fret;
 
 	while ((opt = getopt(argc, argv, "I:l:tg:s:xv")) != -1) {
 		switch (opt) {
@@ -365,7 +369,11 @@ int main(int argc, char **argv)
 		if (verbose > 1) /* use -v -v to see this */
 			printf (">>>>>>>>> start reading file. remaining loops = %d\n", loops);
 
-		if (!fgets(buf, BUFSZ-1, infile)) /* read first frame from logfile */
+		/* read first non-comment frame from logfile */
+		while ((fret = fgets(buf, BUFSZ-1, infile)) != NULL && buf[0] == COMMENT)
+			;
+
+		if (!fret)
 			goto out; /* nothing to read */
 
 		eof = 0;
@@ -427,8 +435,11 @@ int main(int argc, char **argv)
 					}
 				}
 
-				/* read next frame from logfile */
-				if (!fgets(buf, BUFSZ-1, infile)) {
+				/* read next non-comment frame from logfile */
+				while ((fret = fgets(buf, BUFSZ-1, infile)) != NULL && buf[0] == COMMENT)
+					;
+
+				if (!fret) {
 					eof = 1; /* this file is completely processed */
 					break;
 				}
