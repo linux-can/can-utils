@@ -159,7 +159,7 @@ int main(int argc, char **argv)
 
 	if (receive) {
 		while ((infinite || loopcount--) && running) {
-			nbytes = read(s, &frame, sizeof(struct can_frame);
+			nbytes = read(s, &frame, sizeof(struct can_frame));
 			if (nbytes < 0) {
 				perror("read");
 				return 1;
