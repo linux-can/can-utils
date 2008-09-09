@@ -56,6 +56,8 @@
 
 #include "lib.h"
 
+#define BUFSZ 400 /* for one line in the logfile */
+
 extern int optind, opterr, optopt;
 
 void print_usage(char *prg)
@@ -69,7 +71,7 @@ void print_usage(char *prg)
 
 int main(int argc, char **argv)
 {
-	char buf[100], device[100], ascframe[100], id[10];
+	static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ], id[10];
 
 	struct can_frame cf;
 	static struct timeval tv, start_tv;
@@ -121,10 +123,22 @@ int main(int argc, char **argv)
 	
 	//printf("Found %d CAN devices!\n", maxdev);
 
-	while (fgets(buf, 99, infile)) {
-		if (sscanf(buf, "(%ld.%ld) %s %s", &tv.tv_sec, &tv.tv_usec,
-			   device, ascframe) != 4)
+	while (fgets(buf, BUFSZ-1, infile)) {
+
+		if (strlen(buf) >= BUFSZ-2) {
+			fprintf(stderr, "line too long for input buffer\n");
 			return 1;
+		}
+
+		/* check for a comment line */
+		if (buf[0] != '(')
+			continue;
+
+		if (sscanf(buf, "(%ld.%ld) %s %s", &tv.tv_sec, &tv.tv_usec,
+			   device, ascframe) != 4) {
+			fprintf(stderr, "incorrect line format in logfile\n");
+			return 1;
+		}
 
 		if (!start_tv.tv_sec) { /* print banner */
 			start_tv = tv;
