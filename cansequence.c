@@ -30,7 +30,7 @@ enum {
 
 void print_usage(char *prg)
 {
-	fprintf(stderr, "Usage: %s <can-interface> [Options]\n"
+	fprintf(stderr, "Usage: %s [<can-interface>] [Options]\n"
 		"\n"
 		"cansequence sends CAN messages with a rising sequence number as payload.\n"
 		"When the -r option is given, cansequence expects to receive these messages\n"
@@ -58,15 +58,16 @@ void sigterm(int signo)
 
 int main(int argc, char **argv)
 {
-	int family = PF_CAN, type = SOCK_RAW, proto = CAN_RAW;
-	int opt;
-	struct sockaddr_can addr;
 	struct can_frame frame;
-	int nbytes;
 	struct ifreq ifr;
+	struct sockaddr_can addr;
+	char *interface = "can0";
+	unsigned char sequence = 0;
+	int family = PF_CAN, type = SOCK_RAW, proto = CAN_RAW;
+	int loopcount = 1, infinite = 0;
+	int nbytes;
+	int opt;
 	int receive = 0;
-	int loopcount = 1, infinite;
-	unsigned char  sequence = 0;
 	int sequence_init = 1;
 	int verbose = 0, quit = 0;
 
@@ -133,13 +134,11 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (optind == argc) {
-		print_usage(basename(argv[0]));
-		exit(0);
-	}
+	if (optind != argc)
+		interface = argv[optind];
 
 	printf("interface = %s, family = %d, type = %d, proto = %d\n",
-	       argv[optind], family, type, proto);
+	       interface, family, type, proto);
 
 	s = socket(family, type, proto);
 	if (s < 0) {
@@ -148,8 +147,11 @@ int main(int argc, char **argv)
 	}
 
 	addr.can_family = family;
-	strncpy(ifr.ifr_name, argv[optind], sizeof(ifr.ifr_name));
-	ioctl(s, SIOCGIFINDEX, &ifr);
+	strncpy(ifr.ifr_name, interface, sizeof(ifr.ifr_name));
+	if (ioctl(s, SIOCGIFINDEX, &ifr)) {
+		perror("ioctl");
+		return 1;
+	}
 	addr.can_ifindex = ifr.ifr_ifindex;
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
