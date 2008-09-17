@@ -51,15 +51,8 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <sys/ioctl.h>
-#include <linux/tty.h>   /* thanks for cleanup since 2.6.21 */
-//#include <asm/termios.h> /* ldiscs for each arch up to 2.6.20 */
 
-#ifndef N_SLCAN
-#error Your kernel includes do not provide the needed line discipline.
-#error This is a normal behaviour for Kernel versions < v2.6.25 .
-#error You might update or patch your kernel OR you can just ignore
-#error this compilation failure if you do not need the slcan driver.
-#endif
+#define LDISC_N_SLCAN 17 /* default slcan line discipline since Kernel 2.6.25 */
 
 void usage(char *name)
 {
@@ -70,7 +63,7 @@ void usage(char *name)
 int main(int argc, char **argv)
 {
 	int fd;
-	int ldisc = N_SLCAN; /* default */
+	int ldisc = LDISC_N_SLCAN;
 	int detach = 0;
 	char *tty;
 	int opt;
