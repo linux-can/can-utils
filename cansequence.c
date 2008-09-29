@@ -42,8 +42,7 @@ void print_usage(char *prg)
 		" -t, --type=TYPE	Socket type, see man 2 socket (default SOCK_RAW = %d)\n"
 		" -p, --protocol=PROTO	CAN protocol (default CAN_RAW = %d)\n"
 		" -r, --receive		work as receiver\n"
-		" -l                    send message infinite times\n"
-		"     --loop=COUNT      send message COUNT times\n"
+		"     --loop=COUNT	send message COUNT times\n"
 		" -q  --quit		quit if a wrong sequence is encountered\n"
 		" -v, --verbose		be verbose (twice to be even more verbose\n"
 		" -h  --help		this help\n"
@@ -64,7 +63,7 @@ int main(int argc, char **argv)
 	char *interface = "can0";
 	unsigned char sequence = 0;
 	int family = PF_CAN, type = SOCK_RAW, proto = CAN_RAW;
-	int loopcount = 1, infinite = 0;
+	int loopcount = 1, infinite = 1;
 	int nbytes;
 	int opt;
 	int receive = 0;
@@ -134,11 +133,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (optind == argc) {
-		print_usage(basename(argv[0]));
-		exit(0);
-        }
-	
 	if (argv[optind] == NULL) {
 		fprintf(stderr, "No Interface supplied\n");
 		exit(-1);
