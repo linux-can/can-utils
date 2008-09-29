@@ -42,8 +42,8 @@ void print_usage(char *prg)
 		" -t, --type=TYPE	Socket type, see man 2 socket (default SOCK_RAW = %d)\n"
 		" -p, --protocol=PROTO	CAN protocol (default CAN_RAW = %d)\n"
 		" -r, --receive		work as receiver\n"
-		" -l COUNT		send COUNT messages, infinite if omitted\n"
-		" --loop=COUNT		\n"
+		" -l                    send message infinite times\n"
+		"     --loop=COUNT      send message COUNT times\n"
 		" -q  --quit		quit if a wrong sequence is encountered\n"
 		" -v, --verbose		be verbose (twice to be even more verbose\n"
 		" -h  --help		this help\n"
@@ -82,12 +82,12 @@ int main(int argc, char **argv)
 		{ "version",	no_argument,		0, VERSION_OPTION},
 		{ "receive",	no_argument,		0, 'r'},
 		{ "quit",	no_argument,		0, 'q'},
-		{ "loop",	optional_argument,	0, 'l'},
+		{ "loop",	required_argument,	0, 'l'},
 		{ "verbose",	no_argument,		0, 'v'},
 		{ 0,		0,			0, 0},
 	};
 
-	while ((opt = getopt_long(argc, argv, "f:t:p:vrl::hq", long_options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "f:t:p:vrlhq", long_options, NULL)) != -1) {
 		switch (opt) {
 		case 'h':
 			print_usage(basename(argv[0]));
@@ -134,8 +134,16 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (optind != argc)
-		interface = argv[optind];
+	if (optind == argc) {
+		print_usage(basename(argv[0]));
+		exit(0);
+        }
+	
+	if (argv[optind] == NULL) {
+		fprintf(stderr, "No Interface supplied\n");
+		exit(-1);
+	}
+	interface = argv[optind];
 
 	printf("interface = %s, family = %d, type = %d, proto = %d\n",
 	       interface, family, type, proto);
