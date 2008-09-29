@@ -133,11 +133,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (argv[optind] == NULL) {
-		fprintf(stderr, "No Interface supplied\n");
-		exit(-1);
-	}
-	interface = argv[optind];
+	if (argv[optind] != NULL)
+		interface = argv[optind];
 
 	printf("interface = %s, family = %d, type = %d, proto = %d\n",
 	       interface, family, type, proto);
