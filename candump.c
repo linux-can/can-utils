@@ -74,6 +74,11 @@
 #define ANYDEV "any"  /* name of interface to receive from any CAN interface */
 #define ANL "\r\n"    /* newline in ASC mode */
 
+#define SILENT_INI 42 /* detect user setting on commandline */
+#define SILENT_OFF 0  /* no silent mode */
+#define SILENT_ANI 1  /* silent mode with animation */
+#define SILENT_ON  2  /* silent mode (completely silent) */
+
 #define BOLD    ATTBOLD
 #define RED     ATTBOLD FGRED
 #define GREEN   ATTBOLD FGGREEN
@@ -104,10 +109,10 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -c          (increment color mode level)\n");
 	fprintf(stderr, "         -i          (binary output - may exceed 80 chars/line)\n");
 	fprintf(stderr, "         -a          (enable additional ASCII output)\n");
-	fprintf(stderr, "         -s <level>  (silent mode - 1: animation 2: completely silent)\n");
+	fprintf(stderr, "         -s <level>  (silent mode - %d: off (default) %d: animation %d: silent)\n", SILENT_OFF, SILENT_ANI, SILENT_ON);
 	fprintf(stderr, "         -b <can>    (bridge mode - send received frames to <can>)\n");
 	fprintf(stderr, "         -B <can>    (bridge mode - like '-b' with disabled loopback)\n");
-	fprintf(stderr, "         -l          (log CAN-frames into file)\n");
+	fprintf(stderr, "         -l          (log CAN-frames into file. Sets '-s %d' by default)\n", SILENT_ON);
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with optional filter sets can be specified\n", MAXSOCK);
@@ -204,7 +209,7 @@ int main(int argc, char **argv)
 	int s[MAXSOCK];
 	int bridge = 0;
 	unsigned char timestamp = 0;
-	unsigned char silent = 0;
+	unsigned char silent = SILENT_INI;
 	unsigned char silentani = 0;
 	unsigned char color = 0;
 	unsigned char view = 0;
@@ -256,6 +261,10 @@ int main(int argc, char **argv)
 
 		case 's':
 			silent = atoi(optarg);
+			if (silent > SILENT_ON) {
+				print_usage(basename(argv[0]));
+				exit(1);
+			}
 			break;
 
 		case 'b':
@@ -314,6 +323,14 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 	
+	if (silent == SILENT_INI) {
+		if (log) {
+			printf("\nDisabled standard output while logging.");
+			silent = SILENT_ON; /* disable output on stdout */
+		} else
+			silent = SILENT_OFF; /* default output */
+	}
+
 	currmax = argc - optind; /* find real number of CAN devices */
 
 	if (currmax > MAXSOCK) {
@@ -448,6 +465,9 @@ int main(int argc, char **argv)
 			now.tm_min,
 			now.tm_sec);
 
+		if (silent != SILENT_ON)
+			printf("\nWarning: console output active while logging!");
+
 		printf("\nEnabling Logfile '%s'\n\n", fname);
 
 		logfile = fopen(fname, "w");
@@ -522,8 +542,8 @@ int main(int argc, char **argv)
 					goto out_fflush; /* no other output to stdout */
 				}
 
-				if (silent){
-					if (silent == 1) {
+				if (silent != SILENT_OFF){
+					if (silent == SILENT_ANI) {
 						printf("%c\b", anichar[silentani%=MAXANI]);
 						silentani++;
 					}
