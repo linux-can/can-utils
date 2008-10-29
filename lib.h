@@ -87,7 +87,7 @@ int parse_canframe(char *cs, struct can_frame *cf);
  * Examples:
  *
  * 123# -> standard CAN-Id = 0x123, dlc = 0
- * 12345678# -> exended CAN-Id = 0x12345678, dlc = 0
+ * 12345678# -> extended CAN-Id = 0x12345678, dlc = 0
  * 123#R -> standard CAN-Id = 0x123, dlc = 0, RTR-frame
  * 7A1#r -> standard CAN-Id = 0x7A1, dlc = 0, RTR-frame
  *
@@ -126,6 +126,9 @@ void sprint_canframe(char *buf , struct can_frame *cf, int sep);
 
 #define CANLIB_VIEW_ASCII	0x1
 #define CANLIB_VIEW_BINARY	0x2
+#define CANLIB_VIEW_SWAP	0x4
+
+#define SWAP_DELIMITER '`'
 
 void fprint_long_canframe(FILE *stream , struct can_frame *cf, char *eol, int view);
 void sprint_long_canframe(char *buf , struct can_frame *cf, int view);

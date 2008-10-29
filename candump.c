@@ -109,6 +109,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -c          (increment color mode level)\n");
 	fprintf(stderr, "         -i          (binary output - may exceed 80 chars/line)\n");
 	fprintf(stderr, "         -a          (enable additional ASCII output)\n");
+	fprintf(stderr, "         -S          (swap byte order in printed CAN data[] - marked with '%c' )\n", SWAP_DELIMITER);
 	fprintf(stderr, "         -s <level>  (silent mode - %d: off (default) %d: animation %d: silent)\n", SILENT_OFF, SILENT_ANI, SILENT_ON);
 	fprintf(stderr, "         -b <can>    (bridge mode - send received frames to <can>)\n");
 	fprintf(stderr, "         -B <can>    (bridge mode - like '-b' with disabled loopback)\n");
@@ -235,7 +236,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:cias:b:B:lLh?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:lLh?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -257,6 +258,10 @@ int main(int argc, char **argv)
 
 		case 'a':
 			view |= CANLIB_VIEW_ASCII;
+			break;
+
+		case 'S':
+			view |= CANLIB_VIEW_SWAP;
 			break;
 
 		case 's':
@@ -323,6 +328,11 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 	
+	if (logfrmt && view) {
+		fprintf(stderr, "Log file format selected: Please disable ASCII/BINARY/SWAP options!\n");
+		exit(0);
+	}
+
 	if (silent == SILENT_INI) {
 		if (log) {
 			printf("\nDisabled standard output while logging.");

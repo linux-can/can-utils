@@ -244,17 +244,34 @@ void sprint_long_canframe(char *buf , struct can_frame *cf, int view) {
 
 	if (view & CANLIB_VIEW_BINARY) {
 		dlen = 9; /* _10101010 */
-		for (i = 0; i < dlc; i++) {
-			buf[offset++] = ' ';
-			for (j = 7; j >= 0; j--)
-				buf[offset++] = (1<<j & cf->data[i])?'1':'0';
+		if (view & CANLIB_VIEW_SWAP) {
+			for (i = dlc - 1; i >= 0; i--) {
+				buf[offset++] = (i == dlc-1)?' ':SWAP_DELIMITER;
+				for (j = 7; j >= 0; j--)
+					buf[offset++] = (1<<j & cf->data[i])?'1':'0';
+			}
+		} else {
+			for (i = 0; i < dlc; i++) {
+				buf[offset++] = ' ';
+				for (j = 7; j >= 0; j--)
+					buf[offset++] = (1<<j & cf->data[i])?'1':'0';
+			}
 		}
 		buf[offset] = 0; /* terminate string */
 	} else {
 		dlen = 3; /* _AA */
-		for (i = 0; i < dlc; i++) {
-			sprintf(buf+offset, " %02X", cf->data[i]);
-			offset += dlen;
+		if (view & CANLIB_VIEW_SWAP) {
+			for (i = dlc - 1; i >= 0; i--) {
+				sprintf(buf+offset, "%c%02X",
+					(i == dlc-1)?' ':SWAP_DELIMITER,
+					cf->data[i]);
+				offset += dlen;
+			}
+		} else {
+			for (i = 0; i < dlc; i++) {
+				sprintf(buf+offset, " %02X", cf->data[i]);
+				offset += dlen;
+			}
 		}
 	}
 
@@ -262,16 +279,27 @@ void sprint_long_canframe(char *buf , struct can_frame *cf, int view) {
 		sprintf(buf+offset, "%*s", dlen*(8-dlc)+13, "ERRORFRAME");
 	else if (view & CANLIB_VIEW_ASCII) {
 		j = dlen*(8-dlc)+4;
-		sprintf(buf+offset, "%*s", j, "'");
-		offset += j;
+		if (view & CANLIB_VIEW_SWAP) {
+			sprintf(buf+offset, "%*s", j, "`");
+			offset += j;
+			for (i = dlc - 1; i >= 0; i--)
+				if ((cf->data[i] > 0x1F) && (cf->data[i] < 0x7F))
+					buf[offset++] = cf->data[i];
+				else
+					buf[offset++] = '.';
 
-		for (i = 0; i < dlc; i++)
-			if ((cf->data[i] > 0x1F) && (cf->data[i] < 0x7F))
-				buf[offset++] = cf->data[i];
-			else
-				buf[offset++] = '.';
+			sprintf(buf+offset, "`");
+		} else {
+			sprintf(buf+offset, "%*s", j, "'");
+			offset += j;
+			for (i = 0; i < dlc; i++)
+				if ((cf->data[i] > 0x1F) && (cf->data[i] < 0x7F))
+					buf[offset++] = cf->data[i];
+				else
+					buf[offset++] = '.';
 
-		sprintf(buf+offset, "'");
+			sprintf(buf+offset, "'");
+		}
 	} 
 }
 
