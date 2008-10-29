@@ -166,7 +166,7 @@ int idx2dindex(int ifidx, int socket) {
 			break;
 
 	if (i == MAXIFNAMES) {
-		printf("Interface index cache only supports %d interfaces.\n",
+		fprintf(stderr, "Interface index cache only supports %d interfaces.\n",
 		       MAXIFNAMES);
 		exit(1);
 	}
@@ -242,7 +242,7 @@ int main(int argc, char **argv)
 			timestamp = optarg[0];
 			if ((timestamp != 'a') && (timestamp != 'A') &&
 			    (timestamp != 'd') && (timestamp != 'z')) {
-				printf("%s: unknown timestamp mode '%c' - ignored\n",
+				fprintf(stderr, "%s: unknown timestamp mode '%c' - ignored\n",
 				       basename(argv[0]), optarg[0]);
 				timestamp = 0;
 			}
@@ -275,7 +275,7 @@ int main(int argc, char **argv)
 		case 'b':
 		case 'B':
 			if (strlen(optarg) >= IFNAMSIZ) {
-				printf("Name of CAN device '%s' is too long!\n\n", optarg);
+				fprintf(stderr, "Name of CAN device '%s' is too long!\n\n", optarg);
 				return 1;
 			} else {
 				bridge = socket(PF_CAN, SOCK_RAW, CAN_RAW);
@@ -335,7 +335,7 @@ int main(int argc, char **argv)
 
 	if (silent == SILENT_INI) {
 		if (log) {
-			printf("\nDisabled standard output while logging.");
+			fprintf(stderr, "\nDisabled standard output while logging.");
 			silent = SILENT_ON; /* disable output on stdout */
 		} else
 			silent = SILENT_OFF; /* default output */
@@ -344,7 +344,7 @@ int main(int argc, char **argv)
 	currmax = argc - optind; /* find real number of CAN devices */
 
 	if (currmax > MAXSOCK) {
-		printf("More than %d CAN devices given on commandline!\n", MAXSOCK);
+		fprintf(stderr, "More than %d CAN devices given on commandline!\n", MAXSOCK);
 		return 1;
 	}
 
@@ -369,7 +369,7 @@ int main(int argc, char **argv)
 			nbytes = strlen(ptr); /* no ',' found => no filter definitions */
 
 		if (nbytes >= IFNAMSIZ) {
-			printf("name of CAN device '%s' is too long!\n", ptr);
+			fprintf(stderr, "name of CAN device '%s' is too long!\n", ptr);
 			return 1;
 		}
 
@@ -429,12 +429,12 @@ int main(int argc, char **argv)
 					numfilter++;
 				} else if (sscanf(ptr, "#%lx",
 						  (long unsigned int *)&err_mask) != 1) { 
-					printf("Error in filter option parsing: '%s'\n", ptr);
+					fprintf(stderr, "Error in filter option parsing: '%s'\n", ptr);
 					exit(1);
 				}
 
 				if (numfilter > MAXFILTER) {
-					printf("Too many filters specified for '%s'.\n",
+					fprintf(stderr, "Too many filters specified for '%s'.\n",
 					       ifr.ifr_name);
 					exit(1);
 				}
@@ -478,7 +478,7 @@ int main(int argc, char **argv)
 		if (silent != SILENT_ON)
 			printf("\nWarning: console output active while logging!");
 
-		printf("\nEnabling Logfile '%s'\n\n", fname);
+		fprintf(stderr, "\nEnabling Logfile '%s'\n\n", fname);
 
 		logfile = fopen(fname, "w");
 		if (!logfile) {
