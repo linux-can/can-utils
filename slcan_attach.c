@@ -47,6 +47,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -54,9 +55,20 @@
 
 #define LDISC_N_SLCAN 17 /* default slcan line discipline since Kernel 2.6.25 */
 
-void usage(char *name)
+void print_usage(char *prg)
 {
-	fprintf(stderr, "Usage: %s [-d] [-l ldisc] tty\n", name);
+	fprintf(stderr, "\nUsage: %s [options] tty\n\n", prg);
+	fprintf(stderr, "Options: -o         (send open command 'O\\r')\n");
+	fprintf(stderr, "         -c         (send close command 'C\\r')\n");
+	fprintf(stderr, "         -s <speed> (set CAN speed 0..8)\n");
+	fprintf(stderr, "         -b <btr>   (set bit time register value)\n");
+	fprintf(stderr, "         -d         (only detach line discipline)\n");
+	fprintf(stderr, "         -w         (attach - wait for keypess - detach)\n");
+	fprintf(stderr, "\nExamples:\n");
+	fprintf(stderr, "slcan_attach -w -o -s6 -c /dev/ttyS1\n");
+	fprintf(stderr, "slcan_attach /dev/ttyS1\n");
+	fprintf(stderr, "slcan_attach -d /dev/ttyS1\n");
+	fprintf(stderr, "\n");
 	exit(1);
 }
 
@@ -65,40 +77,104 @@ int main(int argc, char **argv)
 	int fd;
 	int ldisc = LDISC_N_SLCAN;
 	int detach = 0;
+	int waitkey = 0;
+	int send_open = 0;
+	int send_close = 0;
+	char *speed = NULL;
+	char *btr = NULL;
+	char buf[10];
 	char *tty;
 	int opt;
 
-	while ((opt = getopt(argc, argv, "l:d")) != -1) {
+	while ((opt = getopt(argc, argv, "l:dwocs:b:")) != -1) {
 		switch (opt) {
 		case 'l':
-			ldisc = atoi(optarg);
+			fprintf(stderr, "Ignored option '-l'\n");
 			break;
 
 		case 'd':
 			detach = 1;
 			break;
+
+		case 'w':
+			waitkey = 1;
+			break;
+
+		case 'o':
+			send_open = 1;
+			break;
+
+		case 'c':
+			send_close = 1;
+			break;
+
+		case 's':
+			speed = optarg;
+			if (strlen(speed) > 1)
+				print_usage(argv[0]);
+			break;
+
+		case 'b':
+			btr = optarg;
+			if (strlen(btr) > 6)
+				print_usage(argv[0]);
+			break;
+
 		default:
-			usage(argv[0]);
+			print_usage(argv[0]);
 			break;
 		}
 	}
 
 	if (argc - optind != 1)
-		usage(argv[0]);
+		print_usage(argv[0]);
 
 	tty = argv[optind];
 
-	if ((fd = open (tty, O_RDONLY | O_NOCTTY)) < 0) {
+	if ((fd = open (tty, O_WRONLY | O_NOCTTY)) < 0) {
 		perror(tty);
 		exit(1);
 	}
 
-	if (detach)
-		ldisc = N_TTY;
+	if (waitkey || !detach) {
 
-	if (ioctl (fd, TIOCSETD, &ldisc) < 0) {
-		perror("ioctl");
-		exit(1);
+		if (speed) {
+			sprintf(buf, "S%s\r", speed);
+			write(fd, buf, strlen(buf));
+		}
+
+		if (btr) {
+			sprintf(buf, "s%s\r", btr);
+			write(fd, buf, strlen(buf));
+		}
+
+		if (send_open) {
+			sprintf(buf, "O\r");
+			write(fd, buf, strlen(buf));
+		}
+
+		if (ioctl (fd, TIOCSETD, &ldisc) < 0) {
+			perror("ioctl");
+			exit(1);
+		}
+	}
+
+	if (waitkey) {
+		printf("Press any key to detach %s ...\n", tty);
+		getchar();
+	}
+
+	if (waitkey || detach) {
+		ldisc = N_TTY;
+		if (ioctl (fd, TIOCSETD, &ldisc) < 0) {
+			perror("ioctl");
+			exit(1);
+		}
+
+		if (send_close) {
+			sprintf(buf, "C\r");
+			write(fd, buf, strlen(buf));
+		}
 	}
 
 	close(fd);
