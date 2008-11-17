@@ -126,6 +126,7 @@ static long loop = LOOP;
 static unsigned char binary;
 static unsigned char binary_gap;
 static unsigned char color;
+static char *interface;
 
 void rx_setup (int fd, int id);
 void rx_delete (int fd, int id);
@@ -290,6 +291,8 @@ int main(int argc, char **argv)
 		printf("name of CAN device '%s' is too long!\n", argv[optind]);
 		return 1;
 	}
+
+	interface = argv[optind];
 
 	if ((s = socket(PF_CAN, SOCK_DGRAM, CAN_BCM)) < 0) {
 		perror("socket");
@@ -543,7 +546,7 @@ int handle_timeo(int fd, long currcms){
 	if (clearscreen) {
 		char startline[80];
 		printf("%s%s", CLR_SCREEN, CSR_HOME);
-		snprintf(startline, 79, "< can-sniffer parameters: l=%ld h=%ld t=%ld >", loop, hold, timeout);
+		snprintf(startline, 79, "< cansniffer %s # l=%ld h=%ld t=%ld >", interface, loop, hold, timeout);
 		printf("%s%*s",STARTLINESTR, 79-(int)strlen(STARTLINESTR), startline);
 		force_redraw = 1;
 		clearscreen = 0;
