@@ -114,10 +114,16 @@ int parse_canframe(char *cs, struct can_frame *cf) {
 	if (len < 4)
 		return 1;
 
-	if (!((cs[3] == CANID_DELIM) || (cs[8] == CANID_DELIM)))
-		return 1;
+	if (cs[3] == CANID_DELIM) { /* 3 digits */
 
-	if (cs[8] == CANID_DELIM) { /* 8 digits */
+		idx = 4;
+		for (i=0; i<3; i++){
+			if ((tmp = asc2nibble(cs[i])) > 0x0F)
+				return 1;
+			cf->can_id |= (tmp << (2-i)*4);
+		}
+
+	} else if (cs[8] == CANID_DELIM) { /* 8 digits */
 
 		idx = 9;
 		for (i=0; i<8; i++){
@@ -128,15 +134,8 @@ int parse_canframe(char *cs, struct can_frame *cf) {
 		if (!(cf->can_id & CAN_ERR_FLAG)) /* 8 digits but no errorframe?  */
 			cf->can_id |= CAN_EFF_FLAG;   /* then it is an extended frame */
 
-	} else { /* 3 digits */
-
-		idx = 4;
-		for (i=0; i<3; i++){
-			if ((tmp = asc2nibble(cs[i])) > 0x0F)
-				return 1;
-			cf->can_id |= (tmp << (2-i)*4);
-		}
-	}
+	} else
+		return 1;
 
 	if((cs[idx] == 'R') || (cs[idx] == 'r')){ /* RTR frame */
 		cf->can_id |= CAN_RTR_FLAG;
