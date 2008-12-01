@@ -130,8 +130,9 @@ void print_usage(char *prg)
 	fprintf(stderr, "%s -c -c -ta can0,123:7FF,400:700,#000000FF can2,400~7F0 can3 can8\n", prg);
 	fprintf(stderr, "%s -l any,0~0,#FFFFFFFF    (log only error frames but no(!) data frames)\n", prg);
 	fprintf(stderr, "%s -l any,0:0,#FFFFFFFF    (log error frames and also all data frames)\n", prg);
-	fprintf(stderr, "%s vcan2,92345678:9FFFFFFF (match only for extended CAN ID 12345678)\n", prg);
-	fprintf(stderr, "%s vcan2,12345678:1FFFFFFF (analog to above due to 8 digit value length)\n", prg);
+	fprintf(stderr, "%s vcan2,92345678:DFFFFFFF (match only for extended CAN ID 12345678)\n", prg);
+	fprintf(stderr, "%s vcan2,123:7FF (matches CAN ID 123 - including EFF and RTR frames)\n", prg);
+	fprintf(stderr, "%s vcan2,123:C00007FF (matches CAN ID 123 - only SFF and non-RTR frames)\n", prg);
 	fprintf(stderr, "\n");
 }
 
@@ -189,21 +190,6 @@ int idx2dindex(int ifidx, int socket) {
 	return i;
 }
 
-canid_t checkeff(char *ptr, char *nptr)
-{
-	int len;
-
-	if (nptr)
-		len = nptr - ptr;
-	else
-		len = strlen(ptr);
-
-	if (len == 17 && (ptr[8] == ':' || ptr[8] == '~'))
-		return CAN_EFF_FLAG;
-	else
-		return 0;
-}
-
 int main(int argc, char **argv)
 {
 	fd_set rdfs;
@@ -219,7 +205,6 @@ int main(int argc, char **argv)
 	int opt, ret;
 	int currmax, numfilter;
 	char *ptr, *nptr;
-	canid_t eff;
 	struct sockaddr_can addr;
 	struct can_filter rfilter[MAXFILTER];
 	can_err_mask_t err_mask;
@@ -411,9 +396,6 @@ int main(int argc, char **argv)
 					   &rfilter[numfilter].can_id, 
 					   (long unsigned int *)
 					   &rfilter[numfilter].can_mask) == 2) {
-					eff = checkeff(ptr, nptr);
- 					rfilter[numfilter].can_id |= eff;
- 					rfilter[numfilter].can_mask |= eff;
  					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
 					numfilter++;
 				} else if (sscanf(ptr, "%lx~%lx",
@@ -422,9 +404,6 @@ int main(int argc, char **argv)
 						  (long unsigned int *)
 						  &rfilter[numfilter].can_mask) == 2) {
  					rfilter[numfilter].can_id |= CAN_INV_FILTER;
-					eff = checkeff(ptr, nptr);
- 					rfilter[numfilter].can_id |= eff;
- 					rfilter[numfilter].can_mask |= eff;
  					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
 					numfilter++;
 				} else if (sscanf(ptr, "#%lx",

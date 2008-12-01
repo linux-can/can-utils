@@ -162,17 +162,22 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	rfilter[0].can_id   = src;
-	if (src & CAN_EFF_FLAG)
-		rfilter[0].can_mask = CAN_EFF_MASK | CAN_EFF_FLAG;
-	else
-		rfilter[0].can_mask = CAN_SFF_MASK;
 
-	rfilter[1].can_id   = dst;
-	if (dst & CAN_EFF_FLAG)
-		rfilter[1].can_mask = CAN_EFF_MASK | CAN_EFF_FLAG;
-	else
-		rfilter[1].can_mask = CAN_SFF_MASK;
+	if (src & CAN_EFF_FLAG) {
+		rfilter[0].can_id   = src & (CAN_EFF_MASK | CAN_EFF_FLAG);
+		rfilter[0].can_mask = (CAN_EFF_MASK|CAN_EFF_FLAG|CAN_RTR_FLAG);
+	} else {
+		rfilter[0].can_id   = src & CAN_SFF_MASK;
+		rfilter[0].can_mask = (CAN_SFF_MASK|CAN_EFF_FLAG|CAN_RTR_FLAG);
+	}
+
+	if (dst & CAN_EFF_FLAG) {
+		rfilter[1].can_id   = dst & (CAN_EFF_MASK | CAN_EFF_FLAG);
+		rfilter[1].can_mask = (CAN_EFF_MASK|CAN_EFF_FLAG|CAN_RTR_FLAG);
+	} else {
+		rfilter[1].can_id   = dst & CAN_SFF_MASK;
+		rfilter[1].can_mask = (CAN_SFF_MASK|CAN_EFF_FLAG|CAN_RTR_FLAG);
+	}
 
 	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, &rfilter, sizeof(rfilter));
 
