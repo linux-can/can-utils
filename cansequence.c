@@ -105,9 +105,10 @@ int main(int argc, char **argv)
 			break;
 
 		case 'l':
-			if (optarg)
+			if (optarg) {
 				loopcount = strtoul(optarg, NULL, 0);
-			else
+				infinite = 0;
+			} else
 				infinite = 1;
 			break;
 
