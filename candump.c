@@ -279,6 +279,9 @@ int main(int argc, char **argv)
 					return 1;
 				}
 
+				/* disable default receive filter on this write-only RAW socket */
+				setsockopt(bridge, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
+
 				if (opt == 'B') {
 					int loopback = 0;
 
