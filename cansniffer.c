@@ -212,7 +212,7 @@ int main(int argc, char **argv)
 	for (i=0; i < 2048 ;i++) /* default: check all CAN-IDs */
 		do_set(i, ENABLE);
 
-	while ((opt = getopt(argc, argv, "m:v:r:t:h:l:qbBcf")) != -1) {
+	while ((opt = getopt(argc, argv, "m:v:r:t:h:l:qbBcf?")) != -1) {
 		switch (opt) {
 		case 'm':
 			sscanf(optarg, "%x", &mask);

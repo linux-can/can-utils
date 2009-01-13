@@ -86,7 +86,7 @@ int main(int argc, char **argv)
 	char *tty;
 	int opt;
 
-	while ((opt = getopt(argc, argv, "l:dwocs:b:")) != -1) {
+	while ((opt = getopt(argc, argv, "l:dwocs:b:?")) != -1) {
 		switch (opt) {
 		case 'l':
 			fprintf(stderr, "Ignored option '-l'\n");
@@ -120,6 +120,7 @@ int main(int argc, char **argv)
 				print_usage(argv[0]);
 			break;
 
+		case '?':
 		default:
 			print_usage(argv[0]);
 			break;

@@ -182,7 +182,7 @@ int main(int argc, char **argv)
 	int data[8];
 	int i, found, opt;
 
-	while ((opt = getopt(argc, argv, "I:O:v")) != -1) {
+	while ((opt = getopt(argc, argv, "I:O:v?")) != -1) {
 		switch (opt) {
 		case 'I':
 			infile = fopen(optarg, "r");
@@ -202,6 +202,11 @@ int main(int argc, char **argv)
 
 		case 'v':
 			verbose = 1;
+			break;
+
+		case '?':
+			print_usage(basename(argv[0]));
+			return 0;
 			break;
 
 		default:

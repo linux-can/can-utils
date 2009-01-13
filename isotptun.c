@@ -111,7 +111,7 @@ int main(int argc, char **argv)
 
 	addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-	while ((opt = getopt(argc, argv, "s:d:x:p:q:P:t:b:m:whv")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:x:p:q:P:t:b:m:whv?")) != -1) {
 		switch (opt) {
 		case 's':
 			addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
@@ -178,10 +178,15 @@ int main(int argc, char **argv)
 			verbose = 1;
 			break;
 
+		case '?':
+			print_usage(basename(argv[0]));
+			exit(0);
+			break;
+
 		default:
 			fprintf(stderr, "Unknown option %c\n", opt);
 			print_usage(basename(argv[0]));
-			exit(0);
+			exit(1);
 			break;
 		}
 	}
@@ -190,7 +195,7 @@ int main(int argc, char **argv)
 	    (addr.can_addr.tp.tx_id == NO_CAN_ID) ||
 	    (addr.can_addr.tp.rx_id == NO_CAN_ID)) {
 		print_usage(basename(argv[0]));
-		exit(0);
+		exit(1);
 	}
   
 	if ((s = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP)) < 0) {

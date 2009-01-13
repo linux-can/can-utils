@@ -193,7 +193,7 @@ int main(int argc, char **argv)
 	unsigned char buffer[4096];
 	int nbytes;
 
-	while ((opt = getopt(argc, argv, "s:d:x:h:ct:f:")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:x:h:ct:f:?")) != -1) {
 		switch (opt) {
 		case 's':
 			src = strtoul(optarg, (char **)NULL, 16);
@@ -234,17 +234,22 @@ int main(int argc, char **argv)
 			}
 			break;
 
+		case '?':
+			print_usage(basename(argv[0]));
+			exit(0);
+			break;
+
 		default:
 			fprintf(stderr, "Unknown option %c\n", opt);
 			print_usage(basename(argv[0]));
-			exit(0);
+			exit(1);
 			break;
 		}
 	}
 
 	if ((argc - optind) != 1 || src == NO_CAN_ID || dst == NO_CAN_ID) {
 		print_usage(basename(argv[0]));
-		exit(0);
+		exit(1);
 	}
   
 	if ((s = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP)) < 0) {

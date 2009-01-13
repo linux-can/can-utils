@@ -79,7 +79,7 @@ int main(int argc, char **argv)
 	FILE *outfile = stdout;
 	static int maxdev, devno, i, crlf, d4, opt;
 
-	while ((opt = getopt(argc, argv, "I:O:4n")) != -1) {
+	while ((opt = getopt(argc, argv, "I:O:4n?")) != -1) {
 		switch (opt) {
 		case 'I':
 			infile = fopen(optarg, "r");
@@ -103,6 +103,11 @@ int main(int argc, char **argv)
 
 		case '4':
 			d4 = 1;
+			break;
+
+		case '?':
+			print_usage(basename(argv[0]));
+			return 0;
 			break;
 
 		default:

@@ -245,7 +245,7 @@ int main(int argc, char **argv)
 	int eof, nbytes, i, j;
 	char *fret;
 
-	while ((opt = getopt(argc, argv, "I:l:tg:s:xv")) != -1) {
+	while ((opt = getopt(argc, argv, "I:l:tg:s:xv?")) != -1) {
 		switch (opt) {
 		case 'I':
 			infile = fopen(optarg, "r");
@@ -289,6 +289,7 @@ int main(int argc, char **argv)
 			verbose++;
 			break;
 
+		case '?':
 		default:
 			print_usage(basename(argv[0]));
 			return 1;

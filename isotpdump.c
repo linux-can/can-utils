@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "s:d:ax:ct:")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:ax:ct:?")) != -1) {
 		switch (opt) {
 		case 's':
 			src = strtoul(optarg, (char **)NULL, 16);
@@ -144,10 +144,15 @@ int main(int argc, char **argv)
 			}
 			break;
 
+		case '?':
+			print_usage(basename(argv[0]));
+			exit(0);
+			break;
+
 		default:
 			fprintf(stderr, "Unknown option %c\n", opt);
 			print_usage(basename(argv[0]));
-			exit(0);
+			exit(1);
 			break;
 		}
 	}
