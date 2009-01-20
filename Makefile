@@ -49,7 +49,7 @@ CFLAGS    = -O2 -Wall -Wno-parentheses -I../kernel/2.6/include \
 
 PROGRAMS = candump cansniffer cansend canplayer canlogserver cangen\
 	   canbusload log2long log2asc asc2log vcan slcan_attach\
-	   isotpdump isotprecv isotpsend isotpsniffer isotptun
+	   isotpdump isotprecv isotpsend isotpsniffer isotptun slcanpty
 
 all: $(PROGRAMS)
 
