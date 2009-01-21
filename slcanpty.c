@@ -170,9 +170,6 @@ int main(int argc, char **argv)
 
 			rxf.can_dlc = rxbuf[rxp] & 0x0F; /* get can_dlc */
 
-			if (rxf.can_dlc > 8)
-				continue;
-
 			rxbuf[rxp] = 0; /* terminate can_id string */
 
 			rxf.can_id = strtoul(rxbuf+1, NULL, 16);
