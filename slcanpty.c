@@ -74,6 +74,7 @@ int main(int argc, char **argv)
 	char rxbuf[SLC_MTU];
 	int txp, rxp;
 	struct can_frame txf, rxf;
+	struct can_filter fi;
 	int tmp, i;
 
 	/* check command line options */
@@ -128,6 +129,10 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	/* no filter content by default */
+	fi.can_id   = CAN_ERR_FLAG;
+	fi.can_mask = CAN_ERR_FLAG;
+
 	while (running) {
 
 		FD_ZERO(&rdfs);
@@ -155,6 +160,26 @@ int main(int argc, char **argv)
 
 			/* convert to struct can_frame rxf */
 			rxcmd = rxbuf[0];
+
+			/* check for filter configuration commands */
+			if (rxcmd == 'm' || rxcmd == 'M') {
+				rxbuf[9] = 0; /* terminate filter string */
+
+				if (rxcmd == 'm') {
+					fi.can_id = strtoul(rxbuf+1,NULL,16);
+					fi.can_id &= CAN_EFF_MASK;
+				} else {
+					fi.can_mask = strtoul(rxbuf+1,NULL,16);
+					fi.can_mask &= CAN_EFF_MASK;
+				}
+
+				/* set only when both values are defined */
+				if (fi.can_id   != CAN_ERR_FLAG &&
+				    fi.can_mask != CAN_ERR_FLAG)
+					setsockopt(s, SOL_CAN_RAW,
+						   CAN_RAW_FILTER, &fi,
+						   sizeof(struct can_filter));
+			}
 
 			if ((rxcmd != 't') && (rxcmd != 'T') &&
 			    (rxcmd != 'r') && (rxcmd != 'R'))
