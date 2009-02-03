@@ -70,6 +70,7 @@ int main(int argc, char **argv)
 	struct ifreq ifr;
 	int running = 1;
 	int tstamp = 0;
+	int is_open = 0;
 	char txcmd, rxcmd;
 	char txbuf[SLC_MTU];
 	char rxbuf[SLC_MTU];
@@ -125,14 +126,17 @@ int main(int argc, char **argv)
 	}
 	addr.can_ifindex = ifr.ifr_ifindex;
 
+	/* disable reception of CAN frames until we are opened by 'O' */
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
+
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
 		return 1;
 	}
 
-	/* no filter content by default */
-	fi.can_id   = CAN_ERR_FLAG;
-	fi.can_mask = CAN_ERR_FLAG;
+	/* open filter by default */
+	fi.can_id   = 0;
+	fi.can_mask = 0;
 
 	while (running) {
 
@@ -175,23 +179,39 @@ int main(int argc, char **argv)
 				}
 
 				/* set only when both values are defined */
-				if (fi.can_id   != CAN_ERR_FLAG &&
-				    fi.can_mask != CAN_ERR_FLAG)
+				if (is_open)
 					setsockopt(s, SOL_CAN_RAW,
 						   CAN_RAW_FILTER, &fi,
 						   sizeof(struct can_filter));
-				continue;
+				goto rx_out_ack;
 			}
 
 			/* check for timestamp on/off command */
 			if (rxcmd == 'Z') {
 				tstamp = rxbuf[1] & 0x01;
-				continue;
+				goto rx_out_ack;
+			}
+
+			/* check for 'O'pen command */
+			if (rxcmd == 'O') {
+				setsockopt(s, SOL_CAN_RAW,
+					   CAN_RAW_FILTER, &fi,
+					   sizeof(struct can_filter));
+				is_open = 1;
+				goto rx_out_ack;
+			}
+
+			/* check for 'C'lose command */
+			if (rxcmd == 'C') {
+				setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER,
+					   NULL, 0);
+				is_open = 0;
+				goto rx_out_ack;
 			}
 
 			if ((rxcmd != 't') && (rxcmd != 'T') &&
 			    (rxcmd != 'r') && (rxcmd != 'R'))
-				continue;
+				goto rx_out_ack;
 
 			if (rxcmd & 0x20) /* tiny chars 'r' 't' => SFF */
 				rxp = 4; /* dlc position tiiid */
@@ -199,7 +219,7 @@ int main(int argc, char **argv)
 				rxp = 9; /* dlc position Tiiiiiiiid */
 
 			if (!((rxbuf[rxp] >= '0') && (rxbuf[rxp] < '9')))
-				continue;
+				goto rx_out_nack;
 
 			rxf.can_dlc = rxbuf[rxp] & 0x0F; /* get can_dlc */
 
@@ -219,17 +239,29 @@ int main(int argc, char **argv)
 
 				tmp = asc2nibble(rxbuf[rxp++]);
 				if (tmp > 0x0F)
-					continue;
+					goto rx_out_nack;
 				rxf.data[i] = (tmp << 4);
 				tmp = asc2nibble(rxbuf[rxp++]);
 				if (tmp > 0x0F)
-					continue;
+					goto rx_out_nack;
 				rxf.data[i] |= tmp;
 			}
 
 			nbytes = write(s, &rxf, sizeof(rxf));
 			if (nbytes != sizeof(rxf)) {
 				perror("write socket");
+				return 1;
+			}
+
+rx_out_ack:
+			rxcmd = '\r';
+			goto rx_out;
+rx_out_nack:
+			rxcmd = '\a';
+rx_out:
+			nbytes = write(p, &rxcmd, 1);
+			if (nbytes < 0) {
+				perror("write pty ack/nack");
 				return 1;
 			}
 		}
