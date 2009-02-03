@@ -69,6 +69,7 @@ int main(int argc, char **argv)
 	struct termios topts;
 	struct ifreq ifr;
 	int running = 1;
+	int tstamp = 0;
 	char txcmd, rxcmd;
 	char txbuf[SLC_MTU];
 	char rxbuf[SLC_MTU];
@@ -179,6 +180,13 @@ int main(int argc, char **argv)
 					setsockopt(s, SOL_CAN_RAW,
 						   CAN_RAW_FILTER, &fi,
 						   sizeof(struct can_filter));
+				continue;
+			}
+
+			/* check for timestamp on/off command */
+			if (rxcmd == 'Z') {
+				tstamp = rxbuf[1] & 0x01;
+				continue;
 			}
 
 			if ((rxcmd != 't') && (rxcmd != 'T') &&
@@ -254,6 +262,16 @@ int main(int argc, char **argv)
 			for (i = 0; i < txf.can_dlc; i++)
 				sprintf(&txbuf[txp + 2*i], "%02X",
 					txf.data[i]);
+
+			if (tstamp) {
+				struct timeval tv;
+
+				if (ioctl(s, SIOCGSTAMP, &tv) < 0)
+					perror("SIOCGSTAMP");
+
+				sprintf(&txbuf[txp + 2*txf.can_dlc], "%04lX",
+					(tv.tv_sec%60)*1000 + tv.tv_usec/1000);
+			}
 
 			strcat(txbuf, "\r"); /* add terminating character */
 			nbytes = write(p, txbuf, strlen(txbuf));
