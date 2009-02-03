@@ -254,12 +254,14 @@ int main(int argc, char **argv)
 			}
 
 rx_out_ack:
-			rxcmd = '\r';
+			rxbuf[0] = '\r';
+			tmp = 1;
 			goto rx_out;
 rx_out_nack:
-			rxcmd = '\a';
+			rxbuf[0] = '\a';
+			tmp = 1;
 rx_out:
-			nbytes = write(p, &rxcmd, 1);
+			nbytes = write(p, rxbuf, tmp);
 			if (nbytes < 0) {
 				perror("write pty ack/nack");
 				return 1;
