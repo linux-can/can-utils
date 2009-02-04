@@ -174,10 +174,11 @@ rx_restart:
 				nbytes--;
 			}
 
-			if (nbytes < 2)
+			if (!nbytes)
 				continue;
 
 			rxcmd = rxbuf[0];
+			rxbuf[nbytes] = 0;
 
 #ifdef DEBUG
 			for (tmp = 0; tmp < nbytes; tmp++)
@@ -302,37 +303,57 @@ rx_restart:
 			else
 				rxp = 9; /* dlc position Tiiiiiiiid */
 
-			if (!((rxbuf[rxp] >= '0') && (rxbuf[rxp] < '9')))
-				goto rx_out_nack;
-
-			rxf.can_dlc = rxbuf[rxp] & 0x0F; /* get can_dlc */
-
-			rxbuf[rxp] = 0; /* terminate can_id string */
-
-			rxf.can_id = strtoul(rxbuf+1, NULL, 16);
-
-			if (!(rxcmd & 0x20)) /* NO tiny chars => EFF */
-				rxf.can_id |= CAN_EFF_FLAG;
-
-			if ((rxcmd | 0x20) == 'r') /* RTR frame */
-				rxf.can_id |= CAN_RTR_FLAG;
-
 			*(unsigned long long *) (&rxf.data) = 0ULL; /* clear */
 
-			for (i = 0, rxp++; i < rxf.can_dlc; i++) {
+			if ((rxcmd | 0x20) == 'r' && rxbuf[rxp] != '0') {
+				/* RTR frame without dlc information */
 
-				tmp = asc2nibble(rxbuf[rxp++]);
-				if (tmp > 0x0F)
+				rxf.can_dlc = rxbuf[rxp]; /* save */
+
+				rxbuf[rxp] = 0; /* terminate can_id string */
+
+				rxf.can_id = strtoul(rxbuf+1, NULL, 16);
+				rxf.can_id |= CAN_RTR_FLAG;
+
+				if (!(rxcmd & 0x20)) /* NO tiny chars => EFF */
+					rxf.can_id |= CAN_EFF_FLAG;
+
+				rxbuf[rxp]  = rxf.can_dlc; /* restore */
+				rxf.can_dlc = 0;
+				rxp--; /* we have no dlc component here */
+
+			} else {
+
+				if (!(rxbuf[rxp] >= '0' && rxbuf[rxp] < '9'))
 					goto rx_out_nack;
-				rxf.data[i] = (tmp << 4);
-				tmp = asc2nibble(rxbuf[rxp++]);
-				if (tmp > 0x0F)
-					goto rx_out_nack;
-				rxf.data[i] |= tmp;
+
+				rxf.can_dlc = rxbuf[rxp] & 0x0F; /* get dlc */
+
+				rxbuf[rxp] = 0; /* terminate can_id string */
+
+				rxf.can_id = strtoul(rxbuf+1, NULL, 16);
+
+				if (!(rxcmd & 0x20)) /* NO tiny chars => EFF */
+					rxf.can_id |= CAN_EFF_FLAG;
+
+				if ((rxcmd | 0x20) == 'r') /* RTR frame */
+					rxf.can_id |= CAN_RTR_FLAG;
+
+				for (i = 0, rxp++; i < rxf.can_dlc; i++) {
+
+					tmp = asc2nibble(rxbuf[rxp++]);
+					if (tmp > 0x0F)
+						goto rx_out_nack;
+					rxf.data[i] = (tmp << 4);
+					tmp = asc2nibble(rxbuf[rxp++]);
+					if (tmp > 0x0F)
+						goto rx_out_nack;
+					rxf.data[i] |= tmp;
+				}
+				/* point to last real data */
+				if (rxf.can_dlc)
+					rxp--;
 			}
-			/* point to last real data */
-			if (rxf.can_dlc)
-				rxp--;
 
 			nbytes = write(s, &rxf, sizeof(rxf));
 			if (nbytes != sizeof(rxf)) {
