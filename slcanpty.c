@@ -44,6 +44,8 @@
 /* maximum rx buffer len: extended CAN frame with timestamp */
 #define SLC_MTU (sizeof("T1111222281122334455667788EA5F\r")+1)
 
+#define DEBUG
+
 static int asc2nibble(char c)
 {
 
@@ -73,7 +75,8 @@ int main(int argc, char **argv)
 	int is_open = 0;
 	char txcmd, rxcmd;
 	char txbuf[SLC_MTU];
-	char rxbuf[SLC_MTU];
+	char rxbuf[200];
+	char replybuf[SLC_MTU];
 	int txp, rxp;
 	struct can_frame txf, rxf;
 	struct can_filter fi;
@@ -163,12 +166,36 @@ int main(int argc, char **argv)
 				return 1;
 			}
 
-			/* convert to struct can_frame rxf */
+rx_restart:
+			/* remove trailing '\r' characters */
+			while (rxbuf[0] == '\r' && nbytes > 0) {
+				for (tmp = 0; tmp < nbytes; tmp++)
+					rxbuf[tmp] = rxbuf[tmp+1];
+				nbytes--;
+			}
+
+			if (nbytes < 2)
+				continue;
+
 			rxcmd = rxbuf[0];
+
+#ifdef DEBUG
+			for (tmp = 0; tmp < nbytes; tmp++)
+				if (rxbuf[tmp] == '\r')
+					putchar('@');
+				else
+					putchar(rxbuf[tmp]);
+			printf("\n");
+#endif
 
 			/* check for filter configuration commands */
 			if (rxcmd == 'm' || rxcmd == 'M') {
 				rxbuf[9] = 0; /* terminate filter string */
+				rxp = 9;
+#if 0
+				/* the filter is no SocketCAN filter :-( */
+
+				/* TODO: behave like a SJA1000 filter */
 
 				if (rxcmd == 'm') {
 					fi.can_id = strtoul(rxbuf+1,NULL,16);
@@ -183,12 +210,15 @@ int main(int argc, char **argv)
 					setsockopt(s, SOL_CAN_RAW,
 						   CAN_RAW_FILTER, &fi,
 						   sizeof(struct can_filter));
+#endif
 				goto rx_out_ack;
 			}
+
 
 			/* check for timestamp on/off command */
 			if (rxcmd == 'Z') {
 				tstamp = rxbuf[1] & 0x01;
+				rxp = 2;
 				goto rx_out_ack;
 			}
 
@@ -197,6 +227,7 @@ int main(int argc, char **argv)
 				setsockopt(s, SOL_CAN_RAW,
 					   CAN_RAW_FILTER, &fi,
 					   sizeof(struct can_filter));
+				rxp = 1;
 				is_open = 1;
 				goto rx_out_ack;
 			}
@@ -205,13 +236,66 @@ int main(int argc, char **argv)
 			if (rxcmd == 'C') {
 				setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER,
 					   NULL, 0);
+				rxp = 1;
 				is_open = 0;
 				goto rx_out_ack;
 			}
 
-			if ((rxcmd != 't') && (rxcmd != 'T') &&
-			    (rxcmd != 'r') && (rxcmd != 'R'))
+			/* check for 'V'ersion command */
+			if (rxcmd == 'V') {
+				sprintf(replybuf, "V1013\r");
+				tmp = strlen(replybuf);
+				rxp = 1;
+				goto rx_out;
+			}
+
+			/* check for serial 'N'umber command */
+			if (rxcmd == 'N') {
+				sprintf(replybuf, "N4242\r");
+				tmp = strlen(replybuf);
+				rxp = 1;
+				goto rx_out;
+			}
+
+			/* check for read status 'F'lags */
+			if (rxcmd == 'F') {
+				sprintf(replybuf, "F00\r");
+				tmp = strlen(replybuf);
+				rxp = 1;
+				goto rx_out;
+			}
+
+			/* correctly answer unsupported commands */
+			if (rxcmd == 'U') {
+				rxp = 2;
 				goto rx_out_ack;
+			}
+			if (rxcmd == 'S') {
+				rxp = 2;
+				goto rx_out_ack;
+			}
+			if (rxcmd == 's') {
+				rxp = 5;
+				goto rx_out_ack;
+			}
+			if (rxcmd == 'P' || rxcmd == 'A') {
+				rxp = 1;
+				goto rx_out_nack;
+			}
+			if (rxcmd == 'X') {
+				rxp = 2;
+				if (rxbuf[1] & 0x01)
+					goto rx_out_ack;
+				else
+					goto rx_out_nack;
+			}
+
+			/* catch unknown commands */
+			if ((rxcmd != 't') && (rxcmd != 'T') &&
+			    (rxcmd != 'r') && (rxcmd != 'R')) {
+				rxp = nbytes-1;
+				goto rx_out_nack;
+			}
 
 			if (rxcmd & 0x20) /* tiny chars 'r' 't' => SFF */
 				rxp = 4; /* dlc position tiiid */
@@ -246,6 +330,9 @@ int main(int argc, char **argv)
 					goto rx_out_nack;
 				rxf.data[i] |= tmp;
 			}
+			/* point to last real data */
+			if (rxf.can_dlc)
+				rxp--;
 
 			nbytes = write(s, &rxf, sizeof(rxf));
 			if (nbytes != sizeof(rxf)) {
@@ -254,17 +341,25 @@ int main(int argc, char **argv)
 			}
 
 rx_out_ack:
-			rxbuf[0] = '\r';
+			replybuf[0] = '\r';
 			tmp = 1;
 			goto rx_out;
 rx_out_nack:
-			rxbuf[0] = '\a';
+			replybuf[0] = '\a';
 			tmp = 1;
 rx_out:
-			nbytes = write(p, rxbuf, tmp);
-			if (nbytes < 0) {
-				perror("write pty ack/nack");
+			tmp = write(p, replybuf, tmp);
+			if (tmp < 0) {
+				perror("write pty replybuf");
 				return 1;
+			}
+
+			/* check if there is another command in this buffer */
+			if (nbytes > rxp+1) {
+				for (tmp = 0, rxp++; rxp+tmp < nbytes; tmp++)
+					rxbuf[tmp] = rxbuf[rxp+tmp];
+				nbytes = tmp;
+				goto rx_restart;
 			}
 		}
 
