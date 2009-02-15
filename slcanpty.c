@@ -61,26 +61,320 @@ static int asc2nibble(char c)
 	return 16; /* error */
 }
 
+/* read data from pty, send CAN frames to CAN socket and answer commands */
+int pty2can(int pty, int socket, struct can_filter *fi,
+	       int *is_open, int *tstamp)
+{
+	int nbytes;
+	char cmd;
+	char buf[200];
+	char replybuf[10]; /* for answers to received commands */
+	int ptr;
+	struct can_frame frame;
+	int tmp, i;
+
+	nbytes = read(pty, &buf, sizeof(buf)-1);
+	if (nbytes < 0) {
+		perror("read pty");
+		return 1;
+	}
+
+rx_restart:
+	/* remove trailing '\r' characters to be robust against some apps */
+	while (buf[0] == '\r' && nbytes > 0) {
+		for (tmp = 0; tmp < nbytes; tmp++)
+			buf[tmp] = buf[tmp+1];
+		nbytes--;
+	}
+
+	if (!nbytes)
+		return 0;
+
+	cmd = buf[0];
+	buf[nbytes] = 0;
+
+#ifdef DEBUG
+	for (tmp = 0; tmp < nbytes; tmp++)
+		if (buf[tmp] == '\r')
+			putchar('@');
+		else
+			putchar(buf[tmp]);
+	printf("\n");
+#endif
+
+	/* check for filter configuration commands */
+	if (cmd == 'm' || cmd == 'M') {
+		buf[9] = 0; /* terminate filter string */
+		ptr = 9;
+#if 0
+		/* the filter is no SocketCAN filter :-( */
+
+		/* TODO: behave like a SJA1000 controller specific filter */
+
+		if (cmd == 'm') {
+			fi->can_id = strtoul(buf+1,NULL,16);
+			fi->can_id &= CAN_EFF_MASK;
+		} else {
+			fi->can_mask = strtoul(buf+1,NULL,16);
+			fi->can_mask &= CAN_EFF_MASK;
+		}
+
+		if (*is_open)
+			setsockopt(socket, SOL_CAN_RAW,
+				   CAN_RAW_FILTER, fi,
+				   sizeof(struct can_filter));
+#endif
+		goto rx_out_ack;
+	}
+
+
+	/* check for timestamp on/off command */
+	if (cmd == 'Z') {
+		*tstamp = buf[1] & 0x01;
+		ptr = 2;
+		goto rx_out_ack;
+	}
+
+	/* check for 'O'pen command */
+	if (cmd == 'O') {
+		setsockopt(socket, SOL_CAN_RAW,
+			   CAN_RAW_FILTER, fi,
+			   sizeof(struct can_filter));
+		ptr = 1;
+		*is_open = 1;
+		goto rx_out_ack;
+	}
+
+	/* check for 'C'lose command */
+	if (cmd == 'C') {
+		setsockopt(socket, SOL_CAN_RAW, CAN_RAW_FILTER,
+			   NULL, 0);
+		ptr = 1;
+		*is_open = 0;
+		goto rx_out_ack;
+	}
+
+	/* check for 'V'ersion command */
+	if (cmd == 'V') {
+		sprintf(replybuf, "V1013\r");
+		tmp = strlen(replybuf);
+		ptr = 1;
+		goto rx_out;
+	}
+
+	/* check for serial 'N'umber command */
+	if (cmd == 'N') {
+		sprintf(replybuf, "N4242\r");
+		tmp = strlen(replybuf);
+		ptr = 1;
+		goto rx_out;
+	}
+
+	/* check for read status 'F'lags */
+	if (cmd == 'F') {
+		sprintf(replybuf, "F00\r");
+		tmp = strlen(replybuf);
+		ptr = 1;
+		goto rx_out;
+	}
+
+	/* correctly answer unsupported commands */
+	if (cmd == 'U') {
+		ptr = 2;
+		goto rx_out_ack;
+	}
+	if (cmd == 'S') {
+		ptr = 2;
+		goto rx_out_ack;
+	}
+	if (cmd == 's') {
+		ptr = 5;
+		goto rx_out_ack;
+	}
+	if (cmd == 'P' || cmd == 'A') {
+		ptr = 1;
+		goto rx_out_nack;
+	}
+	if (cmd == 'X') {
+		ptr = 2;
+		if (buf[1] & 0x01)
+			goto rx_out_ack;
+		else
+			goto rx_out_nack;
+	}
+
+	/* catch unknown commands */
+	if ((cmd != 't') && (cmd != 'T') &&
+	    (cmd != 'r') && (cmd != 'R')) {
+		ptr = nbytes-1;
+		goto rx_out_nack;
+	}
+
+	if (cmd & 0x20) /* tiny chars 'r' 't' => SFF */
+		ptr = 4; /* dlc position tiiid */
+	else
+		ptr = 9; /* dlc position Tiiiiiiiid */
+
+	*(unsigned long long *) (&frame.data) = 0ULL; /* clear data[] */
+
+	if ((cmd | 0x20) == 'r' && buf[ptr] != '0') {
+
+		/* 
+		 * RTR frame without dlc information!
+		 * This is against the SLCAN spec but sent
+		 * by a commercial CAN tool ... so we are
+		 * robust against this protocol violation.
+		 */
+
+		frame.can_dlc = buf[ptr]; /* save following byte */
+
+		buf[ptr] = 0; /* terminate can_id string */
+
+		frame.can_id = strtoul(buf+1, NULL, 16);
+		frame.can_id |= CAN_RTR_FLAG;
+
+		if (!(cmd & 0x20)) /* NO tiny chars => EFF */
+			frame.can_id |= CAN_EFF_FLAG;
+
+		buf[ptr]  = frame.can_dlc; /* restore following byte */
+		frame.can_dlc = 0;
+		ptr--; /* we have no dlc component in the violation case */
+
+	} else {
+
+		if (!(buf[ptr] >= '0' && buf[ptr] < '9'))
+			goto rx_out_nack;
+
+		frame.can_dlc = buf[ptr] - '0'; /* get dlc from ASCII val */
+
+		buf[ptr] = 0; /* terminate can_id string */
+
+		frame.can_id = strtoul(buf+1, NULL, 16);
+
+		if (!(cmd & 0x20)) /* NO tiny chars => EFF */
+			frame.can_id |= CAN_EFF_FLAG;
+
+		if ((cmd | 0x20) == 'r') /* RTR frame */
+			frame.can_id |= CAN_RTR_FLAG;
+
+		for (i = 0, ptr++; i < frame.can_dlc; i++) {
+
+			tmp = asc2nibble(buf[ptr++]);
+			if (tmp > 0x0F)
+				goto rx_out_nack;
+			frame.data[i] = (tmp << 4);
+			tmp = asc2nibble(buf[ptr++]);
+			if (tmp > 0x0F)
+				goto rx_out_nack;
+			frame.data[i] |= tmp;
+		}
+		/* point to last real data */
+		if (frame.can_dlc)
+			ptr--;
+	}
+
+	nbytes = write(socket, &frame, sizeof(frame));
+	if (nbytes != sizeof(frame)) {
+		perror("write socket");
+		return 1;
+	}
+
+rx_out_ack:
+	replybuf[0] = '\r';
+	tmp = 1;
+	goto rx_out;
+rx_out_nack:
+	replybuf[0] = '\a';
+	tmp = 1;
+rx_out:
+	tmp = write(pty, replybuf, tmp);
+	if (tmp < 0) {
+		perror("write pty replybuf");
+		return 1;
+	}
+
+	/* check if there is another command in this buffer */
+	if (nbytes > ptr+1) {
+		for (tmp = 0, ptr++; ptr+tmp < nbytes; tmp++)
+			buf[tmp] = buf[ptr+tmp];
+		nbytes = tmp;
+		goto rx_restart;
+	}
+
+	return 0;
+}
+
+/* read CAN frames from CAN interface and write it to the pty */
+int can2pty(int pty, int socket, int *tstamp)
+{
+	int nbytes;
+	char cmd;
+	char buf[SLC_MTU];
+	int ptr;
+	struct can_frame frame;
+	int i;
+
+	nbytes = read(socket, &frame, sizeof(frame));
+	if (nbytes != sizeof(frame)) {
+		perror("read socket");
+		return 1;
+	}
+
+	/* convert to slcan ASCII frame */
+	if (frame.can_id & CAN_RTR_FLAG)
+		cmd = 'R'; /* becomes 'r' in SFF format */
+	else
+		cmd = 'T'; /* becomes 't' in SFF format */
+
+	if (frame.can_id & CAN_EFF_FLAG)
+		sprintf(buf, "%c%08X%d", cmd,
+			frame.can_id & CAN_EFF_MASK,
+			frame.can_dlc);
+	else
+		sprintf(buf, "%c%03X%d", cmd | 0x20,
+			frame.can_id & CAN_SFF_MASK,
+			frame.can_dlc);
+
+	ptr = strlen(buf);
+
+	for (i = 0; i < frame.can_dlc; i++)
+		sprintf(&buf[ptr + 2*i], "%02X",
+			frame.data[i]);
+
+	if (*tstamp) {
+		struct timeval tv;
+
+		if (ioctl(socket, SIOCGSTAMP, &tv) < 0)
+			perror("SIOCGSTAMP");
+
+		sprintf(&buf[ptr + 2*frame.can_dlc], "%04lX",
+			(tv.tv_sec%60)*1000 + tv.tv_usec/1000);
+	}
+
+	strcat(buf, "\r"); /* add terminating character */
+	nbytes = write(pty, buf, strlen(buf));
+	if (nbytes < 0) {
+		perror("write pty");
+		return 1;
+	}
+	fflush(NULL);
+
+	return 0;
+}
+
+
 int main(int argc, char **argv)
 {
 	fd_set rdfs;
 	int p; /* pty master file */ 
 	int s; /* can raw socket */ 
-	int nbytes;
 	struct sockaddr_can addr;
 	struct termios topts;
 	struct ifreq ifr;
 	int running = 1;
 	int tstamp = 0;
 	int is_open = 0;
-	char txcmd, rxcmd;
-	char txbuf[SLC_MTU];
-	char rxbuf[200];
-	char replybuf[SLC_MTU];
-	int txp, rxp;
-	struct can_frame txf, rxf;
 	struct can_filter fi;
-	int tmp, i;
 
 	/* check command line options */
 	if (argc != 3) {
@@ -158,278 +452,16 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		if (FD_ISSET(p, &rdfs)) {
-			/* read rxdata from pty */
-			nbytes = read(p, &rxbuf, sizeof(rxbuf)-1);
-			if (nbytes < 0) {
-				perror("read pty");
-				return 1;
-			}
-
-rx_restart:
-			/* remove trailing '\r' characters */
-			while (rxbuf[0] == '\r' && nbytes > 0) {
-				for (tmp = 0; tmp < nbytes; tmp++)
-					rxbuf[tmp] = rxbuf[tmp+1];
-				nbytes--;
-			}
-
-			if (!nbytes)
-				continue;
-
-			rxcmd = rxbuf[0];
-			rxbuf[nbytes] = 0;
-
-#ifdef DEBUG
-			for (tmp = 0; tmp < nbytes; tmp++)
-				if (rxbuf[tmp] == '\r')
-					putchar('@');
-				else
-					putchar(rxbuf[tmp]);
-			printf("\n");
-#endif
-
-			/* check for filter configuration commands */
-			if (rxcmd == 'm' || rxcmd == 'M') {
-				rxbuf[9] = 0; /* terminate filter string */
-				rxp = 9;
-#if 0
-				/* the filter is no SocketCAN filter :-( */
-
-				/* TODO: behave like a SJA1000 filter */
-
-				if (rxcmd == 'm') {
-					fi.can_id = strtoul(rxbuf+1,NULL,16);
-					fi.can_id &= CAN_EFF_MASK;
-				} else {
-					fi.can_mask = strtoul(rxbuf+1,NULL,16);
-					fi.can_mask &= CAN_EFF_MASK;
-				}
-
-				/* set only when both values are defined */
-				if (is_open)
-					setsockopt(s, SOL_CAN_RAW,
-						   CAN_RAW_FILTER, &fi,
-						   sizeof(struct can_filter));
-#endif
-				goto rx_out_ack;
-			}
-
-
-			/* check for timestamp on/off command */
-			if (rxcmd == 'Z') {
-				tstamp = rxbuf[1] & 0x01;
-				rxp = 2;
-				goto rx_out_ack;
-			}
-
-			/* check for 'O'pen command */
-			if (rxcmd == 'O') {
-				setsockopt(s, SOL_CAN_RAW,
-					   CAN_RAW_FILTER, &fi,
-					   sizeof(struct can_filter));
-				rxp = 1;
-				is_open = 1;
-				goto rx_out_ack;
-			}
-
-			/* check for 'C'lose command */
-			if (rxcmd == 'C') {
-				setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER,
-					   NULL, 0);
-				rxp = 1;
-				is_open = 0;
-				goto rx_out_ack;
-			}
-
-			/* check for 'V'ersion command */
-			if (rxcmd == 'V') {
-				sprintf(replybuf, "V1013\r");
-				tmp = strlen(replybuf);
-				rxp = 1;
-				goto rx_out;
-			}
-
-			/* check for serial 'N'umber command */
-			if (rxcmd == 'N') {
-				sprintf(replybuf, "N4242\r");
-				tmp = strlen(replybuf);
-				rxp = 1;
-				goto rx_out;
-			}
-
-			/* check for read status 'F'lags */
-			if (rxcmd == 'F') {
-				sprintf(replybuf, "F00\r");
-				tmp = strlen(replybuf);
-				rxp = 1;
-				goto rx_out;
-			}
-
-			/* correctly answer unsupported commands */
-			if (rxcmd == 'U') {
-				rxp = 2;
-				goto rx_out_ack;
-			}
-			if (rxcmd == 'S') {
-				rxp = 2;
-				goto rx_out_ack;
-			}
-			if (rxcmd == 's') {
-				rxp = 5;
-				goto rx_out_ack;
-			}
-			if (rxcmd == 'P' || rxcmd == 'A') {
-				rxp = 1;
-				goto rx_out_nack;
-			}
-			if (rxcmd == 'X') {
-				rxp = 2;
-				if (rxbuf[1] & 0x01)
-					goto rx_out_ack;
-				else
-					goto rx_out_nack;
-			}
-
-			/* catch unknown commands */
-			if ((rxcmd != 't') && (rxcmd != 'T') &&
-			    (rxcmd != 'r') && (rxcmd != 'R')) {
-				rxp = nbytes-1;
-				goto rx_out_nack;
-			}
-
-			if (rxcmd & 0x20) /* tiny chars 'r' 't' => SFF */
-				rxp = 4; /* dlc position tiiid */
-			else
-				rxp = 9; /* dlc position Tiiiiiiiid */
-
-			*(unsigned long long *) (&rxf.data) = 0ULL; /* clear */
-
-			if ((rxcmd | 0x20) == 'r' && rxbuf[rxp] != '0') {
-				/* RTR frame without dlc information */
-
-				rxf.can_dlc = rxbuf[rxp]; /* save */
-
-				rxbuf[rxp] = 0; /* terminate can_id string */
-
-				rxf.can_id = strtoul(rxbuf+1, NULL, 16);
-				rxf.can_id |= CAN_RTR_FLAG;
-
-				if (!(rxcmd & 0x20)) /* NO tiny chars => EFF */
-					rxf.can_id |= CAN_EFF_FLAG;
-
-				rxbuf[rxp]  = rxf.can_dlc; /* restore */
-				rxf.can_dlc = 0;
-				rxp--; /* we have no dlc component here */
-
-			} else {
-
-				if (!(rxbuf[rxp] >= '0' && rxbuf[rxp] < '9'))
-					goto rx_out_nack;
-
-				rxf.can_dlc = rxbuf[rxp] & 0x0F; /* get dlc */
-
-				rxbuf[rxp] = 0; /* terminate can_id string */
-
-				rxf.can_id = strtoul(rxbuf+1, NULL, 16);
-
-				if (!(rxcmd & 0x20)) /* NO tiny chars => EFF */
-					rxf.can_id |= CAN_EFF_FLAG;
-
-				if ((rxcmd | 0x20) == 'r') /* RTR frame */
-					rxf.can_id |= CAN_RTR_FLAG;
-
-				for (i = 0, rxp++; i < rxf.can_dlc; i++) {
-
-					tmp = asc2nibble(rxbuf[rxp++]);
-					if (tmp > 0x0F)
-						goto rx_out_nack;
-					rxf.data[i] = (tmp << 4);
-					tmp = asc2nibble(rxbuf[rxp++]);
-					if (tmp > 0x0F)
-						goto rx_out_nack;
-					rxf.data[i] |= tmp;
-				}
-				/* point to last real data */
-				if (rxf.can_dlc)
-					rxp--;
-			}
-
-			nbytes = write(s, &rxf, sizeof(rxf));
-			if (nbytes != sizeof(rxf)) {
-				perror("write socket");
-				return 1;
-			}
-
-rx_out_ack:
-			replybuf[0] = '\r';
-			tmp = 1;
-			goto rx_out;
-rx_out_nack:
-			replybuf[0] = '\a';
-			tmp = 1;
-rx_out:
-			tmp = write(p, replybuf, tmp);
-			if (tmp < 0) {
-				perror("write pty replybuf");
-				return 1;
-			}
-
-			/* check if there is another command in this buffer */
-			if (nbytes > rxp+1) {
-				for (tmp = 0, rxp++; rxp+tmp < nbytes; tmp++)
-					rxbuf[tmp] = rxbuf[rxp+tmp];
-				nbytes = tmp;
-				goto rx_restart;
-			}
+		if (FD_ISSET(p, &rdfs))
+			if (pty2can(p, s, &fi, &is_open, &tstamp)) {
+			running = 0;
+			continue;
 		}
 
-		if (FD_ISSET(s, &rdfs)) {
-			/* read txframe from CAN interface */
-			nbytes = read(s, &txf, sizeof(txf));
-			if (nbytes != sizeof(txf)) {
-				perror("read socket");
-				return 1;
-			}
-
-			/* convert to slcan ASCII txf */
-			if (txf.can_id & CAN_RTR_FLAG)
-				txcmd = 'R'; /* becomes 'r' in SFF format */
-			else
-				txcmd = 'T'; /* becomes 't' in SFF format */
-
-			if (txf.can_id & CAN_EFF_FLAG)
-				sprintf(txbuf, "%c%08X%d", txcmd,
-					txf.can_id & CAN_EFF_MASK,
-					txf.can_dlc);
-			else
-				sprintf(txbuf, "%c%03X%d", txcmd | 0x20,
-					txf.can_id & CAN_SFF_MASK,
-					txf.can_dlc);
-
-			txp = strlen(txbuf);
-
-			for (i = 0; i < txf.can_dlc; i++)
-				sprintf(&txbuf[txp + 2*i], "%02X",
-					txf.data[i]);
-
-			if (tstamp) {
-				struct timeval tv;
-
-				if (ioctl(s, SIOCGSTAMP, &tv) < 0)
-					perror("SIOCGSTAMP");
-
-				sprintf(&txbuf[txp + 2*txf.can_dlc], "%04lX",
-					(tv.tv_sec%60)*1000 + tv.tv_usec/1000);
-			}
-
-			strcat(txbuf, "\r"); /* add terminating character */
-			nbytes = write(p, txbuf, strlen(txbuf));
-			if (nbytes < 0) {
-				perror("write pty");
-				return 1;
-			}
-			fflush(NULL);
+		if (FD_ISSET(s, &rdfs))
+			if (can2pty(p, s, &tstamp)) {
+			running = 0;
+			continue;
 		}
 	}
 
