@@ -115,6 +115,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -B <can>    (bridge mode - like '-b' with disabled loopback)\n");
 	fprintf(stderr, "         -l          (log CAN-frames into file. Sets '-s %d' by default)\n", SILENT_ON);
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
+	fprintf(stderr, "         -n <count>  (terminate after receiption of <count> CAN frames)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with optional filter sets can be specified\n", MAXSOCK);
 	fprintf(stderr, "on the commandline in the form: <ifname>[,filter]*\n");
@@ -202,6 +203,7 @@ int main(int argc, char **argv)
 	unsigned char view = 0;
 	unsigned char log = 0;
 	unsigned char logfrmt = 0;
+	int count = 0;
 	int opt, ret;
 	int currmax, numfilter;
 	char *ptr, *nptr;
@@ -221,7 +223,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:lLh?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:lLn:h?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -302,6 +304,14 @@ int main(int argc, char **argv)
 
 		case 'L':
 			logfrmt = 1;
+			break;
+
+		case 'n':
+			count = atoi(optarg);
+			if (count < 1) {
+				print_usage(basename(argv[0]));
+				exit(1);
+			}
 			break;
 
 		default:
@@ -499,6 +509,9 @@ int main(int argc, char **argv)
 					fprintf(stderr, "read: incomplete CAN frame\n");
 					return 1;
 				}
+
+				if (count && (--count == 0))
+					running = 0;
 
 				if (bridge) {
 					nbytes = write(bridge, &frame, sizeof(struct can_frame));
