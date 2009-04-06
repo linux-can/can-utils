@@ -5,7 +5,7 @@
 /*
  * candump.c
  *
- * Copyright (c) 2002-2007 Volkswagen Group Electronic Research
+ * Copyright (c) 2002-2009 Volkswagen Group Electronic Research
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -68,7 +68,6 @@
 #include "lib.h"
 
 #define MAXSOCK 16    /* max. number of CAN interfaces given on the cmdline */
-#define MAXFILTER 30  /* max. number of possible filters for each socket */
 #define MAXIFNAMES 30 /* size of receive name index to omit ioctls */
 #define MAXCOL 6      /* number of different colors for colorized output */
 #define ANYDEV "any"  /* name of interface to receive from any CAN interface */
@@ -119,7 +118,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with optional filter sets can be specified\n", MAXSOCK);
 	fprintf(stderr, "on the commandline in the form: <ifname>[,filter]*\n");
-	fprintf(stderr, "\nUp to %d comma separated filters can be specified for each given CAN interface:\n", MAXFILTER);
+	fprintf(stderr, "\nComma separated filters can be specified for each given CAN interface:\n");
 	fprintf(stderr, " <can_id>:<can_mask> (matches when <received_can_id> & mask == can_id & mask)\n");
 	fprintf(stderr, " <can_id>~<can_mask> (matches when <received_can_id> & mask != can_id & mask)\n");
 	fprintf(stderr, " #<error_mask>       (set error frame filter, see include/linux/can/error.h)\n");
@@ -208,7 +207,7 @@ int main(int argc, char **argv)
 	int currmax, numfilter;
 	char *ptr, *nptr;
 	struct sockaddr_can addr;
-	struct can_filter rfilter[MAXFILTER];
+	struct can_filter *rfilter;
 	can_err_mask_t err_mask;
 	struct can_frame frame;
 	int nbytes, i;
@@ -396,6 +395,21 @@ int main(int argc, char **argv)
 
 			/* found a ',' after the interface name => check for filters */
 
+			/* determine number of filters to alloc the filter space */
+			numfilter = 0;
+			ptr = nptr;
+			while (ptr) {
+				numfilter++;
+				ptr++; /* hop behind the ',' */
+				ptr = strchr(ptr, ','); /* exit condition */
+			}
+
+			rfilter = malloc(sizeof(struct can_filter) * numfilter);
+			if (!rfilter) {
+				fprintf(stderr, "Failed to create filter space!\n");
+				return 1;
+			}
+
 			numfilter = 0;
 			err_mask = 0;
 
@@ -424,12 +438,6 @@ int main(int argc, char **argv)
 					fprintf(stderr, "Error in filter option parsing: '%s'\n", ptr);
 					exit(1);
 				}
-
-				if (numfilter > MAXFILTER) {
-					fprintf(stderr, "Too many filters specified for '%s'.\n",
-					       ifr.ifr_name);
-					exit(1);
-				}
 			}
 
 			if (err_mask)
@@ -438,7 +446,10 @@ int main(int argc, char **argv)
 
 			if (numfilter)
 				setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_FILTER,
-					   &rfilter, numfilter * sizeof(struct can_filter));
+					   rfilter, numfilter * sizeof(struct can_filter));
+
+			free(rfilter);
+
 		} /* if (nptr) */
 
 		if (bind(s[i], (struct sockaddr *)&addr, sizeof(addr)) < 0) {
