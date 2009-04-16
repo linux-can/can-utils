@@ -115,6 +115,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -l          (log CAN-frames into file. Sets '-s %d' by default)\n", SILENT_ON);
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "         -n <count>  (terminate after receiption of <count> CAN frames)\n");
+	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with optional filter sets can be specified\n", MAXSOCK);
 	fprintf(stderr, "on the commandline in the form: <ifname>[,filter]*\n");
@@ -203,6 +204,7 @@ int main(int argc, char **argv)
 	unsigned char log = 0;
 	unsigned char logfrmt = 0;
 	int count = 0;
+	int rcvbuf_size = 0;
 	int opt, ret;
 	int currmax, numfilter;
 	char *ptr, *nptr;
@@ -222,7 +224,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:lLn:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:lLn:r:h?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -308,6 +310,14 @@ int main(int argc, char **argv)
 		case 'n':
 			count = atoi(optarg);
 			if (count < 1) {
+				print_usage(basename(argv[0]));
+				exit(1);
+			}
+			break;
+
+		case 'r':
+			rcvbuf_size = atoi(optarg);
+			if (rcvbuf_size < 1) {
 				print_usage(basename(argv[0]));
 				exit(1);
 			}
@@ -451,6 +461,30 @@ int main(int argc, char **argv)
 			free(rfilter);
 
 		} /* if (nptr) */
+
+		if (rcvbuf_size) {
+
+			int curr_rcvbuf_size;
+			socklen_t curr_rcvbuf_size_len = sizeof(curr_rcvbuf_size);
+
+			if (setsockopt(s[i], SOL_SOCKET, SO_RCVBUF,
+				       &rcvbuf_size, sizeof(rcvbuf_size)) < 0) {
+				perror("setsockopt SO_RCVBUF");
+				exit(1);
+			}
+
+			if (getsockopt(s[i], SOL_SOCKET, SO_RCVBUF,
+				       &curr_rcvbuf_size, &curr_rcvbuf_size_len) < 0) {
+				perror("getsockopt SO_RCVBUF");
+				exit(1);
+			}
+
+			/* Only print a warning the first time we detect the adjustment */
+			/* n.b.: The wanted size is doubled in Linux in net/sore/sock.c */
+			if (!i && curr_rcvbuf_size < rcvbuf_size*2)
+				fprintf(stderr, "The socket receive buffer size was "
+					"adjusted due to /proc/sys/net/core/rmem_max.\n");
+		}
 
 		if (bind(s[i], (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 			perror("bind");
