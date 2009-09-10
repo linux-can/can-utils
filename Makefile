@@ -48,7 +48,7 @@ CFLAGS    = -O2 -Wall -Wno-parentheses -I../kernel/2.6/include \
 	    -DAF_CAN=PF_CAN
 
 PROGRAMS = candump cansniffer cansend canplayer canlogserver cangen\
-	   canbusload log2long log2asc asc2log\
+	   canbusload log2long log2asc asc2log bcmserver\
 	   isotpdump isotprecv isotpsend isotpsniffer isotptun\
 	   slcan_attach slcand slcanpty
 
