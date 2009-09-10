@@ -40,9 +40,11 @@
 #
 #  Send feedback to <socketcan-users@lists.berlios.de>
 
+KERNELDIR = ../kernel/2.6
+
 MAKEFLAGS = -k
 
-CFLAGS    = -O2 -Wall -Wno-parentheses -I../kernel/2.6/include \
+CFLAGS    = -O2 -Wall -Wno-parentheses -I$(KERNELDIR)/include \
 	    -fno-strict-aliasing \
 	    -DPF_CAN=29 \
 	    -DAF_CAN=PF_CAN
