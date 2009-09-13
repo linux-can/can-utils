@@ -73,6 +73,7 @@ int main(int argc, char **argv)
 	};
 	char *interface = "can0";
 	unsigned char sequence = 0;
+	int seq_wrap = 0;
 	int family = PF_CAN, type = SOCK_RAW, proto = CAN_RAW;
 	int loopcount = 1, infinite = 1;
 	int use_poll = 0;
@@ -226,7 +227,7 @@ int main(int argc, char **argv)
 
 			sequence++;
 			if (verbose && !sequence)
-				printf("sequence wrap around\n");
+				printf("sequence wrap around (%d)\n", seq_wrap++);
 
 		}
 	} else {
@@ -272,7 +273,7 @@ int main(int argc, char **argv)
 			sequence++;
 
 			if (verbose && !sequence)
-				printf("sequence wrap around\n");
+				printf("sequence wrap around (%d)\n", seq_wrap++);
 		}
 	}
 
