@@ -1,13 +1,15 @@
 #include <can_config.h>
 
+#include <errno.h>
 #include <getopt.h>
 #include <libgen.h>
+#include <limits.h>
+#include <poll.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <limits.h>
 
 #include <net/if.h>
 
@@ -28,6 +30,8 @@ enum {
 	VERSION_OPTION = CHAR_MAX + 1,
 };
 
+#define CAN_ID_DEFAULT	(2)
+
 void print_usage(char *prg)
 {
 	fprintf(stderr, "Usage: %s [<can-interface>] [Options]\n"
@@ -38,16 +42,16 @@ void print_usage(char *prg)
 		"The main purpose of this program is to test the reliability of CAN links.\n"
 		"\n"
 		"Options:\n"
-		" -f, --family=FAMILY	Protocol family (default PF_CAN = %d)\n"
-		" -t, --type=TYPE	Socket type, see man 2 socket (default SOCK_RAW = %d)\n"
-		" -p, --protocol=PROTO	CAN protocol (default CAN_RAW = %d)\n"
+		" -e  --extended		send extended frame\n"
+		" -i, --identifier=ID	CAN Identifier (default = %u)\n"
 		" -r, --receive		work as receiver\n"
 		"     --loop=COUNT	send message COUNT times\n"
+		" -p  --poll		use poll(2) to wait for buffer space while sending\n"
 		" -q  --quit		quit if a wrong sequence is encountered\n"
 		" -v, --verbose		be verbose (twice to be even more verbose\n"
 		" -h  --help		this help\n"
 		"     --version		print version information and exit\n",
-		prg, PF_CAN, SOCK_RAW, CAN_RAW);
+		prg, CAN_ID_DEFAULT);
 }
 
 void sigterm(int signo)
@@ -57,51 +61,75 @@ void sigterm(int signo)
 
 int main(int argc, char **argv)
 {
-	struct can_frame frame;
 	struct ifreq ifr;
 	struct sockaddr_can addr;
+	struct can_frame frame = {
+		.can_dlc = 1,
+	};
+	struct can_filter filter[] = {
+		{
+			.can_id = CAN_ID_DEFAULT,
+		},
+	};
 	char *interface = "can0";
 	unsigned char sequence = 0;
 	int family = PF_CAN, type = SOCK_RAW, proto = CAN_RAW;
 	int loopcount = 1, infinite = 1;
+	int use_poll = 0;
+	int extended = 0;
 	int nbytes;
 	int opt;
 	int receive = 0;
 	int sequence_init = 1;
 	int verbose = 0, quit = 0;
+	int exit_value = EXIT_SUCCESS;
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
 
 	struct option long_options[] = {
+		{ "extended",	no_argument,		0, 'e' },
 		{ "help",	no_argument,		0, 'h' },
-		{ "family",	required_argument,	0, 'f' },
-		{ "protocol",	required_argument,	0, 'p' },
-		{ "type",	required_argument,	0, 't' },
+		{ "poll",	no_argument,		0, 'p' },
+		{ "quit",	no_argument,		0, 'q' },
+		{ "receive",	no_argument,		0, 'r' },
+		{ "verbose",	no_argument,		0, 'v' },
 		{ "version",	no_argument,		0, VERSION_OPTION},
-		{ "receive",	no_argument,		0, 'r'},
-		{ "quit",	no_argument,		0, 'q'},
-		{ "loop",	required_argument,	0, 'l'},
-		{ "verbose",	no_argument,		0, 'v'},
+		{ "identifier",	required_argument,	0, 'i' },
+		{ "loop",	required_argument,	0, 'l' },
 		{ 0,		0,			0, 0},
 	};
 
-	while ((opt = getopt_long(argc, argv, "f:t:p:vrlhq", long_options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "ehpqrvi:l:", long_options, NULL)) != -1) {
 		switch (opt) {
-		case 'h':
-			print_usage(basename(argv[0]));
-			exit(0);
-
-		case 'f':
-			family = strtoul(optarg, NULL, 0);
+		case 'e':
+			extended = 1;
 			break;
 
-		case 't':
-			type = strtoul(optarg, NULL, 0);
+		case 'h':
+			print_usage(basename(argv[0]));
+			exit(EXIT_SUCCESS);
 			break;
 
 		case 'p':
-			proto = strtoul(optarg, NULL, 0);
+			use_poll = 1;
+			break;
+
+		case 'q':
+			quit = 1;
+			break;
+
+		case 'r':
+			receive = 1;
+			break;
+
+		case 'v':
+			verbose++;
+			break;
+
+		case VERSION_OPTION:
+			printf("cansequence %s\n", VERSION);
+			exit(EXIT_SUCCESS);
 			break;
 
 		case 'l':
@@ -112,21 +140,10 @@ int main(int argc, char **argv)
 				infinite = 1;
 			break;
 
-		case 'r':
-			receive = 1;
+		case 'i':
+			filter->can_id = strtoul(optarg, NULL, 0);
 			break;
 
-		case 'q':
-			quit = 1;
-			break;
-
-		case 'v':
-			verbose++;
-			break;
-
-		case VERSION_OPTION:
-			printf("cansequence %s\n", VERSION);
-			exit(0);
 
 		default:
 			fprintf(stderr, "Unknown option %c\n", opt);
@@ -136,6 +153,16 @@ int main(int argc, char **argv)
 
 	if (argv[optind] != NULL)
 		interface = argv[optind];
+
+	if (extended) {
+		filter->can_mask = CAN_EFF_MASK;
+		filter->can_id  &= CAN_EFF_MASK;
+		filter->can_id  |= CAN_EFF_FLAG;
+	} else {
+		filter->can_mask = CAN_SFF_MASK;
+		filter->can_id  &= CAN_SFF_MASK;
+	}
+	frame.can_id = filter->can_id;
 
 	printf("interface = %s, family = %d, type = %d, proto = %d\n",
 	       interface, family, type, proto);
@@ -154,52 +181,100 @@ int main(int argc, char **argv)
 	}
 	addr.can_ifindex = ifr.ifr_ifindex;
 
+	/* first don't recv. any msgs */
+	if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0)) {
+		perror("setsockopt");
+		exit(EXIT_FAILURE);
+	}
+
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
 		return 1;
 	}
 
 	if (receive) {
+		/* enable recv. now */
+		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, filter, sizeof(filter))) {
+			perror("setsockopt");
+			exit(EXIT_FAILURE);
+		}
+
 		while ((infinite || loopcount--) && running) {
 			nbytes = read(s, &frame, sizeof(struct can_frame));
 			if (nbytes < 0) {
 				perror("read");
 				return 1;
-			} else {
-				if (sequence_init) {
-					sequence_init = 0;
-					sequence = frame.data[0];
-				}
-				if (verbose > 1)
-					printf("received frame. sequence number: %d\n", frame.data[0]);
-				if (frame.data[0] != sequence) {
-					printf("received wrong sequence count. expected: %d, got: %d\n",
-					       sequence, frame.data[0]);
-					if (quit)
-						exit(1);
-					sequence = frame.data[0];
-				}
-				if (verbose && !sequence)
-					printf("sequence wrap around\n");
-				sequence++;
 			}
-		}
-	} else {
-		frame.can_dlc = 1;
-		frame.can_id = 2;
-		frame.data[0] = 0;
-		while ((infinite || loopcount--) && running) {
+
+			if (sequence_init) {
+				sequence_init = 0;
+				sequence = frame.data[0];
+			}
+
 			if (verbose > 1)
-				printf("sending frame. sequence number: %d\n", sequence);
+				printf("received frame. sequence number: %d\n", frame.data[0]);
+
+			if (frame.data[0] != sequence) {
+				printf("received wrong sequence count. expected: %d, got: %d\n",
+				       sequence, frame.data[0]);
+				if (quit) {
+					exit_value = EXIT_FAILURE;
+					break;
+				}
+				sequence = frame.data[0];
+			}
+
+			sequence++;
 			if (verbose && !sequence)
 				printf("sequence wrap around\n");
-			if (write(s, &frame, sizeof(frame)) < 0) {
-				perror("write");
-				break;
+
+		}
+	} else {
+		while ((infinite || loopcount--) && running) {
+			ssize_t len;
+
+			if (verbose > 1)
+				printf("sending frame. sequence number: %d\n", sequence);
+
+		again:
+			len = write(s, &frame, sizeof(frame));
+			if (len == -1) {
+				switch (errno) {
+				case ENOBUFS: {
+					int err;
+					struct pollfd fds[] = {
+						{
+							.fd	= s,
+							.events	= POLLOUT,
+						},
+					};
+
+					if (!use_poll) {
+						perror("write");
+						exit(EXIT_FAILURE);
+					}
+
+					err = poll(fds, 1, 1000);
+					if (err == -1 && errno != -EINTR) {
+						perror("poll()");
+						exit(EXIT_FAILURE);
+					}
+				}
+				case EINTR:	/* fallthrough */
+					goto again;
+				default:
+					perror("write");
+					exit(EXIT_FAILURE);
+				}
 			}
+
 			(unsigned char)frame.data[0]++;
 			sequence++;
+
+			if (verbose && !sequence)
+				printf("sequence wrap around\n");
 		}
 	}
-	return 0;
+
+	exit(exit_value);
 }
