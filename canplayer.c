@@ -64,6 +64,7 @@
 #define DEFAULT_LOOPS	1	/* only one replay */
 #define CHANNELS	20	/* anyone using more than 20 CAN interfaces at a time? */
 #define BUFSZ		400	/* for one line in the logfile */
+#define STDOUTIDX	65536	/* interface index for printing on stdout - bigger than max uint16 */
 
 struct assignment {
 	char txif[IFNAMSIZ];
@@ -96,6 +97,8 @@ void print_usage(char *prg)
 		"<write-if>=<log-if>\n");
 	fprintf(stderr, "e.g. vcan2=can0 ( send frames received from can0 on "
 		"vcan2 )\n");
+	fprintf(stderr, "extra hook: stdout=can0 ( print logfile line marked with can0 on "
+		"stdout )\n");
 	fprintf(stderr, "No assignments => send frames to the interface(s) they "
 		"had been received from.\n\n");
 	fprintf(stderr, "Lines in the logfile not beginning with '(' (start of "
@@ -210,13 +213,16 @@ int add_assignment(char *mode, int socket, char *txname, char *rxname,
 	}
 	strcpy(asgn[i].rxif, rxname);
 
-	strcpy(ifr.ifr_name, txname);
-	if (ioctl(socket, SIOCGIFINDEX, &ifr) < 0) {
-		perror("SIOCGIFINDEX");
-		fprintf(stderr, "write-if interface name '%s' is wrong!\n", txname);
-		return 1;
-	}
-	asgn[i].txifidx = ifr.ifr_ifindex;
+	if (strcmp(txname, "stdout")) {
+		strcpy(ifr.ifr_name, txname);
+		if (ioctl(socket, SIOCGIFINDEX, &ifr) < 0) {
+			perror("SIOCGIFINDEX");
+			fprintf(stderr, "write-if interface name '%s' is wrong!\n", txname);
+			return 1;
+		}
+		asgn[i].txifidx = ifr.ifr_ifindex;
+	} else
+		asgn[i].txifidx = STDOUTIDX;
 
 	if (verbose > 1) /* use -v -v to see this */
 		printf("added %s assignment: log-if=%s write-if=%s write-if-idx=%d\n",
@@ -417,7 +423,11 @@ int main(int argc, char **argv)
 					txidx = get_txidx(device);
 				}
 
-				if (txidx) { /* only send to valid CAN devices */
+				if (txidx == STDOUTIDX) /* hook to print logfile lines on stdout */
+
+					printf("%s", buf); /* print the line AS-IS without extra \n */
+
+				else if (txidx > 0) { /* only send to valid CAN devices */
 
 					if (parse_canframe(ascframe, &frame)) {
 						fprintf(stderr, "wrong CAN frame format: '%s'!", ascframe);
