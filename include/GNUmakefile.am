@@ -2,7 +2,8 @@ noinst_HEADERS = \
 	libsocketcan-nlstuff.h
 
 nobase_include_HEADERS = \
-	socketcan_netlink.h
+	socketcan_netlink.h \
+	can/netlink.h
 
 MAINTAINERCLEANFILES = \
 	libsocketcan-nl_config.h.in \
