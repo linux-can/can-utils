@@ -1,0 +1,12 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libsocketcan-nl 
+Description: provides access to socketcan netlink interface
+Requires: @REQUIRES_LIBRN@
+Version: @VERSION@
+Libs: -L${libdir} -llibsocketcan-nl
+#Libs.private: -lm -lpthread ...etc...
+Cflags: -I${includedir}

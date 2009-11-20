@@ -1,0 +1,34 @@
+SUBDIRS = \
+	include \
+	config \
+	src \
+	tests
+
+EXTRA_DIST = \
+	autogen.sh \
+	config/m4/.secret-world-domination-project
+
+MAINTAINERCLEANFILES = \
+	configure \
+	GNUmakefile.in \
+	aclocal.m4 \
+	config/autoconf/compile \
+	config/autoconf/config.guess \
+	config/autoconf/config.sub \
+	config/autoconf/depcomp \
+	config/autoconf/install-sh \
+	config/autoconf/ltmain.sh \
+	config/autoconf/mdate-sh \
+	config/autoconf/missing \
+	config/autoconf/texinfo.tex \
+	config/m4/libtool.m4 \
+	config/m4/ltoptions.m4 \
+	config/m4/ltsugar.m4 \
+	config/m4/ltversion.m4 \
+	config/m4/lt~obsolete.m4 \
+	$(DIST_ARCHIVES)
+
+maintainer-clean-local:
+	-chmod -R a+rw $(distdir)
+	-rm -fr $(distdir)
+
