@@ -18,6 +18,25 @@
 #define NLMSG_TAIL(nmsg) \
 	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 
+struct get_req {
+	struct nlmsghdr n;
+	struct rtgenmsg g;
+};
+
+struct set_req {
+	struct nlmsghdr n;
+	struct ifinfomsg i;
+	char buf[1024];
+};
+
+struct req_info {
+	__u8 restart;
+	__u8 disable_autorestart;
+	__u32 restart_ms;
+	__u32 bitrate;
+	__u32 ctrlmode;
+	__u32 flags;
+};
 
 static void
 parse_rtattr(struct rtattr **tb, int max, struct rtattr *rta, int len)
