@@ -560,6 +560,15 @@ int scan_set_ctrlmode(const char *name, __u32 mode, __u32 flags)
 	return set_link(name, &req_info);
 }
 
+int scan_set_bitrate(const char *name, __u32 bitrate)
+{
+	struct req_info req_info = {
+		.bitrate = bitrate,
+	};
+
+	return set_link(name, &req_info);
+}
+
 int scan_get_state(const char *name)
 {
 	int fd;
