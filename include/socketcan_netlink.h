@@ -28,6 +28,7 @@
 #define GET_STATE 1
 #define GET_RESTART_MS 2
 #define GET_BITTIMING 3
+#define GET_CTRLMODE 4
 
 int if_down(int fd, const char *name);
 int if_up(int fd, const char *name);
@@ -35,9 +36,11 @@ int if_up(int fd, const char *name);
 int set_restart(const char *name);
 int set_bitrate(const char *name, __u32 bitrate);
 int set_restart_ms(const char *name, __u32 restart_ms);
+int set_ctrlmode(const char *name, __u32 mode, __u32 flags);
 
 int get_state(const char *name);
 __u32 get_restart_ms(const char *name);
 int get_bittiming(const char *name, struct can_bittiming *bt);
+int get_ctrlmode(const char *name, struct can_ctrlmode *cm);
 
 #endif

@@ -54,7 +54,7 @@ struct req_info {
 	__u32 restart_ms;
 	__u32 bitrate;
 	__u32 ctrlmode;
-	__u32 flags;
+	__u32 ctrlflags;
 };
 
 static void
@@ -356,6 +356,16 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 				fprintf(stderr, "no bittiming data found\n");
 
 			break;
+		case GET_CTRLMODE:
+			if (can_attr[IFLA_CAN_CTRLMODE]) {
+				memcpy(res,
+				       RTA_DATA(can_attr[IFLA_CAN_CTRLMODE]),
+				       sizeof(struct can_ctrlmode));
+				ret = 0;
+			} else
+				fprintf(stderr, "no ctrlmode data found\n");
+
+			break;
 		default:
 			fprintf(stderr, "unknown acquire mode\n");
 		}
@@ -429,7 +439,7 @@ static int do_set_nl_link(int fd, __u8 if_state, const char *name,
 		if (req_info->ctrlmode) {
 			memset(&cm, 0, sizeof(cm));
 			cm.mask = req_info->ctrlmode;
-			cm.flags = req_info->flags;
+			cm.flags = req_info->ctrlflags;
 			addattr_l(&req.n, 1024, IFLA_CAN_CTRLMODE, &cm,
 				  sizeof(cm));
 		}
@@ -482,15 +492,6 @@ int if_down(int fd, const char *name)
 	return do_set_nl_link(fd, IF_DOWN, name, NULL);
 }
 
-int set_bitrate(const char *name, __u32 bitrate)
-{
-	struct req_info req_info = {
-		.bitrate = bitrate,
-	};
-
-	return set_link(name, &req_info);
-}
-
 int set_restart(const char *name)
 {
 	int fd;
@@ -533,6 +534,16 @@ int set_restart_ms(const char *name, __u32 restart_ms)
 
 	if (restart_ms == 0)
 		req_info.disable_autorestart = 1;
+
+	return set_link(name, &req_info);
+}
+
+int set_ctrlmode(const char *name, __u32 mode, __u32 flags)
+{
+	struct req_info req_info = {
+		.ctrlmode = mode,
+		.ctrlflags = flags,
+	};
 
 	return set_link(name, &req_info);
 }
@@ -583,6 +594,23 @@ int get_bittiming(const char *name, struct can_bittiming *bt)
 		return -1;
 
 	err = do_get_nl_link(fd, GET_BITTIMING, name, bt);
+	if (err < 0)
+		return -1;
+
+	close(fd);
+	return 0;
+}
+
+int get_ctrlmode(const char *name, struct can_ctrlmode *cm)
+{
+	int fd;
+	int err;
+
+	fd = open_nl_sock();
+	if (fd < 0)
+		return -1;
+
+	err = do_get_nl_link(fd, GET_CTRLMODE, name, cm);
 	if (err < 0)
 		return -1;
 
