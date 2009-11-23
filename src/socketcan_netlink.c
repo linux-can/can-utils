@@ -36,6 +36,11 @@
 #define NLMSG_TAIL(nmsg) \
 	((struct rtattr *) (((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 
+#define IFLA_CAN_MAX	(__IFLA_CAN_MAX - 1)
+
+#define IF_UP 1
+#define IF_DOWN 2
+
 struct get_req {
 	struct nlmsghdr n;
 	struct rtgenmsg g;

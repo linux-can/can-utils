@@ -17,15 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-
 #ifndef _SOCKETCAN_NETLINK_H
 #define _SOCKETCAN_NETLINK_H
 
 #include <linux/can/netlink.h>
-
-#define IFLA_CAN_MAX	(__IFLA_CAN_MAX - 1)
-#define IF_UP 1
-#define IF_DOWN 2
 
 #define GET_STATE 1
 #define GET_RESTART_MS 2
