@@ -91,8 +91,8 @@ static int addattr32(struct nlmsghdr *n, size_t maxlen, int type, __u32 data)
 	return 0;
 }
 
-static int addattr_l(struct nlmsghdr *n, size_t maxlen, int type, const void *data,
-		     int alen)
+static int addattr_l(struct nlmsghdr *n, size_t maxlen, int type,
+		     const void *data, int alen)
 {
 	int len = RTA_LENGTH(alen);
 	struct rtattr *rta;
@@ -151,8 +151,7 @@ static int send_mod_request(int fd, struct nlmsghdr *n)
 	while (1) {
 		iov.iov_len = sizeof(buf);
 		status = recvmsg(fd, &msg, 0);
-		for (h = (struct nlmsghdr *)buf; 
-				(size_t)status >= sizeof(*h);) {
+		for (h = (struct nlmsghdr *)buf; (size_t) status >= sizeof(*h);) {
 			int len = h->nlmsg_len;
 			int l = len - sizeof(*h);
 			if (l < 0 || len > status) {
@@ -168,7 +167,7 @@ static int send_mod_request(int fd, struct nlmsghdr *n)
 			if (h->nlmsg_type == NLMSG_ERROR) {
 				struct nlmsgerr *err =
 				    (struct nlmsgerr *)NLMSG_DATA(h);
-				if ((size_t)l < sizeof(struct nlmsgerr)) {
+				if ((size_t) l < sizeof(struct nlmsgerr)) {
 					fprintf(stderr, "ERROR truncated\n");
 				} else {
 					errno = -err->error;
@@ -285,7 +284,7 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 		perror("Receive error");
 		return ret;
 	}
-	size_t u_msglen = (size_t)msglen;
+	size_t u_msglen = (size_t) msglen;
 	/* Check to see if the buffers in msg get truncated */
 	if (msg.msg_namelen != sizeof(peer) ||
 	    (msg.msg_flags & (MSG_TRUNC | MSG_CTRUNC))) {
@@ -294,7 +293,8 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 	}
 
 	for (nl_msg = (struct nlmsghdr *)nlbuf;
-	     NLMSG_OK(nl_msg, u_msglen); nl_msg = NLMSG_NEXT(nl_msg, u_msglen)) {
+	     NLMSG_OK(nl_msg, u_msglen);
+	     nl_msg = NLMSG_NEXT(nl_msg, u_msglen)) {
 		int type = nl_msg->nlmsg_type;
 		int len;
 		if (type != RTM_NEWLINK)
@@ -327,9 +327,9 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 		switch (acquire) {
 		case GET_STATE:
 			if (can_attr[IFLA_CAN_STATE]) {
-				*((int *)res) =
-				    *((__u32 *)
-				      RTA_DATA(can_attr[IFLA_CAN_STATE]));
+				*((int *)res) = *((__u32 *)
+						  RTA_DATA(can_attr
+							   [IFLA_CAN_STATE]));
 				ret = 0;
 			} else {
 				fprintf(stderr, "no state data found\n");
@@ -338,9 +338,9 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 			break;
 		case GET_RESTART_MS:
 			if (can_attr[IFLA_CAN_RESTART_MS]) {
-				*((__u32 *) res) =
-				    *((__u32 *)
-				      RTA_DATA(can_attr[IFLA_CAN_RESTART_MS]));
+				*((__u32 *) res) = *((__u32 *)
+						     RTA_DATA(can_attr
+							      [IFLA_CAN_RESTART_MS]));
 				ret = 0;
 			} else
 				fprintf(stderr, "no restart_ms data found\n");
@@ -348,7 +348,8 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 			break;
 		case GET_BITTIMING:
 			if (can_attr[IFLA_CAN_BITTIMING]) {
-				memcpy(res, RTA_DATA(can_attr[IFLA_CAN_BITTIMING]),
+				memcpy(res,
+				       RTA_DATA(can_attr[IFLA_CAN_BITTIMING]),
 				       sizeof(struct can_bittiming));
 				ret = 0;
 			} else
@@ -362,14 +363,15 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 	return ret;
 }
 
-static int do_set_nl_link(int fd, __u8 if_state, const char* name, struct req_info *req_info)
+static int do_set_nl_link(int fd, __u8 if_state, const char *name,
+			  struct req_info *req_info)
 {
 	struct set_req req;
 
 	struct can_bittiming bt;
-	struct can_ctrlmode cm; 
+	struct can_ctrlmode cm;
 
-	const char* type="can";
+	const char *type = "can";
 
 	memset(&req, 0, sizeof(req));
 
@@ -428,7 +430,8 @@ static int do_set_nl_link(int fd, __u8 if_state, const char* name, struct req_in
 			memset(&cm, 0, sizeof(cm));
 			cm.mask = req_info->ctrlmode;
 			cm.flags = req_info->flags;
-			addattr_l(&req.n, 1024, IFLA_CAN_CTRLMODE, &cm, sizeof(cm));
+			addattr_l(&req.n, 1024, IFLA_CAN_CTRLMODE, &cm,
+				  sizeof(cm));
 		}
 
 		/* mark end of data section */
@@ -447,7 +450,7 @@ static int set_link(const char *name, struct req_info *req_info)
 	int fd;
 	int err = 0;
 
-	fd =  open_nl_sock();
+	fd = open_nl_sock();
 	if (fd < 0)
 		goto err_out;
 
@@ -499,8 +502,7 @@ int set_restart(const char *name)
 	if (state != CAN_STATE_BUS_OFF) {
 		fprintf(stderr,
 			"Device %s is not in BUS_OFF,"
-			" no use to restart it\n",
-			name);
+			" no use to restart it\n", name);
 		err = 0;
 		goto err_out;
 	}
@@ -509,7 +511,7 @@ int set_restart(const char *name)
 		.restart = 1,
 	};
 
-	fd =  open_nl_sock();
+	fd = open_nl_sock();
 	if (fd < 0)
 		goto err_out;
 
