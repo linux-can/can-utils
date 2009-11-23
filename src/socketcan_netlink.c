@@ -501,14 +501,22 @@ int scan_set_restart(const char *name)
 	int fd;
 	int err = -1;
 	int state;
+	__u32 restart_ms;
 
+	/* first we check if we can restart the device at all */
 	state = scan_get_state(name);
-
 	if (state != CAN_STATE_BUS_OFF) {
 		fprintf(stderr,
-			"Device %s is not in BUS_OFF,"
-			" no use to restart it\n", name);
-		err = 0;
+			"Device is not in BUS_OFF,"
+			" no use to restart\n");
+		goto err_out;
+	}
+
+	restart_ms = scan_get_restart_ms(name);
+	if (restart_ms > 0) {
+		fprintf(stderr,
+			"auto restart with %ums interval is turned on,"
+			" no use to restart\n", restart_ms);
 		goto err_out;
 	}
 
