@@ -464,7 +464,7 @@ static int set_link(const char *name, struct req_info *req_info)
 	if (fd < 0)
 		goto err_out;
 
-	err = if_down(fd, name);
+	err = netif_down(fd, name);
 	if (err < 0)
 		goto close_out;
 
@@ -472,7 +472,7 @@ static int set_link(const char *name, struct req_info *req_info)
 	if (err < 0)
 		goto close_out;
 
-	err = if_up(fd, name);
+	err = netif_up(fd, name);
 	if (err < 0)
 		goto close_out;
 
@@ -482,23 +482,23 @@ err_out:
 	return err;
 }
 
-int if_up(int fd, const char *name)
+int netif_up(int fd, const char *name)
 {
 	return do_set_nl_link(fd, IF_UP, name, NULL);
 }
 
-int if_down(int fd, const char *name)
+int netif_down(int fd, const char *name)
 {
 	return do_set_nl_link(fd, IF_DOWN, name, NULL);
 }
 
-int set_restart(const char *name)
+int scan_set_restart(const char *name)
 {
 	int fd;
 	int err = -1;
 	int state;
 
-	state = get_state(name);
+	state = scan_get_state(name);
 
 	if (state != CAN_STATE_BUS_OFF) {
 		fprintf(stderr,
@@ -526,7 +526,7 @@ err_out:
 	return err;
 }
 
-int set_restart_ms(const char *name, __u32 restart_ms)
+int scan_set_restart_ms(const char *name, __u32 restart_ms)
 {
 	struct req_info req_info = {
 		.restart_ms = restart_ms,
@@ -538,7 +538,7 @@ int set_restart_ms(const char *name, __u32 restart_ms)
 	return set_link(name, &req_info);
 }
 
-int set_ctrlmode(const char *name, __u32 mode, __u32 flags)
+int scan_set_ctrlmode(const char *name, __u32 mode, __u32 flags)
 {
 	struct req_info req_info = {
 		.ctrlmode = mode,
@@ -548,7 +548,7 @@ int set_ctrlmode(const char *name, __u32 mode, __u32 flags)
 	return set_link(name, &req_info);
 }
 
-int get_state(const char *name)
+int scan_get_state(const char *name)
 {
 	int fd;
 	int state;
@@ -565,7 +565,7 @@ int get_state(const char *name)
 	return state;
 }
 
-__u32 get_restart_ms(const char *name)
+__u32 scan_get_restart_ms(const char *name)
 {
 	int fd;
 	int err;
@@ -584,7 +584,7 @@ __u32 get_restart_ms(const char *name)
 
 }
 
-int get_bittiming(const char *name, struct can_bittiming *bt)
+int scan_get_bittiming(const char *name, struct can_bittiming *bt)
 {
 	int fd;
 	int err;
@@ -601,7 +601,7 @@ int get_bittiming(const char *name, struct can_bittiming *bt)
 	return 0;
 }
 
-int get_ctrlmode(const char *name, struct can_ctrlmode *cm)
+int scan_get_ctrlmode(const char *name, struct can_ctrlmode *cm)
 {
 	int fd;
 	int err;

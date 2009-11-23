@@ -30,17 +30,17 @@
 #define GET_BITTIMING 3
 #define GET_CTRLMODE 4
 
-int if_down(int fd, const char *name);
-int if_up(int fd, const char *name);
+int netif_down(int fd, const char *name);
+int netif_up(int fd, const char *name);
 
-int set_restart(const char *name);
-int set_bitrate(const char *name, __u32 bitrate);
-int set_restart_ms(const char *name, __u32 restart_ms);
-int set_ctrlmode(const char *name, __u32 mode, __u32 flags);
+int scan_set_restart(const char *name);
+int scan_set_bitrate(const char *name, __u32 bitrate);
+int scan_set_restart_ms(const char *name, __u32 restart_ms);
+int scan_set_ctrlmode(const char *name, __u32 mode, __u32 flags);
 
-int get_state(const char *name);
-__u32 get_restart_ms(const char *name);
-int get_bittiming(const char *name, struct can_bittiming *bt);
-int get_ctrlmode(const char *name, struct can_ctrlmode *cm);
+int scan_get_state(const char *name);
+__u32 scan_get_restart_ms(const char *name);
+int scan_get_bittiming(const char *name, struct can_bittiming *bt);
+int scan_get_ctrlmode(const char *name, struct can_ctrlmode *cm);
 
 #endif
