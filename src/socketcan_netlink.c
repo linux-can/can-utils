@@ -41,6 +41,11 @@
 #define IF_UP 1
 #define IF_DOWN 2
 
+#define GET_STATE 1
+#define GET_RESTART_MS 2
+#define GET_BITTIMING 3
+#define GET_CTRLMODE 4
+
 struct get_req {
 	struct nlmsghdr n;
 	struct rtgenmsg g;

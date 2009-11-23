@@ -22,11 +22,6 @@
 
 #include <linux/can/netlink.h>
 
-#define GET_STATE 1
-#define GET_RESTART_MS 2
-#define GET_BITTIMING 3
-#define GET_CTRLMODE 4
-
 int scan_set_restart(const char *name);
 int scan_set_bitrate(const char *name, __u32 bitrate);
 int scan_set_restart_ms(const char *name, __u32 restart_ms);
