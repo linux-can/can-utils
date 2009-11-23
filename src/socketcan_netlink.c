@@ -504,16 +504,22 @@ int scan_set_restart(const char *name)
 	__u32 restart_ms;
 
 	/* first we check if we can restart the device at all */
-	state = scan_get_state(name);
-	if (state != CAN_STATE_BUS_OFF) {
+	if ((scan_get_state(name, &state)) < 0) {
+		fprintf(stderr, "cannot get bustate, "
+				"something is seriously wrong\n");
+		goto err_out;
+	} else if (state != CAN_STATE_BUS_OFF) {
 		fprintf(stderr,
 			"Device is not in BUS_OFF,"
 			" no use to restart\n");
 		goto err_out;
 	}
 
-	restart_ms = scan_get_restart_ms(name);
-	if (restart_ms > 0) {
+	if ((scan_get_restart_ms(name, &restart_ms)) < 0) {
+		fprintf(stderr, "cannot get restart_ms, "
+				"something is seriously wrong\n");
+		goto err_out;
+	} else if (restart_ms > 0) {
 		fprintf(stderr,
 			"auto restart with %ums interval is turned on,"
 			" no use to restart\n", restart_ms);
@@ -569,39 +575,35 @@ int scan_set_bitrate(const char *name, __u32 bitrate)
 	return set_link(name, &req_info);
 }
 
-int scan_get_state(const char *name)
+int scan_get_state(const char *name, int *state)
 {
 	int fd;
-	int state;
 	int err;
 
 	fd = open_nl_sock();
 	if (fd < 0)
 		return -1;
 
-	err = do_get_nl_link(fd, GET_STATE, name, &state);
-	if (err < 0)
-		return -1;
-
-	return state;
-}
-
-__u32 scan_get_restart_ms(const char *name)
-{
-	int fd;
-	int err;
-	__u32 restart_ms;
-
-	fd = open_nl_sock();
-	if (fd < 0)
-		return -1;
-
-	err = do_get_nl_link(fd, GET_RESTART_MS, name, &restart_ms);
-	if (err < 0)
-		return -1;
+	err = do_get_nl_link(fd, GET_STATE, name, state);
 
 	close(fd);
-	return restart_ms;
+
+	return err;
+}
+
+int scan_get_restart_ms(const char *name, __u32 *restart_ms)
+{
+	int fd;
+	int err;
+
+	fd = open_nl_sock();
+	if (fd < 0)
+		return -1;
+
+	err = do_get_nl_link(fd, GET_RESTART_MS, name, restart_ms);
+
+	close(fd);
+	return err;
 
 }
 
