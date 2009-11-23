@@ -1,6 +1,5 @@
 noinst_HEADERS = \
-	libsocketcan-nlstuff.h \
-	can/netlink.h
+	libsocketcan-nlstuff.h
 
 nobase_include_HEADERS = \
 	socketcan_netlink.h

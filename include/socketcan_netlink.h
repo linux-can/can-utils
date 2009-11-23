@@ -21,6 +21,8 @@
 #ifndef _SOCKETCAN_NETLINK_H
 #define _SOCKETCAN_NETLINK_H
 
+#include <linux/can/netlink.h>
+
 #define IFLA_CAN_MAX	(__IFLA_CAN_MAX - 1)
 #define IF_UP 1
 #define IF_DOWN 2
