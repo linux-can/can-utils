@@ -77,7 +77,7 @@ static int addattr32(struct nlmsghdr *n, size_t maxlen, int type, __u32 data)
 
 	if (NLMSG_ALIGN(n->nlmsg_len) + len > maxlen) {
 		fprintf(stderr,
-			"addattr32: Error! max allowed bound %lu exceeded\n",
+			"addattr32: Error! max allowed bound %zu exceeded\n",
 			maxlen);
 		return -1;
 	}
@@ -99,7 +99,7 @@ static int addattr_l(struct nlmsghdr *n, size_t maxlen, int type,
 
 	if (NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len) > maxlen) {
 		fprintf(stderr,
-			"addattr_l ERROR: message exceeded bound of %lu\n",
+			"addattr_l ERROR: message exceeded bound of %zu\n",
 			maxlen);
 		return -1;
 	}
