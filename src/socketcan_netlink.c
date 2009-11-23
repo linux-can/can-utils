@@ -307,7 +307,7 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 		    nl_msg->nlmsg_len - NLMSG_LENGTH(sizeof(struct ifaddrmsg));
 		parse_rtattr(tb, IFLA_MAX, IFLA_RTA(ifi), len);
 
-		if (strncmp((char *)RTA_DATA(tb[IFLA_IFNAME]), name, 4) != 0)
+		if (strncmp((char *)RTA_DATA(tb[IFLA_IFNAME]), name, sizeof(name)) != 0)
 			continue;
 
 		if (tb[IFLA_LINKINFO])
