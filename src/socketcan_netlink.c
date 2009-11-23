@@ -459,6 +459,16 @@ static int do_set_nl_link(int fd, __u8 if_state, const char *name,
 	return send_mod_request(fd, &req.n);
 }
 
+static int netif_up(int fd, const char *name)
+{
+	return do_set_nl_link(fd, IF_UP, name, NULL);
+}
+
+static int netif_down(int fd, const char *name)
+{
+	return do_set_nl_link(fd, IF_DOWN, name, NULL);
+}
+
 static int set_link(const char *name, struct req_info *req_info)
 {
 	int fd;
@@ -484,16 +494,6 @@ close_out:
 	close(fd);
 err_out:
 	return err;
-}
-
-int netif_up(int fd, const char *name)
-{
-	return do_set_nl_link(fd, IF_UP, name, NULL);
-}
-
-int netif_down(int fd, const char *name)
-{
-	return do_set_nl_link(fd, IF_DOWN, name, NULL);
 }
 
 int scan_set_restart(const char *name)

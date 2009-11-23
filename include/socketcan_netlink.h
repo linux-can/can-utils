@@ -27,9 +27,6 @@
 #define GET_BITTIMING 3
 #define GET_CTRLMODE 4
 
-int netif_down(int fd, const char *name);
-int netif_up(int fd, const char *name);
-
 int scan_set_restart(const char *name);
 int scan_set_bitrate(const char *name, __u32 bitrate);
 int scan_set_restart_ms(const char *name, __u32 restart_ms);
