@@ -66,11 +66,9 @@ AC_CHECK_HEADERS([	\
 	unistd.h	\
 	utime.h		\
 	net/if.h	\
-	linux/netlink.h,,,[linux/socket.h] \
-	linux/rtnetlink.h,,,[linux/socket.h] \
 	])
 
-
+AC_CHECK_HEADER(linux/can/netlink.h,[],[AC_MSG_ERROR([cannot findcan/netlink.h])],[])
 #
 # Checks for typedefs, structures, and compiler characteristics.
 #
