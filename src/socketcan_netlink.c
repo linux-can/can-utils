@@ -62,9 +62,8 @@ struct req_info {
 	__u8 restart;
 	__u8 disable_autorestart;
 	__u32 restart_ms;
-	__u32 bitrate;
-	__u32 ctrlmode;
-	__u32 ctrlflags;
+	struct can_ctrlmode *ctrlmode;
+	struct can_bittiming *bittiming;
 };
 
 static void
@@ -388,9 +387,6 @@ static int do_set_nl_link(int fd, __u8 if_state, const char *name,
 {
 	struct set_req req;
 
-	struct can_bittiming bt;
-	struct can_ctrlmode cm;
-
 	const char *type = "can";
 
 	memset(&req, 0, sizeof(req));
@@ -436,22 +432,19 @@ static int do_set_nl_link(int fd, __u8 if_state, const char *name,
 			addattr32(&req.n, 1024, IFLA_CAN_RESTART_MS,
 				  req_info->restart_ms);
 
-		if (req_info->bitrate > 0) {
-			memset(&bt, 0, sizeof(bt));
-			bt.bitrate = req_info->bitrate;
-			addattr_l(&req.n, 1024, IFLA_CAN_BITTIMING,
-				  &bt, sizeof(bt));
-		}
-
 		if (req_info->restart)
 			addattr32(&req.n, 1024, IFLA_CAN_RESTART, 1);
 
-		if (req_info->ctrlmode) {
-			memset(&cm, 0, sizeof(cm));
-			cm.mask = req_info->ctrlmode;
-			cm.flags = req_info->ctrlflags;
-			addattr_l(&req.n, 1024, IFLA_CAN_CTRLMODE, &cm,
-				  sizeof(cm));
+		if (req_info->bittiming != NULL) {
+			addattr_l(&req.n, 1024, IFLA_CAN_BITTIMING,
+				  	req_info->bittiming,
+				  	sizeof(struct can_bittiming));
+		}
+
+		if (req_info->ctrlmode != NULL) {
+			addattr_l(&req.n, 1024, IFLA_CAN_CTRLMODE,
+					req_info->ctrlmode,
+				  	sizeof(struct can_ctrlmode));
 		}
 
 		/* mark end of data section */
@@ -502,7 +495,7 @@ err_out:
 	return err;
 }
 
-int scan_set_restart(const char *name)
+int scan_do_restart(const char *name)
 {
 	int fd;
 	int err = -1;
@@ -562,11 +555,19 @@ int scan_set_restart_ms(const char *name, __u32 restart_ms)
 	return set_link(name, &req_info);
 }
 
-int scan_set_ctrlmode(const char *name, __u32 mode, __u32 flags)
+int scan_set_ctrlmode(const char *name,  struct can_ctrlmode *cm)
 {
 	struct req_info req_info = {
-		.ctrlmode = mode,
-		.ctrlflags = flags,
+		.ctrlmode = cm,
+	};
+
+	return set_link(name, &req_info);
+}
+
+int scan_set_bittiming(const char *name, struct can_bittiming *bt)
+{
+	struct req_info req_info = {
+		.bittiming = bt,
 	};
 
 	return set_link(name, &req_info);
@@ -574,11 +575,12 @@ int scan_set_ctrlmode(const char *name, __u32 mode, __u32 flags)
 
 int scan_set_bitrate(const char *name, __u32 bitrate)
 {
-	struct req_info req_info = {
-		.bitrate = bitrate,
-	};
+	struct can_bittiming bt;
 
-	return set_link(name, &req_info);
+	memset(&bt, 0, sizeof(bt));
+	bt.bitrate = bitrate;
+
+	return scan_set_bittiming(name, &bt);
 }
 
 int scan_get_state(const char *name, int *state)

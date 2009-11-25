@@ -23,14 +23,16 @@
 
 #include <linux/can/netlink.h>
 
-int scan_set_restart(const char *name);
-int scan_set_bitrate(const char *name, __u32 bitrate);
-int scan_set_restart_ms(const char *name, __u32 restart_ms);
-int scan_set_ctrlmode(const char *name, __u32 mode, __u32 flags);
+int scan_do_restart(const char *name);
 
-int scan_get_state(const char *name, int *state);
+int scan_set_restart_ms(const char *name, __u32 restart_ms);
+int scan_set_bittiming(const char *name, struct can_bittiming *bt);
+int scan_set_ctrlmode(const char *name, struct can_ctrlmode *cm);
+int scan_set_bitrate(const char *name, __u32 bitrate);
+
 int scan_get_restart_ms(const char *name, __u32 *restart_ms);
 int scan_get_bittiming(const char *name, struct can_bittiming *bt);
 int scan_get_ctrlmode(const char *name, struct can_ctrlmode *cm);
+int scan_get_state(const char *name, int *state);
 
 #endif
