@@ -423,11 +423,12 @@ int main(int argc, char **argv)
 					txidx = get_txidx(device);
 				}
 
-				if (txidx == STDOUTIDX) /* hook to print logfile lines on stdout */
+				if (txidx == STDOUTIDX) { /* hook to print logfile lines on stdout */
 
 					printf("%s", buf); /* print the line AS-IS without extra \n */
+					fflush(stdout);
 
-				else if (txidx > 0) { /* only send to valid CAN devices */
+				} else if (txidx > 0) { /* only send to valid CAN devices */
 
 					if (parse_canframe(ascframe, &frame)) {
 						fprintf(stderr, "wrong CAN frame format: '%s'!", ascframe);
