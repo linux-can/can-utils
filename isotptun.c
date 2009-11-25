@@ -58,6 +58,7 @@
 #include <string.h>
 #include <libgen.h>
 #include <errno.h>
+#include <signal.h>
 
 #include <net/if.h>
 #include <sys/types.h>
@@ -69,6 +70,8 @@
 #include <linux/if_tun.h>
 
 #define NO_CAN_ID 0xFFFFFFFFU
+
+static volatile int running = 1;
 
 void print_usage(char *prg)
 {
@@ -93,6 +96,11 @@ void print_usage(char *prg)
 	fprintf(stderr, "\n");
 }
 
+void sigterm(int signo)
+{
+	running = 0;
+}
+
 int main(int argc, char **argv)
 {
 	fd_set rdfs;
@@ -103,11 +111,14 @@ int main(int argc, char **argv)
 	static struct can_isotp_fc_options fcopts;
 	int opt, ret;
 	extern int optind, opterr, optopt;
-	static int quit;
 	static int verbose;
 
 	unsigned char buffer[4096];
 	int nbytes;
+
+	signal(SIGTERM, sigterm);
+	signal(SIGHUP, sigterm);
+	signal(SIGINT, sigterm);
 
 	addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
@@ -235,22 +246,15 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	while (!quit) {
+	while (running) {
 
 		FD_ZERO(&rdfs);
 		FD_SET(s, &rdfs);
 		FD_SET(t, &rdfs);
-		FD_SET(0, &rdfs);
 
 		if ((ret = select(t+1, &rdfs, NULL, NULL, NULL)) < 0) {
 			perror("select");
 			continue;
-		}
-
-		if (FD_ISSET(0, &rdfs)) {
-			getchar();
-			quit = 1;
-			printf("quit due to keyboard input.\n");
 		}
 
 		if (FD_ISSET(s, &rdfs)) {
