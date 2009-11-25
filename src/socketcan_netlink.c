@@ -573,12 +573,13 @@ int scan_set_bittiming(const char *name, struct can_bittiming *bt)
 	return set_link(name, &req_info);
 }
 
-int scan_set_bitrate(const char *name, __u32 bitrate)
+int scan_set_bitrate(const char *name, __u32 bitrate, __u32 sample_point)
 {
 	struct can_bittiming bt;
 
 	memset(&bt, 0, sizeof(bt));
 	bt.bitrate = bitrate;
+	bt.sample_point = sample_point;
 
 	return scan_set_bittiming(name, &bt);
 }
