@@ -7,6 +7,6 @@ Name: libsocketcan-nl
 Description: provides access to socketcan netlink interface
 Requires:
 Version: @VERSION@
-Libs: -L${libdir} -llibsocketcan-nl
+Libs: -L${libdir} -lsocketcan-nl
 #Libs.private: -lm -lpthread ...etc...
 Cflags: -I${includedir}
