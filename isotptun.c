@@ -70,6 +70,7 @@
 #include <linux/if_tun.h>
 
 #define NO_CAN_ID 0xFFFFFFFFU
+#define DEFAULT_NAME "ctun%d"
 
 static volatile int running = 1;
 
@@ -80,6 +81,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "ethernet frames inside ISO15765-2 (unreliable) datagrams on CAN.\n\n");
 	fprintf(stderr, "Options: -s <can_id>  (source can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -d <can_id>  (destination can_id. Use 8 digits for extended IDs)\n");
+	fprintf(stderr, "         -n <name>    (name of created IP netdevice. Default: '%s')\n", DEFAULT_NAME);
 	fprintf(stderr, "         -x <addr>    (extended addressing mode.)\n");
 	fprintf(stderr, "         -p <byte>    (padding byte rx path)\n");
 	fprintf(stderr, "         -q <byte>    (padding byte tx path)\n");
@@ -112,8 +114,8 @@ int main(int argc, char **argv)
 	int opt, ret;
 	extern int optind, opterr, optopt;
 	static int verbose;
-
 	unsigned char buffer[4096];
+	static char name[IFNAMSIZ] = DEFAULT_NAME;
 	int nbytes;
 
 	signal(SIGTERM, sigterm);
@@ -122,7 +124,7 @@ int main(int argc, char **argv)
 
 	addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-	while ((opt = getopt(argc, argv, "s:d:x:p:q:P:t:b:m:whv?")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:n:x:p:q:P:t:b:m:whv?")) != -1) {
 		switch (opt) {
 		case 's':
 			addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
@@ -134,6 +136,10 @@ int main(int argc, char **argv)
 			addr.can_addr.tp.rx_id = strtoul(optarg, (char **)NULL, 16);
 			if (strlen(optarg) > 7)
 				addr.can_addr.tp.rx_id |= CAN_EFF_FLAG;
+			break;
+
+		case 'n':
+			strncpy(name, optarg, IFNAMSIZ-1);
 			break;
 
 		case 'x':
@@ -237,7 +243,7 @@ int main(int argc, char **argv)
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
-	strncpy(ifr.ifr_name, "ctun%d", IFNAMSIZ);
+	strncpy(ifr.ifr_name, name, IFNAMSIZ);
 
 	if (ioctl(t, TUNSETIFF, (void *) &ifr) < 0) {
 		perror("ioctl tunfd");
