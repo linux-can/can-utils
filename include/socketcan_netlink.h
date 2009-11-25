@@ -34,5 +34,6 @@ int scan_get_restart_ms(const char *name, __u32 *restart_ms);
 int scan_get_bittiming(const char *name, struct can_bittiming *bt);
 int scan_get_ctrlmode(const char *name, struct can_ctrlmode *cm);
 int scan_get_state(const char *name, int *state);
+int scan_get_clock(const char *name, struct can_clock *clock);
 
 #endif

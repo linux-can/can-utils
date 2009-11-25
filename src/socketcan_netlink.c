@@ -46,6 +46,7 @@
 #define GET_RESTART_MS 2
 #define GET_BITTIMING 3
 #define GET_CTRLMODE 4
+#define GET_CLOCK 5
 
 struct get_req {
 	struct nlmsghdr n;
@@ -375,6 +376,16 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 				fprintf(stderr, "no ctrlmode data found\n");
 
 			break;
+		case GET_CLOCK:
+			if (can_attr[IFLA_CAN_CLOCK]) {
+				memcpy(res,
+				       RTA_DATA(can_attr[IFLA_CAN_CLOCK]),
+				       sizeof(struct can_clock));
+				ret = 0;
+			} else
+				fprintf(stderr, "no clock parameter data found\n");
+
+			break;
 		default:
 			fprintf(stderr, "unknown acquire mode\n");
 		}
@@ -643,6 +654,23 @@ int scan_get_ctrlmode(const char *name, struct can_ctrlmode *cm)
 		return -1;
 
 	err = do_get_nl_link(fd, GET_CTRLMODE, name, cm);
+	if (err < 0)
+		return -1;
+
+	close(fd);
+	return 0;
+}
+
+int scan_get_clock(const char *name, struct can_clock *clock)
+{
+	int fd;
+	int err;
+
+	fd = open_nl_sock();
+	if (fd < 0)
+		return -1;
+
+	err = do_get_nl_link(fd, GET_CLOCK, name, clock);
 	if (err < 0)
 		return -1;
 
