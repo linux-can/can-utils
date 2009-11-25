@@ -52,7 +52,7 @@ CFLAGS    = -O2 -Wall -Wno-parentheses -I$(KERNELDIR)/include \
 PROGRAMS = candump cansniffer cansend canplayer canlogserver cangen\
 	   canbusload log2long log2asc asc2log bcmserver\
 	   isotpdump isotprecv isotpsend isotpsniffer isotptun\
-	   slcan_attach slcand slcanpty
+	   slcan_attach slcand slcanpty canfdtest
 
 all: $(PROGRAMS)
 
