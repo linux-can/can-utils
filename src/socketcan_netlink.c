@@ -393,6 +393,26 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 	return ret;
 }
 
+static int get_link(const char *name, __u8 acquire, void *res)
+{
+	int fd;
+	int err = -1;
+
+	fd = open_nl_sock();
+	if (fd < 0)
+		goto err_out;
+
+	err = do_get_nl_link(fd, acquire, name, res);
+	if (err < 0)
+		goto close_out;
+
+close_out:
+	close(fd);
+err_out:
+	return err;
+
+}
+
 static int do_set_nl_link(int fd, __u8 if_state, const char *name,
 			  struct req_info *req_info)
 {
@@ -597,83 +617,25 @@ int scan_set_bitrate(const char *name, __u32 bitrate, __u32 sample_point)
 
 int scan_get_state(const char *name, int *state)
 {
-	int fd;
-	int err;
-
-	fd = open_nl_sock();
-	if (fd < 0)
-		return -1;
-
-	err = do_get_nl_link(fd, GET_STATE, name, state);
-
-	close(fd);
-
-	return err;
+	return get_link(name, GET_STATE, state);
 }
 
 int scan_get_restart_ms(const char *name, __u32 *restart_ms)
 {
-	int fd;
-	int err;
-
-	fd = open_nl_sock();
-	if (fd < 0)
-		return -1;
-
-	err = do_get_nl_link(fd, GET_RESTART_MS, name, restart_ms);
-
-	close(fd);
-	return err;
-
+	return get_link(name, GET_RESTART_MS, restart_ms);
 }
 
 int scan_get_bittiming(const char *name, struct can_bittiming *bt)
 {
-	int fd;
-	int err;
-
-	fd = open_nl_sock();
-	if (fd < 0)
-		return -1;
-
-	err = do_get_nl_link(fd, GET_BITTIMING, name, bt);
-	if (err < 0)
-		return -1;
-
-	close(fd);
-	return 0;
+	return get_link(name, GET_BITTIMING, bt);
 }
 
 int scan_get_ctrlmode(const char *name, struct can_ctrlmode *cm)
 {
-	int fd;
-	int err;
-
-	fd = open_nl_sock();
-	if (fd < 0)
-		return -1;
-
-	err = do_get_nl_link(fd, GET_CTRLMODE, name, cm);
-	if (err < 0)
-		return -1;
-
-	close(fd);
-	return 0;
+	return get_link(name, GET_CTRLMODE, cm);
 }
 
 int scan_get_clock(const char *name, struct can_clock *clock)
 {
-	int fd;
-	int err;
-
-	fd = open_nl_sock();
-	if (fd < 0)
-		return -1;
-
-	err = do_get_nl_link(fd, GET_CLOCK, name, clock);
-	if (err < 0)
-		return -1;
-
-	close(fd);
-	return 0;
+	return get_link(name, GET_CLOCK, clock);
 }
