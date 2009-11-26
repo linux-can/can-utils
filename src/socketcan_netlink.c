@@ -489,17 +489,7 @@ static int do_set_nl_link(int fd, __u8 if_state, const char *name,
 	return send_mod_request(fd, &req.n);
 }
 
-static int netif_up(int fd, const char *name)
-{
-	return do_set_nl_link(fd, IF_UP, name, NULL);
-}
-
-static int netif_down(int fd, const char *name)
-{
-	return do_set_nl_link(fd, IF_DOWN, name, NULL);
-}
-
-static int set_link(const char *name, struct req_info *req_info)
+static int set_link(const char *name, __u8 if_state, struct req_info *req_info)
 {
 	int fd;
 	int err = 0;
@@ -508,15 +498,7 @@ static int set_link(const char *name, struct req_info *req_info)
 	if (fd < 0)
 		goto err_out;
 
-	err = netif_down(fd, name);
-	if (err < 0)
-		goto close_out;
-
-	err = do_set_nl_link(fd, 0, name, req_info);
-	if (err < 0)
-		goto close_out;
-
-	err = netif_up(fd, name);
+	err = do_set_nl_link(fd, if_state, name, req_info);
 	if (err < 0)
 		goto close_out;
 
@@ -524,6 +506,17 @@ close_out:
 	close(fd);
 err_out:
 	return err;
+}
+
+int scan_do_start(const char *name)
+{
+	return set_link(name, IF_UP, NULL);
+}
+
+int scan_do_stop(const char *name)
+{
+
+	return set_link(name, IF_DOWN, NULL);
 }
 
 int scan_do_restart(const char *name)
@@ -583,7 +576,7 @@ int scan_set_restart_ms(const char *name, __u32 restart_ms)
 	if (restart_ms == 0)
 		req_info.disable_autorestart = 1;
 
-	return set_link(name, &req_info);
+	return set_link(name, 0, &req_info);
 }
 
 int scan_set_ctrlmode(const char *name,  struct can_ctrlmode *cm)
@@ -592,7 +585,7 @@ int scan_set_ctrlmode(const char *name,  struct can_ctrlmode *cm)
 		.ctrlmode = cm,
 	};
 
-	return set_link(name, &req_info);
+	return set_link(name, 0, &req_info);
 }
 
 int scan_set_bittiming(const char *name, struct can_bittiming *bt)
@@ -601,7 +594,7 @@ int scan_set_bittiming(const char *name, struct can_bittiming *bt)
 		.bittiming = bt,
 	};
 
-	return set_link(name, &req_info);
+	return set_link(name, 0, &req_info);
 }
 
 int scan_set_bitrate(const char *name, __u32 bitrate, __u32 sample_point)

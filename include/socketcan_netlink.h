@@ -24,6 +24,8 @@
 #include <linux/can/netlink.h>
 
 int scan_do_restart(const char *name);
+int scan_do_stop(const char *name);
+int scan_do_start(const char *name);
 
 int scan_set_restart_ms(const char *name, __u32 restart_ms);
 int scan_set_bittiming(const char *name, struct can_bittiming *bt);
