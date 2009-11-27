@@ -317,7 +317,9 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 		    nl_msg->nlmsg_len - NLMSG_LENGTH(sizeof(struct ifaddrmsg));
 		parse_rtattr(tb, IFLA_MAX, IFLA_RTA(ifi), len);
 
-		if (strncmp((char *)RTA_DATA(tb[IFLA_IFNAME]), name, sizeof(name)) != 0)
+		if (strncmp
+		    ((char *)RTA_DATA(tb[IFLA_IFNAME]), name,
+		     sizeof(name)) != 0)
 			continue;
 
 		if (tb[IFLA_LINKINFO])
@@ -383,7 +385,8 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 				       sizeof(struct can_clock));
 				ret = 0;
 			} else
-				fprintf(stderr, "no clock parameter data found\n");
+				fprintf(stderr,
+					"no clock parameter data found\n");
 
 			break;
 		default:
@@ -468,14 +471,14 @@ static int do_set_nl_link(int fd, __u8 if_state, const char *name,
 
 		if (req_info->bittiming != NULL) {
 			addattr_l(&req.n, 1024, IFLA_CAN_BITTIMING,
-				  	req_info->bittiming,
-				  	sizeof(struct can_bittiming));
+				  req_info->bittiming,
+				  sizeof(struct can_bittiming));
 		}
 
 		if (req_info->ctrlmode != NULL) {
 			addattr_l(&req.n, 1024, IFLA_CAN_CTRLMODE,
-					req_info->ctrlmode,
-				  	sizeof(struct can_ctrlmode));
+				  req_info->ctrlmode,
+				  sizeof(struct can_ctrlmode));
 		}
 
 		/* mark end of data section */
@@ -515,7 +518,6 @@ int can_do_start(const char *name)
 
 int can_do_stop(const char *name)
 {
-
 	return set_link(name, IF_DOWN, NULL);
 }
 
@@ -529,18 +531,17 @@ int can_do_restart(const char *name)
 	/* first we check if we can restart the device at all */
 	if ((can_get_state(name, &state)) < 0) {
 		fprintf(stderr, "cannot get bustate, "
-				"something is seriously wrong\n");
+			"something is seriously wrong\n");
 		goto err_out;
 	} else if (state != CAN_STATE_BUS_OFF) {
 		fprintf(stderr,
-			"Device is not in BUS_OFF,"
-			" no use to restart\n");
+			"Device is not in BUS_OFF," " no use to restart\n");
 		goto err_out;
 	}
 
 	if ((can_get_restart_ms(name, &restart_ms)) < 0) {
 		fprintf(stderr, "cannot get restart_ms, "
-				"something is seriously wrong\n");
+			"something is seriously wrong\n");
 		goto err_out;
 	} else if (restart_ms > 0) {
 		fprintf(stderr,
@@ -579,7 +580,7 @@ int can_set_restart_ms(const char *name, __u32 restart_ms)
 	return set_link(name, 0, &req_info);
 }
 
-int can_set_ctrlmode(const char *name,  struct can_ctrlmode *cm)
+int can_set_ctrlmode(const char *name, struct can_ctrlmode *cm)
 {
 	struct req_info req_info = {
 		.ctrlmode = cm,
@@ -607,14 +608,15 @@ int can_set_bitrate(const char *name, __u32 bitrate)
 	return can_set_bittiming(name, &bt);
 }
 
-int can_set_bitrate_samplepoint(const char *name, __u32 bitrate, __u32 sample_point)
+int can_set_bitrate_samplepoint(const char *name, __u32 bitrate,
+				__u32 sample_point)
 {
 	struct can_bittiming bt;
 
 	memset(&bt, 0, sizeof(bt));
 	bt.bitrate = bitrate;
 	bt.sample_point = sample_point;
-	printf("%s: sample_point %u\n", __func__,bt.sample_point);
+
 	return can_set_bittiming(name, &bt);
 }
 
