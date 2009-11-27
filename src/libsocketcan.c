@@ -597,14 +597,24 @@ int can_set_bittiming(const char *name, struct can_bittiming *bt)
 	return set_link(name, 0, &req_info);
 }
 
-int can_set_bitrate(const char *name, __u32 bitrate, __u32 sample_point)
+int can_set_bitrate(const char *name, __u32 bitrate)
+{
+	struct can_bittiming bt;
+
+	memset(&bt, 0, sizeof(bt));
+	bt.bitrate = bitrate;
+
+	return can_set_bittiming(name, &bt);
+}
+
+int can_set_bitrate_samplepoint(const char *name, __u32 bitrate, __u32 sample_point)
 {
 	struct can_bittiming bt;
 
 	memset(&bt, 0, sizeof(bt));
 	bt.bitrate = bitrate;
 	bt.sample_point = sample_point;
-
+	printf("%s: sample_point %u\n", __func__,bt.sample_point);
 	return can_set_bittiming(name, &bt);
 }
 
