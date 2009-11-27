@@ -1,9 +1,9 @@
-noinst_HEADERS = \
-	libsocketcan-nlstuff.h
+# noinst_HEADERS = \
+#	libsocketcan-stuff.h
 
 nobase_include_HEADERS = \
-	socketcan_netlink.h
+	libsocketcan.h
 
 MAINTAINERCLEANFILES = \
-	libsocketcan-nl_config.h.in \
+	libsocketcan_config.h.in \
 	GNUmakefile.in

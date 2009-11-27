@@ -1,16 +1,16 @@
-lib_LTLIBRARIES = libsocketcan-nl.la
+lib_LTLIBRARIES = libsocketcan.la
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_builddir)/include
 
-libsocketcan_nl_la_SOURCES = socketcan_netlink.c
+libsocketcan_la_SOURCES = libsocketcan.c
 
-libsocketcan_nl_la_LDFLAGS = \
+libsocketcan_la_LDFLAGS = \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 #	-no-undefined	# win32_dll stuff only
 
-#libsocketcan-nl_LDADD = \
+#libsocketcan_LDADD = \
 #	$(librn_LIBS)
 #
 MAINTAINERCLEANFILES = \

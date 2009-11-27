@@ -7,7 +7,7 @@ noinst_PROGRAMS = \
 test_SOURCES = \
 	test.c
 test_LDADD = \
-	$(top_builddir)/src/libsocketcan-nl.la
+	$(top_builddir)/src/libsocketcan.la
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/include \

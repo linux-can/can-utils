@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.59)
 
-AC_INIT([libsocketcan-nl], [trunk], [bugs@pengutronix.de])
-AC_CONFIG_HEADERS([include/libsocketcan-nl_config.h])
-AC_CONFIG_SRCDIR([src/socketcan_netlink.c])
+AC_INIT([libsocketcan], [trunk], [bugs@pengutronix.de])
+AC_CONFIG_HEADERS([include/libsocketcan_config.h])
+AC_CONFIG_SRCDIR([src/libsocketcan.c])
 AC_CONFIG_MACRO_DIR([config/m4])
 AC_CONFIG_AUX_DIR([config/autoconf])
 AC_CANONICAL_BUILD
@@ -110,7 +110,7 @@ fi
 
 AC_CONFIG_FILES([
 	GNUmakefile
-	config/libsocketcan-nl.pc
+	config/libsocketcan.pc
 	config/GNUmakefile
 	include/GNUmakefile
 	src/GNUmakefile

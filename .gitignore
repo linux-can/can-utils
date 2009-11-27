@@ -4,14 +4,14 @@ GNUmakefile
 GNUmakefile.in
 
 aclocal.m4
-config/libsocketcan-nl.pc
+config/libsocketcan.pc
 config/m4/libtool.m4
 config/m4/ltoptions.m4
 config/m4/ltsugar.m4
 config/m4/ltversion.m4
 config/m4/lt~obsolete.m4
-include/libsocketcan-nl_config.h
-include/libsocketcan-nl_config.h.in
+include/libsocketcan_config.h
+include/libsocketcan_config.h.in
 include/stamp-h1
 
 config.log

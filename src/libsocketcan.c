@@ -1,5 +1,5 @@
 /*
- * socketcan_netlink.c
+ * libsocketcan.c
  *
  * (C) 2009 Luotao Fu <l.fu@pengutronix.de> 
  *
@@ -29,7 +29,7 @@
 #include <linux/rtnetlink.h>
 #include <linux/netlink.h>
 
-#include <socketcan_netlink.h>
+#include <libsocketcan.h>
 
 #define parse_rtattr_nested(tb, max, rta) \
 	(parse_rtattr((tb), (max), RTA_DATA(rta), RTA_PAYLOAD(rta)))
@@ -508,18 +508,18 @@ err_out:
 	return err;
 }
 
-int scan_do_start(const char *name)
+int can_do_start(const char *name)
 {
 	return set_link(name, IF_UP, NULL);
 }
 
-int scan_do_stop(const char *name)
+int can_do_stop(const char *name)
 {
 
 	return set_link(name, IF_DOWN, NULL);
 }
 
-int scan_do_restart(const char *name)
+int can_do_restart(const char *name)
 {
 	int fd;
 	int err = -1;
@@ -527,7 +527,7 @@ int scan_do_restart(const char *name)
 	__u32 restart_ms;
 
 	/* first we check if we can restart the device at all */
-	if ((scan_get_state(name, &state)) < 0) {
+	if ((can_get_state(name, &state)) < 0) {
 		fprintf(stderr, "cannot get bustate, "
 				"something is seriously wrong\n");
 		goto err_out;
@@ -538,7 +538,7 @@ int scan_do_restart(const char *name)
 		goto err_out;
 	}
 
-	if ((scan_get_restart_ms(name, &restart_ms)) < 0) {
+	if ((can_get_restart_ms(name, &restart_ms)) < 0) {
 		fprintf(stderr, "cannot get restart_ms, "
 				"something is seriously wrong\n");
 		goto err_out;
@@ -567,7 +567,7 @@ err_out:
 	return err;
 }
 
-int scan_set_restart_ms(const char *name, __u32 restart_ms)
+int can_set_restart_ms(const char *name, __u32 restart_ms)
 {
 	struct req_info req_info = {
 		.restart_ms = restart_ms,
@@ -579,7 +579,7 @@ int scan_set_restart_ms(const char *name, __u32 restart_ms)
 	return set_link(name, 0, &req_info);
 }
 
-int scan_set_ctrlmode(const char *name,  struct can_ctrlmode *cm)
+int can_set_ctrlmode(const char *name,  struct can_ctrlmode *cm)
 {
 	struct req_info req_info = {
 		.ctrlmode = cm,
@@ -588,7 +588,7 @@ int scan_set_ctrlmode(const char *name,  struct can_ctrlmode *cm)
 	return set_link(name, 0, &req_info);
 }
 
-int scan_set_bittiming(const char *name, struct can_bittiming *bt)
+int can_set_bittiming(const char *name, struct can_bittiming *bt)
 {
 	struct req_info req_info = {
 		.bittiming = bt,
@@ -597,7 +597,7 @@ int scan_set_bittiming(const char *name, struct can_bittiming *bt)
 	return set_link(name, 0, &req_info);
 }
 
-int scan_set_bitrate(const char *name, __u32 bitrate, __u32 sample_point)
+int can_set_bitrate(const char *name, __u32 bitrate, __u32 sample_point)
 {
 	struct can_bittiming bt;
 
@@ -605,30 +605,30 @@ int scan_set_bitrate(const char *name, __u32 bitrate, __u32 sample_point)
 	bt.bitrate = bitrate;
 	bt.sample_point = sample_point;
 
-	return scan_set_bittiming(name, &bt);
+	return can_set_bittiming(name, &bt);
 }
 
-int scan_get_state(const char *name, int *state)
+int can_get_state(const char *name, int *state)
 {
 	return get_link(name, GET_STATE, state);
 }
 
-int scan_get_restart_ms(const char *name, __u32 *restart_ms)
+int can_get_restart_ms(const char *name, __u32 *restart_ms)
 {
 	return get_link(name, GET_RESTART_MS, restart_ms);
 }
 
-int scan_get_bittiming(const char *name, struct can_bittiming *bt)
+int can_get_bittiming(const char *name, struct can_bittiming *bt)
 {
 	return get_link(name, GET_BITTIMING, bt);
 }
 
-int scan_get_ctrlmode(const char *name, struct can_ctrlmode *cm)
+int can_get_ctrlmode(const char *name, struct can_ctrlmode *cm)
 {
 	return get_link(name, GET_CTRLMODE, cm);
 }
 
-int scan_get_clock(const char *name, struct can_clock *clock)
+int can_get_clock(const char *name, struct can_clock *clock)
 {
 	return get_link(name, GET_CLOCK, clock);
 }
