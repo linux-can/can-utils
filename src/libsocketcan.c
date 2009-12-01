@@ -47,6 +47,7 @@
 #define GET_BITTIMING 3
 #define GET_CTRLMODE 4
 #define GET_CLOCK 5
+#define GET_BITTIMING_CONST 6
 
 struct get_req {
 	struct nlmsghdr n;
@@ -389,6 +390,16 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 					"no clock parameter data found\n");
 
 			break;
+		case GET_BITTIMING_CONST:
+			if (can_attr[IFLA_CAN_BITTIMING_CONST]) {
+				memcpy(res,
+				       RTA_DATA(can_attr[IFLA_CAN_BITTIMING_CONST]),
+				       sizeof(struct can_bittiming_const));
+				ret = 0;
+			} else
+				fprintf(stderr, "no bittiming_const data found\n");
+
+			break;
 		default:
 			fprintf(stderr, "unknown acquire mode\n");
 		}
@@ -644,3 +655,9 @@ int can_get_clock(const char *name, struct can_clock *clock)
 {
 	return get_link(name, GET_CLOCK, clock);
 }
+
+int can_get_bittiming_const(const char *name, struct can_bittiming_const *btc)
+{
+	return get_link(name, GET_BITTIMING_CONST, btc);
+}
+
