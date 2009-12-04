@@ -21,9 +21,9 @@ CFLAGS="${CFLAGS} -Wall"
 # Interfaces changed/added/removed: CURRENT++	REVISION=0
 # Interfaces added:		    AGE++
 # Interfaces removed:		    AGE=0
-LT_CURRENT=2
+LT_CURRENT=3
 LT_REVISION=0
-LT_AGE=0
+LT_AGE=1
 AC_SUBST(LT_CURRENT)
 AC_SUBST(LT_REVISION)
 AC_SUBST(LT_AGE)
