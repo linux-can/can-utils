@@ -1,0 +1,11 @@
+/** @mainpage libsocketcan
+
+This is libsocketcan, a userspace library to do some common tasks while dealing
+with the socketcan Framework.
+
+@defgroup extern External API
+@defgroup intern Interally used callbacks and structures
+
+*/
+
+

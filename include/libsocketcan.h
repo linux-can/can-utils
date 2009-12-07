@@ -8,18 +8,23 @@
  * Software Foundation; either version 2.1 of the License, or (at your option)
  * any later version.
  *
- * This library is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * This library is distributed in the hope that it will be useful, but without
+ * any warranty; without even the implied warranty of merchantability or fitness
+ * for a particular purpose. see the gnu lesser general public license for more
  * details.
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this library; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * you should have received a copy of the gnu lesser general public license
+ * along with this library; if not, write to the free software foundation, inc.,
+ * 59 temple place, suite 330, boston, ma 02111-1307 usa
  */
 
-#ifndef _SOCKETCAN_NETLINK_H
-#define _SOCKETCAN_NETLINK_H
+#ifndef _socketcan_netlink_h
+#define _socketcan_netlink_h
+
+/**
+ * @file
+ * @brief API overview
+ */
 
 #include <linux/can/netlink.h>
 

@@ -1,5 +1,4 @@
-/*
- * libsocketcan.c
+/* libsocketcan.c
  *
  * (C) 2009 Luotao Fu <l.fu@pengutronix.de> 
  *
@@ -16,6 +15,11 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this library; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
+
+/**
+ * @file
+ * @brief library code
  */
 
 #include <stdio.h>
@@ -124,6 +128,19 @@ static int addattr_l(struct nlmsghdr *n, size_t maxlen, int type,
 	return 0;
 }
 
+/**
+ * @ingroup intern
+ * @brief send_mod_request - send a linkinfo modification request
+ *
+ * @param fd decriptor to a priorly opened netlink socket
+ * @param n netlink message containing the request
+ *
+ * sends a request to setup the the linkinfo to netlink layer and awaits the
+ * status.
+ *
+ * @return 0 if success
+ * @return negativ if failed
+ */
 static int send_mod_request(int fd, struct nlmsghdr *n)
 {
 	int status;
@@ -197,6 +214,17 @@ static int send_mod_request(int fd, struct nlmsghdr *n)
 	return 0;
 }
 
+/**
+ * @ingroup intern
+ * @brief send_dump_request - send a dump linkinfo request
+ *
+ * @param fd decriptor to a priorly opened netlink socket
+ * @param family rt_gen message family
+ * @param type netlink message header type
+ *
+ * @return 0 if success
+ * @return negativ if failed
+ */
 static int send_dump_request(int fd, int family, int type)
 {
 	struct get_req req;
@@ -214,6 +242,15 @@ static int send_dump_request(int fd, int family, int type)
 	return send(fd, (void *)&req, sizeof(req), 0);
 }
 
+/**
+ * @ingroup intern
+ * @brief open_nl_sock - open a netlink socket
+ *
+ * opens a netlink socket and returns the socket descriptor
+ * 
+ * @return 0 if success
+ * @return negativ if failed
+ */
 static int open_nl_sock()
 {
 	int fd;
@@ -256,6 +293,25 @@ static int open_nl_sock()
 	}
 	return fd;
 }
+
+/**
+ * @ingroup intern
+ * @brief do_get_nl_link - get linkinfo
+ *
+ * @param fd socket file descriptor to a priorly opened netlink socket
+ * @param acquire  which parameter we want to get
+ * @param name name of the can device. This is the netdev name, as ifconfig -a
+ * shows in your system. usually it contains prefix "can" and the numer of the
+ * can line. e.g. "can0"
+ * @param res pointer to store the result
+ *
+ * This callback send a dump request into the netlink layer, collect the packet
+ * containing the linkinfo and fill the pointer res points to depending on the
+ * acquire mode set in param acquire.
+ *
+ * @return 0 if success
+ * @return -1 if failed
+ */
 
 static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 {
@@ -407,6 +463,21 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 	return ret;
 }
 
+/**
+ * @ingroup intern
+ * @brief get_link - get linkinfo
+ *
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ * @param acquire which parameter we want to get
+ * @param res pointer to store the result
+ * 
+ * This is a wrapper for do_get_nl_link
+ *
+ * @return 0 if success
+ * @return -1 if failed
+ */
 static int get_link(const char *name, __u8 acquire, void *res)
 {
 	int fd;
@@ -427,6 +498,27 @@ err_out:
 
 }
 
+/**
+ * @ingroup intern
+ * @brief do_set_nl_link - setup linkinfo
+ *
+ * @param fd socket file descriptor to a priorly opened netlink socket
+ * @param if_state state of the interface we want to put the device into. this
+ * parameter is only set if you want to use the callback to driver up/down the
+ * device
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ * @param req_info request parameters
+ * 
+ * This callback can do two different tasks:
+ * - bring up/down the interface
+ * - set up a netlink packet with request, as set up in req_info
+ * Which task this callback will do depends on which parameters are set.
+ *
+ * @return 0 if success
+ * @return -1 if failed
+ */
 static int do_set_nl_link(int fd, __u8 if_state, const char *name,
 			  struct req_info *req_info)
 {
@@ -503,6 +595,24 @@ static int do_set_nl_link(int fd, __u8 if_state, const char *name,
 	return send_mod_request(fd, &req.n);
 }
 
+/**
+ * @ingroup intern
+ * @brief set_link - open a netlink socket and setup linkinfo
+ *
+ * @param name name of the can device. This is the netdev name, as ifconfig -a
+ * shows in your system. usually it contains prefix "can" and the numer of the
+ * can line. e.g. "can0"
+ * @param if_state state of the interface we want to put the device into. this
+ * parameter is only set if you want to use the callback to driver up/down the
+ * device
+ * @param req_info request parameters
+ *
+ * This is a wrapper for do_set_nl_link. It opens a netlink socket and sends
+ * down the requests.
+ *
+ * @return 0 if success
+ * @return -1 if failed
+ */
 static int set_link(const char *name, __u8 if_state, struct req_info *req_info)
 {
 	int fd;
@@ -522,16 +632,59 @@ err_out:
 	return err;
 }
 
+/**
+ * @ingroup extern
+ * can_do_start - start the can interface
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ *
+ * This starts the can interface with the given name. It simply changes the if
+ * state of the interface to up. All initialisation works will be done in
+ * kernel. The if state can also be queried by a simple ifconfig.
+ *
+ * @return 0 if success
+ * @return -1 if failed
+ */
 int can_do_start(const char *name)
 {
 	return set_link(name, IF_UP, NULL);
 }
 
+/**
+ * @ingroup extern
+ * can_do_stop - stop the can interface
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ *
+ * This stops the can interface with the given name. It simply changes the if
+ * state of the interface to down. Any running communication would be stopped.
+ * 
+ * @return 0 if success
+ * @return -1 if failed
+ */
 int can_do_stop(const char *name)
 {
 	return set_link(name, IF_DOWN, NULL);
 }
 
+/**
+ * @ingroup extern
+ * can_do_restart - restart the can interface
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ *
+ * This triggers the start mode of the can device.
+ * 
+ * NOTE: 
+ * - restart mode can only be triggerd if the device is in BUS_OFF and the auto
+ * restart not turned on (restart_ms == 0)
+ *  
+ * @return 0 if success
+ * @return -1 if failed
+ */
 int can_do_restart(const char *name)
 {
 	int fd;
@@ -579,6 +732,21 @@ err_out:
 	return err;
 }
 
+/**
+ * @ingroup extern
+ * can_set_restart_ms - set interval of auto restart.
+ *
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ * @param restart_ms interval of auto restart in milliseconds
+ *
+ * This sets how often the device shall automatically restart the interface in
+ * case that a bus_off is detected.
+ * 
+ * @return 0 if success
+ * @return -1 if failed
+ */
 int can_set_restart_ms(const char *name, __u32 restart_ms)
 {
 	struct req_info req_info = {
@@ -591,6 +759,58 @@ int can_set_restart_ms(const char *name, __u32 restart_ms)
 	return set_link(name, 0, &req_info);
 }
 
+/**
+ * @ingroup extern
+ * can_set_ctrlmode - setup the control mode.
+ *
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ *
+ * @param cm pointer of a can_ctrlmode struct
+ *
+ * This sets the control mode of the can device. There're currently three
+ * different control modes:
+ * - LOOPBACK
+ * - LISTEN_ONLY
+ * - TRIPPLE_SAMPLING
+ *
+ * You have to define the control mode struct yourself. a can_ctrlmode struct
+ * is declared as:
+ *
+ * @code
+ * struct can_ctrlmode {
+ *	__u32 mask;
+ *	__u32 flags;
+ * }
+ * @endcode
+ * 
+ * You can use mask to select modes you want to control and flags to determine
+ * if you want to turn the selected mode(s) on or off. Every control mode is
+ * mapped to an own macro
+ *
+ * @code
+ * #define CAN_CTRLMODE_LOOPBACK   0x1
+ * #define CAN_CTRLMODE_LISTENONLY 0x2
+ * #define CAN_CTRLMODE_3_SAMPLES  0x4
+ * @endcode
+ *
+ * e.g. the following pseudocode
+ * 
+ * @code
+ * struct can_ctrlmode cm;
+ * memset(&cm, 0, sizeof(cm));
+ * cm.mask = CAN_CTRLMODE_LOOPBACK | CAN_CTRLMODE_LISTENONLY;
+ * cm.flags = CAN_CTRLMODE_LOOPBACK;
+ * can_set_ctrlmode(candev, &cm);
+ * @endcode
+ * 
+ * will turn the loopback mode on and listenonly mode off.
+ *
+ * @return 0 if success
+ * @return -1 if failed
+ */
+
 int can_set_ctrlmode(const char *name, struct can_ctrlmode *cm)
 {
 	struct req_info req_info = {
@@ -600,6 +820,44 @@ int can_set_ctrlmode(const char *name, struct can_ctrlmode *cm)
 	return set_link(name, 0, &req_info);
 }
 
+/**
+ * @ingroup extern
+ * can_set_bittiming - setup the bittiming.
+ *
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ * @param bt pointer to a can_bittiming struct
+ *
+ * This sets the bittiming of the can device. This is for advantage usage. In
+ * normal cases you should use can_set_bitrate to simply define the bitrate and
+ * let the driver automatically calculate the bittiming. You will only need this
+ * function if you wish to define the bittiming in expert mode with fully
+ * manually defined timing values.
+ * You have to define the bittiming struct yourself. a can_bittiming struct
+ * consists of:
+ *
+ * @code
+ * struct can_bittiming {
+ *	__u32 bitrate;
+ *	__u32 sample_point;
+ *	__u32 tq;
+ *	__u32 prop_seg;
+ *	__u32 phase_seg1;
+ *	__u32 phase_seg2;
+ *	__u32 sjw;
+ *	__u32 brp;
+ * }
+ * @endcode
+ *
+ * to define a customized bittiming, you have to define tq, prop_seq,
+ * phase_seg1, phase_seg2 and sjw. See http://www.can-cia.org/index.php?id=88
+ * for more information about bittiming and synchronizations on can bus.
+ *
+ * @return 0 if success
+ * @return -1 if failed
+ */
+
 int can_set_bittiming(const char *name, struct can_bittiming *bt)
 {
 	struct req_info req_info = {
@@ -608,6 +866,25 @@ int can_set_bittiming(const char *name, struct can_bittiming *bt)
 
 	return set_link(name, 0, &req_info);
 }
+
+/**
+ * @ingroup extern
+ * can_set_bitrate - setup the bitrate.
+ *
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ * @param bitrate bitrate of the can bus
+ *
+ * This is the recommended way to setup the bus bit timing. You only have to
+ * give a bitrate value here. The exact bit timing will be calculated
+ * automatically. To use this function, make sure that CONFIG_CAN_CALC_BITTIMING
+ * is set to y in your kernel configuration. bitrate can be a value between
+ * 1000(1kbit/s) and 1000000(1000kbit/s).
+ *
+ * @return 0 if success
+ * @return -1 if failed
+ */
 
 int can_set_bitrate(const char *name, __u32 bitrate)
 {
@@ -619,6 +896,23 @@ int can_set_bitrate(const char *name, __u32 bitrate)
 	return can_set_bittiming(name, &bt);
 }
 
+/**
+ * @ingroup extern
+ * can_set_bitrate_samplepoint - setup the bitrate.
+ *
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ * @param bitrate bitrate of the can bus
+ * @param sample_point sample point value
+ *
+ * This one is similar to can_set_bitrate, only you can additionally set up the
+ * time point for sampling (sample point) customly instead of using the
+ * CIA recommended value. sample_point can be a value between 0 and 999.
+ *
+ * @return 0 if success
+ * @return -1 if failed
+ */
 int can_set_bitrate_samplepoint(const char *name, __u32 bitrate,
 				__u32 sample_point)
 {
@@ -631,31 +925,159 @@ int can_set_bitrate_samplepoint(const char *name, __u32 bitrate,
 	return can_set_bittiming(name, &bt);
 }
 
+/**
+ * @ingroup extern
+ * can_get_state - get the current state of the device
+ *
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ * @param state pointer to store the state
+ *
+ * This one stores the current state of the can interface into the given
+ * pointer. Valid states are:
+ * - CAN_STATE_ERROR_ACTIVE
+ * - CAN_STATE_ERROR_WARNING
+ * - CAN_STATE_ERROR_PASSIVE
+ * - CAN_STATE_BUS_OFF
+ * - CAN_STATE_STOPPED
+ * - CAN_STATE_SLEEPING
+ *
+ * The first four states is determined by the value of RX/TX error counter.
+ * Please see relevant can specification for more information about this. A
+ * device in STATE_STOPPED is an inactive device. STATE_SLEEPING is not
+ * implemented on all devices.
+ * 
+ * @return 0 if success
+ * @return -1 if failed
+ */
+
 int can_get_state(const char *name, int *state)
 {
 	return get_link(name, GET_STATE, state);
 }
+
+/**
+ * @ingroup extern
+ * can_get_restart_ms - get the current interval of auto restarting. 
+ *
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ * @param restart_ms pointer to store the value.
+ *
+ * This one stores the current interval of auto restarting into the given
+ * pointer.
+ * 
+ * The socketcan framework can automatically restart a device if it is in
+ * bus_off in a given interval. This function gets this value in milliseconds.
+ * restart_ms == 0 means that autorestarting is turned off.
+ *
+ * @return 0 if success
+ * @return -1 if failed
+ */
 
 int can_get_restart_ms(const char *name, __u32 *restart_ms)
 {
 	return get_link(name, GET_RESTART_MS, restart_ms);
 }
 
+/**
+ * @ingroup extern
+ * can_get_bittiming - get the current bittimnig configuration.
+ *
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ * @param bt pointer to the bittiming struct.
+ *
+ * This one stores the current bittiming configuration.
+ *
+ * Please see can_set_bittiming for more information about bit timing.
+ *  
+ * @return 0 if success
+ * @return -1 if failed
+ */
 int can_get_bittiming(const char *name, struct can_bittiming *bt)
 {
 	return get_link(name, GET_BITTIMING, bt);
 }
+
+/**
+ * @ingroup extern
+ * can_get_ctrlmode - get the current control mode.
+ *
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ * @param cm pointer to the ctrlmode struct.
+ *
+ * This one stores the current control mode configuration.
+ *
+ * Please see can_set_ctrlmode for more information about control modes.
+ *  
+ * @return 0 if success
+ * @return -1 if failed
+ */
 
 int can_get_ctrlmode(const char *name, struct can_ctrlmode *cm)
 {
 	return get_link(name, GET_CTRLMODE, cm);
 }
 
+/**
+ * @ingroup extern
+ * can_get_clock - get the current clock struct.
+ *
+ * @param name: name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ * @param clock pointer to the clock struct.
+ *
+ * This one stores the current clock configuration. At the time of writing the
+ * can_clock struct only contains information about the clock frequecy. This
+ * information is e.g. essential while setting up the bit timing.
+ * 
+ * @return 0 if success
+ * @return -1 if failed
+ */
 int can_get_clock(const char *name, struct can_clock *clock)
 {
 	return get_link(name, GET_CLOCK, clock);
 }
 
+/**
+ * @ingroup extern
+ * can_get_bittiming_const - get the current bittimnig constant.
+ *
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ * @param btc pointer to the bittiming constant struct.
+ *
+ * This one stores the hardware dependent bittiming constant. The
+ * can_bittiming_const struct consists:
+ * 
+ * @code
+ * struct can_bittiming_const {
+ *	char name[16];
+ *	__u32 tseg1_min;
+ *	__u32 tseg1_max;
+ *	__u32 tseg2_min;
+ *	__u32 tseg2_max;
+ *	__u32 sjw_max;
+ *	__u32 brp_min;
+ *	__u32 brp_max;
+ *	__u32 brp_inc;
+ *	};
+ * @endcode
+ * 
+ * The information in this struct is used to calculate the bus bit timing
+ * automatically.
+ *  
+ * @return 0 if success
+ * @return -1 if failed
+ */
 int can_get_bittiming_const(const char *name, struct can_bittiming_const *btc)
 {
 	return get_link(name, GET_BITTIMING_CONST, btc);

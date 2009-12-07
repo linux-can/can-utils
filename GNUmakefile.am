@@ -32,3 +32,10 @@ maintainer-clean-local:
 	-chmod -R a+rw $(distdir)
 	-rm -fr $(distdir)
 
+docs : htmldocs
+
+htmldocs:
+	@echo  'Running doxygen with local Doxyfile'
+	-doxygen Doxyfile
+
+
