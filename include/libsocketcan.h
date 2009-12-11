@@ -26,7 +26,7 @@
  * @brief API overview
  */
 
-#include <linux/can/netlink.h>
+#include <can_netlink.h>
 
 int can_do_restart(const char *name);
 int can_do_stop(const char *name);

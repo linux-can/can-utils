@@ -68,7 +68,6 @@ AC_CHECK_HEADERS([	\
 	net/if.h	\
 	])
 
-AC_CHECK_HEADER(linux/can/netlink.h,[],[AC_MSG_ERROR([cannot find can/netlink.h])],[])
 #
 # Checks for typedefs, structures, and compiler characteristics.
 #
