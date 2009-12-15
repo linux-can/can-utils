@@ -28,6 +28,9 @@ MAINTAINERCLEANFILES = \
 	config/m4/lt~obsolete.m4 \
 	$(DIST_ARCHIVES)
 
+dist_doc_DATA = INSTALL \
+		README
+
 maintainer-clean-local:
 	-chmod -R a+rw $(distdir)
 	-rm -fr $(distdir)

@@ -1,0 +1,18 @@
+libsocketcan
+----------------------------------------------------
+This library allows you to control some basic functions in socketcan from
+userspace.
+
+Dependencies:
+----------------------------------------------------
+A recent kernel with integrated SocketCAN (at least 2.6.30)
+
+Building:
+----------------------------------------------------
+Please refert to the INSTALL file
+
+Documentation:
+----------------------------------------------------
+Make sure you have oxygen installed on your host. If yes simply Run
+make docs
+and look for the API doc in Documentation/html.
