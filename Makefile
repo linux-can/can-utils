@@ -46,6 +46,7 @@ MAKEFLAGS = -k
 
 CFLAGS    = -O2 -Wall -Wno-parentheses -I$(KERNELDIR)/include \
 	    -fno-strict-aliasing \
+	    -DSO_RXQ_OVFL=40 \
 	    -DPF_CAN=29 \
 	    -DAF_CAN=PF_CAN
 

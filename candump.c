@@ -89,6 +89,9 @@
 const char col_on [MAXCOL][19] = {BLUE, RED, GREEN, BOLD, MAGENTA, CYAN};
 const char col_off [] = ATTRESET;
 
+static char *cmdlinename[MAXSOCK];
+static __u32 dropcnt[MAXSOCK];
+static __u32 last_dropcnt[MAXSOCK];
 static char devname[MAXIFNAMES][IFNAMSIZ+1];
 static int  dindex[MAXIFNAMES];
 static int  max_devname_len; /* to prevent frazzled device name output */ 
@@ -116,6 +119,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "         -n <count>  (terminate after receiption of <count> CAN frames)\n");
 	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
+	fprintf(stderr, "         -d          (monitor dropped CAN frames)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with optional filter sets can be specified\n", MAXSOCK);
 	fprintf(stderr, "on the commandline in the form: <ifname>[,filter]*\n");
@@ -197,6 +201,7 @@ int main(int argc, char **argv)
 	int s[MAXSOCK];
 	int bridge = 0;
 	unsigned char timestamp = 0;
+	unsigned char dropmonitor = 0;
 	unsigned char silent = SILENT_INI;
 	unsigned char silentani = 0;
 	unsigned char color = 0;
@@ -209,6 +214,10 @@ int main(int argc, char **argv)
 	int currmax, numfilter;
 	char *ptr, *nptr;
 	struct sockaddr_can addr;
+	char ctrlmsg[CMSG_SPACE(sizeof(struct timeval)) + CMSG_SPACE(sizeof(__u32))];
+	struct iovec iov;
+	struct msghdr msg;
+	struct cmsghdr *cmsg;
 	struct can_filter *rfilter;
 	can_err_mask_t err_mask;
 	struct can_frame frame;
@@ -224,7 +233,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:lLn:r:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:ldLn:r:h?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -286,7 +295,7 @@ int main(int argc, char **argv)
 				setsockopt(bridge, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
 
 				if (opt == 'B') {
-					int loopback = 0;
+					const int loopback = 0;
 
 					setsockopt(bridge, SOL_CAN_RAW, CAN_RAW_LOOPBACK,
 						   &loopback, sizeof(loopback));
@@ -301,6 +310,10 @@ int main(int argc, char **argv)
 	    
 		case 'l':
 			log = 1;
+			break;
+
+		case 'd':
+			dropmonitor = 1;
 			break;
 
 		case 'L':
@@ -369,6 +382,8 @@ int main(int argc, char **argv)
 			perror("socket");
 			return 1;
 		}
+
+		cmdlinename[i] = ptr; /* save pointer to cmdline name of this socket */
 
 		if (nptr)
 			nbytes = nptr - ptr;  /* interface name is up the first ',' */
@@ -446,7 +461,7 @@ int main(int argc, char **argv)
 				} else if (sscanf(ptr, "#%lx",
 						  (long unsigned int *)&err_mask) != 1) { 
 					fprintf(stderr, "Error in filter option parsing: '%s'\n", ptr);
-					exit(1);
+					return 1;
 				}
 			}
 
@@ -470,13 +485,13 @@ int main(int argc, char **argv)
 			if (setsockopt(s[i], SOL_SOCKET, SO_RCVBUF,
 				       &rcvbuf_size, sizeof(rcvbuf_size)) < 0) {
 				perror("setsockopt SO_RCVBUF");
-				exit(1);
+				return 1;
 			}
 
 			if (getsockopt(s[i], SOL_SOCKET, SO_RCVBUF,
 				       &curr_rcvbuf_size, &curr_rcvbuf_size_len) < 0) {
 				perror("getsockopt SO_RCVBUF");
-				exit(1);
+				return 1;
 			}
 
 			/* Only print a warning the first time we detect the adjustment */
@@ -484,6 +499,28 @@ int main(int argc, char **argv)
 			if (!i && curr_rcvbuf_size < rcvbuf_size*2)
 				fprintf(stderr, "The socket receive buffer size was "
 					"adjusted due to /proc/sys/net/core/rmem_max.\n");
+		}
+
+		if (timestamp || log || logfrmt) {
+
+			const int timestamp_on = 1;
+
+			if (setsockopt(s[i], SOL_SOCKET, SO_TIMESTAMP,
+				       &timestamp_on, sizeof(timestamp_on)) < 0) {
+				perror("setsockopt SO_TIMESTAMP");
+				return 1;
+			}
+		}
+
+		if (dropmonitor) {
+
+			const int dropmonitor_on = 1;
+
+			if (setsockopt(s[i], SOL_SOCKET, SO_RXQ_OVFL,
+				       &dropmonitor_on, sizeof(dropmonitor_on)) < 0) {
+				perror("setsockopt SO_RXQ_OVFL not supported by your Linux Kernel");
+				return 1;
+			}
 		}
 
 		if (bind(s[i], (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -524,6 +561,13 @@ int main(int argc, char **argv)
 		}
 	}
 
+	/* these settings are static and can be held out of the hot path */
+	iov.iov_base = &frame;
+	msg.msg_name = &addr;
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	msg.msg_control = &ctrlmsg;
+
 	while (running) {
 
 		FD_ZERO(&rdfs);
@@ -540,11 +584,15 @@ int main(int argc, char **argv)
 
 			if (FD_ISSET(s[i], &rdfs)) {
 
-				socklen_t len = sizeof(addr);
 				int idx;
 
-				nbytes = recvfrom(s[i], &frame, sizeof(struct can_frame), 0,
-						  (struct sockaddr*)&addr, &len);
+				/* these settings may be modified by recvmsg() */
+				iov.iov_len = sizeof(frame);
+				msg.msg_namelen = sizeof(addr);
+				msg.msg_controllen = sizeof(ctrlmsg);  
+				msg.msg_flags = 0;
+
+				nbytes = recvmsg(s[i], &msg, 0);
 				if (nbytes < 0) {
 					perror("read");
 					return 1;
@@ -569,10 +617,35 @@ int main(int argc, char **argv)
 					}
 				}
 		    
-				if (timestamp || log || logfrmt)
-					if (ioctl(s[i], SIOCGSTAMP, &tv) < 0)
-						perror("SIOCGSTAMP");
+				for (cmsg = CMSG_FIRSTHDR(&msg);
+				     cmsg && (cmsg->cmsg_level == SOL_SOCKET);
+				     cmsg = CMSG_NXTHDR(&msg,cmsg)) {
+					if (cmsg->cmsg_type == SO_TIMESTAMP)
+						tv = *(struct timeval *)CMSG_DATA(cmsg);
+					else if (cmsg->cmsg_type == SO_RXQ_OVFL)
+						dropcnt[i] = *(__u32 *)CMSG_DATA(cmsg);
+				}
 
+				/* check for (unlikely) dropped frames on this specific socket */
+				if (dropcnt[i] != last_dropcnt[i]) {
+
+					__u32 frames;
+
+					if (dropcnt[i] > last_dropcnt[i])
+						frames = dropcnt[i] - last_dropcnt[i];
+					else
+						frames = 4294967295U - last_dropcnt[i] + dropcnt[i]; /* 4294967295U == UINT32_MAX */
+
+					if (silent != SILENT_ON)
+						printf("DROPCOUNT: dropped %d CAN frame%s on '%s' socket (total drops %d)\n",
+						       frames, (frames > 1)?"s":"", cmdlinename[i], dropcnt[i]);
+
+					if (log)
+						fprintf(logfile, "DROPCOUNT: dropped %d CAN frame%s on '%s' socket (total drops %d)\n",
+							frames, (frames > 1)?"s":"", cmdlinename[i], dropcnt[i]);
+
+					last_dropcnt[i] = dropcnt[i];
+				}
 
 				idx = idx2dindex(addr.can_ifindex, s[i]);
 
