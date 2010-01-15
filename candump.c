@@ -355,7 +355,7 @@ int main(int argc, char **argv)
 
 	if (silent == SILENT_INI) {
 		if (log) {
-			fprintf(stderr, "\nDisabled standard output while logging.");
+			fprintf(stderr, "Disabled standard output while logging.\n");
 			silent = SILENT_ON; /* disable output on stdout */
 		} else
 			silent = SILENT_OFF; /* default output */
@@ -482,23 +482,30 @@ int main(int argc, char **argv)
 			int curr_rcvbuf_size;
 			socklen_t curr_rcvbuf_size_len = sizeof(curr_rcvbuf_size);
 
-			if (setsockopt(s[i], SOL_SOCKET, SO_RCVBUF,
+			/* try SO_RCVBUFFORCE first, if we run with CAP_NET_ADMIN */
+			if (setsockopt(s[i], SOL_SOCKET, SO_RCVBUFFORCE,
 				       &rcvbuf_size, sizeof(rcvbuf_size)) < 0) {
-				perror("setsockopt SO_RCVBUF");
-				return 1;
-			}
+#ifdef DEBUG
+				printf("SO_RCVBUFFORCE failed so try SO_RCVBUF ...\n");
+#endif
+				if (setsockopt(s[i], SOL_SOCKET, SO_RCVBUF,
+					       &rcvbuf_size, sizeof(rcvbuf_size)) < 0) {
+					perror("setsockopt SO_RCVBUF");
+					return 1;
+				}
 
-			if (getsockopt(s[i], SOL_SOCKET, SO_RCVBUF,
-				       &curr_rcvbuf_size, &curr_rcvbuf_size_len) < 0) {
-				perror("getsockopt SO_RCVBUF");
-				return 1;
-			}
+				if (getsockopt(s[i], SOL_SOCKET, SO_RCVBUF,
+					       &curr_rcvbuf_size, &curr_rcvbuf_size_len) < 0) {
+					perror("getsockopt SO_RCVBUF");
+					return 1;
+				}
 
-			/* Only print a warning the first time we detect the adjustment */
-			/* n.b.: The wanted size is doubled in Linux in net/sore/sock.c */
-			if (!i && curr_rcvbuf_size < rcvbuf_size*2)
-				fprintf(stderr, "The socket receive buffer size was "
-					"adjusted due to /proc/sys/net/core/rmem_max.\n");
+				/* Only print a warning the first time we detect the adjustment */
+				/* n.b.: The wanted size is doubled in Linux in net/sore/sock.c */
+				if (!i && curr_rcvbuf_size < rcvbuf_size*2)
+					fprintf(stderr, "The socket receive buffer size was "
+						"adjusted due to /proc/sys/net/core/rmem_max.\n");
+			}
 		}
 
 		if (timestamp || log || logfrmt) {
