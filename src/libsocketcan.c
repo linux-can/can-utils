@@ -52,6 +52,7 @@
 #define GET_CTRLMODE 4
 #define GET_CLOCK 5
 #define GET_BITTIMING_CONST 6
+#define GET_BERR_COUNTER 7
 
 struct get_req {
 	struct nlmsghdr n;
@@ -456,6 +457,17 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 				fprintf(stderr, "no bittiming_const data found\n");
 
 			break;
+		case GET_BERR_COUNTER:
+			if (can_attr[IFLA_CAN_BERR_COUNTER]) {
+				memcpy(res,
+				       RTA_DATA(can_attr[IFLA_CAN_BERR_COUNTER]),
+				       sizeof(struct can_berr_counter));
+				ret = 0;
+			} else
+				fprintf(stderr, "no berr_counter data found\n");
+
+			break;
+
 		default:
 			fprintf(stderr, "unknown acquire mode\n");
 		}
@@ -1083,3 +1095,29 @@ int can_get_bittiming_const(const char *name, struct can_bittiming_const *btc)
 	return get_link(name, GET_BITTIMING_CONST, btc);
 }
 
+
+/**
+ * @ingroup extern
+ * can_get_berr_counter - get the tx/rx error counter.
+ *
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ * @param bc pointer to the error counter struct..
+ *
+ * This one gets the current rx/tx error counter from the hardware.
+ * 
+ * @code
+ * struct can_berr_counter {
+ *	__u16 txerr;
+ *	__u16 rxerr; 
+ *	};
+ * @endcode
+ * 
+ * @return 0 if success
+ * @return -1 if failed
+ */
+int can_get_berr_counter(const char *name, struct can_berr_counter *bc)
+{
+	return get_link(name, GET_BERR_COUNTER, bc);
+}
