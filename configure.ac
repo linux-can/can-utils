@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.59)
 
-AC_INIT([libsocketcan], [0.0.7], [bugs@pengutronix.de])
+AC_INIT([libsocketcan], [0.0.8], [bugs@pengutronix.de])
 AC_CONFIG_HEADERS([include/libsocketcan_config.h])
 AC_CONFIG_SRCDIR([src/libsocketcan.c])
 AC_CONFIG_MACRO_DIR([config/m4])
