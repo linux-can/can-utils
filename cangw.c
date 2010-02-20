@@ -50,6 +50,7 @@
 #include <libgen.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/socket.h>
 #include <net/if.h>
 #include <linux/netlink.h>
@@ -305,8 +306,13 @@ int main(int argc, char **argv)
 	switch (cmd) {
 
 	case ADD:
-		req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_EXCL;
+		req.n.nlmsg_flags = NLM_F_REQUEST;
 		req.n.nlmsg_type  = RTM_NEWROUTE;
+		break;
+
+	case DEL:
+		req.n.nlmsg_flags = NLM_F_REQUEST;
+		req.n.nlmsg_type  = RTM_DELROUTE;
 		break;
 
 	default:
