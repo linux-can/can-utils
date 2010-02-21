@@ -99,7 +99,7 @@ void print_usage(char *prg)
 {
 	fprintf(stderr, "\nUsage: %s [options]\n\n", prg);
 	fprintf(stderr, "Commands:  -A (add a new rule)\n");
-	fprintf(stderr, "           -D (delete a rule)             [not yet implemented]\n");
+	fprintf(stderr, "           -D (delete a rule)\n");
 	fprintf(stderr, "           -F (flush - delete all rules)  [not yet implemented]\n");
 	fprintf(stderr, "           -L (list all rules)            [not yet implemented]\n");
 	fprintf(stderr, "Mandatory: -s <src_dev>  (source netdevice)\n");
@@ -209,11 +209,15 @@ int main(int argc, char **argv)
 	int have_filter = 0;
 
 	struct {
-		struct nlmsghdr n;
-		struct rtcanmsg r;
+		struct nlmsghdr nh;
+		struct rtcanmsg rtcan;
 		char buf[200];
 
 	} req;
+
+	char rxbuf[8192]; /* netlink receive buffer */
+	struct nlmsghdr *nlh;
+	struct nlmsgerr *rte;
 
 	struct can_filter filter;
 	struct sockaddr_nl nladdr;
@@ -248,19 +252,19 @@ int main(int argc, char **argv)
 			break;
 
 		case 's':
-			req.r.src_ifindex = if_nametoindex(optarg);
+			req.rtcan.src_ifindex = if_nametoindex(optarg);
 			break;
 
 		case 'd':
-			req.r.dst_ifindex = if_nametoindex(optarg);
+			req.rtcan.dst_ifindex = if_nametoindex(optarg);
 			break;
 
 		case 't':
-			req.r.can_txflags |= CAN_GW_TXFLAGS_SRC_TSTAMP;
+			req.rtcan.can_txflags |= CAN_GW_TXFLAGS_SRC_TSTAMP;
 			break;
 
 		case 'e':
-			req.r.can_txflags |= CAN_GW_TXFLAGS_ECHO;
+			req.rtcan.can_txflags |= CAN_GW_TXFLAGS_ECHO;
 			break;
 
 		case 'f':
@@ -296,7 +300,7 @@ int main(int argc, char **argv)
 	}
 
 	if ((argc - optind != 0) || (cmd == UNSPEC) ||
-	    (!req.r.src_ifindex) || (!req.r.dst_ifindex)) {
+	    (!req.rtcan.src_ifindex) || (!req.rtcan.dst_ifindex)) {
 		print_usage(basename(argv[0]));
 		exit(1);
 	}
@@ -306,13 +310,13 @@ int main(int argc, char **argv)
 	switch (cmd) {
 
 	case ADD:
-		req.n.nlmsg_flags = NLM_F_REQUEST;
-		req.n.nlmsg_type  = RTM_NEWROUTE;
+		req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+		req.nh.nlmsg_type  = RTM_NEWROUTE;
 		break;
 
 	case DEL:
-		req.n.nlmsg_flags = NLM_F_REQUEST;
-		req.n.nlmsg_type  = RTM_DELROUTE;
+		req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+		req.nh.nlmsg_type  = RTM_DELROUTE;
 		break;
 
 	default:
@@ -321,15 +325,15 @@ int main(int argc, char **argv)
 		break;
 	}
 
-	req.n.nlmsg_len   = NLMSG_LENGTH(sizeof(struct rtcanmsg));
-	req.n.nlmsg_seq   = 0;
+	req.nh.nlmsg_len   = NLMSG_LENGTH(sizeof(struct rtcanmsg));
+	req.nh.nlmsg_seq   = 0;
 
-	req.r.can_family  = AF_CAN;
+	req.rtcan.can_family  = AF_CAN;
 
 	/* add new attributes here */
 
 	if (have_filter)
-		addattr_l(&req.n, sizeof(req), CGW_FILTER, &filter, sizeof(filter));
+		addattr_l(&req.nh, sizeof(req), CGW_FILTER, &filter, sizeof(filter));
 
 	// a better example code
 	// modmsg.modtype = CGW_MOD_ID;
@@ -337,18 +341,40 @@ int main(int argc, char **argv)
 
 	/* add up to CGW_MOD_FUNCS modification definitions */
 	for (i = 0; i < modidx; i++)
-		addattr_l(&req.n, sizeof(req), modmsg[i].instruction, &modmsg[i], CGW_MODATTR_LEN);
+		addattr_l(&req.nh, sizeof(req), modmsg[i].instruction, &modmsg[i], CGW_MODATTR_LEN);
 
 	memset(&nladdr, 0, sizeof(nladdr));
 	nladdr.nl_family = AF_NETLINK;
 	nladdr.nl_pid    = 0;
 	nladdr.nl_groups = 0;
 
-	err = sendto(s, &req, req.n.nlmsg_len, 0,
+	err = sendto(s, &req, req.nh.nlmsg_len, 0,
 		     (struct sockaddr*)&nladdr, sizeof(nladdr));
+	if (err < 0) {
+		perror("netlink sendto");
+		return err;
+	}
 
-	if (err < 0)
-		perror("PF_CAN netlink gateway answered ");
+	// clean netlink receive buffer
+	bzero(rxbuf, sizeof(rxbuf));
+
+	if (cmd == ADD || cmd == DEL) {
+
+		err = recv(s, &rxbuf, sizeof(rxbuf), 0);
+		if (err < 0) {
+			perror("netlink recv");
+			return err;
+		}
+		nlh = (struct nlmsghdr *)rxbuf;
+		if (nlh->nlmsg_type != NLMSG_ERROR) {
+			fprintf(stderr, "unexpected netlink answer of type %d\n", nlh->nlmsg_type);
+			return -EINVAL;
+		}
+		rte = (struct nlmsgerr *)NLMSG_DATA(nlh);
+		err = rte->error;
+		if (err < 0)
+			fprintf(stderr, "netlink error %d (%s)\n", err, strerror(abs(err)));
+	}
 
 	close(s);
 
