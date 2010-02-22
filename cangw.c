@@ -99,7 +99,7 @@ void printfilter(const void *data)
 {
 	struct can_filter *filter = (struct can_filter *)data;
 
-	printf("-f %X:%X ", filter->can_id, filter->can_mask);
+	printf("-f %03X:%X ", filter->can_id, filter->can_mask);
 }
 
 void printmod(const char *type, const void *data)
@@ -120,7 +120,7 @@ void printmod(const char *type, const void *data)
 	if (mod.modtype & CGW_MOD_DATA)
 		printf("D");
 
-	printf(":%X.%X.", mod.cf.can_id, mod.cf.can_dlc);
+	printf(":%03X.%X.", mod.cf.can_id, mod.cf.can_dlc);
 
 	for (i = 0; i < 8; i++)
 		printf("%02X", mod.cf.data[i]);
