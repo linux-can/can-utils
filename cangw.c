@@ -95,13 +95,47 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	return 0;
 }
 
+void printfilter(const void *data)
+{
+	struct can_filter *filter = (struct can_filter *)data;
+
+	printf("-f %X:%X ", filter->can_id, filter->can_mask);
+}
+
+void printmod(const char *type, const void *data)
+{
+	struct modattr mod;
+	int i;
+
+	memcpy (&mod, data, CGW_MODATTR_LEN);
+
+	printf("-m %s:", type);
+
+	if (mod.modtype & CGW_MOD_ID)
+		printf("I");
+
+	if (mod.modtype & CGW_MOD_DLC)
+		printf("L");
+
+	if (mod.modtype & CGW_MOD_DATA)
+		printf("D");
+
+	printf(":%X.%X.", mod.cf.can_id, mod.cf.can_dlc);
+
+	for (i = 0; i < 8; i++)
+		printf("%02X", mod.cf.data[i]);
+
+	printf(" ");
+}
+
+
 void print_usage(char *prg)
 {
 	fprintf(stderr, "\nUsage: %s [options]\n\n", prg);
 	fprintf(stderr, "Commands:  -A (add a new rule)\n");
 	fprintf(stderr, "           -D (delete a rule)\n");
 	fprintf(stderr, "           -F (flush - delete all rules)  [not yet implemented]\n");
-	fprintf(stderr, "           -L (list all rules)            [not yet implemented]\n");
+	fprintf(stderr, "           -L (list all rules)\n");
 	fprintf(stderr, "Mandatory: -s <src_dev>  (source netdevice)\n");
 	fprintf(stderr, "           -d <dst_dev>  (destination netdevice)\n");
 	fprintf(stderr, "Options:   -t (preserve src_dev rx timestamp)\n");
@@ -216,8 +250,15 @@ int main(int argc, char **argv)
 	} req;
 
 	char rxbuf[8192]; /* netlink receive buffer */
+	char ifname[IF_NAMESIZE]; /* internface name for if_indextoname() */
 	struct nlmsghdr *nlh;
 	struct nlmsgerr *rte;
+	struct rtcanmsg *rtc;
+	struct rtattr *rta;
+	__u32 handled = 0;
+	__u32 dropped = 0;
+	int rtlen;
+	int len;
 
 	struct can_filter filter;
 	struct sockaddr_nl nladdr;
@@ -299,8 +340,13 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if ((argc - optind != 0) || (cmd == UNSPEC) ||
-	    (!req.rtcan.src_ifindex) || (!req.rtcan.dst_ifindex)) {
+	if ((argc - optind != 0) || (cmd == UNSPEC)) {
+		print_usage(basename(argv[0]));
+		exit(1);
+	}
+
+	if ((cmd == ADD || cmd == DEL) &&
+	    ((!req.rtcan.src_ifindex) || (!req.rtcan.dst_ifindex))) {
 		print_usage(basename(argv[0]));
 		exit(1);
 	}
@@ -319,6 +365,11 @@ int main(int argc, char **argv)
 		req.nh.nlmsg_type  = RTM_DELROUTE;
 		break;
 
+	case LIST:
+		req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+		req.nh.nlmsg_type  = RTM_GETROUTE;
+		break;
+
 	default:
 		printf("This function is not yet implemented.\n");
 		exit(1);
@@ -335,9 +386,11 @@ int main(int argc, char **argv)
 	if (have_filter)
 		addattr_l(&req.nh, sizeof(req), CGW_FILTER, &filter, sizeof(filter));
 
-	// a better example code
-	// modmsg.modtype = CGW_MOD_ID;
-	// addattr_l(&req.n, sizeof(req), CGW_MOD_SET, &modmsg, CGW_MODATTR_LEN);
+	/*
+	 * a better example code
+	 * modmsg.modtype = CGW_MOD_ID;
+	 * addattr_l(&req.n, sizeof(req), CGW_MOD_SET, &modmsg, CGW_MODATTR_LEN);
+	 */
 
 	/* add up to CGW_MOD_FUNCS modification definitions */
 	for (i = 0; i < modidx; i++)
@@ -355,7 +408,7 @@ int main(int argc, char **argv)
 		return err;
 	}
 
-	// clean netlink receive buffer
+	/* clean netlink receive buffer */
 	bzero(rxbuf, sizeof(rxbuf));
 
 	if (cmd == ADD || cmd == DEL) {
@@ -374,6 +427,86 @@ int main(int argc, char **argv)
 		err = rte->error;
 		if (err < 0)
 			fprintf(stderr, "netlink error %d (%s)\n", err, strerror(abs(err)));
+
+	} else {
+
+		/* cmd == LIST (for now) */
+
+		while (1) {
+			len = recv(s, &rxbuf, sizeof(rxbuf), 0);
+			if (len < 0) {
+				perror("netlink recv");
+				return len;
+			}
+			nlh = (struct nlmsghdr *)rxbuf;
+			if (nlh->nlmsg_type == NLMSG_DONE) 
+				break;
+
+			rtc = (struct rtcanmsg *)NLMSG_DATA(nlh);
+			if (rtc->can_family != AF_CAN) {
+				printf("received msg from unknown family %d\n", rtc->can_family);
+				return -EINVAL;
+			}
+
+			/*
+			 * print list in a representation that
+			 * can be used directly for start scripts
+			 */
+
+			printf("%s -A ", basename(argv[0]));
+			printf("-s %s ", if_indextoname(rtc->src_ifindex, ifname));
+			printf("-d %s ", if_indextoname(rtc->dst_ifindex, ifname));
+
+			if (rtc->can_txflags & CAN_GW_TXFLAGS_ECHO)
+				printf("-e ");
+
+			if (rtc->can_txflags & CAN_GW_TXFLAGS_SRC_TSTAMP)
+				printf("-t ");
+
+			/* check for attributes */
+			rta = (struct rtattr *) RTM_RTA(rtc);
+			rtlen = RTM_PAYLOAD(nlh);
+			for(;RTA_OK(rta, rtlen);rta=RTA_NEXT(rta,rtlen))
+			{
+				switch(rta->rta_type) {
+
+				case CGW_FILTER:
+					printfilter(RTA_DATA(rta));
+					break;
+
+				case CGW_MOD_AND:
+					printmod("AND", RTA_DATA(rta));
+					break;
+
+				case CGW_MOD_OR:
+					printmod("OR", RTA_DATA(rta));
+					break;
+
+				case CGW_MOD_XOR:
+					printmod("XOR", RTA_DATA(rta));
+					break;
+
+				case CGW_MOD_SET:
+					printmod("SET", RTA_DATA(rta));
+					break;
+
+				case CGW_HANDLED:
+					handled = *(__u32 *)RTA_DATA(rta);
+					break;
+
+				case CGW_DROPPED:
+					dropped = *(__u32 *)RTA_DATA(rta);
+					break;
+
+				default:
+					printf("Unknown attribute %d!", rta->rta_type);
+					return -EINVAL;
+					break;
+				}
+			}
+
+			printf("# %d handled %d dropped\n", handled, dropped); /* end of entry */
+		}
 	}
 
 	close(s);
