@@ -134,7 +134,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "\nUsage: %s [options]\n\n", prg);
 	fprintf(stderr, "Commands:  -A (add a new rule)\n");
 	fprintf(stderr, "           -D (delete a rule)\n");
-	fprintf(stderr, "           -F (flush - delete all rules)  [not yet implemented]\n");
+	fprintf(stderr, "           -F (flush - delete all rules)\n");
 	fprintf(stderr, "           -L (list all rules)\n");
 	fprintf(stderr, "Mandatory: -s <src_dev>  (source netdevice)\n");
 	fprintf(stderr, "           -d <dst_dev>  (destination netdevice)\n");
@@ -365,6 +365,14 @@ int main(int argc, char **argv)
 		req.nh.nlmsg_type  = RTM_DELROUTE;
 		break;
 
+	case FLUSH:
+		req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+		req.nh.nlmsg_type  = RTM_DELROUTE;
+		/* if_index set to 0 => remove all entries */
+		req.rtcan.src_ifindex  = 0;
+		req.rtcan.dst_ifindex  = 0;
+		break;
+
 	case LIST:
 		req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
 		req.nh.nlmsg_type  = RTM_GETROUTE;
@@ -411,7 +419,13 @@ int main(int argc, char **argv)
 	/* clean netlink receive buffer */
 	bzero(rxbuf, sizeof(rxbuf));
 
-	if (cmd == ADD || cmd == DEL) {
+	if (cmd != LIST) {
+
+		/*
+		 * cmd == ADD || cmd == DEL || cmd == FLUSH
+		 *
+		 * Parse the requested netlink acknowledge return values.
+		 */
 
 		err = recv(s, &rxbuf, sizeof(rxbuf), 0);
 		if (err < 0) {
@@ -430,7 +444,7 @@ int main(int argc, char **argv)
 
 	} else {
 
-		/* cmd == LIST (for now) */
+		/* cmd == LIST */
 
 		while (1) {
 			len = recv(s, &rxbuf, sizeof(rxbuf), 0);
