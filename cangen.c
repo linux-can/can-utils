@@ -51,6 +51,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include <poll.h>
 #include <ctype.h>
 #include <libgen.h>
 #include <time.h>
@@ -92,6 +93,8 @@ void print_usage(char *prg)
 		" generation mode - see below)\n");
 	fprintf(stderr, "         -D <mode>     (CAN data (payload)"
 		" generation mode - see below)\n");
+	fprintf(stderr, "         -p <timeout>  (poll on -ENOBUFS to write frames"
+		" with <timeout> ms)\n");
 	fprintf(stderr, "         -i            (ignore -ENOBUFS return values on"
 		" write() syscalls)\n");
 	fprintf(stderr, "         -x            (disable local loopback of "
@@ -114,6 +117,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "(fixed CAN data payload and length)\n");
 	fprintf(stderr, "%s vcan0 -g 0 -i -x                    ", prg);
 	fprintf(stderr, "(full load test ignoring -ENOBUFS)\n");
+	fprintf(stderr, "%s vcan0 -g 0 -p 10 -x                 ", prg);
+	fprintf(stderr, "(full load test with polling, 10ms timeout)\n");
 	fprintf(stderr, "%s vcan0                               ", prg);
 	fprintf(stderr, "(my favourite default :)\n\n");
 }
@@ -126,6 +131,7 @@ void sigterm(int signo)
 int main(int argc, char **argv)
 {
 	unsigned long gap = DEFAULT_GAP; 
+	unsigned long polltimeout = 0;
 	unsigned char ignore_enobufs = 0;
 	unsigned char extended = 0;
 	unsigned char id_mode = MODE_RANDOM;
@@ -137,6 +143,7 @@ int main(int argc, char **argv)
 
 	int opt;
 	int s; /* socket */
+	struct pollfd fds;
 
 	struct sockaddr_can addr;
 	static struct can_frame frame;
@@ -150,7 +157,7 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	while ((opt = getopt(argc, argv, "ig:eI:L:D:xvh?")) != -1) {
+	while ((opt = getopt(argc, argv, "ig:eI:L:D:xp:vh?")) != -1) {
 		switch (opt) {
 
 		case 'i':
@@ -207,6 +214,10 @@ int main(int argc, char **argv)
 
 		case 'x':
 			loopback_disable = 1;
+			break;
+
+		case 'p':
+			polltimeout = strtoul(optarg, NULL, 10);
 			break;
 
 		case '?':
@@ -284,6 +295,11 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	if (polltimeout) {
+		fds.fd = s;
+		fds.events = POLLOUT;
+	}
+
 	while (running) {
 
 		if (id_mode == MODE_RANDOM) {
@@ -331,11 +347,18 @@ int main(int argc, char **argv)
 				perror("write");
 				return 1;
 			}
-			if (!ignore_enobufs) {
+			if (!ignore_enobufs && !polltimeout) {
 				perror("write");
 				return 1;
 			}
-			enobufs_count++;
+			if (polltimeout) {
+				/* wait for the write socket (with timeout) */
+				if (poll(&fds, 1, polltimeout) < 0) {
+					perror("poll");
+					return 1;
+				}
+			} else
+				enobufs_count++;
 
 		} else if (nbytes < sizeof(struct can_frame)) {
 			fprintf(stderr, "write: incomplete CAN frame\n");
