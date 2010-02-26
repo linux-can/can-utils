@@ -341,6 +341,7 @@ int main(int argc, char **argv)
 				fprint_canframe(stdout, &frame, "\n", 1);
 		}
 
+resend:
 		nbytes = write(s, &frame, sizeof(struct can_frame));
 		if (nbytes < 0) {
 			if (errno != ENOBUFS) {
@@ -356,7 +357,8 @@ int main(int argc, char **argv)
 				if (poll(&fds, 1, polltimeout) < 0) {
 					perror("poll");
 					return 1;
-				}
+				} else
+					goto resend;
 			} else
 				enobufs_count++;
 
