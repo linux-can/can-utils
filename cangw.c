@@ -134,7 +134,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "\nUsage: %s [options]\n\n", prg);
 	fprintf(stderr, "Commands:  -A (add a new rule)\n");
 	fprintf(stderr, "           -D (delete a rule)\n");
-	fprintf(stderr, "           -F (flush - delete all rules)\n");
+	fprintf(stderr, "           -F (flush / delete all rules)\n");
 	fprintf(stderr, "           -L (list all rules)\n");
 	fprintf(stderr, "Mandatory: -s <src_dev>  (source netdevice)\n");
 	fprintf(stderr, "           -d <dst_dev>  (destination netdevice)\n");
@@ -153,10 +153,10 @@ void print_usage(char *prg)
 	fprintf(stderr, " - <can_id> is an u32 value containing the CAN Identifier\n");
 	fprintf(stderr, " - <can_dlc> is an u8 value containing the data length code (0 .. 8)\n");
 	fprintf(stderr, " - <can_data> is always eight(!) u8 values containing the CAN frames data\n");
-	fprintf(stderr, "The instructions are performed in the order 'AND' -> 'OR' -> 'XOR' -> 'SET'\n");
+	fprintf(stderr, "The max. four modifications are performed in the order AND -> OR -> XOR -> SET\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Example:\n");
-	fprintf(stderr, "%s -A -s can0 -d vcan3 -f 123:C00007FF -m SET:IL:80000333.4.1122334455667788\n", prg);
+	fprintf(stderr, "%s -A -s can0 -d vcan3 -e -f 123:C00007FF -m SET:IL:333.4.1122334455667788\n", prg);
 	fprintf(stderr, "\n");
 }
 
