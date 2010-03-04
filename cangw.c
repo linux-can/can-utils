@@ -255,8 +255,7 @@ int main(int argc, char **argv)
 	struct nlmsgerr *rte;
 	struct rtcanmsg *rtc;
 	struct rtattr *rta;
-	__u32 handled = 0;
-	__u32 dropped = 0;
+	__u32 handled, dropped;
 	int rtlen;
 	int len;
 
@@ -478,6 +477,10 @@ int main(int argc, char **argv)
 				printf("-t ");
 
 			/* check for attributes */
+
+			handled = 0;
+			dropped = 0;
+
 			rta = (struct rtattr *) RTM_RTA(rtc);
 			rtlen = RTM_PAYLOAD(nlh);
 			for(;RTA_OK(rta, rtlen);rta=RTA_NEXT(rta,rtlen))
