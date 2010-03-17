@@ -40,6 +40,9 @@
 #
 #  Send feedback to <socketcan-users@lists.berlios.de>
 
+DESTDIR =
+PREFIX = /usr/local
+
 KERNELDIR = ../kernel/2.6
 
 MAKEFLAGS = -k
@@ -61,7 +64,8 @@ clean:
 	rm -f $(PROGRAMS) *.o
 
 install:
-	cp -f $(PROGRAMS) /usr/local/bin
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	cp -f $(PROGRAMS) $(DESTDIR)$(PREFIX)/bin
 
 distclean:
 	rm -f $(PROGRAMS) *.o *~
