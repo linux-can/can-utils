@@ -53,10 +53,16 @@ CFLAGS    = -O2 -Wall -Wno-parentheses -I$(KERNELDIR)/include \
 	    -DPF_CAN=29 \
 	    -DAF_CAN=PF_CAN
 
-PROGRAMS = candump cansniffer cansend canplayer canlogserver cangen\
-	   canbusload log2long log2asc asc2log bcmserver\
-	   isotpdump isotprecv isotpsend isotpsniffer isotptun\
-	   slcan_attach slcand slcanpty canfdtest cangw
+PROGRAMS_ISOTP = isotpdump isotprecv isotpsend isotpsniffer isotptun
+PROGRAMS_CANGW = cangw
+PROGRAMS_SLCAN = slcan_attach slcand
+PROGRAMS = candump cansniffer cansend canplayer cangen canbusload\
+	   log2long log2asc asc2log\
+	   canlogserver bcmserver\
+	   $(PROGRAMS_ISOTP)\
+	   $(PROGRAMS_CANGW)\
+	   $(PROGRAMS_SLCAN)\
+	   slcanpty canfdtest
 
 all: $(PROGRAMS)
 
