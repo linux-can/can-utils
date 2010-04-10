@@ -72,6 +72,9 @@ struct modattr {
 } __attribute__((packed));
 
 
+#define RTCAN_RTA(r)  ((struct rtattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct rtcanmsg))))
+#define RTCAN_PAYLOAD(n) NLMSG_PAYLOAD(n,sizeof(struct rtcanmsg))
+
 /* some netlink helpers stolen from iproute2 package */
 #define NLMSG_TAIL(nmsg) \
         ((struct rtattr *)(((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
@@ -128,6 +131,26 @@ void printmod(const char *type, const void *data)
 	printf(" ");
 }
 
+void print_cs_xor(struct cgw_csum_xor *cs_xor)
+{
+	printf("-x %d:%d:%d:%02X ",
+	       cs_xor->from_idx, cs_xor->to_idx,
+	       cs_xor->result_idx, cs_xor->prefix_value);
+}
+
+void print_cs_crc8(struct cgw_csum_crc8 *cs_crc8)
+{
+	int i;
+
+	printf("-c %d:%d:%d:",
+	       cs_crc8->from_idx, cs_crc8->to_idx,
+	       cs_crc8->result_idx);
+
+	for (i = 0; i < 256; i++)
+		printf("%02X", cs_crc8->crctab[i]);
+
+	printf(" ");
+}
 
 void print_usage(char *prg)
 {
@@ -160,11 +183,20 @@ void print_usage(char *prg)
 	fprintf(stderr, "\n");
 }
 
+int b64hex(char *asc, unsigned char *bin, int len)
+{
+	int i;
+
+	for (i = 0; i < len; i++) {
+		if (!sscanf(asc+(i*2), "%2hhx", bin+i))
+			return 1;	
+	}
+	return 0;
+}
+
 int parse_mod(char *optarg, struct modattr *modmsg)
 {
 	char *ptr, *nptr;
-	int i;
-
 	char hexdata[17] = {0};
 
 	ptr = optarg;
@@ -223,12 +255,170 @@ int parse_mod(char *optarg, struct modattr *modmsg)
 	if (strlen(hexdata) != 16)
 		return 6;
 
-	for (i = 0; i < 8; i++) {
-		if (!sscanf(&hexdata[i*2], "%2hhx", &modmsg->cf.data[i]))
-			return 7;	
-	}
+	if (b64hex(hexdata, &modmsg->cf.data[0], 8))
+		return 7;
 
 	return 0; /* ok */
+}
+
+int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
+{
+	char ifname[IF_NAMESIZE]; /* internface name for if_indextoname() */
+	struct rtcanmsg *rtc;
+	struct rtattr *rta;
+	struct nlmsghdr *nlh;
+	unsigned int src_ifindex = 0;
+	unsigned int dst_ifindex = 0;
+	__u32 handled, dropped;
+	int rtlen;
+
+
+	nlh = (struct nlmsghdr *)rxbuf;
+
+	while (1) {
+		if (!NLMSG_OK(nlh, len))
+			return 0;
+
+		if (nlh->nlmsg_type == NLMSG_ERROR) {
+			printf("NLMSG_ERROR\n");
+			return 1;
+		}
+
+		if (nlh->nlmsg_type == NLMSG_DONE) {
+			//printf("NLMSG_DONE\n");
+			return 1;
+		}
+
+		rtc = (struct rtcanmsg *)NLMSG_DATA(nlh);
+		if (rtc->can_family != AF_CAN) {
+			printf("received msg from unknown family %d\n", rtc->can_family);
+			return -EINVAL;
+		}
+
+		if (rtc->gwtype != CGW_TYPE_CAN_CAN) {
+			printf("received msg with unknown gwtype %d\n", rtc->gwtype);
+			return -EINVAL;
+		}
+
+		/*
+		 * print list in a representation that
+		 * can be used directly for start scripts.
+		 *
+		 * To order the mandatory and optional parameters in the
+		 * output string, the NLMSG is parsed twice.
+		 */
+
+		handled = 0;
+		dropped = 0;
+		src_ifindex = 0;
+		dst_ifindex = 0;
+
+		printf("%s -A ", basename(prgname));
+
+		/* first parse for mandatory options */
+		rta = (struct rtattr *) RTCAN_RTA(rtc);
+		rtlen = RTCAN_PAYLOAD(nlh);
+		for(;RTA_OK(rta, rtlen);rta=RTA_NEXT(rta,rtlen))
+		{
+			//printf("(A-%d)", rta->rta_type);
+			switch(rta->rta_type) {
+
+			case CGW_FILTER:
+			case CGW_MOD_AND:
+			case CGW_MOD_OR:
+			case CGW_MOD_XOR:
+			case CGW_MOD_SET:
+			case CGW_CS_XOR:
+			case CGW_CS_CRC8:
+				break;
+
+			case CGW_SRC_IF:
+				src_ifindex = *(__u32 *)RTA_DATA(rta);
+				break;
+
+			case CGW_DST_IF:
+				dst_ifindex = *(__u32 *)RTA_DATA(rta);
+				break;
+
+			case CGW_HANDLED:
+				handled = *(__u32 *)RTA_DATA(rta);
+				break;
+
+			case CGW_DROPPED:
+				dropped = *(__u32 *)RTA_DATA(rta);
+				break;
+
+			default:
+				printf("Unknown attribute %d!", rta->rta_type);
+				return -EINVAL;
+				break;
+			}
+		}
+
+
+		printf("-s %s ", if_indextoname(src_ifindex, ifname));
+		printf("-d %s ", if_indextoname(dst_ifindex, ifname));
+
+		if (rtc->flags & CGW_FLAGS_CAN_ECHO)
+			printf("-e ");
+
+		if (rtc->flags & CGW_FLAGS_CAN_SRC_TSTAMP)
+			printf("-t ");
+
+		/* second parse for mod attributes */
+		rta = (struct rtattr *) RTCAN_RTA(rtc);
+		rtlen = RTCAN_PAYLOAD(nlh);
+		for(;RTA_OK(rta, rtlen);rta=RTA_NEXT(rta,rtlen))
+		{
+			//printf("(B-%d)", rta->rta_type);
+			switch(rta->rta_type) {
+
+			case CGW_FILTER:
+				printfilter(RTA_DATA(rta));
+				break;
+
+			case CGW_MOD_AND:
+				printmod("AND", RTA_DATA(rta));
+				break;
+
+			case CGW_MOD_OR:
+				printmod("OR", RTA_DATA(rta));
+				break;
+
+			case CGW_MOD_XOR:
+				printmod("XOR", RTA_DATA(rta));
+				break;
+
+			case CGW_MOD_SET:
+				printmod("SET", RTA_DATA(rta));
+				break;
+
+			case CGW_CS_XOR:
+				print_cs_xor((struct cgw_csum_xor *)RTA_DATA(rta));
+				break;
+
+			case CGW_CS_CRC8:
+				print_cs_crc8((struct cgw_csum_crc8 *)RTA_DATA(rta));
+				break;
+
+			case CGW_SRC_IF:
+			case CGW_DST_IF:
+			case CGW_HANDLED:
+			case CGW_DROPPED:
+				break;
+
+			default:
+				printf("Unknown attribute %d!", rta->rta_type);
+				return -EINVAL;
+				break;
+			}
+		}
+
+		printf("# %d handled %d dropped\n", handled, dropped); /* end of entry */
+
+		/* jump to next NLMSG in the given buffer */
+		nlh = NLMSG_NEXT(nlh, len);
+	}
 }
 
 int main(int argc, char **argv)
@@ -241,26 +431,30 @@ int main(int argc, char **argv)
 
 	int cmd = UNSPEC;
 	int have_filter = 0;
+	int have_cs_xor = 0;
+	int have_cs_crc8 = 0;
 
 	struct {
 		struct nlmsghdr nh;
 		struct rtcanmsg rtcan;
-		char buf[200];
+		char buf[600];
 
 	} req;
 
-	char rxbuf[8192]; /* netlink receive buffer */
-	char ifname[IF_NAMESIZE]; /* internface name for if_indextoname() */
+	unsigned char rxbuf[8192]; /* netlink receive buffer */
 	struct nlmsghdr *nlh;
 	struct nlmsgerr *rte;
-	struct rtcanmsg *rtc;
-	struct rtattr *rta;
-	__u32 handled, dropped;
-	int rtlen;
+	unsigned int src_ifindex = 0;
+	unsigned int dst_ifindex = 0;
+	__u16 flags = 0;
 	int len;
 
 	struct can_filter filter;
 	struct sockaddr_nl nladdr;
+
+	struct cgw_csum_xor cs_xor;
+	struct cgw_csum_crc8 cs_crc8;
+	char crc8tab[513] = {0};
 
 	struct modattr modmsg[CGW_MOD_FUNCS];
 	int modidx = 0;
@@ -268,7 +462,7 @@ int main(int argc, char **argv)
 
 	memset(&req, 0, sizeof(req));
 
-	while ((opt = getopt(argc, argv, "ADFLs:d:tef:m:?")) != -1) {
+	while ((opt = getopt(argc, argv, "ADFLs:d:tef:c:x:m:?")) != -1) {
 		switch (opt) {
 
 		case 'A':
@@ -292,19 +486,19 @@ int main(int argc, char **argv)
 			break;
 
 		case 's':
-			req.rtcan.src_ifindex = if_nametoindex(optarg);
+			src_ifindex = if_nametoindex(optarg);
 			break;
 
 		case 'd':
-			req.rtcan.dst_ifindex = if_nametoindex(optarg);
+			dst_ifindex = if_nametoindex(optarg);
 			break;
 
 		case 't':
-			req.rtcan.can_txflags |= CAN_GW_TXFLAGS_SRC_TSTAMP;
+			flags |= CGW_FLAGS_CAN_SRC_TSTAMP;
 			break;
 
 		case 'e':
-			req.rtcan.can_txflags |= CAN_GW_TXFLAGS_ECHO;
+			flags |= CGW_FLAGS_CAN_ECHO;
 			break;
 
 		case 'f':
@@ -314,6 +508,30 @@ int main(int argc, char **argv)
 				have_filter = 1;
 			} else {
 				printf("Bad filter definition '%s'.\n", optarg);
+				exit(1);
+			}
+			break;
+
+		case 'x':
+			if (sscanf(optarg, "%hhd:%hhd:%hhd:%hhx",
+				   &cs_xor.from_idx, &cs_xor.to_idx,
+				   &cs_xor.result_idx, &cs_xor.prefix_value) == 4) {
+				have_cs_xor = 1;
+			} else {
+				printf("Bad XOR checksum definition '%s'.\n", optarg);
+				exit(1);
+			}
+			break;
+
+		case 'c':
+			if ((sscanf(optarg, "%hhd:%hhd:%hhd:%512s",
+				    &cs_crc8.from_idx, &cs_crc8.to_idx,
+				    &cs_crc8.result_idx, crc8tab) == 4) &&
+			    (strlen(crc8tab) == 512) &&
+			    (b64hex(crc8tab, (unsigned char *)&cs_crc8.crctab, 256) == 0)) {
+				have_cs_crc8 = 1;
+			} else {
+				printf("Bad CRC8 checksum definition '%s'.\n", optarg);
 				exit(1);
 			}
 			break;
@@ -345,7 +563,7 @@ int main(int argc, char **argv)
 	}
 
 	if ((cmd == ADD || cmd == DEL) &&
-	    ((!req.rtcan.src_ifindex) || (!req.rtcan.dst_ifindex))) {
+	    ((!src_ifindex) || (!dst_ifindex))) {
 		print_usage(basename(argv[0]));
 		exit(1);
 	}
@@ -368,8 +586,8 @@ int main(int argc, char **argv)
 		req.nh.nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
 		req.nh.nlmsg_type  = RTM_DELROUTE;
 		/* if_index set to 0 => remove all entries */
-		req.rtcan.src_ifindex  = 0;
-		req.rtcan.dst_ifindex  = 0;
+		src_ifindex  = 0;
+		dst_ifindex  = 0;
 		break;
 
 	case LIST:
@@ -387,11 +605,22 @@ int main(int argc, char **argv)
 	req.nh.nlmsg_seq   = 0;
 
 	req.rtcan.can_family  = AF_CAN;
+	req.rtcan.gwtype = CGW_TYPE_CAN_CAN;
+	req.rtcan.flags = flags;
+
+	addattr_l(&req.nh, sizeof(req), CGW_SRC_IF, &src_ifindex, sizeof(src_ifindex));
+	addattr_l(&req.nh, sizeof(req), CGW_DST_IF, &dst_ifindex, sizeof(dst_ifindex));
 
 	/* add new attributes here */
 
 	if (have_filter)
 		addattr_l(&req.nh, sizeof(req), CGW_FILTER, &filter, sizeof(filter));
+
+	if (have_cs_xor)
+		addattr_l(&req.nh, sizeof(req), CGW_CS_XOR, &cs_xor, sizeof(cs_xor));
+
+	if (have_cs_crc8)
+		addattr_l(&req.nh, sizeof(req), CGW_CS_CRC8, &cs_crc8, sizeof(cs_crc8));
 
 	/*
 	 * a better example code
@@ -451,78 +680,17 @@ int main(int argc, char **argv)
 				perror("netlink recv");
 				return len;
 			}
-			nlh = (struct nlmsghdr *)rxbuf;
-			if (nlh->nlmsg_type == NLMSG_DONE) 
+#if 0
+			printf("received msg len %d\n", len);
+
+			for (i = 0; i < len; i++)
+				printf("%02X ", rxbuf[i]);
+
+			printf("\n");
+#endif
+			/* leave on errors or NLMSG_DONE */
+			if (parse_rtlist(argv[0], rxbuf, len))
 				break;
-
-			rtc = (struct rtcanmsg *)NLMSG_DATA(nlh);
-			if (rtc->can_family != AF_CAN) {
-				printf("received msg from unknown family %d\n", rtc->can_family);
-				return -EINVAL;
-			}
-
-			/*
-			 * print list in a representation that
-			 * can be used directly for start scripts
-			 */
-
-			printf("%s -A ", basename(argv[0]));
-			printf("-s %s ", if_indextoname(rtc->src_ifindex, ifname));
-			printf("-d %s ", if_indextoname(rtc->dst_ifindex, ifname));
-
-			if (rtc->can_txflags & CAN_GW_TXFLAGS_ECHO)
-				printf("-e ");
-
-			if (rtc->can_txflags & CAN_GW_TXFLAGS_SRC_TSTAMP)
-				printf("-t ");
-
-			/* check for attributes */
-
-			handled = 0;
-			dropped = 0;
-
-			rta = (struct rtattr *) RTM_RTA(rtc);
-			rtlen = RTM_PAYLOAD(nlh);
-			for(;RTA_OK(rta, rtlen);rta=RTA_NEXT(rta,rtlen))
-			{
-				switch(rta->rta_type) {
-
-				case CGW_FILTER:
-					printfilter(RTA_DATA(rta));
-					break;
-
-				case CGW_MOD_AND:
-					printmod("AND", RTA_DATA(rta));
-					break;
-
-				case CGW_MOD_OR:
-					printmod("OR", RTA_DATA(rta));
-					break;
-
-				case CGW_MOD_XOR:
-					printmod("XOR", RTA_DATA(rta));
-					break;
-
-				case CGW_MOD_SET:
-					printmod("SET", RTA_DATA(rta));
-					break;
-
-				case CGW_HANDLED:
-					handled = *(__u32 *)RTA_DATA(rta);
-					break;
-
-				case CGW_DROPPED:
-					dropped = *(__u32 *)RTA_DATA(rta);
-					break;
-
-				default:
-					printf("Unknown attribute %d!", rta->rta_type);
-					return -EINVAL;
-					break;
-				}
-			}
-
-			printf("# %d handled %d dropped\n", handled, dropped); /* end of entry */
 		}
 	}
 
