@@ -135,16 +135,17 @@ void print_cs_xor(struct cgw_csum_xor *cs_xor)
 {
 	printf("-x %d:%d:%d:%02X ",
 	       cs_xor->from_idx, cs_xor->to_idx,
-	       cs_xor->result_idx, cs_xor->prefix_value);
+	       cs_xor->result_idx, cs_xor->init_xor_val);
 }
 
 void print_cs_crc8(struct cgw_csum_crc8 *cs_crc8)
 {
 	int i;
 
-	printf("-c %d:%d:%d:",
+	printf("-c %d:%d:%d:%02X:%02X:",
 	       cs_crc8->from_idx, cs_crc8->to_idx,
-	       cs_crc8->result_idx);
+	       cs_crc8->result_idx, cs_crc8->init_crc_val,
+	       cs_crc8->final_xor_val);
 
 	for (i = 0; i < 256; i++)
 		printf("%02X", cs_crc8->crctab[i]);
@@ -246,17 +247,24 @@ int parse_mod(char *optarg, struct modattr *modmsg)
 		ptr++;
 	}
 
-	if ((sscanf(++ptr, "%lx.%hhd.%16s",
-		    (long unsigned int *)&modmsg->cf.can_id,
-		    (unsigned char *)&modmsg->cf.can_dlc, hexdata) != 3) ||
-	    (modmsg->cf.can_dlc > 8))
+	if (sscanf(++ptr, "%lx.%hhx.%16s",
+		   (long unsigned int *)&modmsg->cf.can_id,
+		   (unsigned char *)&modmsg->cf.can_dlc, hexdata) != 3)
 		return 5;
 
-	if (strlen(hexdata) != 16)
+	/* 4-bit masks can have values from 0 to 0xF */ 
+	if (modmsg->cf.can_dlc > 0xF)
 		return 6;
 
-	if (b64hex(hexdata, &modmsg->cf.data[0], 8))
+	/* but when setting CAN_DLC the value has to be limited to 8 */
+	if (modmsg->instruction == CGW_MOD_SET && modmsg->cf.can_dlc > 8)
 		return 7;
+
+	if (strlen(hexdata) != 16)
+		return 8;
+
+	if (b64hex(hexdata, &modmsg->cf.data[0], 8))
+		return 9;
 
 	return 0; /* ok */
 }
@@ -515,7 +523,7 @@ int main(int argc, char **argv)
 		case 'x':
 			if (sscanf(optarg, "%hhd:%hhd:%hhd:%hhx",
 				   &cs_xor.from_idx, &cs_xor.to_idx,
-				   &cs_xor.result_idx, &cs_xor.prefix_value) == 4) {
+				   &cs_xor.result_idx, &cs_xor.init_xor_val) == 4) {
 				have_cs_xor = 1;
 			} else {
 				printf("Bad XOR checksum definition '%s'.\n", optarg);
@@ -524,9 +532,10 @@ int main(int argc, char **argv)
 			break;
 
 		case 'c':
-			if ((sscanf(optarg, "%hhd:%hhd:%hhd:%512s",
+			if ((sscanf(optarg, "%hhd:%hhd:%hhd:%hhx:%hhx:%512s",
 				    &cs_crc8.from_idx, &cs_crc8.to_idx,
-				    &cs_crc8.result_idx, crc8tab) == 4) &&
+				    &cs_crc8.result_idx, &cs_crc8.init_crc_val,
+				    &cs_crc8.final_xor_val, crc8tab) == 6) &&
 			    (strlen(crc8tab) == 512) &&
 			    (b64hex(crc8tab, (unsigned char *)&cs_crc8.crctab, 256) == 0)) {
 				have_cs_crc8 = 1;
@@ -616,11 +625,11 @@ int main(int argc, char **argv)
 	if (have_filter)
 		addattr_l(&req.nh, sizeof(req), CGW_FILTER, &filter, sizeof(filter));
 
-	if (have_cs_xor)
-		addattr_l(&req.nh, sizeof(req), CGW_CS_XOR, &cs_xor, sizeof(cs_xor));
-
 	if (have_cs_crc8)
 		addattr_l(&req.nh, sizeof(req), CGW_CS_CRC8, &cs_crc8, sizeof(cs_crc8));
+
+	if (have_cs_xor)
+		addattr_l(&req.nh, sizeof(req), CGW_CS_XOR, &cs_xor, sizeof(cs_xor));
 
 	/*
 	 * a better example code
