@@ -138,6 +138,35 @@ void print_cs_xor(struct cgw_csum_xor *cs_xor)
 	       cs_xor->result_idx, cs_xor->init_xor_val);
 }
 
+void print_cs_crc8_profile(struct cgw_csum_crc8 *cs_crc8)
+{
+	int i;
+
+	printf("-p %d:", cs_crc8->profile);
+
+	switch (cs_crc8->profile) {
+
+	case  CGW_CRC8PRF_1U8:
+
+		printf("%02X", cs_crc8->profile_data[0]);
+		break;
+
+	case  CGW_CRC8PRF_16U8:
+
+		for (i = 0; i < 16; i++)
+			printf("%02X", cs_crc8->profile_data[i]);
+		break;
+
+	case  CGW_CRC8PRF_SFFID_XOR:
+		break;
+
+	default:
+		printf("<unknown profile #%d>", cs_crc8->profile);
+	}
+
+	printf(" ");
+}
+
 void print_cs_crc8(struct cgw_csum_crc8 *cs_crc8)
 {
 	int i;
@@ -151,6 +180,9 @@ void print_cs_crc8(struct cgw_csum_crc8 *cs_crc8)
 		printf("%02X", cs_crc8->crctab[i]);
 
 	printf(" ");
+
+	if (cs_crc8->profile != CGW_CRC8PRF_UNSPEC)
+		print_cs_crc8_profile(cs_crc8);
 }
 
 void print_usage(char *prg)
@@ -166,6 +198,9 @@ void print_usage(char *prg)
 	fprintf(stderr, "           -e (echo sent frames - recommended on vcanx)\n");
 	fprintf(stderr, "           -f <filter> (set CAN filter)\n");
 	fprintf(stderr, "           -m <mod> (set frame modifications)\n");
+	fprintf(stderr, "           -x <from_idx>:<to_idx>:<result_idx>:<init_xor_val> (XOR checksum)\n");
+	fprintf(stderr, "           -c <from>:<to>:<result>:<init_val>:<xor_val>:<crctab[256]> (CRC8 cs)\n");
+	fprintf(stderr, "           -p <profile>:[<profile_data>] (CRC8 checksum profile & parameters)\n");
 	fprintf(stderr, "\nValues are given and expected in hexadecimal values. Leading 0s can be omitted.\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "<filter> is a <value>:<mask> CAN identifier filter\n");
@@ -182,6 +217,11 @@ void print_usage(char *prg)
 	fprintf(stderr, "Example:\n");
 	fprintf(stderr, "%s -A -s can0 -d vcan3 -e -f 123:C00007FF -m SET:IL:333.4.1122334455667788\n", prg);
 	fprintf(stderr, "\n");
+	fprintf(stderr, "Supported CRC 8 profiles:\n");
+	fprintf(stderr, "Profile '%d' (1U8)       - add one additional u8 value\n", CGW_CRC8PRF_1U8);
+	fprintf(stderr, "Profile '%d' (16U8)      - add u8 value from table[16] indexed by (data[1] & 0xF)\n", CGW_CRC8PRF_16U8);
+	fprintf(stderr, "Profile '%d' (SFFID_XOR) - add u8 value (can_id & 0xFF) ^ (can_id >> 8 & 0xFF)\n", CGW_CRC8PRF_SFFID_XOR);
+	fprintf(stderr, "\n");
 }
 
 int b64hex(char *asc, unsigned char *bin, int len)
@@ -193,6 +233,45 @@ int b64hex(char *asc, unsigned char *bin, int len)
 			return 1;	
 	}
 	return 0;
+}
+
+int parse_crc8_profile(char *optarg, struct cgw_csum_crc8 *crc8)
+{
+	int ret = 1;
+	char *ptr;
+
+	if (sscanf(optarg, "%hhd:", &crc8->profile) != 1)
+		return ret;
+
+	switch (crc8->profile) {
+
+	case  CGW_CRC8PRF_1U8:
+
+		if (sscanf(optarg, "%hhd:%2hhx", &crc8->profile, &crc8->profile_data[0]) == 2)
+			ret = 0;
+
+		break;
+
+	case  CGW_CRC8PRF_16U8:
+
+		ptr = strchr(optarg, ':');
+
+		/* check if length contains 16 base64 hex values */
+		if (ptr != NULL &&
+		    strlen(ptr) == strlen(":00112233445566778899AABBCCDDEEFF") &&
+		    b64hex(ptr+1, (unsigned char *)&crc8->profile_data[0], 16) == 0)
+			ret = 0;
+
+		break;
+
+	case  CGW_CRC8PRF_SFFID_XOR:
+
+		/* no additional parameters needed */
+		ret = 0;
+		break;
+	}
+
+	return ret;
 }
 
 int parse_mod(char *optarg, struct modattr *modmsg)
@@ -469,8 +548,10 @@ int main(int argc, char **argv)
 	int i;
 
 	memset(&req, 0, sizeof(req));
+	memset(&cs_xor, 0, sizeof(cs_xor));
+	memset(&cs_crc8, 0, sizeof(cs_crc8));
 
-	while ((opt = getopt(argc, argv, "ADFLs:d:tef:c:x:m:?")) != -1) {
+	while ((opt = getopt(argc, argv, "ADFLs:d:tef:c:p:x:m:?")) != -1) {
 		switch (opt) {
 
 		case 'A':
@@ -541,6 +622,13 @@ int main(int argc, char **argv)
 				have_cs_crc8 = 1;
 			} else {
 				printf("Bad CRC8 checksum definition '%s'.\n", optarg);
+				exit(1);
+			}
+			break;
+
+		case 'p':
+			if (parse_crc8_profile(optarg, &cs_crc8)) {
+				printf("Bad CRC8 profile definition '%s'.\n", optarg);
 				exit(1);
 			}
 			break;
