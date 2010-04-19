@@ -742,7 +742,7 @@ int main(int argc, char **argv)
 	}
 
 	/* clean netlink receive buffer */
-	bzero(rxbuf, sizeof(rxbuf));
+	memset(rxbuf, 0x0, sizeof(rxbuf));
 
 	if (cmd != LIST) {
 
