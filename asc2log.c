@@ -97,6 +97,9 @@ void calc_tv(struct timeval *tv, struct timeval *read_tv,
 	if (dplace == 4) /* shift values having only 4 decimal places */
 		read_tv->tv_usec *= 100;                /* and need for 6 */
 
+	if (dplace == 5) /* shift values having only 5 decimal places */
+		read_tv->tv_usec *= 10;                /* and need for 6 */
+
 	if (timestamps == 'a') { /* absolute */
 
 		tv->tv_sec  = date_tv->tv_sec  + read_tv->tv_sec;
@@ -172,7 +175,7 @@ int main(int argc, char **argv)
 	static struct timeval tv; /* current frame timestamp */
 	static struct timeval read_tv; /* frame timestamp from ASC file */
 	static struct timeval date_tv; /* date of the ASC file */
-	static int dplace; /* decimal place 4 or 6 or uninitialized */
+	static int dplace; /* decimal place 4, 5 or 6 or uninitialized */
 	static char base; /* 'd'ec or 'h'ex */
 	static char timestamps; /* 'a'bsolute or 'r'elative */
 
@@ -262,8 +265,8 @@ int main(int argc, char **argv)
 				dplace = strlen(tmp2);
 				if (verbose)
 					printf("decimal place %d, e.g. '%s'\n", dplace, tmp2);
-				if ((dplace != 4) && (dplace != 6)) {
-					printf("invalid dplace %d (must be 4 or 6)!\n", dplace);
+				if (dplace < 4 || dplace > 6) {
+					printf("invalid dplace %d (must be 4, 5 or 6)!\n", dplace);
 					return 1;
 				}
 			} else
