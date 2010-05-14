@@ -310,11 +310,12 @@ int main(int argc, char **argv)
 		loops = 1;
 	}
 
-	if (verbose > 1) /* use -v -v to see this */
+	if (verbose > 1) { /* use -v -v to see this */
 		if (infinite_loops)
 			printf("infinite_loops\n");
 		else
 			printf("%d loops\n", loops);
+	}
 
 	sleep_ts.tv_sec  =  gap / 1000;
 	sleep_ts.tv_nsec = (gap % 1000) * 1000000;

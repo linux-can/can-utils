@@ -150,11 +150,12 @@ void printstats(int signo)
 
 	for (i=0; i<currmax; i++) {
 
-		if (color)
+		if (color) {
 			if (i%2)
 				printf("%s", FGRED);
 			else
 				printf("%s", FGBLUE);
+		}
 
 		if (stat[i].bitrate)
 			percent = (stat[i].recv_bits_total*100)/stat[i].bitrate;
