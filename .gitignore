@@ -35,6 +35,7 @@ GNUmakefile.in
 /isotpdump
 /isotprecv
 /isotpsend
+/isotpserver
 /isotpsniffer
 /isotptun
 /log2asc

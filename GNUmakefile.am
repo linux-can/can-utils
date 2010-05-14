@@ -46,6 +46,7 @@ bin_PROGRAMS += \
 	isotpdump \
 	isotprecv \
 	isotpsend \
+	isotpserver \
 	isotpsniffer \
 	isotptun
 endif
