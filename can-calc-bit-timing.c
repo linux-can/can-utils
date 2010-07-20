@@ -98,6 +98,7 @@ struct can_bittiming_const {
 	__u32 brp_inc;
 
 	/* added for can-calc-bit-timing utility */
+	__u32 ref_clk;		/* CAN system clock frequency in Hz */
 	void (*printf_btr)(struct can_bittiming *bt, int hdr);
 };
 
@@ -138,7 +139,7 @@ static void print_usage(char* cmd)
 	       "\t-c <clock>   : real CAN system clock in Hz\n",
 	       cmd);
 
-	exit(1);
+	exit(EXIT_FAILURE);
 }
 
 static void printf_btr_sja1000(struct can_bittiming *bt, int hdr)
@@ -210,6 +211,7 @@ static struct can_bittiming_const can_calc_consts[] = {
 		.brp_max = 64,
 		.brp_inc = 1,
 
+		.ref_clk = 8000000,
 		.printf_btr = printf_btr_sja1000,
 	},
 	{
@@ -223,6 +225,7 @@ static struct can_bittiming_const can_calc_consts[] = {
 		.brp_max = 64,
 		.brp_inc = 1,
 
+		.ref_clk = 33000000,
 		.printf_btr = printf_btr_sja1000,
 	},
 	{
@@ -236,6 +239,7 @@ static struct can_bittiming_const can_calc_consts[] = {
 		.brp_max = 128,
 		.brp_inc = 1,
 
+		.ref_clk = 100000000,
 		.printf_btr = printf_btr_at91,
 	},
 	{
@@ -249,6 +253,7 @@ static struct can_bittiming_const can_calc_consts[] = {
 		.brp_max = 64,
 		.brp_inc = 1,
 
+		.ref_clk = 16000000,
 		.printf_btr = printf_btr_mcp251x,
 	},
 	{
@@ -262,6 +267,7 @@ static struct can_bittiming_const can_calc_consts[] = {
 		.brp_max = 256,
 		.brp_inc = 1,
 
+		.ref_clk = 8000000,
 		.printf_btr = printf_btr_rtcantl1,
 	},
 };
@@ -461,15 +467,24 @@ static void print_bit_timing(const struct can_bittiming_const *btc,
 	printf("\n");
 }
 
+static void do_list(void)
+{
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(can_calc_consts); i++)
+		printf("%s\n", can_calc_consts[i].name);
+}
+
 int main(int argc, char *argv[])
 {
-	long bitrate = 0;
-	long ref_clk = 8000000;
+	__u32 bitrate = 0;
+	__u32 opt_ref_clk = 0, ref_clk;
 	int sampl_pt = 0;
 	int quiet = 0;
 	int list = 0;
 	char *name = NULL;
-	int i, opt;
+	unsigned int i, j;
+	int opt, found = 0;
 
 	const struct can_bittiming_const *btc = NULL;
 
@@ -480,7 +495,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'c':
-			ref_clk = atoi(optarg);
+			opt_ref_clk = atoi(optarg);
 			break;
 
 		case 'l':
@@ -508,37 +523,40 @@ int main(int argc, char *argv[])
 		name = argv[optind];
 
 	if (list) {
-		for (i = 0; i < sizeof(can_calc_consts) /
-			     sizeof(struct can_bittiming_const); i++)
-			printf("%s\n", can_calc_consts[i].name);
-		return 0;
+		do_list();
+		exit(EXIT_SUCCESS);
 	}
 
 	if (sampl_pt && (sampl_pt >= 1000 || sampl_pt < 100))
 		print_usage(argv[0]);
 
-	if (name) {
-		for (i = 0; i < sizeof(can_calc_consts) /
-			     sizeof(struct can_bittiming_const); i++) {
-			if (!strcmp(can_calc_consts[i].name, name)) {
-				btc = &can_calc_consts[i];
-				break;
-			}
+	for (i = 0; i < ARRAY_SIZE(can_calc_consts); i++) {
+		if (name && strcmp(can_calc_consts[i].name, name))
+			continue;
+
+		found = 1;
+		btc = &can_calc_consts[i];
+
+		if (opt_ref_clk)
+			ref_clk = opt_ref_clk;
+		else
+			ref_clk = btc->ref_clk;
+
+		if (bitrate) {
+			print_bit_timing(btc, bitrate, sampl_pt, ref_clk, quiet);
+		} else {
+			for (j = 0; j < ARRAY_SIZE(common_bitrates); j++)
+				print_bit_timing(btc, common_bitrates[j],
+						 sampl_pt, ref_clk, j);
 		}
-		if (!btc)
-			print_usage(argv[0]);
-
-	} else {
-		btc = &can_calc_consts[0];
+		printf("\n");
 	}
 
-	if (bitrate) {
-		print_bit_timing(btc, bitrate, sampl_pt, ref_clk, quiet);
-	} else {
-		for (i = 0; i < sizeof(common_bitrates) / sizeof(long); i++)
-			print_bit_timing(btc, common_bitrates[i], sampl_pt,
-					 ref_clk, i);
+	if (!found) {
+		printf("error: unknown CAN controller '%s', try one of these:\n\n", name);
+		do_list();
+		exit(EXIT_FAILURE);
 	}
 
-	return 0;
+	exit(EXIT_SUCCESS);
 }
