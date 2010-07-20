@@ -12,13 +12,119 @@
  *   This software is released under the GPL-License.
  */
 
+#include <errno.h>
+#include <getopt.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
-#include <getopt.h>
+
+#include <linux/types.h>
+
+/* seems not to be defined in errno.h */
+#ifndef ENOTSUPP
+#define ENOTSUPP	524	/* Operation is not supported */
+#endif
+
+/* usefull defines */
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 #define do_div(a,b) a = (a) / (b)
+
+#define abs(x) ({				\
+		long __x = (x);			\
+		(__x < 0) ? -__x : __x;		\
+	})
+
+/**
+ * clamp - return a value clamped to a given range with strict typechecking
+ * @val: current value
+ * @min: minimum allowable value
+ * @max: maximum allowable value
+ *
+ * This macro does strict typechecking of min/max to make sure they are of the
+ * same type as val.  See the unnecessary pointer comparisons.
+ */
+#define clamp(val, min, max) ({			\
+	typeof(val) __val = (val);		\
+	typeof(min) __min = (min);		\
+	typeof(max) __max = (max);		\
+	(void) (&__val == &__min);		\
+	(void) (&__val == &__max);		\
+	__val = __val < __min ? __min: __val;	\
+	__val > __max ? __max: __val; })
+
+/* we don't want to see these prints */
+#define dev_err(dev, format, arg...)	do { } while (0)
+#define dev_warn(dev, format, arg...)	do { } while (0)
+
+/* define in-kernel-types */
+typedef __u64 u64;
+typedef __u32 u32;
+
+
+/*
+ * CAN bit-timing parameters
+ *
+ * For futher information, please read chapter "8 BIT TIMING
+ * REQUIREMENTS" of the "Bosch CAN Specification version 2.0"
+ * at http://www.semiconductors.bosch.de/pdf/can2spec.pdf.
+ */
+struct can_bittiming {
+	__u32 bitrate;		/* Bit-rate in bits/second */
+	__u32 sample_point;	/* Sample point in one-tenth of a percent */
+	__u32 tq;		/* Time quanta (TQ) in nanoseconds */
+	__u32 prop_seg;		/* Propagation segment in TQs */
+	__u32 phase_seg1;	/* Phase buffer segment 1 in TQs */
+	__u32 phase_seg2;	/* Phase buffer segment 2 in TQs */
+	__u32 sjw;		/* Synchronisation jump width in TQs */
+	__u32 brp;		/* Bit-rate prescaler */
+};
+
+/*
+ * CAN harware-dependent bit-timing constant
+ *
+ * Used for calculating and checking bit-timing parameters
+ */
+struct can_bittiming_const {
+	char name[16];		/* Name of the CAN controller hardware */
+	__u32 tseg1_min;	/* Time segement 1 = prop_seg + phase_seg1 */
+	__u32 tseg1_max;
+	__u32 tseg2_min;	/* Time segement 2 = phase_seg2 */
+	__u32 tseg2_max;
+	__u32 sjw_max;		/* Synchronisation jump width */
+	__u32 brp_min;		/* Bit-rate prescaler */
+	__u32 brp_max;
+	__u32 brp_inc;
+
+	/* added for can-calc-bit-timing utility */
+	void (*printf_btr)(struct can_bittiming *bt, int hdr);
+};
+
+/*
+ * CAN clock parameters
+ */
+struct can_clock {
+	__u32 freq;		/* CAN system clock frequency in Hz */
+};
+
+
+/*
+ * minimal structs, just enough to be source level compatible
+ */
+struct can_priv {
+	const struct can_bittiming_const *bittiming_const;
+	struct can_clock clock;
+};
+
+struct net_device {
+	struct can_priv	priv;
+};
+
+static inline void *netdev_priv(const struct net_device *dev)
+{
+	return (void *)&dev->priv;
+}
 
 static void print_usage(char* cmd)
 {
@@ -35,33 +141,7 @@ static void print_usage(char* cmd)
 	exit(1);
 }
 
-struct can_bittime {
-	uint32_t brp;
-	uint8_t prop_seg;
-	uint8_t phase_seg1;
-	uint8_t phase_seg2;
-	uint8_t sjw;
-	uint32_t tq;
-	uint32_t error;
-	int sampl_pt;
-};
-
-struct can_bittiming_const {
-	char name[32];
-	int prop_seg_min;
-	int prop_seg_max;
-	int phase_seg1_min;
-	int phase_seg1_max;
-	int phase_seg2_min;
-	int phase_seg2_max;
-	int sjw_max;
-	int brp_min;
-	int brp_max;
-	int brp_inc;
-	void (*printf_btr)(struct can_bittime *bt, int hdr);
-};
-
-static void printf_btr_sja1000(struct can_bittime *bt, int hdr)
+static void printf_btr_sja1000(struct can_bittiming *bt, int hdr)
 {
 	uint8_t btr0, btr1;
 
@@ -75,7 +155,7 @@ static void printf_btr_sja1000(struct can_bittime *bt, int hdr)
 	}
 }
 
-static void printf_btr_at91(struct can_bittime *bt, int hdr)
+static void printf_btr_at91(struct can_bittiming *bt, int hdr)
 {
 	if (hdr) {
 		printf("CAN_BR");
@@ -89,7 +169,7 @@ static void printf_btr_at91(struct can_bittime *bt, int hdr)
 	}
 }
 
-static void printf_btr_mcp2510(struct can_bittime *bt, int hdr)
+static void printf_btr_mcp251x(struct can_bittiming *bt, int hdr)
 {
 	uint8_t cnf1, cnf2, cnf3;
 
@@ -103,7 +183,7 @@ static void printf_btr_mcp2510(struct can_bittime *bt, int hdr)
 	}
 }
 
-static void printf_btr_rtcantl1(struct can_bittime *bt, int hdr)
+static void printf_btr_rtcantl1(struct can_bittiming *bt, int hdr)
 {
 	uint16_t bcr0, bcr1;
 
@@ -118,73 +198,70 @@ static void printf_btr_rtcantl1(struct can_bittime *bt, int hdr)
 	}
 }
 
-struct can_bittiming_const can_calc_consts[] = {
+static struct can_bittiming_const can_calc_consts[] = {
 	{
-		"sja1000",
-		/* Note: only prop_seg + bt->phase_seg1 matters */
-		.phase_seg1_min = 1,
-		.phase_seg1_max = 16,
-		.phase_seg2_min = 1,
-		.phase_seg2_max = 8,
+		.name = "sja1000",
+		.tseg1_min = 1,
+		.tseg1_max = 16,
+		.tseg2_min = 1,
+		.tseg2_max = 8,
 		.sjw_max = 4,
 		.brp_min = 1,
 		.brp_max = 64,
 		.brp_inc = 1,
+
 		.printf_btr = printf_btr_sja1000,
 	},
 	{
-		"mscan",
-		/* Note: only prop_seg + bt->phase_seg1 matters */
-		.phase_seg1_min = 4,
-		.phase_seg1_max = 16,
-		.phase_seg2_min = 2,
-		.phase_seg2_max = 8,
+		.name = "mscan",
+		.tseg1_min = 4,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
 		.sjw_max = 4,
 		.brp_min = 1,
 		.brp_max = 64,
 		.brp_inc = 1,
+
 		.printf_btr = printf_btr_sja1000,
 	},
 	{
-		"at91",
-		.prop_seg_min = 1,
-		.prop_seg_max = 8,
-		.phase_seg1_min = 1,
-		.phase_seg1_max = 8,
-		.phase_seg2_min = 2,
-		.phase_seg2_max = 8,
+		.name = "at91",
+		.tseg1_min = 4,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
 		.sjw_max = 4,
-		.brp_min = 1,
+		.brp_min = 2,
 		.brp_max = 128,
 		.brp_inc = 1,
+
 		.printf_btr = printf_btr_at91,
 	},
 	{
-		"mcp2510",
-		.prop_seg_min = 1,
-		.prop_seg_max = 8,
-		.phase_seg1_min = 1,
-		.phase_seg1_max = 8,
-		.phase_seg2_min = 2,
-		.phase_seg2_max = 8,
+		.name = "mcp251x",
+		.tseg1_min = 3,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
 		.sjw_max = 4,
 		.brp_min = 1,
 		.brp_max = 64,
 		.brp_inc = 1,
-		.printf_btr = printf_btr_mcp2510,
+
+		.printf_btr = printf_btr_mcp251x,
 	},
 	{
-		"rtcantl1",
-		.prop_seg_min = 2,
-		.prop_seg_max = 8,
-		.phase_seg1_min = 2,
-		.phase_seg1_max = 8,
-		.phase_seg2_min = 2,
-		.phase_seg2_max = 8,
+		.name = "rtcantl1",
+		.tseg1_min = 4,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
 		.sjw_max = 4,
 		.brp_min = 1,
 		.brp_max = 256,
 		.brp_inc = 1,
+
 		.printf_btr = printf_btr_rtcantl1,
 	},
 };
@@ -198,69 +275,66 @@ static long common_bitrates[] = {
 	100000,
 	50000,
 	20000,
-	10000
+	10000,
 };
+
+#define CAN_CALC_MAX_ERROR 50 /* in one-tenth of a percent */
 
 static int can_update_spt(const struct can_bittiming_const *btc,
 			  int sampl_pt, int tseg, int *tseg1, int *tseg2)
 {
 	*tseg2 = tseg + 1 - (sampl_pt * (tseg + 1)) / 1000;
-	if (*tseg2 < btc->phase_seg2_min)
-		*tseg2 = btc->phase_seg2_min;
-	if (*tseg2 > btc->phase_seg2_max)
-		*tseg2 = btc->phase_seg2_max;
+	if (*tseg2 < btc->tseg2_min)
+		*tseg2 = btc->tseg2_min;
+	if (*tseg2 > btc->tseg2_max)
+		*tseg2 = btc->tseg2_max;
 	*tseg1 = tseg - *tseg2;
-	if (*tseg1 > btc->prop_seg_max + btc->phase_seg1_max) {
-		*tseg1 = btc->prop_seg_max + btc->phase_seg1_max;
+	if (*tseg1 > btc->tseg1_max) {
+		*tseg1 = btc->tseg1_max;
 		*tseg2 = tseg - *tseg1;
 	}
 	return 1000 * (tseg + 1 - *tseg2) / (tseg + 1);
 }
 
-int can_calc_bittiming(struct can_bittime *bt, long bitrate,
-		       int sampl_pt, long clock,
-		       const struct can_bittiming_const *btc)
+static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt)
 {
-	long best_error = 1000000000, error;
-	int best_tseg = 0, best_brp = 0, brp = 0;
-	int spt_error = 1000, spt = 0;
+	struct can_priv *priv = netdev_priv(dev);
+	const struct can_bittiming_const *btc = priv->bittiming_const;
 	long rate, best_rate = 0;
-	int tseg = 0, tseg1 = 0, tseg2 = 0;
-	uint64_t v64;
+	long best_error = 1000000000, error = 0;
+	int best_tseg = 0, best_brp = 0, brp = 0;
+	int tsegall, tseg = 0, tseg1 = 0, tseg2 = 0;
+	int spt_error = 1000, spt = 0, sampl_pt;
+	u64 v64;
 
-	if (sampl_pt == 0) {
-		/* Use CIA recommended sample points */
-		if (bitrate > 800000)
+	if (!priv->bittiming_const)
+		return -ENOTSUPP;
+
+	/* Use CIA recommended sample points */
+	if (bt->sample_point) {
+		sampl_pt = bt->sample_point;
+	} else {
+		if (bt->bitrate > 800000)
 			sampl_pt = 750;
-		else if (bitrate > 500000)
+		else if (bt->bitrate > 500000)
 			sampl_pt = 800;
 		else
 			sampl_pt = 875;
 	}
 
-#ifdef DEBUG
-	printf("tseg brp bitrate biterror\n");
-#endif
-
 	/* tseg even = round down, odd = round up */
-	for (tseg = (btc->prop_seg_max + btc->phase_seg1_max +
-		     btc->phase_seg2_max) * 2 + 1;
-	     tseg >= (btc->prop_seg_min + btc->phase_seg1_min +
-		      btc->phase_seg2_min) * 2; tseg--) {
-		/* Compute all posibilities of tseg choices (tseg=tseg1+tseg2) */
-		brp = clock / ((1 + tseg / 2) * bitrate) + tseg % 2;
+	for (tseg = (btc->tseg1_max + btc->tseg2_max) * 2 + 1;
+	     tseg >= (btc->tseg1_min + btc->tseg2_min) * 2; tseg--) {
+		tsegall = 1 + tseg / 2;
+		/* Compute all possible tseg choices (tseg=tseg1+tseg2) */
+		brp = priv->clock.freq / (tsegall * bt->bitrate) + tseg % 2;
 		/* chose brp step which is possible in system */
 		brp = (brp / btc->brp_inc) * btc->brp_inc;
 		if ((brp < btc->brp_min) || (brp > btc->brp_max))
 			continue;
-		rate = clock / (brp * (1 + tseg / 2));
-		error = bitrate - rate;
+		rate = priv->clock.freq / (brp * tsegall);
+		error = bt->bitrate - rate;
 		/* tseg brp biterror */
-#if DEBUG
-		printf("%4d %3d %7ld %8ld %03d\n", tseg, brp, rate, error,
-		       can_update_spt(btc, sampl_pt, tseg / 2,
-				      &tseg1, &tseg2));
-#endif
 		if (error < 0)
 			error = -error;
 		if (error > best_error)
@@ -270,15 +344,12 @@ int can_calc_bittiming(struct can_bittime *bt, long bitrate,
 			spt = can_update_spt(btc, sampl_pt, tseg / 2,
 					     &tseg1, &tseg2);
 			error = sampl_pt - spt;
-			//printf("%d %d %d\n", sampl_pt, error, spt_error);
 			if (error < 0)
 				error = -error;
 			if (error > spt_error)
 				continue;
 			spt_error = error;
-			//printf("%d\n", spt_error);
 		}
-		//printf("error=%d\n", best_error);
 		best_tseg = tseg / 2;
 		best_brp = brp;
 		best_rate = rate;
@@ -286,65 +357,73 @@ int can_calc_bittiming(struct can_bittime *bt, long bitrate,
 			break;
 	}
 
-	if (best_error && (bitrate / best_error < 10))
-		return -1;
-
-	spt = can_update_spt(btc, sampl_pt, best_tseg,
-			     &tseg1, &tseg2);
-
-	if (tseg2 > tseg1) {
-		/* sample point < 50% */
-		bt->phase_seg1 = tseg1 / 2;
-	} else {
-		/* keep phase_seg{1,2} equal around the sample point */
-		bt->phase_seg1 = tseg2;
+	if (best_error) {
+		/* Error in one-tenth of a percent */
+		error = (best_error * 1000) / bt->bitrate;
+		if (error > CAN_CALC_MAX_ERROR) {
+			dev_err(dev->dev.parent,
+				"bitrate error %ld.%ld%% too high\n",
+				error / 10, error % 10);
+			return -EDOM;
+		} else {
+			dev_warn(dev->dev.parent, "bitrate error %ld.%ld%%\n",
+				 error / 10, error % 10);
+		}
 	}
-	bt->prop_seg = tseg1 - bt->phase_seg1;
-	/* Check prop_seg range if necessary */
-	if (btc->prop_seg_min || btc->prop_seg_max) {
-		if (bt->prop_seg < btc->prop_seg_min)
-			bt->prop_seg = btc->prop_seg_min;
-		else if (bt->prop_seg > btc->prop_seg_max)
-			bt->prop_seg = btc->prop_seg_max;
-		bt->phase_seg1 = tseg1 - bt->prop_seg;
-	}
+
+	/* real sample point */
+	bt->sample_point = can_update_spt(btc, sampl_pt, best_tseg,
+					  &tseg1, &tseg2);
+
+	v64 = (u64)best_brp * 1000000000UL;
+	do_div(v64, priv->clock.freq);
+	bt->tq = (u32)v64;
+	bt->prop_seg = tseg1 / 2;
+	bt->phase_seg1 = tseg1 - bt->prop_seg;
 	bt->phase_seg2 = tseg2;
 	bt->sjw = 1;
 	bt->brp = best_brp;
-	bt->error = best_error;
-	bt->sampl_pt = spt;
-	v64 = (uint64_t)bt->brp * 1000000000UL;
-	v64 /= clock;
-	bt->tq = (int)v64;
+
+	/* real bit-rate */
+	bt->bitrate = priv->clock.freq / (bt->brp * (tseg1 + tseg2 + 1));
 
 	return 0;
 }
 
-void print_bit_timing(const struct can_bittiming_const *btc,
-		      long bitrate, int sampl_pt, long ref_clk, int quiet)
+static void print_bit_timing(const struct can_bittiming_const *btc,
+			     __u32 bitrate, __u32 sample_point, __u32 ref_clk,
+			     int quiet)
 {
-	struct can_bittime bt;
-
-	memset(&bt, 0, sizeof(bt));
+	struct net_device dev = {
+		.priv.bittiming_const = btc,
+		.priv.clock.freq = ref_clk,
+	};
+	struct can_bittiming bt = {
+		.bitrate = bitrate,
+		.sample_point = sample_point,
+	};
+	long rate_error;
 
 	if (!quiet) {
-		printf("Bit timing parameters for %s using %ldHz\n",
+		printf("Bit timing parameters for %s using %dHz\n",
 		       btc->name, ref_clk);
 		printf("Bitrate TQ[ns] PrS PhS1 PhS2 SJW BRP SampP Error ");
 		btc->printf_btr(&bt, 1);
 		printf("\n");
 	}
 
-	if (can_calc_bittiming(&bt, bitrate, sampl_pt, ref_clk, btc)) {
-		printf("%7ld ***bitrate not possible***\n", bitrate);
+	if (can_calc_bittiming(&dev, &bt)) {
+		printf("%7d ***bitrate not possible***\n", bitrate);
 		return;
 	}
 
-	printf("%7ld %6d %3d %4d %4d %3d %3d %2d.%d%% %4.1f%% ",
+	rate_error = abs((__s32)(bitrate - bt.bitrate));
+
+	printf("%7d %6d %3d %4d %4d %3d %3d %2d.%d%% %4.1f%% ",
 	       bitrate, bt.tq, bt.prop_seg, bt.phase_seg1,
 	       bt.phase_seg2, bt.sjw, bt.brp,
-	       bt.sampl_pt / 10, bt.sampl_pt % 10,
-	       (double)100 * bt.error / bitrate);
+	       bt.sample_point / 10, bt.sample_point % 10,
+	       100.0 * rate_error / bitrate);
 	btc->printf_btr(&bt, 0);
 	printf("\n");
 }
