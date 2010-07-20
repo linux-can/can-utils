@@ -158,7 +158,7 @@ static void printf_btr_sja1000(struct can_bittiming *bt, int hdr)
 static void printf_btr_at91(struct can_bittiming *bt, int hdr)
 {
 	if (hdr) {
-		printf("CAN_BR");
+		printf("%10s", "CAN_BR");
 	} else {
 		uint32_t br = ((bt->phase_seg2 - 1) |
 			       ((bt->phase_seg1 - 1) << 4) |
@@ -390,6 +390,20 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt)
 	return 0;
 }
 
+static __u32 get_cia_sample_point(__u32 bitrate)
+{
+	__u32 sampl_pt;
+
+	if (bitrate > 800000)
+		sampl_pt = 750;
+	else if (bitrate > 500000)
+		sampl_pt = 800;
+	else
+		sampl_pt = 875;
+
+	return sampl_pt;
+}
+
 static void print_bit_timing(const struct can_bittiming_const *btc,
 			     __u32 bitrate, __u32 sample_point, __u32 ref_clk,
 			     int quiet)
@@ -402,12 +416,15 @@ static void print_bit_timing(const struct can_bittiming_const *btc,
 		.bitrate = bitrate,
 		.sample_point = sample_point,
 	};
-	long rate_error;
+	long rate_error, spt_error;
 
 	if (!quiet) {
-		printf("Bit timing parameters for %s using %dHz\n",
-		       btc->name, ref_clk);
-		printf("Bitrate TQ[ns] PrS PhS1 PhS2 SJW BRP SampP Error ");
+		printf("Bit timing parameters for %s with %.6f MHz ref clock\n"
+		       "nominal                                 real Bitrt   nom  real SampP\n"
+		       "Bitrate TQ[ns] PrS PhS1 PhS2 SJW BRP Bitrate Error SampP SampP Error ",
+		       btc->name,
+		       ref_clk / 1000000.0);
+
 		btc->printf_btr(&bt, 1);
 		printf("\n");
 	}
@@ -417,13 +434,29 @@ static void print_bit_timing(const struct can_bittiming_const *btc,
 		return;
 	}
 
-	rate_error = abs((__s32)(bitrate - bt.bitrate));
+	/* get nominal sample point */
+	if (!sample_point)
+		sample_point = get_cia_sample_point(bitrate);
 
-	printf("%7d %6d %3d %4d %4d %3d %3d %2d.%d%% %4.1f%% ",
-	       bitrate, bt.tq, bt.prop_seg, bt.phase_seg1,
-	       bt.phase_seg2, bt.sjw, bt.brp,
-	       bt.sample_point / 10, bt.sample_point % 10,
-	       100.0 * rate_error / bitrate);
+	rate_error = abs((__s32)(bitrate - bt.bitrate));
+	spt_error = abs((__s32)(sample_point - bt.sample_point));
+
+	printf("%7d "
+	       "%6d %3d %4d %4d "
+	       "%3d %3d "
+	       "%7d %4.1f%% "
+	       "%4.1f%% %4.1f%% %4.1f%% ",
+	       bitrate,
+	       bt.tq, bt.prop_seg, bt.phase_seg1, bt.phase_seg2,
+	       bt.sjw, bt.brp,
+
+	       bt.bitrate,
+	       100.0 * rate_error / bitrate,
+
+	       sample_point / 10.0,
+	       bt.sample_point / 10.0,
+	       100.0 * spt_error / sample_point);
+
 	btc->printf_btr(&bt, 0);
 	printf("\n");
 }
