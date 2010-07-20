@@ -170,6 +170,21 @@ static void printf_btr_at91(struct can_bittiming *bt, int hdr)
 	}
 }
 
+static void printf_btr_flexcan(struct can_bittiming *bt, int hdr)
+{
+	if (hdr) {
+		printf("%10s", "CAN_CTRL");
+	} else {
+		uint32_t ctrl = (((bt->brp        - 1) << 24) |
+				 ((bt->sjw        - 1) << 22) |
+				 ((bt->phase_seg1 - 1) << 19) |
+				 ((bt->phase_seg2 - 1) << 16) |
+				 ((bt->prop_seg   - 1) <<  0));
+
+		printf("0x%08x", ctrl);
+	}
+}
+
 static void printf_btr_mcp251x(struct can_bittiming *bt, int hdr)
 {
 	uint8_t cnf1, cnf2, cnf3;
@@ -225,7 +240,49 @@ static struct can_bittiming_const can_calc_consts[] = {
 		.brp_max = 64,
 		.brp_inc = 1,
 
+		.ref_clk = 32000000,
+		.printf_btr = printf_btr_sja1000,
+	},
+	{
+		.name = "mscan",
+		.tseg1_min = 4,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
+		.sjw_max = 4,
+		.brp_min = 1,
+		.brp_max = 64,
+		.brp_inc = 1,
+
 		.ref_clk = 33000000,
+		.printf_btr = printf_btr_sja1000,
+	},
+	{
+		.name = "mscan",
+		.tseg1_min = 4,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
+		.sjw_max = 4,
+		.brp_min = 1,
+		.brp_max = 64,
+		.brp_inc = 1,
+
+		.ref_clk = 33300000,
+		.printf_btr = printf_btr_sja1000,
+	},
+	{
+		.name = "mscan",
+		.tseg1_min = 4,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
+		.sjw_max = 4,
+		.brp_min = 1,
+		.brp_max = 64,
+		.brp_inc = 1,
+
+		.ref_clk = 33333333,
 		.printf_btr = printf_btr_sja1000,
 	},
 	{
@@ -241,6 +298,63 @@ static struct can_bittiming_const can_calc_consts[] = {
 
 		.ref_clk = 100000000,
 		.printf_btr = printf_btr_at91,
+	},
+	{
+		.name = "at91",
+		.tseg1_min = 4,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
+		.sjw_max = 4,
+		.brp_min = 2,
+		.brp_max = 128,
+		.brp_inc = 1,
+
+		/* real world clock as found on the ronetix PM9263 */
+		.ref_clk = 99532800,
+		.printf_btr = printf_btr_at91,
+	},
+	{
+		.name = "flexcan",
+		.tseg1_min = 4,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
+		.sjw_max = 4,
+		.brp_min = 1,
+		.brp_max = 256,
+		.brp_inc = 1,
+
+		.ref_clk = 49875000,
+		.printf_btr = printf_btr_flexcan,
+	},
+	{
+		.name = "flexcan",
+		.tseg1_min = 4,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
+		.sjw_max = 4,
+		.brp_min = 1,
+		.brp_max = 256,
+		.brp_inc = 1,
+
+		.ref_clk = 66500000,
+		.printf_btr = printf_btr_flexcan,
+	},
+	{
+		.name = "mcp251x",
+		.tseg1_min = 3,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
+		.sjw_max = 4,
+		.brp_min = 1,
+		.brp_max = 64,
+		.brp_inc = 1,
+
+		.ref_clk = 8000000,
+		.printf_btr = printf_btr_mcp251x,
 	},
 	{
 		.name = "mcp251x",
