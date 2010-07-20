@@ -199,21 +199,6 @@ static void printf_btr_mcp251x(struct can_bittiming *bt, int hdr)
 	}
 }
 
-static void printf_btr_rtcantl1(struct can_bittiming *bt, int hdr)
-{
-	uint16_t bcr0, bcr1;
-
-	if (hdr) {
-		printf("__BCR0 __BCR1");
-	} else {
-		bcr1 = ((((bt->prop_seg + bt->phase_seg1 - 1) & 0x0F) << 12) |
-			(((bt->phase_seg2 - 1) & 0x07) << 8) |
-			(((bt->sjw - 1) & 0x03) << 4));
-		bcr0 =  ((bt->brp - 1) & 0xFF);
-		printf("0x%04x 0x%04x", bcr0, bcr1);
-	}
-}
-
 static struct can_bittiming_const can_calc_consts[] = {
 	{
 		.name = "sja1000",
@@ -369,20 +354,6 @@ static struct can_bittiming_const can_calc_consts[] = {
 
 		.ref_clk = 16000000,
 		.printf_btr = printf_btr_mcp251x,
-	},
-	{
-		.name = "rtcantl1",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 256,
-		.brp_inc = 1,
-
-		.ref_clk = 8000000,
-		.printf_btr = printf_btr_rtcantl1,
 	},
 };
 
