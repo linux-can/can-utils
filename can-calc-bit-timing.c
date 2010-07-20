@@ -105,17 +105,17 @@ static void printf_btr_mcp2510(struct can_bittime *bt, int hdr)
 
 static void printf_btr_rtcantl1(struct can_bittime *bt, int hdr)
 {
-  uint16_t bcr0, bcr1;
+	uint16_t bcr0, bcr1;
 
-  if (hdr) {
-	  printf("__BCR0 __BCR1");
-  } else {
-	  bcr1 = ((((bt->prop_seg + bt->phase_seg1 - 1) & 0x0F) << 12) |
-		  (((bt->phase_seg2 - 1) & 0x07) << 8) |
-		  (((bt->sjw - 1) & 0x03) << 4));
-	  bcr0 =  ((bt->brp - 1) & 0xFF);
-	  printf("0x%04x 0x%04x", bcr0, bcr1);
-  }
+	if (hdr) {
+		printf("__BCR0 __BCR1");
+	} else {
+		bcr1 = ((((bt->prop_seg + bt->phase_seg1 - 1) & 0x0F) << 12) |
+			(((bt->phase_seg2 - 1) & 0x07) << 8) |
+			(((bt->sjw - 1) & 0x03) << 4));
+		bcr0 =  ((bt->brp - 1) & 0xFF);
+		printf("0x%04x 0x%04x", bcr0, bcr1);
+	}
 }
 
 struct can_bittiming_const can_calc_consts[] = {
@@ -231,7 +231,7 @@ int can_calc_bittiming(struct can_bittime *bt, long bitrate,
 	if (sampl_pt == 0) {
 		/* Use CIA recommended sample points */
 		if (bitrate > 800000)
-			 sampl_pt = 750;
+			sampl_pt = 750;
 		else if (bitrate > 500000)
 			sampl_pt = 800;
 		else
@@ -283,7 +283,7 @@ int can_calc_bittiming(struct can_bittime *bt, long bitrate,
 		best_brp = brp;
 		best_rate = rate;
 		if (error == 0)
-		    break;
+			break;
 	}
 
 	if (best_error && (bitrate / best_error < 10))
@@ -368,7 +368,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'c':
-		        ref_clk = atoi(optarg);
+			ref_clk = atoi(optarg);
 			break;
 
 		case 'l':
