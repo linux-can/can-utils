@@ -22,6 +22,7 @@ libcan_la_SOURCES = \
 bin_PROGRAMS = \
 	asc2log \
 	bcmserver \
+	can-calc-bit-timing \
 	canbusload \
 	candump \
 	canfdtest \

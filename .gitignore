@@ -23,6 +23,7 @@ GNUmakefile.in
 
 /asc2log
 /bcmserver
+/can-calc-bit-timing
 /canbusload
 /candump
 /canfdtest
