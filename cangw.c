@@ -203,7 +203,9 @@ void print_usage(char *prg)
 	fprintf(stderr, "           -p <profile>:[<profile_data>] (CRC8 checksum profile & parameters)\n");
 	fprintf(stderr, "\nValues are given and expected in hexadecimal values. Leading 0s can be omitted.\n");
 	fprintf(stderr, "\n");
-	fprintf(stderr, "<filter> is a <value>:<mask> CAN identifier filter\n");
+	fprintf(stderr, "<filter> is a <value><mask> CAN identifier filter\n");
+	fprintf(stderr, "   <can_id>:<can_mask> (matches when <received_can_id> & mask == can_id & mask)\n");
+	fprintf(stderr, "   <can_id>~<can_mask> (matches when <received_can_id> & mask != can_id & mask)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "<mod> is a CAN frame modification instruction consisting of\n");
 	fprintf(stderr, "<instruction>:<can_frame-elements>:<can_id>.<can_dlc>.<can_data>\n");
@@ -594,6 +596,11 @@ int main(int argc, char **argv)
 			if (sscanf(optarg, "%lx:%lx",
 				   (long unsigned int *)&filter.can_id, 
 				   (long unsigned int *)&filter.can_mask) == 2) {
+				have_filter = 1;
+			} else if (sscanf(optarg, "%lx~%lx",
+					  (long unsigned int *)&filter.can_id, 
+					  (long unsigned int *)&filter.can_mask) == 2) {
+				filter.can_id |= CAN_INV_FILTER;
 				have_filter = 1;
 			} else {
 				printf("Bad filter definition '%s'.\n", optarg);
