@@ -88,6 +88,7 @@ static unsigned char redraw;
 static unsigned char timestamp;
 static unsigned char color;
 static unsigned char bargraph;
+static unsigned char ignore_bitstuffing;
 static char *prg;
 
 void print_usage(char *prg)
@@ -98,11 +99,13 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -c (colorize lines)\n");
 	fprintf(stderr, "         -b (show bargraph in %d%% resolution)\n", PERCENTRES);
 	fprintf(stderr, "         -r (redraw the terminal - similar to top)\n");
+	fprintf(stderr, "         -i (ignore bitstuffing estimation in bandwith calculation)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with mandatory bitrate can be specified on the \n", MAXSOCK);
 	fprintf(stderr, "commandline in the form: <ifname>@<bitrate>\n\n");
 	fprintf(stderr, "The bitrate is mandatory as it is needed to know the CAN bus bitrate to\n");
 	fprintf(stderr, "calcultate the bus load percentage based on the received CAN frames.\n");
+	fprintf(stderr, "Due to the bitstuffing estimation the calculated busload may exceed 100%%.\n");
 	fprintf(stderr, "For each given interface the data is presented in one line which contains:\n\n");
 	fprintf(stderr, "(interface) (received CAN frames) (used bits total) (used bits for payload)\n");
 	fprintf(stderr, "\nExample:\n");
@@ -174,6 +177,9 @@ void printstats(int signo)
 
 			printf("  |");
 
+			if (percent > 100)
+				percent = 100;
+
 			for (j=0; j < NUMBAR; j++){
 				if (j < percent/PERCENTRES)
 					printf("X");
@@ -220,7 +226,7 @@ int main(int argc, char **argv)
 
 	prg = basename(argv[0]);
 
-	while ((opt = getopt(argc, argv, "rtbch?")) != -1) {
+	while ((opt = getopt(argc, argv, "rtbcih?")) != -1) {
 		switch (opt) {
 		case 'r':
 			redraw = 1;
@@ -236,6 +242,10 @@ int main(int argc, char **argv)
 
 		case 'c':
 			color = 1;
+			break;
+
+		case 'i':
+			ignore_bitstuffing = 1;
 			break;
 
 		default:
@@ -365,11 +375,32 @@ int main(int argc, char **argv)
 
 				stat[i].recv_frames++;
 				stat[i].recv_bits_payload += frame.can_dlc*8;
-				stat[i].recv_bits_total += frame.can_dlc*8;
-				if (frame.can_id & CAN_EFF_FLAG)
-					stat[i].recv_bits_total += 67;
-				else
-					stat[i].recv_bits_total += 47;
+
+				/*
+				 * Following Ken Tindells *worst* case calculation for stuff-bits
+				 * (see "Guaranteeing Message Latencies on Controller Area Network" 1st ICC'94)
+				 * the needed bits on the wire can be calculated as:
+				 *
+				 * (34 + 8n)/5 + 47 + 8n for SFF frames (11 bit CAN-ID) => (269 + 48n)/5 
+				 * (54 + 8n)/5 + 67 + 8n for EFF frames (29 bit CAN-ID) => (389 + 48n)/5 
+				 *
+				 * while 'n' is the data length code (number of payload bytes)
+				 *
+				 */
+
+				if (ignore_bitstuffing) {
+					/* calculation without bitstuffing */
+					if (frame.can_id & CAN_EFF_FLAG)
+						stat[i].recv_bits_total += 67 + frame.can_dlc*8;
+					else
+						stat[i].recv_bits_total += 47 + frame.can_dlc*8;
+				} else {
+					/* needed bits including estimated worst case stuff bits */
+					if (frame.can_id & CAN_EFF_FLAG)
+						stat[i].recv_bits_total += (389 + frame.can_dlc*48)/5;
+					else
+						stat[i].recv_bits_total += (269 + frame.can_dlc*48)/5;
+				}
 			}
 		}
 	}
