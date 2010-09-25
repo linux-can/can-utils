@@ -443,23 +443,18 @@ int main(int argc, char **argv)
 				ptr = nptr+1; /* hop behind the ',' */
 				nptr = strchr(ptr, ','); /* update exit condition */
 
-				if (sscanf(ptr, "%lx:%lx",
-					   (long unsigned int *)
+				if (sscanf(ptr, "%x:%x",
 					   &rfilter[numfilter].can_id, 
-					   (long unsigned int *)
 					   &rfilter[numfilter].can_mask) == 2) {
  					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
 					numfilter++;
-				} else if (sscanf(ptr, "%lx~%lx",
-						  (long unsigned int *)
+				} else if (sscanf(ptr, "%x~%x",
 						  &rfilter[numfilter].can_id, 
-						  (long unsigned int *)
 						  &rfilter[numfilter].can_mask) == 2) {
  					rfilter[numfilter].can_id |= CAN_INV_FILTER;
  					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
 					numfilter++;
-				} else if (sscanf(ptr, "#%lx",
-						  (long unsigned int *)&err_mask) != 1) { 
+				} else if (sscanf(ptr, "#%x", &err_mask) != 1) { 
 					fprintf(stderr, "Error in filter option parsing: '%s'\n", ptr);
 					return 1;
 				}

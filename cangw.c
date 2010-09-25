@@ -328,8 +328,7 @@ int parse_mod(char *optarg, struct modattr *modmsg)
 		ptr++;
 	}
 
-	if (sscanf(++ptr, "%lx.%hhx.%16s",
-		   (long unsigned int *)&modmsg->cf.can_id,
+	if (sscanf(++ptr, "%x.%hhx.%16s", &modmsg->cf.can_id,
 		   (unsigned char *)&modmsg->cf.can_dlc, hexdata) != 3)
 		return 5;
 
@@ -593,13 +592,11 @@ int main(int argc, char **argv)
 			break;
 
 		case 'f':
-			if (sscanf(optarg, "%lx:%lx",
-				   (long unsigned int *)&filter.can_id, 
-				   (long unsigned int *)&filter.can_mask) == 2) {
+			if (sscanf(optarg, "%x:%x", &filter.can_id,
+				   &filter.can_mask) == 2) {
 				have_filter = 1;
-			} else if (sscanf(optarg, "%lx~%lx",
-					  (long unsigned int *)&filter.can_id, 
-					  (long unsigned int *)&filter.can_mask) == 2) {
+			} else if (sscanf(optarg, "%x~%x", &filter.can_id,
+					  &filter.can_mask) == 2) {
 				filter.can_id |= CAN_INV_FILTER;
 				have_filter = 1;
 			} else {
