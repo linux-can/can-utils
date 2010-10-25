@@ -30,7 +30,6 @@ extern int optind, opterr, optopt;
 static int s = -1;
 static bool running = true;
 static bool infinite = true;
-static bool sequence_init = true;
 static unsigned int drop_until_quit;
 static unsigned int drop_count;
 static bool use_poll = false;
@@ -90,6 +89,7 @@ static void do_receive()
 	};
 	struct cmsghdr *cmsg;
 	const int dropmonitor_on = 1;
+	bool sequence_init = true;
 	unsigned int seq_wrap = 0;
 	uint8_t sequence = 0;
 	ssize_t nbytes;
@@ -117,7 +117,7 @@ static void do_receive()
 		}
 
 		if (sequence_init) {
-			sequence_init = 0;
+			sequence_init = false;
 			sequence = frame.data[0];
 		}
 
