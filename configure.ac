@@ -10,8 +10,6 @@ AC_CONFIG_AUX_DIR([config/autoconf])
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 
-AM_MAINTAINER_MODE
-
 CFLAGS="${CFLAGS} -Wall"
 
 #
@@ -92,12 +90,12 @@ AC_CHECK_FUNCS([gethostbyaddr gethostbyname gethostname gettimeofday memset mkdi
 #
 AC_MSG_CHECKING([whether to enable debugging])
 AC_ARG_ENABLE(debug,
-    AS_HELP_STRING([--enable-debug], [enable debugging @<:@default=yes@:>@]),
+    AS_HELP_STRING([--enable-debug], [enable debugging @<:@default=no@:>@]),
 	[case "$enableval" in
 	y | yes) CONFIG_DEBUG=yes ;;
         *) CONFIG_DEBUG=no ;;
     esac],
-    [CONFIG_DEBUG=yes])
+    [CONFIG_DEBUG=no])
 AC_MSG_RESULT([${CONFIG_DEBUG}])
 if test "${CONFIG_DEBUG}" = "yes"; then
     CFLAGS="${CFLAGS} -Werror -Wsign-compare -Wfloat-equal -Wformat-security -g -O1"
