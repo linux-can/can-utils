@@ -1,6 +1,6 @@
 /* libsocketcan.c
  *
- * (C) 2009 Luotao Fu <l.fu@pengutronix.de> 
+ * (C) 2009 Luotao Fu <l.fu@pengutronix.de>
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -248,7 +248,7 @@ static int send_dump_request(int fd, int family, int type)
  * @brief open_nl_sock - open a netlink socket
  *
  * opens a netlink socket and returns the socket descriptor
- * 
+ *
  * @return 0 if success
  * @return negativ if failed
  */
@@ -484,7 +484,7 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
  * line. e.g. "can0"
  * @param acquire which parameter we want to get
  * @param res pointer to store the result
- * 
+ *
  * This is a wrapper for do_get_nl_link
  *
  * @return 0 if success
@@ -522,7 +522,7 @@ err_out:
  * in your system. usually it contains prefix "can" and the numer of the can
  * line. e.g. "can0"
  * @param req_info request parameters
- * 
+ *
  * This callback can do two different tasks:
  * - bring up/down the interface
  * - set up a netlink packet with request, as set up in req_info
@@ -672,7 +672,7 @@ int can_do_start(const char *name)
  *
  * This stops the can interface with the given name. It simply changes the if
  * state of the interface to down. Any running communication would be stopped.
- * 
+ *
  * @return 0 if success
  * @return -1 if failed
  */
@@ -689,11 +689,11 @@ int can_do_stop(const char *name)
  * line. e.g. "can0"
  *
  * This triggers the start mode of the can device.
- * 
- * NOTE: 
+ *
+ * NOTE:
  * - restart mode can only be triggerd if the device is in BUS_OFF and the auto
  * restart not turned on (restart_ms == 0)
- *  
+ *
  * @return 0 if success
  * @return -1 if failed
  */
@@ -755,7 +755,7 @@ err_out:
  *
  * This sets how often the device shall automatically restart the interface in
  * case that a bus_off is detected.
- * 
+ *
  * @return 0 if success
  * @return -1 if failed
  */
@@ -796,7 +796,7 @@ int can_set_restart_ms(const char *name, __u32 restart_ms)
  *	__u32 flags;
  * }
  * @endcode
- * 
+ *
  * You can use mask to select modes you want to control and flags to determine
  * if you want to turn the selected mode(s) on or off. Every control mode is
  * mapped to an own macro
@@ -808,7 +808,7 @@ int can_set_restart_ms(const char *name, __u32 restart_ms)
  * @endcode
  *
  * e.g. the following pseudocode
- * 
+ *
  * @code
  * struct can_ctrlmode cm;
  * memset(&cm, 0, sizeof(cm));
@@ -816,7 +816,7 @@ int can_set_restart_ms(const char *name, __u32 restart_ms)
  * cm.flags = CAN_CTRLMODE_LOOPBACK;
  * can_set_ctrlmode(candev, &cm);
  * @endcode
- * 
+ *
  * will turn the loopback mode on and listenonly mode off.
  *
  * @return 0 if success
@@ -959,7 +959,7 @@ int can_set_bitrate_samplepoint(const char *name, __u32 bitrate,
  * Please see relevant can specification for more information about this. A
  * device in STATE_STOPPED is an inactive device. STATE_SLEEPING is not
  * implemented on all devices.
- * 
+ *
  * @return 0 if success
  * @return -1 if failed
  */
@@ -971,7 +971,7 @@ int can_get_state(const char *name, int *state)
 
 /**
  * @ingroup extern
- * can_get_restart_ms - get the current interval of auto restarting. 
+ * can_get_restart_ms - get the current interval of auto restarting.
  *
  * @param name name of the can device. This is the netdev name, as ifconfig -a shows
  * in your system. usually it contains prefix "can" and the numer of the can
@@ -980,7 +980,7 @@ int can_get_state(const char *name, int *state)
  *
  * This one stores the current interval of auto restarting into the given
  * pointer.
- * 
+ *
  * The socketcan framework can automatically restart a device if it is in
  * bus_off in a given interval. This function gets this value in milliseconds.
  * restart_ms == 0 means that autorestarting is turned off.
@@ -1006,7 +1006,7 @@ int can_get_restart_ms(const char *name, __u32 *restart_ms)
  * This one stores the current bittiming configuration.
  *
  * Please see can_set_bittiming for more information about bit timing.
- *  
+ *
  * @return 0 if success
  * @return -1 if failed
  */
@@ -1027,7 +1027,7 @@ int can_get_bittiming(const char *name, struct can_bittiming *bt)
  * This one stores the current control mode configuration.
  *
  * Please see can_set_ctrlmode for more information about control modes.
- *  
+ *
  * @return 0 if success
  * @return -1 if failed
  */
@@ -1049,7 +1049,7 @@ int can_get_ctrlmode(const char *name, struct can_ctrlmode *cm)
  * This one stores the current clock configuration. At the time of writing the
  * can_clock struct only contains information about the clock frequecy. This
  * information is e.g. essential while setting up the bit timing.
- * 
+ *
  * @return 0 if success
  * @return -1 if failed
  */
@@ -1069,7 +1069,7 @@ int can_get_clock(const char *name, struct can_clock *clock)
  *
  * This one stores the hardware dependent bittiming constant. The
  * can_bittiming_const struct consists:
- * 
+ *
  * @code
  * struct can_bittiming_const {
  *	char name[16];
@@ -1083,10 +1083,10 @@ int can_get_clock(const char *name, struct can_clock *clock)
  *	__u32 brp_inc;
  *	};
  * @endcode
- * 
+ *
  * The information in this struct is used to calculate the bus bit timing
  * automatically.
- *  
+ *
  * @return 0 if success
  * @return -1 if failed
  */
@@ -1106,14 +1106,14 @@ int can_get_bittiming_const(const char *name, struct can_bittiming_const *btc)
  * @param bc pointer to the error counter struct..
  *
  * This one gets the current rx/tx error counter from the hardware.
- * 
+ *
  * @code
  * struct can_berr_counter {
  *	__u16 txerr;
- *	__u16 rxerr; 
+ *	__u16 rxerr;
  *	};
  * @endcode
- * 
+ *
  * @return 0 if success
  * @return -1 if failed
  */
