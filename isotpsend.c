@@ -69,7 +69,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -x <addr>    (extended addressing mode. Use 'any' for all addresses)\n");
 	fprintf(stderr, "         -p <byte>    (set and enable padding byte)\n");
 	fprintf(stderr, "         -P <mode>    (check padding in FC. (l)ength (c)ontent (a)ll)\n");
-	fprintf(stderr, "         -t <time ns> (transmit time in nanosecs)\n");
+	fprintf(stderr, "         -t <time ns> (frame transmit time (N_As) in nanosecs)\n");
+	fprintf(stderr, "         -f <time ns> (ignore FC and force local tx stmin value in nanosecs)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "The pdu data is expected on STDIN in space separated ASCII hex values.\n");
 	fprintf(stderr, "\n");
@@ -83,12 +84,13 @@ int main(int argc, char **argv)
     static struct can_isotp_options opts;
     int opt;
     extern int optind, opterr, optopt;
+    __u32 force_tx_stmin = 0;
     unsigned char buf[4096];
     int buflen = 0;
 
     addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-    while ((opt = getopt(argc, argv, "s:d:x:p:P:t:?")) != -1) {
+    while ((opt = getopt(argc, argv, "s:d:x:p:P:t:f:?")) != -1) {
 	    switch (opt) {
 	    case 's':
 		    addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
@@ -130,6 +132,11 @@ int main(int argc, char **argv)
 		    opts.frame_txtime = strtoul(optarg, (char **)NULL, 10);
 		    break;
 
+	    case 'f':
+		    opts.flags |= CAN_ISOTP_FORCE_TXSTMIN;
+		    force_tx_stmin = strtoul(optarg, (char **)NULL, 10);
+		    break;
+
 	    case '?':
 		    print_usage(basename(argv[0]));
 		    exit(0);
@@ -156,6 +163,9 @@ int main(int argc, char **argv)
     }
 
     setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
+
+    if (opts.flags & CAN_ISOTP_FORCE_TXSTMIN)
+	    setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_TX_STMIN, &force_tx_stmin, sizeof(force_tx_stmin));
 
     addr.can_family = AF_CAN;
     strcpy(ifr.ifr_name, argv[optind]);

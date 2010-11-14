@@ -71,6 +71,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -P <mode>    (check padding in SF/CF. (l)ength (c)ontent (a)ll)\n");
 	fprintf(stderr, "         -b <bs>      (blocksize. 0 = off)\n");
 	fprintf(stderr, "         -m <val>     (STmin in ms/ns. See spec.)\n");
+	fprintf(stderr, "         -f <time ns> (force rx stmin value in nanosecs)\n");
 	fprintf(stderr, "         -w <num>     (max. wait frame transmissions.)\n");
 	fprintf(stderr, "         -l           (loop: do not exit after pdu receiption.)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
@@ -87,6 +88,7 @@ int main(int argc, char **argv)
     static struct can_isotp_fc_options fcopts;
     int opt, i;
     extern int optind, opterr, optopt;
+    __u32 force_rx_stmin = 0;
     int loop = 0;
 
     unsigned char msg[4096];
@@ -94,7 +96,7 @@ int main(int argc, char **argv)
 
     addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-    while ((opt = getopt(argc, argv, "s:d:x:p:P:b:m:w:l?")) != -1) {
+    while ((opt = getopt(argc, argv, "s:d:x:p:P:b:m:w:f:l?")) != -1) {
 	    switch (opt) {
 	    case 's':
 		    addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
@@ -144,6 +146,11 @@ int main(int argc, char **argv)
 		    fcopts.wftmax = strtoul(optarg, (char **)NULL, 16) & 0xFF;
 		    break;
 
+	    case 'f':
+		    opts.flags |= CAN_ISOTP_FORCE_RXSTMIN;
+		    force_rx_stmin = strtoul(optarg, (char **)NULL, 10);
+		    break;
+
 	    case 'l':
 		    loop = 1;
 		    break;
@@ -175,6 +182,9 @@ int main(int argc, char **argv)
 
     setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
     setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_RECV_FC, &fcopts, sizeof(fcopts));
+
+    if (opts.flags & CAN_ISOTP_FORCE_RXSTMIN)
+	    setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_RX_STMIN, &force_rx_stmin, sizeof(force_rx_stmin));
 
     addr.can_family = AF_CAN;
     strcpy(ifr.ifr_name, argv[optind]);
