@@ -52,6 +52,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <sys/ioctl.h>
+#include <net/if.h>
 
 #define LDISC_N_SLCAN 17 /* default slcan line discipline since Kernel 2.6.25 */
 
@@ -82,7 +83,7 @@ int main(int argc, char **argv)
 	int send_close = 0;
 	char *speed = NULL;
 	char *btr = NULL;
-	char buf[10];
+	char buf[IFNAMSIZ+1];
 	char *tty;
 	int opt;
 
@@ -155,9 +156,15 @@ int main(int argc, char **argv)
 		}
 
 		if (ioctl (fd, TIOCSETD, &ldisc) < 0) {
-			perror("ioctl");
+			perror("ioctl TIOCSETD");
 			exit(1);
 		}
+
+		if (ioctl (fd, SIOCGIFNAME, buf) < 0) {
+			perror("ioctl SIOCGIFNAME");
+			exit(1);
+		} else
+			printf("attached tty %s to netdevice %s\n", tty, buf);
 	}
 
 	if (waitkey) {
