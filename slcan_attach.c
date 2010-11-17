@@ -65,10 +65,12 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -b <btr>   (set bit time register value)\n");
 	fprintf(stderr, "         -d         (only detach line discipline)\n");
 	fprintf(stderr, "         -w         (attach - wait for keypess - detach)\n");
+	fprintf(stderr, "         -n <name>  (assign created netdevice name)\n");
 	fprintf(stderr, "\nExamples:\n");
 	fprintf(stderr, "slcan_attach -w -o -s6 -c /dev/ttyS1\n");
 	fprintf(stderr, "slcan_attach /dev/ttyS1\n");
 	fprintf(stderr, "slcan_attach -d /dev/ttyS1\n");
+	fprintf(stderr, "slcan_attach -w -n can15 /dev/ttyS1\n");
 	fprintf(stderr, "\n");
 	exit(1);
 }
@@ -85,9 +87,10 @@ int main(int argc, char **argv)
 	char *btr = NULL;
 	char buf[IFNAMSIZ+1];
 	char *tty;
+	char *name = NULL;
 	int opt;
 
-	while ((opt = getopt(argc, argv, "l:dwocs:b:?")) != -1) {
+	while ((opt = getopt(argc, argv, "l:dwocs:b:n:?")) != -1) {
 		switch (opt) {
 		case 'l':
 			fprintf(stderr, "Ignored option '-l'\n");
@@ -118,6 +121,12 @@ int main(int argc, char **argv)
 		case 'b':
 			btr = optarg;
 			if (strlen(btr) > 6)
+				print_usage(argv[0]);
+			break;
+
+		case 'n':
+			name = optarg;
+			if (strlen(name) > IFNAMSIZ-1)
 				print_usage(argv[0]);
 			break;
 
@@ -155,16 +164,41 @@ int main(int argc, char **argv)
 			write(fd, buf, strlen(buf));
 		}
 
+		/* set slcan line discipline on given tty */
 		if (ioctl (fd, TIOCSETD, &ldisc) < 0) {
 			perror("ioctl TIOCSETD");
 			exit(1);
 		}
 
+		/* retrieve the name of the created CAN netdevice */
 		if (ioctl (fd, SIOCGIFNAME, buf) < 0) {
 			perror("ioctl SIOCGIFNAME");
 			exit(1);
-		} else
-			printf("attached tty %s to netdevice %s\n", tty, buf);
+		}
+
+		printf("attached tty %s to netdevice %s\n", tty, buf);
+
+		/* try to rename the created device if requested */
+		if (name) {
+			struct ifreq ifr;
+			int s = socket(PF_INET, SOCK_DGRAM, 0);
+ 
+			printf("rename netdevice %s to %s ... ", buf, name);
+
+			if (s < 0)
+				perror("socket for interface rename");
+			else {
+				strncpy (ifr.ifr_name, buf, IFNAMSIZ);
+				strncpy (ifr.ifr_newname, name, IFNAMSIZ);
+ 
+				if (ioctl(s, SIOCSIFNAME, &ifr) < 0)
+					printf("failed!\n");
+				else
+					printf("ok.\n");
+ 
+				close(s);
+			}
+		}
 	}
 
 	if (waitkey) {
