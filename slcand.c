@@ -52,6 +52,7 @@
 #include <pwd.h>
 #include <signal.h>
 #include <sys/ioctl.h>
+#include <net/if.h>
 
 /* default slcan line discipline since Kernel 2.6.25 */
 #define LDISC_N_SLCAN 17
@@ -67,10 +68,10 @@
 
 void print_usage(char *prg)
 {
-	fprintf(stderr, "\nUsage: %s tty\n\n", prg);
+	fprintf(stderr, "\nUsage: %s tty [name]\n\n", prg);
 	fprintf(stderr, "Example:\n");
 	fprintf(stderr, "%s ttyUSB1\n", prg);
-	fprintf(stderr, "%s ttyS0\n", prg);
+	fprintf(stderr, "%s ttyS0 can0\n", prg);
 	fprintf(stderr, "\n");
 	exit(EXIT_FAILURE);
 }
@@ -91,7 +92,7 @@ static void child_handler (int signum)
 	}
 }
 
-static void daemonize (const char *lockfile, char *tty)
+static void daemonize (const char *lockfile, char *tty, char *name)
 {
 	pid_t pid, sid, parent;
 	int lfp = -1;
@@ -124,7 +125,7 @@ static void daemonize (const char *lockfile, char *tty)
 		struct passwd *pw = getpwnam (RUN_AS_USER);
 		if (pw)
 		{
-			syslog (LOG_NOTICE, "setting user to " RUN_AS_USER);
+			//syslog (LOG_NOTICE, "setting user to " RUN_AS_USER);
 			setuid (pw->pw_uid);
 		}
 	}
@@ -207,17 +208,26 @@ static void daemonize (const char *lockfile, char *tty)
 
 int main (int argc, char *argv[])
 {
-	char *tty;
+	char *tty = NULL;
 	char *ttypath;
 	char const *devprefix = "/dev/";
+	char *name = NULL;
+	char buf[IFNAMSIZ+1];
 
 	/* Initialize the logging interface */
 	openlog (DAEMON_NAME, LOG_PID, LOG_LOCAL5);
 
 	/* See how we're called */
-	if (argc != 2)
+	if (argc == 2) {
+		tty = argv[1];
+	} else if (argc == 3) {
+		tty = argv[1];
+		name = argv[2];
+		if (strlen(name) > IFNAMSIZ-1)
+			print_usage(argv[0]);
+	} else {
 		print_usage(argv[0]);
-	tty = argv[1];
+	}
 
 	/* Prepare the tty device name string */
 	char * pch;
@@ -230,20 +240,51 @@ int main (int argc, char *argv[])
 	syslog (LOG_INFO, "starting on TTY device %s", ttypath);
 
 	/* Daemonize */
-	daemonize ("/var/lock/" DAEMON_NAME, tty);
+	daemonize ("/var/lock/" DAEMON_NAME, tty, name);
 
 	/* Now we are a daemon -- do the work for which we were paid */
 	int fd;
 	int ldisc = LDISC_N_SLCAN;
 
 	if ((fd = open (ttypath, O_WRONLY | O_NOCTTY )) < 0) {
+	    syslog (LOG_NOTICE, "failed to open TTY device %s\n", ttypath);
 		perror(ttypath);
 		exit(1);
 	}
 
+	/* set slcan like discipline on given tty */
 	if (ioctl (fd, TIOCSETD, &ldisc) < 0) {
-		perror("ioctl");
+		perror("ioctl TIOCSETD");
 		exit(1);
+	}
+	
+	/* retrieve the name of the created CAN netdevice */
+	if (ioctl (fd, SIOCGIFNAME, buf) < 0) {
+		perror("ioctl SIOCGIFNAME");
+		exit(1);
+	}
+
+	syslog (LOG_NOTICE, "attached TTY %s to netdevice %s\n", ttypath, buf);
+	
+	/* try to rename the created netdevice */
+	if (name) {
+		struct ifreq ifr;
+		int s = socket(PF_INET, SOCK_DGRAM, 0);
+		if (s < 0)
+			perror("socket for interface rename");
+		else {
+			strncpy (ifr.ifr_name, buf, IFNAMSIZ);
+			strncpy (ifr.ifr_newname, name, IFNAMSIZ);
+
+			if (ioctl(s, SIOCSIFNAME, &ifr) < 0) {
+				syslog (LOG_NOTICE, "netdevice %s rename to %s failed\n", buf, name);
+				perror("ioctl SIOCSIFNAME rename");
+                exit(1);
+			} else
+				syslog (LOG_NOTICE, "netdevice %s renamed to %s\n", buf, name);
+
+			close(s);
+		}	
 	}
 
 	/* The Big Loop */
