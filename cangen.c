@@ -95,6 +95,8 @@ void print_usage(char *prg)
 		" generation mode - see below)\n");
 	fprintf(stderr, "         -p <timeout>  (poll on -ENOBUFS to write frames"
 		" with <timeout> ms)\n");
+	fprintf(stderr, "         -n <count>    (terminate after <count> CAN frames "
+		"- default infinite)\n");
 	fprintf(stderr, "         -i            (ignore -ENOBUFS return values on"
 		" write() syscalls)\n");
 	fprintf(stderr, "         -x            (disable local loopback of "
@@ -139,6 +141,7 @@ int main(int argc, char **argv)
 	unsigned char dlc_mode = MODE_RANDOM;
 	unsigned char loopback_disable = 0;
 	unsigned char verbose = 0;
+	int count = 0;
 	uint64_t incdata = 0;
 
 	int opt;
@@ -157,7 +160,7 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	while ((opt = getopt(argc, argv, "ig:eI:L:D:xp:vh?")) != -1) {
+	while ((opt = getopt(argc, argv, "ig:eI:L:D:xp:n:vh?")) != -1) {
 		switch (opt) {
 
 		case 'i':
@@ -218,6 +221,14 @@ int main(int argc, char **argv)
 
 		case 'p':
 			polltimeout = strtoul(optarg, NULL, 10);
+			break;
+
+		case 'n':
+			count = atoi(optarg);
+			if (count < 1) {
+				print_usage(basename(argv[0]));
+				return 1;
+			}
 			break;
 
 		case '?':
@@ -301,6 +312,9 @@ int main(int argc, char **argv)
 	}
 
 	while (running) {
+
+		if (count && (--count == 0))
+			running = 0;
 
 		if (id_mode == MODE_RANDOM) {
 
