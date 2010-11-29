@@ -115,6 +115,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -s <level>  (silent mode - %d: off (default) %d: animation %d: silent)\n", SILENT_OFF, SILENT_ANI, SILENT_ON);
 	fprintf(stderr, "         -b <can>    (bridge mode - send received frames to <can>)\n");
 	fprintf(stderr, "         -B <can>    (bridge mode - like '-b' with disabled loopback)\n");
+	fprintf(stderr, "         -u <usecs>  (delay bridge forwarding by <usecs> microseconds)\n");
 	fprintf(stderr, "         -l          (log CAN-frames into file. Sets '-s %d' by default)\n", SILENT_ON);
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "         -n <count>  (terminate after receiption of <count> CAN frames)\n");
@@ -200,6 +201,7 @@ int main(int argc, char **argv)
 	fd_set rdfs;
 	int s[MAXSOCK];
 	int bridge = 0;
+	useconds_t bridge_delay = 0;
 	unsigned char timestamp = 0;
 	unsigned char dropmonitor = 0;
 	unsigned char silent = SILENT_INI;
@@ -233,7 +235,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:ldLn:r:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:u:ldLn:r:h?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -308,6 +310,10 @@ int main(int argc, char **argv)
 			}
 			break;
 	    
+		case 'u':
+			bridge_delay = (useconds_t)strtoul(optarg, (char **)NULL, 10);
+			break;
+
 		case 'l':
 			log = 1;
 			break;
@@ -609,6 +615,9 @@ int main(int argc, char **argv)
 					running = 0;
 
 				if (bridge) {
+					if (bridge_delay)
+						usleep(bridge_delay);
+
 					nbytes = write(bridge, &frame, sizeof(struct can_frame));
 					if (nbytes < 0) {
 						perror("bridge write");
