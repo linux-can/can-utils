@@ -63,6 +63,12 @@
 /* Change this to the user under which to run */
 #define RUN_AS_USER "root"
 
+/* The length of ttypath buffer */
+#define TTYPATH_LENGTH	64
+
+/* The length of pidfile name buffer */
+#define PIDFILE_LENGTH	64
+
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
 
@@ -99,9 +105,9 @@ static void daemonize (const char *lockfile, char *tty, char *name)
 	FILE * pFile;
 	char const *pidprefix = "/var/run/";
 	char const *pidsuffix = ".pid";
-	char *pidfile;
-	pidfile = malloc((strlen(pidprefix) +strlen(DAEMON_NAME) + strlen(tty) + strlen(pidsuffix) + 1) * sizeof(char));
-	sprintf(pidfile, "%s%s-%s%s", pidprefix, DAEMON_NAME, tty, pidsuffix);
+	char pidfile[PIDFILE_LENGTH];
+
+	snprintf(pidfile, PIDFILE_LENGTH, "%s%s-%s%s", pidprefix, DAEMON_NAME, tty, pidsuffix);
 
 	/* already a daemon */
 	if (getppid () == 1)
@@ -209,7 +215,7 @@ static void daemonize (const char *lockfile, char *tty, char *name)
 int main (int argc, char *argv[])
 {
 	char *tty = NULL;
-	char *ttypath;
+	char ttypath[TTYPATH_LENGTH];
 	char const *devprefix = "/dev/";
 	char *name = NULL;
 	char buf[IFNAMSIZ+1];
@@ -235,8 +241,8 @@ int main (int argc, char *argv[])
 	if (pch == tty) {
 		print_usage(argv[0]);
 	}
-	ttypath = malloc((strlen(devprefix) + strlen(tty)) * sizeof(char));
-	sprintf (ttypath, "%s%s", devprefix, tty);
+
+	snprintf (ttypath, TTYPATH_LENGTH, "%s%s", devprefix, tty);
 	syslog (LOG_INFO, "starting on TTY device %s", ttypath);
 
 	/* Daemonize */
