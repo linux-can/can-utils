@@ -61,13 +61,14 @@ void print_usage(char *prg)
 	fprintf(stderr, "\nUsage: %s [options] tty\n\n", prg);
 	fprintf(stderr, "Options: -o         (send open command 'O\\r')\n");
 	fprintf(stderr, "         -c         (send close command 'C\\r')\n");
+	fprintf(stderr, "         -f         (read status flags with 'F\\r' to reset error states)\n");
 	fprintf(stderr, "         -s <speed> (set CAN speed 0..8)\n");
 	fprintf(stderr, "         -b <btr>   (set bit time register value)\n");
 	fprintf(stderr, "         -d         (only detach line discipline)\n");
 	fprintf(stderr, "         -w         (attach - wait for keypess - detach)\n");
 	fprintf(stderr, "         -n <name>  (assign created netdevice name)\n");
 	fprintf(stderr, "\nExamples:\n");
-	fprintf(stderr, "slcan_attach -w -o -s6 -c /dev/ttyS1\n");
+	fprintf(stderr, "slcan_attach -w -o -f -s6 -c /dev/ttyS1\n");
 	fprintf(stderr, "slcan_attach /dev/ttyS1\n");
 	fprintf(stderr, "slcan_attach -d /dev/ttyS1\n");
 	fprintf(stderr, "slcan_attach -w -n can15 /dev/ttyS1\n");
@@ -83,6 +84,7 @@ int main(int argc, char **argv)
 	int waitkey = 0;
 	int send_open = 0;
 	int send_close = 0;
+	int send_read_status_flags = 0;
 	char *speed = NULL;
 	char *btr = NULL;
 	char buf[IFNAMSIZ+1];
@@ -90,7 +92,7 @@ int main(int argc, char **argv)
 	char *name = NULL;
 	int opt;
 
-	while ((opt = getopt(argc, argv, "l:dwocs:b:n:?")) != -1) {
+	while ((opt = getopt(argc, argv, "l:dwocfs:b:n:?")) != -1) {
 		switch (opt) {
 		case 'l':
 			fprintf(stderr, "Ignored option '-l'\n");
@@ -110,6 +112,10 @@ int main(int argc, char **argv)
 
 		case 'c':
 			send_close = 1;
+			break;
+
+		case 'f':
+			send_read_status_flags = 1;
 			break;
 
 		case 's':
@@ -156,6 +162,11 @@ int main(int argc, char **argv)
 
 		if (btr) {
 			sprintf(buf, "C\rs%s\r", btr);
+			write(fd, buf, strlen(buf));
+		}
+
+		if (send_read_status_flags) {
+			sprintf(buf, "F\r");
 			write(fd, buf, strlen(buf));
 		}
 
