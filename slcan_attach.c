@@ -150,12 +150,12 @@ int main(int argc, char **argv)
 	if (waitkey || !detach) {
 
 		if (speed) {
-			sprintf(buf, "S%s\r", speed);
+			sprintf(buf, "C\rS%s\r", speed);
 			write(fd, buf, strlen(buf));
 		}
 
 		if (btr) {
-			sprintf(buf, "s%s\r", btr);
+			sprintf(buf, "C\rs%s\r", btr);
 			write(fd, buf, strlen(buf));
 		}
 
