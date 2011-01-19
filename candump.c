@@ -716,7 +716,7 @@ int main(int argc, char **argv)
 						diff.tv_sec--, diff.tv_usec += 1000000;
 					if (diff.tv_sec < 0)
 						diff.tv_sec = diff.tv_usec = 0;
-					printf("(%ld.%06ld) ", diff.tv_sec, diff.tv_usec);
+					printf("(%03ld.%06ld) ", diff.tv_sec, diff.tv_usec);
 				
 					if (timestamp == 'd')
 						last_tv = tv; /* update for delta calculation */
