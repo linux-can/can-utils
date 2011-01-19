@@ -155,6 +155,11 @@ int main(int argc, char **argv)
 	struct ifreq ifr;
 
 	struct timespec ts;
+	struct timeval now;
+
+	/* set seed value for pseudo random numbers */
+	gettimeofday(&now, NULL);
+	srandom(now.tv_usec);
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
