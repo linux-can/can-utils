@@ -317,7 +317,7 @@ static const char *error_classes[] = {
 	"no-acknowledgement-on-tx",
 	"bus-off",
 	"bus-error",
-	"restarted-from-bus-off",
+	"restarted-after-bus-off",
 };
 
 static const char *controller_problems[] = {
@@ -379,8 +379,8 @@ static const char *protocol_violation_locations[] = {
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif
 
-static int sprintf_error_data(char *buf, size_t len, uint8_t err,
-			      const char **arr, int arr_len)
+static int snprintf_error_data(char *buf, size_t len, uint8_t err,
+			       const char **arr, int arr_len)
 {
 	int i, n = 0, count = 0;
 
@@ -399,14 +399,14 @@ static int sprintf_error_data(char *buf, size_t len, uint8_t err,
 	return n;
 }
 
-static int sprintf_error_lostarb(char *buf, size_t len, struct can_frame *cf)
+static int snprintf_error_lostarb(char *buf, size_t len, struct can_frame *cf)
 {
 	if (len <= 0)
 		return 0;
 	return snprintf(buf, len, "{at bit %d}", cf->data[0]);
 }
 
-static int sprintf_error_ctrl(char *buf, size_t len, struct can_frame *cf)
+static int snprintf_error_ctrl(char *buf, size_t len, struct can_frame *cf)
 {
 	int n = 0;
 
@@ -414,7 +414,7 @@ static int sprintf_error_ctrl(char *buf, size_t len, struct can_frame *cf)
 		return 0;
 
 	n += snprintf(buf + n, len - n, "{");
-	n += sprintf_error_data(buf + n, len - n, cf->data[1],
+	n += snprintf_error_data(buf + n, len - n, cf->data[1],
 				controller_problems,
 				ARRAY_SIZE(controller_problems));
 	n += snprintf(buf + n, len - n, "}");
@@ -422,7 +422,7 @@ static int sprintf_error_ctrl(char *buf, size_t len, struct can_frame *cf)
 	return n;
 }
 
-static int sprintf_error_prot(char *buf, size_t len, struct can_frame *cf)
+static int snprintf_error_prot(char *buf, size_t len, struct can_frame *cf)
 {
 	int n = 0;
 
@@ -430,7 +430,7 @@ static int sprintf_error_prot(char *buf, size_t len, struct can_frame *cf)
 		return 0;
 
 	n += snprintf(buf + n, len - n, "{{");
-	n += sprintf_error_data(buf + n, len - n, cf->data[2],
+	n += snprintf_error_data(buf + n, len - n, cf->data[2],
 				protocol_violation_types,
 				ARRAY_SIZE(protocol_violation_types));
 	n += snprintf(buf + n, len - n, "}{");
@@ -469,12 +469,12 @@ void snprintf_can_error_frame(char *buf, size_t len, struct can_frame *cf,
 				n += snprintf(buf + n, len - n, "%s", sep);
  			n += snprintf(buf + n, len - n, "%s", error_classes[i]);
 			if (mask == CAN_ERR_LOSTARB)
-				n += sprintf_error_lostarb(buf + n, len - n,
+				n += snprintf_error_lostarb(buf + n, len - n,
 							   cf);
 			if (mask == CAN_ERR_CRTL)
-				n += sprintf_error_ctrl(buf + n, len - n, cf);
+				n += snprintf_error_ctrl(buf + n, len - n, cf);
 			if (mask == CAN_ERR_PROT)
-				n += sprintf_error_prot(buf + n, len - n, cf);
+				n += snprintf_error_prot(buf + n, len - n, cf);
 			classes++;
 		}
 	}

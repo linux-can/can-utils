@@ -148,7 +148,7 @@ void sprint_long_canframe(char *buf , struct can_frame *cf, int view);
  *
  */
 
-void snprintf_can_error_frame(char *buf, int len, struct can_frame *cf,
+void snprintf_can_error_frame(char *buf, size_t len, struct can_frame *cf,
 			      char *sep);
 /*
  * Creates a CAN error frame output in user readable format.
