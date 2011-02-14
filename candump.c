@@ -121,6 +121,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -n <count>  (terminate after receiption of <count> CAN frames)\n");
 	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
 	fprintf(stderr, "         -d          (monitor dropped CAN frames)\n");
+	fprintf(stderr, "         -e          (dump CAN error frames in human-readable format)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with optional filter sets can be specified\n", MAXSOCK);
 	fprintf(stderr, "on the commandline in the form: <ifname>[,filter]*\n");
@@ -235,7 +236,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:u:ldLn:r:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:u:ldLn:r:he?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -261,6 +262,10 @@ int main(int argc, char **argv)
 
 		case 'S':
 			view |= CANLIB_VIEW_SWAP;
+			break;
+
+		case 'e':
+			view |= CANLIB_VIEW_ERROR;
 			break;
 
 		case 's':

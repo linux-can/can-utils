@@ -127,6 +127,7 @@ void sprint_canframe(char *buf , struct can_frame *cf, int sep);
 #define CANLIB_VIEW_ASCII	0x1
 #define CANLIB_VIEW_BINARY	0x2
 #define CANLIB_VIEW_SWAP	0x4
+#define CANLIB_VIEW_ERROR	0x8
 
 #define SWAP_DELIMITER '`'
 
@@ -145,4 +146,10 @@ void sprint_long_canframe(char *buf , struct can_frame *cf, int view);
  * fprint_long_canframe(stdout, &frame, "\n", 0); // with eol to STDOUT
  * fprint_long_canframe(stderr, &frame, NULL, 0); // no eol to STDERR
  *
+ */
+
+void snprintf_can_error_frame(char *buf, int len, struct can_frame *cf,
+			      char *sep);
+/*
+ * Creates a CAN error frame output in user readable format.
  */
