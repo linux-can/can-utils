@@ -28,6 +28,10 @@
 
 #include <can_netlink.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int can_do_restart(const char *name);
 int can_do_stop(const char *name);
 int can_do_start(const char *name);
@@ -46,5 +50,9 @@ int can_get_clock(const char *name, struct can_clock *clock);
 int can_get_bittiming_const(const char *name, struct can_bittiming_const *btc);
 int can_get_berr_counter(const char *name, struct can_berr_counter *bc);
 int can_get_device_stats(const char *name, struct can_device_stats *cds);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
