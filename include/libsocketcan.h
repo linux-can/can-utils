@@ -45,5 +45,6 @@ int can_get_state(const char *name, int *state);
 int can_get_clock(const char *name, struct can_clock *clock);
 int can_get_bittiming_const(const char *name, struct can_bittiming_const *btc);
 int can_get_berr_counter(const char *name, struct can_berr_counter *bc);
+int can_get_device_stats(const char *name, struct can_device_stats *cds);
 
 #endif

@@ -53,6 +53,7 @@
 #define GET_CLOCK 5
 #define GET_BITTIMING_CONST 6
 #define GET_BERR_COUNTER 7
+#define GET_XSTATS 8
 
 struct get_req {
 	struct nlmsghdr n;
@@ -385,6 +386,17 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 					    IFLA_INFO_MAX, tb[IFLA_LINKINFO]);
 		else
 			continue;
+
+		if (acquire == GET_XSTATS) {
+			if (!linkinfo[IFLA_INFO_XSTATS])
+				fprintf(stderr, "no can statistics found\n");
+			else {
+				memcpy(res, RTA_DATA(linkinfo[IFLA_INFO_XSTATS]),
+						sizeof(struct can_device_stats));
+				ret = 0;
+			}
+			continue;
+		}
 
 		if (!linkinfo[IFLA_INFO_DATA]) {
 			fprintf(stderr, "no link data found\n");
@@ -1120,4 +1132,25 @@ int can_get_bittiming_const(const char *name, struct can_bittiming_const *btc)
 int can_get_berr_counter(const char *name, struct can_berr_counter *bc)
 {
 	return get_link(name, GET_BERR_COUNTER, bc);
+}
+
+/**
+ * @ingroup extern
+ * can_get_device_stats - get the can_device_stats.
+ *
+ * @param name name of the can device. This is the netdev name, as ifconfig -a shows
+ * in your system. usually it contains prefix "can" and the numer of the can
+ * line. e.g. "can0"
+ * @param bc pointer to the error counter struct..
+ *
+ * This one gets the current can_device_stats.
+ *
+ * Please see struct can_device_stats for more information.
+ *
+ * @return 0 if success
+ * @return -1 if failed
+ */
+int can_get_device_stats(const char *name, struct can_device_stats *cds)
+{
+	return get_link(name, GET_XSTATS, cds);
 }
