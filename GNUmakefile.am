@@ -1,8 +1,7 @@
 SUBDIRS = \
 	include \
 	config \
-	src \
-	tests
+	src
 
 EXTRA_DIST = \
 	autogen.sh \
