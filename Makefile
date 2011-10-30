@@ -43,11 +43,9 @@
 DESTDIR =
 PREFIX = /usr/local
 
-KERNELDIR = ../kernel/2.6
-
 MAKEFLAGS = -k
 
-CFLAGS    = -O2 -Wall -Wno-parentheses -I$(KERNELDIR)/include \
+CFLAGS    = -O2 -Wall -Wno-parentheses -Iinclude \
 	    -fno-strict-aliasing \
 	    -DSO_RXQ_OVFL=40 \
 	    -DPF_CAN=29 \
