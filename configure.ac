@@ -78,47 +78,6 @@ AC_CHECK_FUNCS([ \
 ])
 
 
-#
-# check for SOCKETCAN specific defines and headers
-#
-AC_ARG_WITH(linux-headers,
-    AS_HELP_STRING([--with-linux-headers=/path/to/kernel/include], [path to linux kernel headers]),
-    [case "${withval}" in
-	(""|y|ye|yes|n|no)
-	    AC_MSG_ERROR([You must supply a PATH as argument to --with-linux-headers]) ;;
-	(*)
-	    LINUX_HEADERS_DIR="$(cd "${withval}" && pwd)"
-	    if test $? -ne 0; then
-	        AC_MSG_ERROR(["${withval}" seems to be an invalid path!])
-	    fi ;;
-    esac]
-)
-
-maybe_linux_headers_dir="../kernel/2.6/include"
-if test -z "${LINUX_HEADERS_DIR}" -a -e "${maybe_linux_headers_dir}"; then
-    LINUX_HEADERS_DIR="$(cd "${maybe_linux_headers_dir}" && pwd)"
-fi
-if test -n "${LINUX_HEADERS_DIR}"; then
-    linux_CFLAGS="-I${LINUX_HEADERS_DIR}"
-fi
-CPPFLAGS="${CPPFLAGS} ${linux_CFLAGS}"
-AC_SUBST(linux_CFLAGS)
-
-
-AC_CHECK_HEADERS([ \
-	linux/can/gw.h \
-	linux/can/isotp.h \
-	],[],[],
-[
-#ifdef HAVE_SYS_SOCKET_H
-#include <sys/socket.h>
-#endif
-])
-
-AM_CONDITIONAL(CONFIG_GW, [test "${ac_cv_header_linux_can_gw_h}" = "yes"])
-AM_CONDITIONAL(CONFIG_ISOTP, [test "${ac_cv_header_linux_can_isotp_h}" = "yes"])
-
-
 AC_CHECK_DECL(SO_RXQ_OVFL,,
     [AC_DEFINE([SO_RXQ_OVFL], [40], [SO_RXQ_OVFL])]
 )

@@ -9,7 +9,24 @@ LDADD = \
 
 noinst_HEADERS = \
 	lib.h \
-	terminal.h
+	terminal.h \
+	include/linux/can/bcm.h \
+	include/linux/can/core.h \
+	include/linux/can/dev.h \
+	include/linux/can/error.h \
+	include/linux/can/gw.h \
+	include/linux/can.h \
+	include/linux/can/isotp.h \
+	include/linux/can/netlink.h \
+	include/linux/can/raw.h \
+	include/socketcan/can/bcm.h \
+	include/socketcan/can/error.h \
+	include/socketcan/can/gw.h \
+	include/socketcan/can.h \
+	include/socketcan/can/ioctl.h \
+	include/socketcan/can/isotp.h \
+	include/socketcan/can/netlink.h \
+	include/socketcan/can/raw.h
 
 
 noinst_LTLIBRARIES = \
@@ -27,30 +44,22 @@ bin_PROGRAMS = \
 	candump \
 	canfdtest \
 	cangen \
+	cangw \
 	canlogserver \
 	canplayer \
 	cansend \
 	cansniffer \
-	log2asc \
-	log2long \
-	slcan_attach \
-	slcand \
-	slcanpty
-
-if CONFIG_GW
-bin_PROGRAMS += \
-	cangw
-endif
-
-if CONFIG_ISOTP
-bin_PROGRAMS += \
 	isotpdump \
 	isotprecv \
 	isotpsend \
 	isotpserver \
 	isotpsniffer \
-	isotptun
-endif
+	isotptun \
+	log2asc \
+	log2long \
+	slcan_attach \
+	slcand \
+	slcanpty
 
 EXTRA_DIST = \
 	autogen.sh
