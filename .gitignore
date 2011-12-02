@@ -44,3 +44,6 @@ GNUmakefile.in
 /slcan_attach
 /slcand
 /slcanpty
+
+/can-utils-*.tar.bz2
+/can-utils-*.tar.gz
