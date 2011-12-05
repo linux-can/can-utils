@@ -36,7 +36,7 @@
  * A copy of the license is included in the section entitled "GNU
  * Free Documentation License".
  *
- * Send feedback to <socketcan-users@lists.berlios.de>
+ * Send feedback to <linux-can@vger.kernel.org>
  *
  */
 
