@@ -111,7 +111,6 @@ AC_CONFIG_FILES([
 	config/GNUmakefile
 	include/GNUmakefile
 	src/GNUmakefile
-	tests/GNUmakefile
 	])
 AC_OUTPUT
 
