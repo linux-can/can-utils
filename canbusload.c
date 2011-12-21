@@ -201,6 +201,7 @@ void printstats(int signo)
 	}
 
 	printf("\n");
+	fflush(stdout);
 
 	alarm(1);
 }
