@@ -350,6 +350,10 @@ int main(int argc, char **argv)
 			*(unsigned long*)(&frame.data[4]) = random();
 		}
 
+		/* set unused payload data to zero like the CAN driver does it on rx */
+		if (frame.can_dlc < 8)
+			memset(&frame.data[frame.can_dlc], 0, 8 - frame.can_dlc);
+
 		if (verbose) {
 
 			printf("  %s  ", argv[optind]);
