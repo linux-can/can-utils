@@ -111,10 +111,10 @@ void print_usage(char *prg)
 	fprintf(stderr, "\nExample:\n");
 	fprintf(stderr, "\nuser$> canbusload can0@100000 can1@500000 can2@500000 can3@500000 -r -t -b -c\n\n");
 	fprintf(stderr, "%s 2008-05-27 15:18:49\n", prg);
-	fprintf(stderr, " can0@100000  805  74491  36656  74%%  |XXXXXXXXXXXXXX......|\n");
-	fprintf(stderr, " can1@500000  796  75140  37728  15%%  |XXX.................|\n");
-	fprintf(stderr, " can2@500000    0      0      0   0%%  |....................|\n");
-	fprintf(stderr, " can3@500000   47   4633   2424   0%%  |....................|\n");
+	fprintf(stderr, " can0@100000   805   74491  36656  74%% |XXXXXXXXXXXXXX......|\n");
+	fprintf(stderr, " can1@500000   796   75140  37728  15%% |XXX.................|\n");
+	fprintf(stderr, " can2@500000     0       0      0   0%% |....................|\n");
+	fprintf(stderr, " can3@500000    47    4633   2424   0%% |....................|\n");
 	fprintf(stderr, "\n");
 }
 
@@ -165,7 +165,7 @@ void printstats(int signo)
 		else
 			percent = 0;
 
-		printf(" %*s@%-*d %4d %6d %6d %3d%%",
+		printf(" %*s@%-*d %5d %7d %6d %3d%%",
 		       max_devname_len, stat[i].devname,
 		       max_bitrate_len, stat[i].bitrate,
 		       stat[i].recv_frames,
@@ -175,7 +175,7 @@ void printstats(int signo)
 
 		if (bargraph) {
 
-			printf("  |");
+			printf(" |");
 
 			if (percent > 100)
 				percent = 100;
