@@ -51,8 +51,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <termios.h>
 
 #define LDISC_N_SLCAN 17 /* default slcan line discipline since Kernel 2.6.25 */
 

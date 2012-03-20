@@ -52,6 +52,7 @@
 
 #include <net/if.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
 
 #include <linux/can.h>
 #include <linux/can/raw.h>

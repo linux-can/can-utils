@@ -44,14 +44,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <syslog.h>
 #include <errno.h>
 #include <pwd.h>
 #include <signal.h>
+#include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <net/if.h>
 
 /* default slcan line discipline since Kernel 2.6.25 */

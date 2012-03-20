@@ -55,6 +55,7 @@
 #include <time.h>
 
 #include <sys/time.h>
+#include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -65,7 +66,6 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include <signal.h>
-#include <wait.h>
 #include <errno.h>
 
 #include "lib.h"
