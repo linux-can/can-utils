@@ -611,7 +611,7 @@ int main(int argc, char **argv)
 					return 1;
 				}
 
-				if (nbytes < sizeof(struct can_frame)) {
+				if ((size_t)nbytes < sizeof(struct can_frame)) {
 					fprintf(stderr, "read: incomplete CAN frame\n");
 					return 1;
 				}
@@ -627,7 +627,7 @@ int main(int argc, char **argv)
 					if (nbytes < 0) {
 						perror("bridge write");
 						return 1;
-					} else if (nbytes < sizeof(struct can_frame)) {
+					} else if ((size_t)nbytes < sizeof(struct can_frame)) {
 						fprintf(stderr,"bridge write: incomplete CAN frame\n");
 						return 1;
 					}
