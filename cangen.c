@@ -132,7 +132,7 @@ void sigterm(int signo)
 
 int main(int argc, char **argv)
 {
-	unsigned long gap = DEFAULT_GAP; 
+	double gap = DEFAULT_GAP;
 	unsigned long polltimeout = 0;
 	unsigned char ignore_enobufs = 0;
 	unsigned char extended = 0;
@@ -173,7 +173,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 'g':
-			gap = strtoul(optarg, NULL, 10);
+			gap = strtod(optarg, NULL);
 			break;
 
 		case 'e':
@@ -251,7 +251,7 @@ int main(int argc, char **argv)
 	}
 
 	ts.tv_sec = gap / 1000;
-	ts.tv_nsec = (gap % 1000) * 1000000;
+	ts.tv_nsec = ((int)(gap * 1000000)) % 1000000000;
 
 	if (id_mode == MODE_FIX) {
 
