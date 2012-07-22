@@ -101,6 +101,7 @@ void print_usage(char *prg)
 		" write() syscalls)\n");
 	fprintf(stderr, "         -x            (disable local loopback of "
 		"generated CAN frames)\n");
+	fprintf(stderr, "         -R            (send RTR frame)\n");
 	fprintf(stderr, "         -v            (increment verbose level for "
 		"printing sent CAN frames)\n\n");
 	fprintf(stderr, "Generation modes:\n");
@@ -141,6 +142,7 @@ int main(int argc, char **argv)
 	unsigned char dlc_mode = MODE_RANDOM;
 	unsigned char loopback_disable = 0;
 	unsigned char verbose = 0;
+	unsigned char rtr_frame = 0;
 	int count = 0;
 	uint64_t incdata = 0;
 
@@ -165,7 +167,7 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	while ((opt = getopt(argc, argv, "ig:eI:L:D:xp:n:vh?")) != -1) {
+	while ((opt = getopt(argc, argv, "ig:eI:L:D:xp:n:vRh?")) != -1) {
 		switch (opt) {
 
 		case 'i':
@@ -224,6 +226,10 @@ int main(int argc, char **argv)
 			loopback_disable = 1;
 			break;
 
+		case 'R':
+			rtr_frame = 1;
+			break;
+
 		case 'p':
 			polltimeout = strtoul(optarg, NULL, 10);
 			break;
@@ -267,6 +273,9 @@ int main(int argc, char **argv)
 		else
 			frame.can_id &= CAN_SFF_MASK;
 	}
+
+	if (rtr_frame)
+		frame.can_id |= CAN_RTR_FLAG;
 
 	if (extended)
 		frame.can_id |=  CAN_EFF_FLAG;
