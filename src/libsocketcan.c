@@ -323,6 +323,7 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 	char nlbuf[1024 * 8];
 
 	int ret = -1;
+	int done = 0;
 
 	struct iovec iov = {
 		.iov_base = (void *)nlbuf,
@@ -349,141 +350,145 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 		return ret;
 	}
 
-	if ((msglen = recvmsg(fd, &msg, 0)) <= 0) {
-		perror("Receive error");
-		return ret;
-	}
-	size_t u_msglen = (size_t) msglen;
-	/* Check to see if the buffers in msg get truncated */
-	if (msg.msg_namelen != sizeof(peer) ||
-	    (msg.msg_flags & (MSG_TRUNC | MSG_CTRUNC))) {
-		fprintf(stderr, "Uhoh... truncated message.\n");
-		return ret;
-	}
+	while (!done && (msglen = recvmsg(fd, &msg, 0)) > 0) {
+		size_t u_msglen = (size_t) msglen;
+		/* Check to see if the buffers in msg get truncated */
+		if (msg.msg_namelen != sizeof(peer) ||
+		    (msg.msg_flags & (MSG_TRUNC | MSG_CTRUNC))) {
+			fprintf(stderr, "Uhoh... truncated message.\n");
+			return -1;
+		}
 
-	for (nl_msg = (struct nlmsghdr *)nlbuf;
-	     NLMSG_OK(nl_msg, u_msglen);
-	     nl_msg = NLMSG_NEXT(nl_msg, u_msglen)) {
-		int type = nl_msg->nlmsg_type;
-		int len;
-		if (type != RTM_NEWLINK)
-			continue;
+		for (nl_msg = (struct nlmsghdr *)nlbuf;
+		     NLMSG_OK(nl_msg, u_msglen);
+		     nl_msg = NLMSG_NEXT(nl_msg, u_msglen)) {
+			int type = nl_msg->nlmsg_type;
+			int len;
 
-		struct ifinfomsg *ifi = NLMSG_DATA(nl_msg);
-		struct rtattr *tb[IFLA_MAX + 1];
-
-		len =
-		    nl_msg->nlmsg_len - NLMSG_LENGTH(sizeof(struct ifaddrmsg));
-		parse_rtattr(tb, IFLA_MAX, IFLA_RTA(ifi), len);
-
-		if (strncmp
-		    ((char *)RTA_DATA(tb[IFLA_IFNAME]), name,
-		     sizeof(name)) != 0)
-			continue;
-
-		if (tb[IFLA_LINKINFO])
-			parse_rtattr_nested(linkinfo,
-					    IFLA_INFO_MAX, tb[IFLA_LINKINFO]);
-		else
-			continue;
-
-		if (acquire == GET_XSTATS) {
-			if (!linkinfo[IFLA_INFO_XSTATS])
-				fprintf(stderr, "no can statistics found\n");
-			else {
-				memcpy(res, RTA_DATA(linkinfo[IFLA_INFO_XSTATS]),
-						sizeof(struct can_device_stats));
-				ret = 0;
+			if (type == NLMSG_DONE) {
+				done++;
+				continue;
 			}
-			continue;
-		}
+			if (type != RTM_NEWLINK)
+				continue;
 
-		if (!linkinfo[IFLA_INFO_DATA]) {
-			fprintf(stderr, "no link data found\n");
-			return ret;
-		}
+			struct ifinfomsg *ifi = NLMSG_DATA(nl_msg);
+			struct rtattr *tb[IFLA_MAX + 1];
 
-		parse_rtattr_nested(can_attr, IFLA_CAN_MAX,
-				    linkinfo[IFLA_INFO_DATA]);
+			len =
+				nl_msg->nlmsg_len - NLMSG_LENGTH(sizeof(struct ifaddrmsg));
+			parse_rtattr(tb, IFLA_MAX, IFLA_RTA(ifi), len);
 
-		switch (acquire) {
-		case GET_STATE:
-			if (can_attr[IFLA_CAN_STATE]) {
-				*((int *)res) = *((__u32 *)
-						  RTA_DATA(can_attr
-							   [IFLA_CAN_STATE]));
-				ret = 0;
-			} else {
-				fprintf(stderr, "no state data found\n");
+			if (strncmp
+			    ((char *)RTA_DATA(tb[IFLA_IFNAME]), name,
+			     sizeof(name)) != 0)
+				continue;
+
+			if (tb[IFLA_LINKINFO])
+				parse_rtattr_nested(linkinfo,
+						    IFLA_INFO_MAX, tb[IFLA_LINKINFO]);
+			else
+				continue;
+
+			if (acquire == GET_XSTATS) {
+				if (!linkinfo[IFLA_INFO_XSTATS])
+					fprintf(stderr, "no can statistics found\n");
+				else {
+					memcpy(res, RTA_DATA(linkinfo[IFLA_INFO_XSTATS]),
+					       sizeof(struct can_device_stats));
+					ret = 0;
+				}
+				continue;
 			}
 
-			break;
-		case GET_RESTART_MS:
-			if (can_attr[IFLA_CAN_RESTART_MS]) {
-				*((__u32 *) res) = *((__u32 *)
-						     RTA_DATA(can_attr
-							      [IFLA_CAN_RESTART_MS]));
-				ret = 0;
-			} else
-				fprintf(stderr, "no restart_ms data found\n");
+			if (!linkinfo[IFLA_INFO_DATA]) {
+				fprintf(stderr, "no link data found\n");
+				return ret;
+			}
 
-			break;
-		case GET_BITTIMING:
-			if (can_attr[IFLA_CAN_BITTIMING]) {
-				memcpy(res,
-				       RTA_DATA(can_attr[IFLA_CAN_BITTIMING]),
-				       sizeof(struct can_bittiming));
-				ret = 0;
-			} else
-				fprintf(stderr, "no bittiming data found\n");
+			parse_rtattr_nested(can_attr, IFLA_CAN_MAX,
+					    linkinfo[IFLA_INFO_DATA]);
 
-			break;
-		case GET_CTRLMODE:
-			if (can_attr[IFLA_CAN_CTRLMODE]) {
-				memcpy(res,
-				       RTA_DATA(can_attr[IFLA_CAN_CTRLMODE]),
-				       sizeof(struct can_ctrlmode));
-				ret = 0;
-			} else
-				fprintf(stderr, "no ctrlmode data found\n");
+			switch (acquire) {
+			case GET_STATE:
+				if (can_attr[IFLA_CAN_STATE]) {
+					*((int *)res) = *((__u32 *)
+							  RTA_DATA(can_attr
+								   [IFLA_CAN_STATE]));
+					ret = 0;
+				} else {
+					fprintf(stderr, "no state data found\n");
+				}
 
-			break;
-		case GET_CLOCK:
-			if (can_attr[IFLA_CAN_CLOCK]) {
-				memcpy(res,
-				       RTA_DATA(can_attr[IFLA_CAN_CLOCK]),
-				       sizeof(struct can_clock));
-				ret = 0;
-			} else
-				fprintf(stderr,
-					"no clock parameter data found\n");
+				break;
+			case GET_RESTART_MS:
+				if (can_attr[IFLA_CAN_RESTART_MS]) {
+					*((__u32 *) res) = *((__u32 *)
+							     RTA_DATA(can_attr
+								      [IFLA_CAN_RESTART_MS]));
+					ret = 0;
+				} else
+					fprintf(stderr, "no restart_ms data found\n");
 
-			break;
-		case GET_BITTIMING_CONST:
-			if (can_attr[IFLA_CAN_BITTIMING_CONST]) {
-				memcpy(res,
-				       RTA_DATA(can_attr[IFLA_CAN_BITTIMING_CONST]),
-				       sizeof(struct can_bittiming_const));
-				ret = 0;
-			} else
-				fprintf(stderr, "no bittiming_const data found\n");
+				break;
+			case GET_BITTIMING:
+				if (can_attr[IFLA_CAN_BITTIMING]) {
+					memcpy(res,
+					       RTA_DATA(can_attr[IFLA_CAN_BITTIMING]),
+					       sizeof(struct can_bittiming));
+					ret = 0;
+				} else
+					fprintf(stderr, "no bittiming data found\n");
 
-			break;
-		case GET_BERR_COUNTER:
-			if (can_attr[IFLA_CAN_BERR_COUNTER]) {
-				memcpy(res,
-				       RTA_DATA(can_attr[IFLA_CAN_BERR_COUNTER]),
-				       sizeof(struct can_berr_counter));
-				ret = 0;
-			} else
-				fprintf(stderr, "no berr_counter data found\n");
+				break;
+			case GET_CTRLMODE:
+				if (can_attr[IFLA_CAN_CTRLMODE]) {
+					memcpy(res,
+					       RTA_DATA(can_attr[IFLA_CAN_CTRLMODE]),
+					       sizeof(struct can_ctrlmode));
+					ret = 0;
+				} else
+					fprintf(stderr, "no ctrlmode data found\n");
 
-			break;
+				break;
+			case GET_CLOCK:
+				if (can_attr[IFLA_CAN_CLOCK]) {
+					memcpy(res,
+					       RTA_DATA(can_attr[IFLA_CAN_CLOCK]),
+					       sizeof(struct can_clock));
+					ret = 0;
+				} else
+					fprintf(stderr,
+						"no clock parameter data found\n");
 
-		default:
-			fprintf(stderr, "unknown acquire mode\n");
+				break;
+			case GET_BITTIMING_CONST:
+				if (can_attr[IFLA_CAN_BITTIMING_CONST]) {
+					memcpy(res,
+					       RTA_DATA(can_attr[IFLA_CAN_BITTIMING_CONST]),
+					       sizeof(struct can_bittiming_const));
+					ret = 0;
+				} else
+					fprintf(stderr, "no bittiming_const data found\n");
+
+				break;
+			case GET_BERR_COUNTER:
+				if (can_attr[IFLA_CAN_BERR_COUNTER]) {
+					memcpy(res,
+					       RTA_DATA(can_attr[IFLA_CAN_BERR_COUNTER]),
+					       sizeof(struct can_berr_counter));
+					ret = 0;
+				} else
+					fprintf(stderr, "no berr_counter data found\n");
+
+				break;
+
+			default:
+				fprintf(stderr, "unknown acquire mode\n");
+			}
 		}
 	}
+
 	return ret;
 }
 
