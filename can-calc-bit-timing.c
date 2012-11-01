@@ -310,7 +310,35 @@ static struct can_bittiming_const can_calc_consts[] = {
 		.brp_max = 256,
 		.brp_inc = 1,
 
+		.ref_clk = 24000000,	/* mx28 */
+		.printf_btr = printf_btr_flexcan,
+	},
+	{
+		.name = "flexcan",
+		.tseg1_min = 4,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
+		.sjw_max = 4,
+		.brp_min = 1,
+		.brp_max = 256,
+		.brp_inc = 1,
+
 		.ref_clk = 49875000,
+		.printf_btr = printf_btr_flexcan,
+	},
+	{
+		.name = "flexcan",
+		.tseg1_min = 4,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
+		.sjw_max = 4,
+		.brp_min = 1,
+		.brp_max = 256,
+		.brp_inc = 1,
+
+		.ref_clk = 66000000,
 		.printf_btr = printf_btr_flexcan,
 	},
 	{
