@@ -199,6 +199,23 @@ static void printf_btr_mcp251x(struct can_bittiming *bt, int hdr)
 	}
 }
 
+static void printf_btr_ti_hecc(struct can_bittiming *bt, int hdr)
+{
+	if (hdr) {
+		printf("%10s", "CANBTC");
+	} else {
+		uint32_t can_btc;
+
+		can_btc = (bt->phase_seg2 - 1) & 0x7;
+		can_btc |= ((bt->phase_seg1 + bt->prop_seg - 1)
+			    & 0xF) << 3;
+		can_btc |= ((bt->sjw - 1) & 0x3) << 8;
+		can_btc |= ((bt->brp - 1) & 0xFF) << 16;
+
+		printf("0x%08x", can_btc);
+	}
+}
+
 static struct can_bittiming_const can_calc_consts[] = {
 	{
 		.name = "sja1000",
@@ -397,6 +414,20 @@ static struct can_bittiming_const can_calc_consts[] = {
 		.ref_clk = 16000000,
 		.printf_btr = printf_btr_mcp251x,
 	},
+	{
+		.name = "ti_hecc",
+		.tseg1_min = 1,
+		.tseg1_max = 16,
+		.tseg2_min = 1,
+		.tseg2_max = 8,
+		.sjw_max = 4,
+		.brp_min = 1,
+		.brp_max = 256,
+		.brp_inc = 1,
+
+		.ref_clk = 13000000,
+		.printf_btr = printf_btr_ti_hecc,
+	}
 };
 
 static long common_bitrates[] = {
