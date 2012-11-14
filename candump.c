@@ -673,6 +673,10 @@ int main(int argc, char **argv)
 
 				idx = idx2dindex(addr.can_ifindex, s[i]);
 
+				/* once we detected a EFF frame indent SFF frames accordingly */
+				if (frame.can_id & CAN_EFF_FLAG)
+					view |= CANLIB_VIEW_INDENT_SFF;
+
 				if (log) {
 					/* log CAN frame with absolute timestamp & device */
 					fprintf(logfile, "(%ld.%06ld) ", tv.tv_sec, tv.tv_usec);

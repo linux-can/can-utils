@@ -288,8 +288,13 @@ void sprint_long_canframe(char *buf , struct canfd_frame *cf, int view, int maxd
 		sprintf(buf, "%08X  ", cf->can_id & CAN_EFF_MASK);
 		offset = 10;
 	} else {
-		sprintf(buf, "%03X  ", cf->can_id & CAN_SFF_MASK);
-		offset = 5;
+		if (view & CANLIB_VIEW_INDENT_SFF) {
+			sprintf(buf, "     %03X  ", cf->can_id & CAN_SFF_MASK);
+			offset = 10;
+		} else {
+			sprintf(buf, "%03X  ", cf->can_id & CAN_SFF_MASK);
+			offset = 5;
+		}
 	}
 
 	if (maxdlen == CAN_MAX_DLEN) {

@@ -171,6 +171,7 @@ void sprint_canframe(char *buf , struct canfd_frame *cf, int sep, int maxdlen);
 #define CANLIB_VIEW_BINARY	0x2
 #define CANLIB_VIEW_SWAP	0x4
 #define CANLIB_VIEW_ERROR	0x8
+#define CANLIB_VIEW_INDENT_SFF	0x10
 
 #define SWAP_DELIMITER '`'
 
@@ -188,6 +189,9 @@ void sprint_long_canframe(char *buf , struct canfd_frame *cf, int view, int maxd
  * 14B0DC51   [8]  4A 94 E8 2A EC 58 55 62   'J..*.XUb' -> (with ASCII output)
  * 20001111   [7]  C6 23 7B 32 69 98 3C      ERRORFRAME -> (CAN_ERR_FLAG set)
  * 12345678  [03]  11 22 33 -> CAN FD with exended CAN-Id = 0x12345678, dlc = 3
+ *
+ * 123   [3]  11 22 33         -> CANLIB_VIEW_INDENT_SFF == 0
+ *      123   [3]  11 22 33    -> CANLIB_VIEW_INDENT_SFF == set
  *
  * Examples:
  *

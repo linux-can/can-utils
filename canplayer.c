@@ -455,9 +455,9 @@ int main(int argc, char **argv)
 						printf("%s (%s) ", get_txname(device), device);
 
 						if (txmtu == CAN_MTU)
-							fprint_long_canframe(stdout, &frame, "\n", 0, CAN_MAX_DLEN);
+							fprint_long_canframe(stdout, &frame, "\n", CANLIB_VIEW_INDENT_SFF, CAN_MAX_DLEN);
 						else
-							fprint_long_canframe(stdout, &frame, "\n", 0, CANFD_MAX_DLEN);
+							fprint_long_canframe(stdout, &frame, "\n", CANLIB_VIEW_INDENT_SFF, CANFD_MAX_DLEN);
 					}
 				}
 
