@@ -141,7 +141,7 @@ int main(int argc, char **argv)
 {
 
 	int sl, sa, sc;
-	int i, ret;
+	int i;
 	int idx = 0;
 	struct sockaddr_in  saddr, clientaddr;
 	struct sockaddr_can caddr;
@@ -228,12 +228,12 @@ int main(int argc, char **argv)
 		FD_SET(sc, &readfds);
 		FD_SET(sa, &readfds);
 
-		ret = select((sc > sa)?sc+1:sa+1, &readfds, NULL, NULL, NULL);
+		select((sc > sa)?sc+1:sa+1, &readfds, NULL, NULL, NULL);
 
 		if (FD_ISSET(sc, &readfds)) {
 
-			ret = recvfrom(sc, &msg, sizeof(msg), 0,
-				       (struct sockaddr*)&caddr, &caddrlen);
+			recvfrom(sc, &msg, sizeof(msg), 0,
+				 (struct sockaddr*)&caddr, &caddrlen);
 
 			ifr.ifr_ifindex = caddr.can_ifindex;
 			ioctl(sc, SIOCGIFNAME, &ifr);

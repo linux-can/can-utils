@@ -391,7 +391,7 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt)
 {
 	struct can_priv *priv = netdev_priv(dev);
 	const struct can_bittiming_const *btc = priv->bittiming_const;
-	long rate, best_rate = 0;
+	long rate = 0;
 	long best_error = 1000000000, error = 0;
 	int best_tseg = 0, best_brp = 0, brp = 0;
 	int tsegall, tseg = 0, tseg1 = 0, tseg2 = 0;
@@ -443,7 +443,6 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt)
 		}
 		best_tseg = tseg / 2;
 		best_brp = brp;
-		best_rate = rate;
 		if (error == 0)
 			break;
 	}

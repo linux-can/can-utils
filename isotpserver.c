@@ -146,7 +146,7 @@ int main(int argc, char **argv)
 
 	fd_set readfds;
 
-	int i, ret;
+	int i;
 	int nbytes;
 
 	int local_port = 0;
@@ -322,7 +322,7 @@ int main(int argc, char **argv)
 		FD_SET(sc, &readfds);
 		FD_SET(sa, &readfds);
 
-		ret = select((sc > sa)?sc+1:sa+1, &readfds, NULL, NULL, NULL);
+		select((sc > sa)?sc+1:sa+1, &readfds, NULL, NULL, NULL);
 
 		if (FD_ISSET(sc, &readfds)) {
 

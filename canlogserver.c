@@ -190,7 +190,7 @@ int main(int argc, char **argv)
 	const int canfd_on = 1;
 	int nbytes, i, j, maxdlen;
 	struct ifreq ifr;
-	struct timeval tv, last_tv;
+	struct timeval tv;
 	int port = DEFPORT;
 	struct sockaddr_in inaddr;
 	struct sockaddr_in clientaddr;
@@ -207,10 +207,6 @@ int main(int argc, char **argv)
 	signalaction.sa_flags = 0;
 	sigaction(SIGTERM, &signalaction, NULL); /* install Signal for termination */
 	sigaction(SIGINT, &signalaction, NULL); /* install Signal for termination */
-
-
-	last_tv.tv_sec  = 0;
-	last_tv.tv_usec = 0;
 
 	while ((opt = getopt(argc, argv, "m:v:i:e:p:?")) != -1) {
 
