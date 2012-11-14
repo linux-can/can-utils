@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * asc2log.c - convert ASC logfile to compact CAN frame logfile
  *
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research

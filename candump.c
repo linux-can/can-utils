@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * candump.c
  *
  * Copyright (c) 2002-2009 Volkswagen Group Electronic Research

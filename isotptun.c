@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * isotptun.c - IP over CAN ISO-TP (ISO15765-2) tunnel / proof-of-concept
  *
  * This program creates a Linux tunnel netdevice 'ctunX' and transfers the

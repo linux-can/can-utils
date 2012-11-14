@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * slcanpty.c -  creates a pty for applications using the slcan ASCII protocol
  * and converts the ASCII data to a CAN network interface (and vice versa)
  *

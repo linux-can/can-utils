@@ -1,6 +1,4 @@
 #
-#  $Id$
-#
 #  Copyright (c) 2002-2005 Volkswagen Group Electronic Research
 #  All rights reserved.
 #

@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * cangen.c - CAN frames generator for testing purposes
  *
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research

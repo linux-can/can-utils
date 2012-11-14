@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * isotpsend.c
  *
  * Copyright (c) 2008 Volkswagen Group Electronic Research

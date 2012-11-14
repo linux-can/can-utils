@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * cansend.c - simple command line tool to send CAN-frames via CAN_RAW sockets
  *
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research

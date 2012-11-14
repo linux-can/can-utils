@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * log2long.c - convert compact CAN frame representation into user readable
  *
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research

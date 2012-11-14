@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * lib.c - library for command line tools
  *
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research

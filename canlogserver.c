@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * canlogserver.c
  *
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research

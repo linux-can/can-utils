@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * slcand.c - userspace daemon for serial line CAN interface driver SLCAN
  *
  * Copyright (c) 2009 Robert Haddon <robert.haddon@verari.com>

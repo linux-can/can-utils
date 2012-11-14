@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * tst-bcm-server.c
  *
  * Test programm that implements a socket server which understands ASCII

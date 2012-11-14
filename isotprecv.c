@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * isotprecv.c
  *
  * Copyright (c) 2008 Volkswagen Group Electronic Research

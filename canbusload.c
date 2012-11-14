@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * canbusload.c
  *
  * Copyright (c) 2002-2008 Volkswagen Group Electronic Research

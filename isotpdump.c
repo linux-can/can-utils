@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * isotpdump.c - dump and explain ISO15765-2 protocol CAN frames
  *
  * Copyright (c) 2008 Volkswagen Group Electronic Research

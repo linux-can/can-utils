@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * canplayer.c - replay a compact CAN frame logfile to CAN devices
  *
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research

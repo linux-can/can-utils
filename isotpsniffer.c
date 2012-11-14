@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * isotpsniffer.c - dump ISO15765-2 datagrams using PF_CAN isotp protocol 
  *
  * Copyright (c) 2008 Volkswagen Group Electronic Research

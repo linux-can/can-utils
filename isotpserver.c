@@ -1,8 +1,4 @@
 /*
- *  $Id$
- */
-
-/*
  * isotpserver.c
  *
  * Implements a socket server which understands ASCII HEX
