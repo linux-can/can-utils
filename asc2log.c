@@ -73,11 +73,14 @@ void print_usage(char *prg)
 void prframe(FILE *file, struct timeval *tv, int dev, struct can_frame *cf) {
 
 	fprintf(file, "(%ld.%06ld) ", tv->tv_sec, tv->tv_usec);
+
 	if (dev > 0)
 		fprintf(file, "can%d ", dev-1);
 	else
 		fprintf(file, "canX ");
-	fprint_canframe(file, cf, "\n", 0);
+
+	/* no CAN FD support so far */
+	fprint_canframe(file, (struct canfd_frame *)cf, "\n", 0, CAN_MAX_DLEN);
 }
 
 void get_can_id(struct can_frame *cf, char *idstring, int base) {

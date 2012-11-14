@@ -87,6 +87,9 @@ void print_usage(char *prg)
 		"- default: %d ms)\n", DEFAULT_GAP);
 	fprintf(stderr, "         -e            (generate extended frame mode "
 		"(EFF) CAN frames)\n");
+	fprintf(stderr, "         -f            (generate CAN FD CAN frames)\n");
+	fprintf(stderr, "         -R            (send RTR frame)\n");
+	fprintf(stderr, "         -m            (mix -e -f -R frames)\n");
 	fprintf(stderr, "         -I <mode>     (CAN ID"
 		" generation mode - see below)\n");
 	fprintf(stderr, "         -L <mode>     (CAN data length code (dlc)"
@@ -101,7 +104,6 @@ void print_usage(char *prg)
 		" write() syscalls)\n");
 	fprintf(stderr, "         -x            (disable local loopback of "
 		"generated CAN frames)\n");
-	fprintf(stderr, "         -R            (send RTR frame)\n");
 	fprintf(stderr, "         -v            (increment verbose level for "
 		"printing sent CAN frames)\n\n");
 	fprintf(stderr, "Generation modes:\n");
@@ -137,6 +139,8 @@ int main(int argc, char **argv)
 	unsigned long polltimeout = 0;
 	unsigned char ignore_enobufs = 0;
 	unsigned char extended = 0;
+	unsigned char canfd = 0;
+	unsigned char mix = 0;
 	unsigned char id_mode = MODE_RANDOM;
 	unsigned char data_mode = MODE_RANDOM;
 	unsigned char dlc_mode = MODE_RANDOM;
@@ -144,14 +148,17 @@ int main(int argc, char **argv)
 	unsigned char verbose = 0;
 	unsigned char rtr_frame = 0;
 	int count = 0;
+	int mtu, maxdlen;
 	uint64_t incdata = 0;
+	int incdlc = 0;
+	unsigned char fixdata[CANFD_MAX_DLEN];
 
 	int opt;
 	int s; /* socket */
 	struct pollfd fds;
 
 	struct sockaddr_can addr;
-	static struct can_frame frame;
+	static struct canfd_frame frame;
 	int nbytes;
 	int i;
 	struct ifreq ifr;
@@ -167,7 +174,7 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	while ((opt = getopt(argc, argv, "ig:eI:L:D:xp:n:vRh?")) != -1) {
+	while ((opt = getopt(argc, argv, "ig:efmI:L:D:xp:n:vRh?")) != -1) {
 		switch (opt) {
 
 		case 'i':
@@ -180,6 +187,15 @@ int main(int argc, char **argv)
 
 		case 'e':
 			extended = 1;
+			break;
+
+		case 'f':
+			canfd = 1;
+			break;
+
+		case 'm':
+			mix = 1;
+			canfd = 1; /* to switch the socket into CAN FD mode */
 			break;
 
 		case 'I':
@@ -200,7 +216,7 @@ int main(int argc, char **argv)
 				dlc_mode = MODE_INCREMENT;
 			} else {
 				dlc_mode = MODE_FIX;
-				frame.can_dlc = atoi(optarg)%9;
+				frame.len = atoi(optarg) & 0xFF; /* is cut to 8 / 64 later */
 			}
 			break;
 
@@ -211,7 +227,7 @@ int main(int argc, char **argv)
 				data_mode = MODE_INCREMENT;
 			} else {
 				data_mode = MODE_FIX;
-				if (hexstring2candata(optarg, &frame)) {
+				if (hexstring2data(optarg, fixdata, CANFD_MAX_DLEN)) {
 					printf ("wrong fix data definition\n");
 					return 1;
 				}
@@ -259,29 +275,12 @@ int main(int argc, char **argv)
 	ts.tv_sec = gap / 1000;
 	ts.tv_nsec = ((int)(gap * 1000000)) % 1000000000;
 
-	if (id_mode == MODE_FIX) {
-
-		/* recognize obviously missing commandline option */
-		if ((frame.can_id > 0x7FF) && !extended) {
-			printf("The given CAN-ID is greater than 0x7FF and "
-			       "the '-e' option is not set.\n");
-			return 1;
-		}
-
-		if (extended)
-			frame.can_id &= CAN_EFF_MASK;
-		else
-			frame.can_id &= CAN_SFF_MASK;
+	/* recognize obviously missing commandline option */
+	if (id_mode == MODE_FIX && frame.can_id > 0x7FF && !extended) {
+		printf("The given CAN-ID is greater than 0x7FF and "
+		       "the '-e' option is not set.\n");
+		return 1;
 	}
-
-	if (rtr_frame)
-		frame.can_id |= CAN_RTR_FLAG;
-
-	if (extended)
-		frame.can_id |=  CAN_EFF_FLAG;
-
-	if ((data_mode == MODE_INCREMENT) && !frame.can_dlc)
-		frame.can_dlc = 1; /* min dlc value for incr. data */
 
 	if (strlen(argv[optind]) >= IFNAMSIZ) {
 		printf("Name of CAN device '%s' is too long!\n\n", argv[optind]);
@@ -315,6 +314,34 @@ int main(int argc, char **argv)
 			   &loopback, sizeof(loopback));
 	}
 
+	if (canfd) {
+		int enable_canfd = 1;
+
+		/* check if the frame fits into the CAN netdevice */
+		if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {
+			perror("SIOCGIFMTU");
+			return 1;
+		}
+
+		if (ifr.ifr_mtu != CANFD_MTU) {
+			printf("CAN interface ist not CAN FD capable - sorry.\n");
+			return 1;
+		}
+
+		/* interface is ok - try to switch the socket into CAN FD mode */
+		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd, sizeof(enable_canfd))){
+			printf("error when enabling CAN FD support\n");
+			return 1;
+		}
+
+		/* ensure discrete CAN FD length values 0..8, 12, 16, 20, 24, 32, 64 */
+		frame.len = can_dlc2len(can_len2dlc(frame.len));
+	} else {
+		/* sanitize CAN 2.0 frame length */
+		if (frame.len > 8)
+			frame.len = 8;
+	}
+
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
 		return 1;
@@ -330,51 +357,73 @@ int main(int argc, char **argv)
 		if (count && (--count == 0))
 			running = 0;
 
-		if (id_mode == MODE_RANDOM) {
+		if (canfd){
+			mtu = CANFD_MTU;
+			maxdlen = CANFD_MAX_DLEN;
+		} else {
+			mtu = CAN_MTU;
+			maxdlen = CAN_MAX_DLEN;
+		}
 
+		if (id_mode == MODE_RANDOM)
 			frame.can_id = random();
 
-			if (extended) {
-				frame.can_id &= CAN_EFF_MASK;
-				frame.can_id |= CAN_EFF_FLAG;
-			} else
-				frame.can_id &= CAN_SFF_MASK;
-		}
+		if (extended) {
+			frame.can_id &= CAN_EFF_MASK;
+			frame.can_id |= CAN_EFF_FLAG;
+		} else
+			frame.can_id &= CAN_SFF_MASK;
+
+		if (rtr_frame && !canfd)
+			frame.can_id |= CAN_RTR_FLAG;
 
 		if (dlc_mode == MODE_RANDOM) {
 
-			frame.can_dlc = random() & 0xF;
-
-			if (frame.can_dlc & 8)
-				frame.can_dlc = 8; /* for about 50% of the frames */
-
-			if ((data_mode == MODE_INCREMENT) && !frame.can_dlc)
-				frame.can_dlc = 1; /* min dlc value for incr. data */
+			if (canfd)
+				frame.len = can_dlc2len(random() & 0xF);
+			else {
+				frame.len = random() & 0xF;
+				if (frame.len & 8)
+					frame.len = 8; /* for about 50% of the frames */
+			}
 		}
+
+		if (data_mode == MODE_INCREMENT && !frame.len)
+			frame.len = 1; /* min dlc value for incr. data */
 
 		if (data_mode == MODE_RANDOM) {
 
 			/* that's what the 64 bit alignment of data[] is for ... :) */
 			*(unsigned long*)(&frame.data[0]) = random();
 			*(unsigned long*)(&frame.data[4]) = random();
+
+			/* omit extra random number generation for CAN FD */
+			if (canfd && frame.len > 8) {
+				memcpy(&frame.data[8], &frame.data[0], 8);
+				memcpy(&frame.data[16], &frame.data[0], 16);
+				memcpy(&frame.data[32], &frame.data[0], 32);
+			}
 		}
 
+		if (data_mode == MODE_FIX)
+			memcpy(frame.data, fixdata, CANFD_MAX_DLEN);
+
 		/* set unused payload data to zero like the CAN driver does it on rx */
-		if (frame.can_dlc < 8)
-			memset(&frame.data[frame.can_dlc], 0, 8 - frame.can_dlc);
+		if (frame.len < maxdlen)
+			memset(&frame.data[frame.len], 0, maxdlen - frame.len);
 
 		if (verbose) {
 
 			printf("  %s  ", argv[optind]);
 
 			if (verbose > 1)
-				fprint_long_canframe(stdout, &frame, "\n", (verbose > 2)?1:0);
+				fprint_long_canframe(stdout, &frame, "\n", (verbose > 2)?1:0, maxdlen);
 			else
-				fprint_canframe(stdout, &frame, "\n", 1);
+				fprint_canframe(stdout, &frame, "\n", 1, maxdlen);
 		}
 
 resend:
-		nbytes = write(s, &frame, sizeof(struct can_frame));
+		nbytes = write(s, &frame, mtu);
 		if (nbytes < 0) {
 			if (errno != ENOBUFS) {
 				perror("write");
@@ -394,7 +443,7 @@ resend:
 			} else
 				enobufs_count++;
 
-		} else if (nbytes < sizeof(struct can_frame)) {
+		} else if (nbytes < mtu) {
 			fprintf(stderr, "write: incomplete CAN frame\n");
 			return 1;
 		}
@@ -403,24 +452,20 @@ resend:
 			if (nanosleep(&ts, NULL))
 				return 1;
 		    
-		if (id_mode == MODE_INCREMENT) {
-
+		if (id_mode == MODE_INCREMENT)
 			frame.can_id++;
-
-			if (extended) {
-				frame.can_id &= CAN_EFF_MASK;
-				frame.can_id |= CAN_EFF_FLAG;
-			} else
-				frame.can_id &= CAN_SFF_MASK;
-		}
 
 		if (dlc_mode == MODE_INCREMENT) {
 
-			frame.can_dlc++;
-			frame.can_dlc %= 9;
+			incdlc++;
 
-			if ((data_mode == MODE_INCREMENT) && !frame.can_dlc)
-				frame.can_dlc = 1; /* min dlc value for incr. data */
+			if (canfd && !mix) {
+				incdlc &= 0xF;
+				frame.len = can_dlc2len(incdlc);
+			} else {
+				incdlc %= 9;
+				frame.len = incdlc;
+			}
 		}
 
 		if (data_mode == MODE_INCREMENT) {
@@ -429,6 +474,13 @@ resend:
 
 			for (i=0; i<8 ;i++)
 				frame.data[i] = (incdata >> i*8) & 0xFFULL;
+		}
+
+		if (mix) {
+			i = random();
+			extended = i&1;
+			canfd = i&2;
+			rtr_frame = ((i&12) == 12); /* reduce RTR frames to 1/4 */
 		}
 	}
 

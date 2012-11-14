@@ -62,9 +62,11 @@
 int main(int argc, char **argv)
 {
 	int s; /* can raw socket */ 
-	int nbytes;
+	int required_mtu;
+	int mtu;
+	int enable_canfd = 1;
 	struct sockaddr_can addr;
-	struct can_frame frame;
+	struct canfd_frame frame;
 	struct ifreq ifr;
 
 	/* check command line options */
@@ -74,14 +76,18 @@ int main(int argc, char **argv)
 	}
 
 	/* parse CAN frame */
-	if (parse_canframe(argv[2], &frame)){
-		fprintf(stderr, "\nWrong CAN-frame format!\n\n");
-		fprintf(stderr, "Try: <can_id>#{R|data}\n");
-		fprintf(stderr, "can_id can have 3 (SFF) or 8 (EFF) hex chars\n");
-		fprintf(stderr, "data has 0 to 8 hex-values that can (optionally)");
-		fprintf(stderr, " be seperated by '.'\n\n");
-		fprintf(stderr, "e.g. 5A1#11.2233.44556677.88 / 123#DEADBEEF / ");
-		fprintf(stderr, "5AA# /\n     1F334455#1122334455667788 / 123#R ");
+	required_mtu = parse_canframe(argv[2], &frame);
+	if (!required_mtu){
+		fprintf(stderr, "\nWrong CAN-frame format! Try:\n\n");
+		fprintf(stderr, "    <can_id>#{R|data}          for CAN 2.0 frames\n");
+		fprintf(stderr, "    <can_id>##<flags>{data}    for CAN FD frames\n\n");
+		fprintf(stderr, "<can_id> can have 3 (SFF) or 8 (EFF) hex chars\n");
+		fprintf(stderr, "{data} has 0..8 (0..64 CAN FD) ASCII hex-values (optionally");
+		fprintf(stderr, " seperated by '.')\n");
+		fprintf(stderr, "<flags> a single ASCII Hex value (0 .. F) which defines");
+		fprintf(stderr, " canfd_frame.flags\n\n");
+		fprintf(stderr, "e.g. 5A1#11.2233.44556677.88 / 123#DEADBEEF / 5AA# / ");
+		fprintf(stderr, "123##1 / 213##311\n     1F334455#1122334455667788 / 123#R ");
 		fprintf(stderr, "for remote transmission request.\n\n");
 		return 1;
 	}
@@ -101,6 +107,31 @@ int main(int argc, char **argv)
 	}
 	addr.can_ifindex = ifr.ifr_ifindex;
 
+	if (required_mtu > CAN_MTU) {
+
+		/* check if the frame fits into the CAN netdevice */
+		if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {
+			perror("SIOCGIFMTU");
+			return 1;
+		}
+		mtu = ifr.ifr_mtu;
+
+		if (mtu != CANFD_MTU) {
+			printf("CAN interface ist not CAN FD capable - sorry.\n");
+			return 1;
+		}
+
+		/* interface is ok - try to switch the socket into CAN FD mode */
+		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES,
+			       &enable_canfd, sizeof(enable_canfd))){
+			printf("error when enabling CAN FD support\n");
+			return 1;
+		}
+
+		/* ensure discrete CAN FD length values 0..8, 12, 16, 20, 24, 32, 64 */
+		frame.len = can_dlc2len(can_len2dlc(frame.len));
+	}
+
 	/* disable default receive filter on this RAW socket */
 	/* This is obsolete as we do not read from the socket at all, but for */
 	/* this reason we can remove the receive list in the Kernel to save a */
@@ -113,12 +144,10 @@ int main(int argc, char **argv)
 	}
 
 	/* send frame */
-	if ((nbytes = write(s, &frame, sizeof(frame))) != sizeof(frame)) {
+	if (write(s, &frame, required_mtu) != required_mtu) {
 		perror("write");
 		return 1;
 	}
-
-	//fprint_long_canframe(stdout, &frame, "\n", 0);
 
 	close(s);
 

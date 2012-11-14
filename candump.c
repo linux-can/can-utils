@@ -95,6 +95,7 @@ static __u32 last_dropcnt[MAXSOCK];
 static char devname[MAXIFNAMES][IFNAMSIZ+1];
 static int  dindex[MAXIFNAMES];
 static int  max_devname_len; /* to prevent frazzled device name output */ 
+const int canfd_on = 1;
 
 #define MAXANI 4
 const char anichar[MAXANI] = {'|', '/', '-', '\\'};
@@ -223,8 +224,8 @@ int main(int argc, char **argv)
 	struct cmsghdr *cmsg;
 	struct can_filter *rfilter;
 	can_err_mask_t err_mask;
-	struct can_frame frame;
-	int nbytes, i;
+	struct canfd_frame frame;
+	int nbytes, i, maxdlen;
 	struct ifreq ifr;
 	struct timeval tv, last_tv;
 	FILE *logfile = NULL;
@@ -483,6 +484,9 @@ int main(int argc, char **argv)
 
 		} /* if (nptr) */
 
+		/* try to switch the socket into CAN FD mode */
+		setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));
+
 		if (rcvbuf_size) {
 
 			int curr_rcvbuf_size;
@@ -611,7 +615,11 @@ int main(int argc, char **argv)
 					return 1;
 				}
 
-				if ((size_t)nbytes < sizeof(struct can_frame)) {
+				if ((size_t)nbytes == CAN_MTU)
+					maxdlen = CAN_MAX_DLEN;
+				else if ((size_t)nbytes == CANFD_MTU)
+					maxdlen = CANFD_MAX_DLEN;
+				else {
 					fprintf(stderr, "read: incomplete CAN frame\n");
 					return 1;
 				}
@@ -623,11 +631,11 @@ int main(int argc, char **argv)
 					if (bridge_delay)
 						usleep(bridge_delay);
 
-					nbytes = write(bridge, &frame, sizeof(struct can_frame));
+					nbytes = write(bridge, &frame, nbytes);
 					if (nbytes < 0) {
 						perror("bridge write");
 						return 1;
-					} else if ((size_t)nbytes < sizeof(struct can_frame)) {
+					} else if ((size_t)nbytes != CAN_MTU && (size_t)nbytes != CANFD_MTU) {
 						fprintf(stderr,"bridge write: incomplete CAN frame\n");
 						return 1;
 					}
@@ -670,14 +678,14 @@ int main(int argc, char **argv)
 					fprintf(logfile, "(%ld.%06ld) ", tv.tv_sec, tv.tv_usec);
 					fprintf(logfile, "%*s ", max_devname_len, devname[idx]);
 					/* without seperator as logfile use-case is parsing */
-					fprint_canframe(logfile, &frame, "\n", 0);
+					fprint_canframe(logfile, &frame, "\n", 0, maxdlen);
 				}
 
 				if (logfrmt) {
 					/* print CAN frame in log file style to stdout */
 					printf("(%ld.%06ld) ", tv.tv_sec, tv.tv_usec);
 					printf("%*s ", max_devname_len, devname[idx]);
-					fprint_canframe(stdout, &frame, "\n", 0);
+					fprint_canframe(stdout, &frame, "\n", 0, maxdlen);
 					goto out_fflush; /* no other output to stdout */
 				}
 
@@ -736,7 +744,7 @@ int main(int argc, char **argv)
 				printf("%*s", max_devname_len, devname[idx]);
 				printf("%s  ", (color==1)?col_off:"");
 
-				fprint_long_canframe(stdout, &frame, NULL, view);
+				fprint_long_canframe(stdout, &frame, NULL, view, maxdlen);
 
 				printf("%s", (color>1)?col_off:"");
 				printf("\n");

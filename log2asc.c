@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 {
 	static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ], id[10];
 
-	struct can_frame cf;
+	struct canfd_frame cf;
 	static struct timeval tv, start_tv;
 	FILE *infile = stdin;
 	FILE *outfile = stdout;
@@ -162,7 +162,7 @@ int main(int argc, char **argv)
 		}
 
 		if (devno) { /* only convert for selected CAN devices */
-			if (parse_canframe(ascframe, &cf))
+			if (parse_canframe(ascframe, &cf) != CAN_MTU) /* no CAN FD support so far */
 				return 1;
 
 			tv.tv_sec  = tv.tv_sec - start_tv.tv_sec;
@@ -189,9 +189,9 @@ int main(int argc, char **argv)
 				if (cf.can_id & CAN_RTR_FLAG)
 					fprintf(outfile, "r"); /* RTR frame */
 				else {
-					fprintf(outfile, "d %d", cf.can_dlc); /* data frame */
+					fprintf(outfile, "d %d", cf.len); /* data frame */
 		    
-					for (i = 0; i < cf.can_dlc; i++) {
+					for (i = 0; i < cf.len; i++) {
 						fprintf(outfile, " %02X", cf.data[i]);
 					}
 				}

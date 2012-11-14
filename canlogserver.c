@@ -74,6 +74,9 @@
 #define ANYDEV "any"
 #define ANL "\r\n" /* newline in ASC mode */
 
+#define COMMENTSZ 200
+#define BUFSZ (sizeof("(1345212884.318850)") + IFNAMSIZ + 4 + CL_CFSZ + COMMENTSZ) /* for one line in the logfile */
+
 #define DEFPORT 28700
 
 static char devname[MAXDEV][IFNAMSIZ+1];
@@ -183,15 +186,16 @@ int main(int argc, char **argv)
 	int currmax = 1; /* we assume at least one can bus ;-) */
 	struct sockaddr_can addr;
 	struct can_filter rfilter;
-	struct can_frame frame;
-	int nbytes, i, j;
+	struct canfd_frame frame;
+	const int canfd_on = 1;
+	int nbytes, i, j, maxdlen;
 	struct ifreq ifr;
 	struct timeval tv, last_tv;
 	int port = DEFPORT;
 	struct sockaddr_in inaddr;
 	struct sockaddr_in clientaddr;
 	socklen_t sin_size = sizeof(clientaddr);
-	char temp[128];
+	char temp[BUFSZ];
 
 	sigemptyset(&sigset);
 	signalaction.sa_handler = &childdied;
@@ -339,6 +343,9 @@ int main(int argc, char **argv)
 			setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_ERR_FILTER,
 				   &err_mask[i], sizeof(err_mask[i]));
 
+		/* try to switch the socket into CAN FD mode */
+		setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));
+
 		j = strlen(argv[optind+i]);
 
 		if (!(j < IFNAMSIZ)) {
@@ -387,14 +394,17 @@ int main(int argc, char **argv)
 				socklen_t len = sizeof(addr);
 				int idx;
 
-				if ((nbytes = recvfrom(s[i], &frame,
-						       sizeof(struct can_frame), 0,
+				if ((nbytes = recvfrom(s[i], &frame, CANFD_MTU, 0,
 						       (struct sockaddr*)&addr, &len)) < 0) {
 					perror("read");
 					return 1;
 				}
 
-				if (nbytes < sizeof(struct can_frame)) {
+				if ((size_t)nbytes == CAN_MTU)
+					maxdlen = CAN_MAX_DLEN;
+				else if ((size_t)nbytes == CANFD_MTU)
+					maxdlen = CANFD_MAX_DLEN;
+				else {
 					fprintf(stderr, "read: incomplete CAN frame\n");
 					return 1;
 				}
@@ -407,7 +417,7 @@ int main(int argc, char **argv)
 
 				sprintf(temp, "(%ld.%06ld) %*s ",
 					tv.tv_sec, tv.tv_usec, max_devname_len, devname[idx]);
-				sprint_canframe(temp+strlen(temp), &frame, 0); 
+				sprint_canframe(temp+strlen(temp), &frame, 0, maxdlen); 
 				strcat(temp, "\n");
 
 				if (write(accsocket, temp, strlen(temp)) < 0) {
@@ -415,13 +425,11 @@ int main(int argc, char **argv)
 					return 1;
 				}
 		    
-				/* printf("%s\n",temp2); */
-
 #if 0
 				/* print CAN frame in log file style to stdout */
 				printf("(%ld.%06ld) ", tv.tv_sec, tv.tv_usec);
 				printf("%*s ", max_devname_len, devname[idx]);
-				fprint_canframe(stdout, &frame, "\n", 0);
+				fprint_canframe(stdout, &frame, "\n", 0, maxdlen);
 #endif
 			}
 

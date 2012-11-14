@@ -52,17 +52,33 @@
 
 #include "lib.h"
 
+#define COMMENTSZ 200
+#define BUFSZ (sizeof("(1345212884.318850)") + IFNAMSIZ + 4 + CL_CFSZ + COMMENTSZ) /* for one line in the logfile */
+
 int main(int argc, char **argv)
 {
-	char buf[100], timestamp[100], device[100], ascframe[100];
-	struct can_frame cf;
+	char buf[BUFSZ], timestamp[BUFSZ], device[BUFSZ], ascframe[BUFSZ];
+	struct canfd_frame cf;
+	int mtu, maxdlen;
 
-	while (fgets(buf, 99, stdin)) {
+	while (fgets(buf, BUFSZ-1, stdin)) {
 		if (sscanf(buf, "%s %s %s", timestamp, device, ascframe) != 3)
 			return 1;
-		if (parse_canframe(ascframe, &cf))
+
+		mtu = parse_canframe(ascframe, &cf);
+		if (mtu == CAN_MTU)
+			maxdlen = CAN_MAX_DLEN;
+		else if (mtu == CANFD_MTU)
+			maxdlen = CANFD_MAX_DLEN;
+		else {
+			fprintf(stderr, "read: incomplete CAN frame\n");
 			return 1;
-		sprint_long_canframe(ascframe, &cf, 1); /* with ASCII output */
+		}
+
+		sprint_long_canframe(ascframe, &cf,
+				     CANLIB_VIEW_ASCII,
+				     maxdlen); /* with ASCII output */
+
 		printf("%s  %s  %s\n", timestamp, device, ascframe);
 	}
 

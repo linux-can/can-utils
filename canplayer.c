@@ -64,7 +64,8 @@
 #define DEFAULT_GAP	1	/* ms */
 #define DEFAULT_LOOPS	1	/* only one replay */
 #define CHANNELS	20	/* anyone using more than 20 CAN interfaces at a time? */
-#define BUFSZ		400	/* for one line in the logfile */
+#define COMMENTSZ 200
+#define BUFSZ (sizeof("(1345212884.318850)") + IFNAMSIZ + 4 + CL_CFSZ + COMMENTSZ) /* for one line in the logfile */
 #define STDOUTIDX	65536	/* interface index for printing on stdout - bigger than max uint16 */
 
 struct assignment {
@@ -73,6 +74,7 @@ struct assignment {
 	char rxif[IFNAMSIZ];
 };
 static struct assignment asgn[CHANNELS];
+const int canfd_on = 1;
 
 extern int optind, opterr, optopt;
 
@@ -236,7 +238,7 @@ int main(int argc, char **argv)
 {
 	static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ];
 	struct sockaddr_can addr;
-	static struct can_frame frame;
+	static struct canfd_frame frame;
 	static struct timeval today_tv, log_tv, last_log_tv, diff_tv;
 	struct timespec sleep_ts;
 	int s; /* CAN_RAW socket */
@@ -249,7 +251,7 @@ int main(int argc, char **argv)
 	static int loops = DEFAULT_LOOPS;
 	int assignments; /* assignments defined on the commandline */
 	int txidx;       /* sendto() interface index */
-	int eof, nbytes, i, j;
+	int eof, txmtu, i, j;
 	char *fret;
 
 	while ((opt = getopt(argc, argv, "I:l:tg:s:xv?")) != -1) {
@@ -332,6 +334,9 @@ int main(int argc, char **argv)
 
 	/* disable unneeded default receive filter on this RAW socket */
 	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
+
+	/* try to switch the socket into CAN FD mode */
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));
 
 	if (loopback_disable) {
 		int loopback = 0;
@@ -432,7 +437,8 @@ int main(int argc, char **argv)
 
 				} else if (txidx > 0) { /* only send to valid CAN devices */
 
-					if (parse_canframe(ascframe, &frame)) {
+					txmtu = parse_canframe(ascframe, &frame);
+					if (!txmtu) {
 						fprintf(stderr, "wrong CAN frame format: '%s'!", ascframe);
 						return 1;
 					}
@@ -440,17 +446,18 @@ int main(int argc, char **argv)
 					addr.can_family  = AF_CAN;
 					addr.can_ifindex = txidx; /* send via this interface */
  
-					nbytes = sendto(s, &frame, sizeof(struct can_frame), 0,
-							(struct sockaddr*)&addr, sizeof(addr));
-
-					if (nbytes != sizeof(struct can_frame)) {
+					if (sendto(s, &frame, txmtu, 0,	(struct sockaddr*)&addr, sizeof(addr)) != txmtu) {
 						perror("sendto");
 						return 1;
 					}
 
 					if (verbose) {
 						printf("%s (%s) ", get_txname(device), device);
-						fprint_long_canframe(stdout, &frame, "\n", 1);
+
+						if (txmtu == CAN_MTU)
+							fprint_long_canframe(stdout, &frame, "\n", 0, CAN_MAX_DLEN);
+						else
+							fprint_long_canframe(stdout, &frame, "\n", 0, CANFD_MAX_DLEN);
 					}
 				}
 
