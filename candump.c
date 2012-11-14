@@ -99,6 +99,7 @@ const int canfd_on = 1;
 
 #define MAXANI 4
 const char anichar[MAXANI] = {'|', '/', '-', '\\'};
+const char extra_m_info[4][4] = {"- -", "B -", "- E", "B E"};
 
 extern int optind, opterr, optopt;
 
@@ -123,6 +124,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
 	fprintf(stderr, "         -d          (monitor dropped CAN frames)\n");
 	fprintf(stderr, "         -e          (dump CAN error frames in human-readable format)\n");
+	fprintf(stderr, "         -x          (print extra message infos, rx/tx brs esi)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with optional filter sets can be specified\n", MAXSOCK);
 	fprintf(stderr, "on the commandline in the form: <ifname>[,filter]*\n");
@@ -206,6 +208,7 @@ int main(int argc, char **argv)
 	useconds_t bridge_delay = 0;
 	unsigned char timestamp = 0;
 	unsigned char dropmonitor = 0;
+	unsigned char extra_msg_info = 0;
 	unsigned char silent = SILENT_INI;
 	unsigned char silentani = 0;
 	unsigned char color = 0;
@@ -237,7 +240,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:u:ldLn:r:he?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:u:ldxLn:r:he?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -326,6 +329,10 @@ int main(int argc, char **argv)
 
 		case 'd':
 			dropmonitor = 1;
+			break;
+
+		case 'x':
+			extra_msg_info = 1;
 			break;
 
 		case 'L':
@@ -746,6 +753,15 @@ int main(int argc, char **argv)
 
 				printf(" %s", (color && (color<3))?col_on[idx%MAXCOL]:"");
 				printf("%*s", max_devname_len, devname[idx]);
+
+				if (extra_msg_info) {
+
+					if (msg.msg_flags & MSG_DONTROUTE)
+						printf ("  TX %s", extra_m_info[frame.flags & 3]);
+					else
+						printf ("  RX %s", extra_m_info[frame.flags & 3]);
+				}
+
 				printf("%s  ", (color==1)?col_off:"");
 
 				fprint_long_canframe(stdout, &frame, NULL, view, maxdlen);
