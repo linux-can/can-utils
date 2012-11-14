@@ -3,13 +3,9 @@
  *
  * Definitions for CAN frame Gateway/Router/Bridge
  *
- * $Id$
- *
  * Author: Oliver Hartkopp <oliver.hartkopp@volkswagen.de>
  * Copyright (c) 2011 Volkswagen Group Electronic Research
  * All rights reserved.
- *
- * Send feedback to <linux-can@vger.kernel.org>
  *
  */
 

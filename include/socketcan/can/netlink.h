@@ -3,11 +3,7 @@
  *
  * Definitions for the CAN netlink interface
  *
- * $Id: dev.h 939 2009-02-14 14:30:19Z wolf $
- *
  * Copyright (c) 2009 Wolfgang Grandegger <wg@grandegger.com>
- *
- * Send feedback to <linux-can@vger.kernel.org>
  *
  */
 

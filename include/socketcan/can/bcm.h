@@ -3,18 +3,17 @@
  *
  * Definitions for CAN Broadcast Manager (BCM)
  *
- * $Id$
- *
  * Author: Oliver Hartkopp <oliver.hartkopp@volkswagen.de>
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research
  * All rights reserved.
- *
- * Send feedback to <linux-can@vger.kernel.org>
  *
  */
 
 #ifndef CAN_BCM_H
 #define CAN_BCM_H
+
+#include <linux/types.h>
+#include <socketcan/can.h>
 
 /**
  * struct bcm_msg_head - head of messages to/from the broadcast manager
