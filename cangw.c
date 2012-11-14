@@ -669,6 +669,11 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
+	if (!modidx && (have_cs_crc8 || have_cs_xor)) {
+		printf("-c or -x can only be used in conjunction with -m\n");
+		exit(1);
+	}
+
 	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 
 	switch (cmd) {
