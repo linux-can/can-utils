@@ -682,7 +682,7 @@ int main(int argc, char **argv)
 
 				if (log) {
 					/* log CAN frame with absolute timestamp & device */
-					fprintf(logfile, "(%ld.%06ld) ", tv.tv_sec, tv.tv_usec);
+					fprintf(logfile, "(%010ld.%06ld) ", tv.tv_sec, tv.tv_usec);
 					fprintf(logfile, "%*s ", max_devname_len, devname[idx]);
 					/* without seperator as logfile use-case is parsing */
 					fprint_canframe(logfile, &frame, "\n", 0, maxdlen);
@@ -690,7 +690,7 @@ int main(int argc, char **argv)
 
 				if (logfrmt) {
 					/* print CAN frame in log file style to stdout */
-					printf("(%ld.%06ld) ", tv.tv_sec, tv.tv_usec);
+					printf("(%010ld.%06ld) ", tv.tv_sec, tv.tv_usec);
 					printf("%*s ", max_devname_len, devname[idx]);
 					fprint_canframe(stdout, &frame, "\n", 0, maxdlen);
 					goto out_fflush; /* no other output to stdout */
@@ -709,7 +709,7 @@ int main(int argc, char **argv)
 				switch (timestamp) {
 
 				case 'a': /* absolute with timestamp */
-					printf("(%ld.%06ld) ", tv.tv_sec, tv.tv_usec);
+					printf("(%010ld.%06ld) ", tv.tv_sec, tv.tv_usec);
 					break;
 
 				case 'A': /* absolute with date */
