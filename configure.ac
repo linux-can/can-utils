@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.59)
 
-AC_INIT([can-utils], [trunk], [socketcan-core@lists.berlios.de])
+AC_INIT([can-utils], [trunk], [linux-can@vger.kernel.org])
 AC_CONFIG_SRCDIR([lib.c])
 AC_CONFIG_MACRO_DIR([config/m4])
 AC_CONFIG_AUX_DIR([config/autoconf])
