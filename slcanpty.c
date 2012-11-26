@@ -270,8 +270,8 @@ rx_restart:
 			ptr--;
 	}
 
-	nbytes = write(socket, &frame, sizeof(frame));
-	if (nbytes != sizeof(frame)) {
+	tmp = write(socket, &frame, sizeof(frame));
+	if (tmp != sizeof(frame)) {
 		perror("write socket");
 		return 1;
 	}
