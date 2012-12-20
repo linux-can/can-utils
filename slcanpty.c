@@ -22,6 +22,9 @@
  *
  */
 
+/* To get ptsname grantpt and unlockpt definitions from stdlib.h */
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +43,7 @@
 
 /* maximum rx buffer len: extended CAN frame with timestamp */
 #define SLC_MTU (sizeof("T1111222281122334455667788EA5F\r")+1)
+#define DEVICE_NAME_PTMX "/dev/ptmx"
 
 #define DEBUG
 
@@ -383,6 +387,8 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Usage: %s <pty> <can interface>\n", argv[0]);
 		fprintf(stderr, "e.g. '%s /dev/ptyc0 can0' creates"
 			" /dev/ttyc0 for the slcan application\n", argv[0]);
+		fprintf(stderr, "e.g. for pseudo-terminal '%s %s can0' creates"
+			" /dev/pts/N\n", argv[0], DEVICE_NAME_PTMX);
 		fprintf(stderr, "\n");
 		return 1;
 	}
@@ -403,6 +409,29 @@ int main(int argc, char **argv)
 	topts.c_lflag &= ~(ICANON | ECHO | ECHOE | ECHOK |
 			   ECHONL | ECHOPRT | ECHOKE | ICRNL);
 	tcsetattr(p, TCSANOW, &topts);
+
+	/* Support for the Unix 98 pseudo-terminal interface /dev/ptmx /dev/pts/N */
+	if  (strcmp(argv[1], DEVICE_NAME_PTMX) == 0) {
+
+		char *name_pts = NULL;	/* slave pseudo-terminal device name */
+
+		if (grantpt(p) < 0) {
+			perror("grantpt");
+			return 1;
+		}
+
+		if (unlockpt(p) < 0) {
+			perror("unlockpt");
+			return 1;
+		}
+
+		name_pts = ptsname(p);
+		if (name_pts == NULL) {
+			perror("ptsname");
+			return 1;
+		}
+		printf("open: %s: slave pseudo-terminal is %s\n", argv[1], name_pts);
+	}
 
 	/* open socket */
 	s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
