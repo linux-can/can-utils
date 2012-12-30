@@ -31,13 +31,13 @@ AC_SUBST(LT_AGE)
 # Checks for programs.
 #
 AC_PROG_CC
-#AM_MISSING_PROG(PERL, perl, $missing_dir)
+dnl AM_MISSING_PROG(PERL, perl, $missing_dir)
 # libtool, old:
 AC_LIBTOOL_WIN32_DLL
-#AC_LIBTOOL_TAGS([])
+dnl AC_LIBTOOL_TAGS([])
 AC_PROG_LIBTOOL
 # libtool, new:
-# LT_INIT(win32-dll)
+dnl LT_INIT(win32-dll)
 
 AM_INIT_AUTOMAKE([foreign no-exeext dist-bzip2])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes]]))
