@@ -98,7 +98,10 @@ void printfilter(const void *data)
 {
 	struct can_filter *filter = (struct can_filter *)data;
 
-	printf("-f %03X:%X ", filter->can_id, filter->can_mask);
+	if (filter->can_id & CAN_INV_FILTER)
+		printf("-f %03X~%X ", (filter->can_id & ~CAN_INV_FILTER), filter->can_mask);
+	else
+		printf("-f %03X:%X ", filter->can_id, filter->can_mask);
 }
 
 void printmod(const char *type, const void *data)
