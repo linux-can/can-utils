@@ -192,6 +192,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "           -d <dst_dev>  (destination netdevice)\n");
 	fprintf(stderr, "Options:   -t (preserve src_dev rx timestamp)\n");
 	fprintf(stderr, "           -e (echo sent frames - recommended on vcanx)\n");
+	fprintf(stderr, "           -i (allow to route to incoming interface)\n");
 	fprintf(stderr, "           -f <filter> (set CAN filter)\n");
 	fprintf(stderr, "           -m <mod> (set frame modifications)\n");
 	fprintf(stderr, "           -x <from_idx>:<to_idx>:<result_idx>:<init_xor_val> (XOR checksum)\n");
@@ -353,7 +354,7 @@ int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
 	struct nlmsghdr *nlh;
 	unsigned int src_ifindex = 0;
 	unsigned int dst_ifindex = 0;
-	__u32 handled, dropped;
+	__u32 handled, dropped, deleted;
 	int rtlen;
 
 
@@ -394,6 +395,7 @@ int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
 
 		handled = 0;
 		dropped = 0;
+		deleted = 0;
 		src_ifindex = 0;
 		dst_ifindex = 0;
 
@@ -432,6 +434,10 @@ int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
 				dropped = *(__u32 *)RTA_DATA(rta);
 				break;
 
+			case CGW_DELETED:
+				deleted = *(__u32 *)RTA_DATA(rta);
+				break;
+
 			default:
 				printf("Unknown attribute %d!", rta->rta_type);
 				return -EINVAL;
@@ -448,6 +454,9 @@ int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
 
 		if (rtc->flags & CGW_FLAGS_CAN_SRC_TSTAMP)
 			printf("-t ");
+
+		if (rtc->flags & CGW_FLAGS_CAN_IIF_TX_OK)
+			printf("-i ");
 
 		/* second parse for mod attributes */
 		rta = (struct rtattr *) RTCAN_RTA(rtc);
@@ -489,6 +498,7 @@ int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
 			case CGW_DST_IF:
 			case CGW_HANDLED:
 			case CGW_DROPPED:
+			case CGW_DELETED:
 				break;
 
 			default:
@@ -498,7 +508,9 @@ int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
 			}
 		}
 
-		printf("# %d handled %d dropped\n", handled, dropped); /* end of entry */
+		/* end of entry */
+		printf("# %d handled %d dropped %d deleted\n",
+		       handled, dropped, deleted);
 
 		/* jump to next NLMSG in the given buffer */
 		nlh = NLMSG_NEXT(nlh, len);
@@ -548,7 +560,7 @@ int main(int argc, char **argv)
 	memset(&cs_xor, 0, sizeof(cs_xor));
 	memset(&cs_crc8, 0, sizeof(cs_crc8));
 
-	while ((opt = getopt(argc, argv, "ADFLs:d:tef:c:p:x:m:?")) != -1) {
+	while ((opt = getopt(argc, argv, "ADFLs:d:teif:c:p:x:m:?")) != -1) {
 		switch (opt) {
 
 		case 'A':
@@ -585,6 +597,10 @@ int main(int argc, char **argv)
 
 		case 'e':
 			flags |= CGW_FLAGS_CAN_ECHO;
+			break;
+
+		case 'i':
+			flags |= CGW_FLAGS_CAN_IIF_TX_OK;
 			break;
 
 		case 'f':
