@@ -181,7 +181,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := isotpdump.c
 LOCAL_MODULE := isotpdump
 LOCAL_MODULE_TAGS := optional
-LOCAL_C_INCLUDES := $(KERNEL_HEADERS) external/can-utils/include/
+LOCAL_C_INCLUDES := $(KERNEL_HEADERS) $(LOCAL_PATH)/include/
 LOCAL_CFLAGS := -O2 -g -W -Wall
 
 include $(BUILD_EXECUTABLE)
@@ -195,7 +195,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := isotprecv.c
 LOCAL_MODULE := isotprecv
 LOCAL_MODULE_TAGS := optional
-LOCAL_C_INCLUDES := $(KERNEL_HEADERS) external/can-utils/include/
+LOCAL_C_INCLUDES := $(KERNEL_HEADERS) $(LOCAL_PATH)/include/
 LOCAL_CFLAGS := -O2 -g -W -Wall
 
 include $(BUILD_EXECUTABLE)
@@ -209,7 +209,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := isotpsend.c
 LOCAL_MODULE := isotpsend
 LOCAL_MODULE_TAGS := optional
-LOCAL_C_INCLUDES := $(KERNEL_HEADERS) external/can-utils/include/
+LOCAL_C_INCLUDES := $(KERNEL_HEADERS) $(LOCAL_PATH)/include/
 LOCAL_CFLAGS := -O2 -g -W -Wall
 
 include $(BUILD_EXECUTABLE)
@@ -223,7 +223,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := isotpserver.c
 LOCAL_MODULE := isotpserver
 LOCAL_MODULE_TAGS := optional
-LOCAL_C_INCLUDES := $(KERNEL_HEADERS) external/can-utils/include/
+LOCAL_C_INCLUDES := $(KERNEL_HEADERS) $(LOCAL_PATH)/include/
 LOCAL_CFLAGS := -O2 -g -W -Wall
 
 include $(BUILD_EXECUTABLE)
@@ -237,7 +237,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := isotpsniffer.c
 LOCAL_MODULE := isotpsniffer.c
 LOCAL_MODULE_TAGS := optional
-LOCAL_C_INCLUDES := $(KERNEL_HEADERS) external/can-utils/include/
+LOCAL_C_INCLUDES := $(KERNEL_HEADERS) $(LOCAL_PATH)/include/
 LOCAL_CFLAGS := -O2 -g -W -Wall
 
 include $(BUILD_EXECUTABLE)
@@ -251,7 +251,7 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := isotptun.c
 LOCAL_MODULE := isotptun
 LOCAL_MODULE_TAGS := optional
-LOCAL_C_INCLUDES := $(KERNEL_HEADERS) external/can-utils/include/
+LOCAL_C_INCLUDES := $(KERNEL_HEADERS) $(LOCAL_PATH)/include/
 LOCAL_CFLAGS := -O2 -g -W -Wall
 
 include $(BUILD_EXECUTABLE)
