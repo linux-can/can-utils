@@ -95,7 +95,7 @@ static void child_handler (int signum)
 	}
 }
 
-static void daemonize (const char *lockfile, char *tty, char *name)
+static void daemonize (const char *lockfile, char *tty)
 {
 	pid_t pid, sid, parent;
 	int lfp = -1;
@@ -182,7 +182,7 @@ static void daemonize (const char *lockfile, char *tty, char *name)
 	}
 
 	pFile = fopen (pidfile,"w");
-	if (pFile < 0)
+	if (pFile == NULL)
 	{
 		syslog (LOG_ERR, "unable to create pid file %s, code=%d (%s)",
 			pidfile, errno, strerror (errno));
@@ -243,7 +243,7 @@ int main (int argc, char *argv[])
 	syslog (LOG_INFO, "starting on TTY device %s", ttypath);
 
 	/* Daemonize */
-	daemonize ("/var/lock/" DAEMON_NAME, tty, name);
+	daemonize ("/var/lock/" DAEMON_NAME, tty);
 
 	/* Now we are a daemon -- do the work for which we were paid */
 	int fd;
