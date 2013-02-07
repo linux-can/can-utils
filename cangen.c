@@ -269,7 +269,7 @@ int main(int argc, char **argv)
 	}
 
 	ts.tv_sec = gap / 1000;
-	ts.tv_nsec = ((int)(gap * 1000000)) % 1000000000;
+	ts.tv_nsec = (long)(((long long)(gap * 1000000)) % 1000000000ll);
 
 	/* recognize obviously missing commandline option */
 	if (id_mode == MODE_FIX && frame.can_id > 0x7FF && !extended) {
