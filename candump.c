@@ -49,6 +49,7 @@
 #include <ctype.h>
 #include <libgen.h>
 #include <time.h>
+#include <errno.h>
 
 #include <sys/time.h>
 #include <sys/types.h>
@@ -121,6 +122,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -d          (monitor dropped CAN frames)\n");
 	fprintf(stderr, "         -e          (dump CAN error frames in human-readable format)\n");
 	fprintf(stderr, "         -x          (print extra message infos, rx/tx brs esi)\n");
+	fprintf(stderr, "         -T <msecs>  (terminate after <msecs> without any reception)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with optional filter sets can be specified\n", MAXSOCK);
 	fprintf(stderr, "on the commandline in the form: <ifname>[,filter]*\n");
@@ -227,6 +229,7 @@ int main(int argc, char **argv)
 	int nbytes, i, maxdlen;
 	struct ifreq ifr;
 	struct timeval tv, last_tv;
+	struct timeval timeout, timeout_config = { 0, 0 }, *timeout_current = NULL;
 	FILE *logfile = NULL;
 
 	signal(SIGTERM, sigterm);
@@ -236,7 +239,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:u:ldxLn:r:he?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:u:ldxLn:r:heT:?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -351,6 +354,17 @@ int main(int argc, char **argv)
 			}
 			break;
 
+		case 'T':
+			errno = 0;
+			timeout_config.tv_usec = strtol(optarg, NULL, 0);
+			if (errno != 0) {
+				print_usage(basename(argv[0]));
+				exit(1);
+			}
+			timeout_config.tv_sec = timeout_config.tv_usec / 1000;
+			timeout_config.tv_usec = (timeout_config.tv_usec % 1000) * 1000;
+			timeout_current = &timeout;
+			break;
 		default:
 			print_usage(basename(argv[0]));
 			exit(1);
@@ -594,7 +608,10 @@ int main(int argc, char **argv)
 		for (i=0; i<currmax; i++)
 			FD_SET(s[i], &rdfs);
 
-		if ((ret = select(s[currmax-1]+1, &rdfs, NULL, NULL, NULL)) < 0) {
+		if (timeout_current)
+			*timeout_current = timeout_config;
+
+		if ((ret = select(s[currmax-1]+1, &rdfs, NULL, NULL, timeout_current)) <= 0) {
 			//perror("select");
 			running = 0;
 			continue;
