@@ -169,6 +169,11 @@ int parse_canframe(char *cs, struct canfd_frame *cf) {
 
 	if((cs[idx] == 'R') || (cs[idx] == 'r')){ /* RTR frame */
 		cf->can_id |= CAN_RTR_FLAG;
+
+		/* check for optional DLC value for CAN 2.0B frames */
+		if(cs[++idx] && (tmp = asc2nibble(cs[idx])) <= CAN_MAX_DLC)
+			cf->len = tmp;
+
 		return ret;
 	}
 
@@ -236,7 +241,13 @@ void sprint_canframe(char *buf , struct canfd_frame *cf, int sep, int maxdlen) {
 
 	/* standard CAN frames may have RTR enabled. There are no ERR frames with RTR */
 	if (maxdlen == CAN_MAX_DLEN && cf->can_id & CAN_RTR_FLAG) {
-		sprintf(buf+offset, "R");
+
+		/* print a given CAN 2.0B DLC if it's not zero */
+		if (cf->len && cf->len <= CAN_MAX_DLC)
+			sprintf(buf+offset, "R%d", cf->len);
+		else
+			sprintf(buf+offset, "R");
+
 		return;
 	}
 
