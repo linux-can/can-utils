@@ -52,7 +52,7 @@ CFLAGS    = -O2 -Wall -Wno-parentheses -Iinclude \
 PROGRAMS_ISOTP = isotpdump isotprecv isotpsend isotpsniffer isotptun isotpserver
 PROGRAMS_CANGW = cangw
 PROGRAMS_SLCAN = slcan_attach slcand
-PROGRAMS_J1939 = jspy jsr
+PROGRAMS_J1939 = jacd jspy jsr
 PROGRAMS = can-calc-bit-timing candump cansniffer cansend canplayer cangen canbusload\
 	   log2long log2asc asc2log\
 	   canlogserver bcmserver\

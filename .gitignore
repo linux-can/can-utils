@@ -39,6 +39,7 @@ GNUmakefile.in
 /isotpserver
 /isotpsniffer
 /isotptun
+/jacd
 /jspy
 /jsr
 /libj1939.a

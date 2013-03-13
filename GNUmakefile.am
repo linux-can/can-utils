@@ -63,9 +63,11 @@ bin_PROGRAMS = \
 
 if CONFIG_J1939
 bin_PROGRAMS += \
+	jacd \
 	jspy \
 	jsr
 
+jacd_LDADD = libj1939.la
 jspy_LDADD = libj1939.la
 jsr_LDADD = libj1939.la
 
