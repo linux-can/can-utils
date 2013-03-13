@@ -73,7 +73,7 @@ install:
 	cp -f $(PROGRAMS) $(DESTDIR)$(PREFIX)/bin
 
 distclean:
-	rm -f $(PROGRAMS) *.o *~
+	rm -f $(PROGRAMS) $(LIBRARIES) *.o *~
 
 cansend.o:	lib.h
 cangen.o:	lib.h
