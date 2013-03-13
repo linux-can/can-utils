@@ -41,6 +41,7 @@ GNUmakefile.in
 /isotpsniffer
 /isotptun
 /jspy
+/jsr
 /log2asc
 /log2long
 /slcan_attach

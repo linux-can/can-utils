@@ -57,6 +57,7 @@ bin_PROGRAMS = \
 	isotpsniffer \
 	isotptun \
 	jspy \
+	jsr \
 	log2asc \
 	log2long \
 	slcan_attach \
@@ -64,6 +65,7 @@ bin_PROGRAMS = \
 	slcanpty
 
 jspy_LDADD = libj1939.la
+jsr_LDADD = libj1939.la
 
 EXTRA_DIST = \
 	autogen.sh
