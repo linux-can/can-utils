@@ -61,6 +61,12 @@ bin_PROGRAMS = \
 	slcand \
 	slcanpty
 
+if CONFIG_J1939
+noinst_LTLIBRARIES += libj1939.la
+
+libj1939_la_SOURCES = libj1939.c
+endif
+
 EXTRA_DIST = \
 	autogen.sh
 

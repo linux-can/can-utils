@@ -60,17 +60,25 @@ PROGRAMS = can-calc-bit-timing candump cansniffer cansend canplayer cangen canbu
 	   $(PROGRAMS_SLCAN)\
 	   slcanpty canfdtest
 
-all: $(PROGRAMS)
+LIBRARIES = libj1939.a
+
+all: $(PROGRAMS) $(LIBRARIES)
 
 clean:
-	rm -f $(PROGRAMS) *.o
+	rm -f $(PROGRAMS) *.o libj1939.a
 
 install:
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
 	cp -f $(PROGRAMS) $(DESTDIR)$(PREFIX)/bin
+	mkdir -p $(DESTDIR)$(PREFIX)/lib
+	cp -f $(LIBRARIES) $(DESTDIR)$(PREFIX)/lib
+
 
 distclean:
-	rm -f $(PROGRAMS) *.o *~
+	rm -f $(PROGRAMS) $(LIBRARIES) *.o *~
+
+libj1939.a: libj1939.o
+	ar crs $@ $<
 
 cansend.o:	lib.h
 cangen.o:	lib.h
