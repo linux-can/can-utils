@@ -62,6 +62,11 @@ bin_PROGRAMS = \
 	slcanpty
 
 if CONFIG_J1939
+bin_PROGRAMS += \
+	jspy
+
+jspy_LDADD = libj1939.la
+
 noinst_LTLIBRARIES += libj1939.la
 
 libj1939_la_SOURCES = libj1939.c
