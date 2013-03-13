@@ -18,6 +18,7 @@ noinst_HEADERS = \
 	include/linux/can/gw.h \
 	include/linux/can.h \
 	include/linux/can/isotp.h \
+	include/linux/can/j1939.h \
 	include/linux/can/netlink.h \
 	include/linux/can/raw.h \
 	include/linux/can/vxcan.h
