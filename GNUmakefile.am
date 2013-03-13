@@ -12,6 +12,7 @@ LDADD = \
 noinst_HEADERS = \
 	canframelen.h \
 	lib.h \
+	libj1939.h \
 	terminal.h \
 	include/linux/can/bcm.h \
 	include/linux/can/error.h \
@@ -25,12 +26,15 @@ noinst_HEADERS = \
 
 
 noinst_LTLIBRARIES = \
-	libcan.la
+	libcan.la \
+	libj1939.la
 
 libcan_la_SOURCES = \
 	lib.c \
 	canframelen.c
 
+libj1939_la_SOURCES = \
+	libj1939.c
 
 bin_PROGRAMS = \
 	asc2log \
