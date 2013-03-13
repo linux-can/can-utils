@@ -55,12 +55,14 @@ CPPFLAGS += -Iinclude \
 PROGRAMS_ISOTP = isotpdump isotprecv isotpsend isotpsniffer isotptun isotpserver isotpperf
 PROGRAMS_CANGW = cangw
 PROGRAMS_SLCAN = slcan_attach slcand
+PROGRAMS_J1939 = jspy
 PROGRAMS = can-calc-bit-timing candump cansniffer cansend canplayer cangen canbusload\
 	   log2long log2asc asc2log\
 	   canlogserver bcmserver\
 	   $(PROGRAMS_ISOTP)\
 	   $(PROGRAMS_CANGW)\
 	   $(PROGRAMS_SLCAN)\
+	   $(PROGRAMS_J1939)\
 	   slcanpty canfdtest
 
 all: $(PROGRAMS)
@@ -84,6 +86,7 @@ canbusload.o:	lib.h
 log2long.o:	lib.h
 log2asc.o:	lib.h
 asc2log.o:	lib.h
+jspy.o:		libj1939.h
 canframelen.o:  canframelen.h
 
 cansend:	cansend.o	lib.o
@@ -95,3 +98,5 @@ log2long:	log2long.o	lib.o
 log2asc:	log2asc.o	lib.o
 asc2log:	asc2log.o	lib.o
 canbusload:	canbusload.o	canframelen.o
+
+jspy:		jspy.o		libj1939.o
