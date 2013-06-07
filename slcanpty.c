@@ -75,8 +75,11 @@ int pty2can(int pty, int socket, struct can_filter *fi,
 	int tmp, i;
 
 	nbytes = read(pty, &buf, sizeof(buf)-1);
-	if (nbytes < 0) {
-		perror("read pty");
+	if (nbytes <= 0) {
+		/* nbytes == 0 : no error but pty decriptor has been closed */
+		if (nbytes < 0)
+			perror("read pty");
+
 		return 1;
 	}
 
