@@ -73,8 +73,9 @@ int pty2can(int pty, int socket, struct can_filter *fi,
 	int ptr;
 	struct can_frame frame;
 	int tmp, i;
+	static int rxoffset = 0; /* points to the end of an received incomplete SLCAN message */
 
-	nbytes = read(pty, &buf, sizeof(buf)-1);
+	nbytes = read(pty, &buf[rxoffset], sizeof(buf)-rxoffset-1);
 	if (nbytes <= 0) {
 		/* nbytes == 0 : no error but pty decriptor has been closed */
 		if (nbytes < 0)
@@ -82,6 +83,10 @@ int pty2can(int pty, int socket, struct can_filter *fi,
 
 		return 1;
 	}
+
+	/* reset incomplete message offset */
+	nbytes += rxoffset;
+	rxoffset = 0;
 
 rx_restart:
 	/* remove trailing '\r' characters to be robust against some apps */
@@ -93,6 +98,21 @@ rx_restart:
 
 	if (!nbytes)
 		return 0;
+
+	/* check if we can detect a complete SLCAN message including '\r' */
+	for (tmp = 0; tmp < nbytes; tmp++) {
+		if (buf[tmp] == '\r')
+			break;
+	}
+
+	/* no '\r' found in the message buffer? */
+	if (tmp == nbytes) {
+		/* save incomplete message */
+		rxoffset = nbytes;
+
+		/* leave here and read from pty again */
+		return 0;
+	}
 
 	cmd = buf[0];
 	buf[nbytes] = 0;
