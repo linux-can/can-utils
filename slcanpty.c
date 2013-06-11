@@ -64,7 +64,7 @@ static int asc2nibble(char c)
 
 /* read data from pty, send CAN frames to CAN socket and answer commands */
 int pty2can(int pty, int socket, struct can_filter *fi,
-	       int *is_open, int *tstamp)
+	    int *is_open, int *tstamp)
 {
 	int nbytes;
 	char cmd;
@@ -386,6 +386,27 @@ int can2pty(int pty, int socket, int *tstamp)
 	return 0;
 }
 
+int check_select_stdin(void)
+{
+	fd_set rdfs;
+	struct timeval timeout;
+	int ret;
+
+	FD_ZERO(&rdfs);
+	FD_SET(0, &rdfs);
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 0;
+
+	ret = select(1, &rdfs, NULL, NULL, &timeout);
+
+	if (ret < 0)
+		return 0; /* not selectable */
+
+	if (ret > 0 && getchar() == EOF)
+		return 0; /* EOF, eg. /dev/null */
+
+	return 1;
+}
 
 int main(int argc, char **argv)
 {
@@ -395,6 +416,7 @@ int main(int argc, char **argv)
 	struct sockaddr_can addr;
 	struct termios topts;
 	struct ifreq ifr;
+	int select_stdin = 0;
 	int running = 1;
 	int tstamp = 0;
 	int is_open = 0;
@@ -415,6 +437,8 @@ int main(int argc, char **argv)
 		fprintf(stderr, "\n");
 		return 1;
 	}
+
+	select_stdin = check_select_stdin();
 
 	/* open pty */
 	p = open(argv[1], O_RDWR);
@@ -489,7 +513,10 @@ int main(int argc, char **argv)
 	while (running) {
 
 		FD_ZERO(&rdfs);
-		FD_SET(0, &rdfs);
+
+		if (select_stdin)
+			FD_SET(0, &rdfs);
+
 		FD_SET(p, &rdfs);
 		FD_SET(s, &rdfs);
 
