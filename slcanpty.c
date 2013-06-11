@@ -430,7 +430,9 @@ int main(int argc, char **argv)
 
 	/* disable local echo which would cause double frames */
 	topts.c_lflag &= ~(ICANON | ECHO | ECHOE | ECHOK |
-			   ECHONL | ECHOPRT | ECHOKE | ICRNL);
+			   ECHONL | ECHOPRT | ECHOKE);
+	topts.c_iflag &= ~(ICRNL);
+	topts.c_iflag |= INLCR;
 	tcsetattr(p, TCSANOW, &topts);
 
 	/* Support for the Unix 98 pseudo-terminal interface /dev/ptmx /dev/pts/N */
