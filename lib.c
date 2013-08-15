@@ -192,7 +192,7 @@ int parse_canframe(char *cs, struct canfd_frame *cf) {
 
 	for (i=0, dlen=0; i < maxdlen; i++){
 
-		if(cs[idx] == DATA_SEPERATOR) /* skip (optional) seperator */
+		if(cs[idx] == DATA_SEPERATOR) /* skip (optional) separator */
 			idx++;
 
 		if(idx >= len) /* end of string => end of data */

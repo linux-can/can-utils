@@ -79,7 +79,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "    <can_id>##<flags>{data}    for CAN FD frames\n\n");
 		fprintf(stderr, "<can_id> can have 3 (SFF) or 8 (EFF) hex chars\n");
 		fprintf(stderr, "{data} has 0..8 (0..64 CAN FD) ASCII hex-values (optionally");
-		fprintf(stderr, " seperated by '.')\n");
+		fprintf(stderr, " separated by '.')\n");
 		fprintf(stderr, "<flags> a single ASCII Hex value (0 .. F) which defines");
 		fprintf(stderr, " canfd_frame.flags\n\n");
 		fprintf(stderr, "e.g. 5A1#11.2233.44556677.88 / 123#DEADBEEF / 5AA# / ");

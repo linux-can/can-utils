@@ -26,7 +26,7 @@
 #define ENOTSUPP	524	/* Operation is not supported */
 #endif
 
-/* usefull defines */
+/* useful defines */
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 #define do_div(a,b) a = (a) / (b)

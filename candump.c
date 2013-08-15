@@ -701,7 +701,7 @@ int main(int argc, char **argv)
 					/* log CAN frame with absolute timestamp & device */
 					fprintf(logfile, "(%010ld.%06ld) ", tv.tv_sec, tv.tv_usec);
 					fprintf(logfile, "%*s ", max_devname_len, devname[idx]);
-					/* without seperator as logfile use-case is parsing */
+					/* without separator as logfile use-case is parsing */
 					fprint_canframe(logfile, &frame, "\n", 0, maxdlen);
 				}
 

@@ -102,7 +102,7 @@ int parse_canframe(char *cs, struct canfd_frame *cf);
  * CAN FD frames
  * - string layout <can_id>##<flags>{data}
  * - <flags> a single ASCII Hex value (0 .. F) which defines canfd_frame.flags
- * - {data} has 0 to 64 hex-values that can (optionally) be seperated by '.'
+ * - {data} has 0 to 64 hex-values that can (optionally) be separated by '.'
  * - return value on successful parsing: CANFD_MTU
  *
  * Return value on detected problems: 0
@@ -146,7 +146,7 @@ void fprint_canframe(FILE *stream , struct canfd_frame *cf, char *eol, int sep, 
 void sprint_canframe(char *buf , struct canfd_frame *cf, int sep, int maxdlen);
 /*
  * Creates a CAN frame hexadecimal output in compact format.
- * The CAN data[] is seperated by '.' when sep != 0.
+ * The CAN data[] is separated by '.' when sep != 0.
  *
  * The type of the CAN frame (CAN 2.0 / CAN FD) is specified by maxdlen:
  * maxdlen = 8 -> CAN2.0 frame

@@ -97,7 +97,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "       <received_can_id> & mask == value & mask\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "When using more than one CAN interface the options\n");
-	fprintf(stderr, "m/v/i/e have comma seperated values e.g. '-m 0,7FF,0'\n");
+	fprintf(stderr, "m/v/i/e have comma separated values e.g. '-m 0,7FF,0'\n");
 	fprintf(stderr, "\nUse interface name '%s' to receive from all CAN interfaces.\n\n", ANYDEV);
 }
 
