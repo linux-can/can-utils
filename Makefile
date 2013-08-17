@@ -38,8 +38,8 @@
 #
 #  Send feedback to <linux-can@vger.kernel.org>
 
-DESTDIR =
-PREFIX = /usr/local
+DESTDIR ?=
+PREFIX ?= /usr/local
 
 MAKEFLAGS = -k
 
