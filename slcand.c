@@ -87,27 +87,28 @@ void print_usage(char *prg)
 	exit(EXIT_FAILURE);
 }
 
-static int slcand_running = 0;
-static int exit_code = 0;
+static int slcand_running;
+static int exit_code;
 static char ttypath[TTYPATH_LENGTH];
 static char pidfile[PIDFILE_LENGTH];
 
-static void child_handler (int signum)
+static void child_handler(int signum)
 {
 	switch (signum) {
+
 	case SIGUSR1:
 		/* exit parent */
 		exit(EXIT_SUCCESS);
 		break;
 	case SIGALRM:
 	case SIGCHLD:
-		syslog (LOG_NOTICE, "received signal %i on %s", signum, ttypath);
+		syslog(LOG_NOTICE, "received signal %i on %s", signum, ttypath);
 		exit_code = EXIT_FAILURE;
 		slcand_running = 0;
 		break;
 	case SIGINT:
 	case SIGTERM:
-		syslog (LOG_NOTICE, "received signal %i on %s", signum, ttypath);
+		syslog(LOG_NOTICE, "received signal %i on %s", signum, ttypath);
 		exit_code = EXIT_SUCCESS;
 		slcand_running = 0;
 		break;
@@ -117,6 +118,7 @@ static void child_handler (int signum)
 static int look_up_uart_speed(long int s)
 {
 	switch (s) {
+
 	case 9600:
 		return B9600;
 	case 19200:
@@ -170,124 +172,119 @@ static int look_up_uart_speed(long int s)
 	}
 }
 
-static pid_t daemonize (const char *lockfile, char *tty, char *name)
+static pid_t daemonize(const char *lockfile, char *tty, char *name)
 {
 	pid_t pid, sid, parent;
 	int lfp = -1;
-	FILE * pFile;
-	FILE * dummyFile;
+	FILE *pFile;
+	FILE *dummyFile;
 	char const *pidprefix = "/var/run/";
 	char const *pidsuffix = ".pid";
 
 	snprintf(pidfile, PIDFILE_LENGTH, "%s%s-%s%s", pidprefix, DAEMON_NAME, tty, pidsuffix);
 
 	/* already a daemon */
-	if (getppid () == 1)
+	if (getppid() == 1)
 		return 0;
 
 	/* Create the lock file as the current user */
-	if (lockfile && lockfile[0])
-	{
-		lfp = open (lockfile, O_RDWR | O_CREAT, 0640);
+	if (lockfile && lockfile[0]) {
+
+		lfp = open(lockfile, O_RDWR | O_CREAT, 0640);
 		if (lfp < 0)
 		{
-			syslog (LOG_ERR, "unable to create lock file %s, code=%d (%s)",
-				lockfile, errno, strerror (errno));
-			exit (EXIT_FAILURE);
+			syslog(LOG_ERR, "unable to create lock file %s, code=%d (%s)",
+			       lockfile, errno, strerror(errno));
+			exit(EXIT_FAILURE);
 		}
 	}
 
 	/* Drop user if there is one, and we were run as root */
-	if (getuid () == 0 || geteuid () == 0)
-	{
-		struct passwd *pw = getpwnam (RUN_AS_USER);
+	if (getuid() == 0 || geteuid() == 0) {
+		struct passwd *pw = getpwnam(RUN_AS_USER);
+
 		if (pw)
 		{
-			//syslog (LOG_NOTICE, "setting user to " RUN_AS_USER);
-			setuid (pw->pw_uid);
+			/* syslog(LOG_NOTICE, "setting user to " RUN_AS_USER); */
+			setuid(pw->pw_uid);
 		}
 	}
 
 	/* Trap signals that we expect to receive */
-	signal (SIGINT, child_handler);
-	signal (SIGTERM, child_handler);
-	signal (SIGCHLD, child_handler);
-	signal (SIGUSR1, child_handler);
-	signal (SIGALRM, child_handler);
+	signal(SIGINT, child_handler);
+	signal(SIGTERM, child_handler);
+	signal(SIGCHLD, child_handler);
+	signal(SIGUSR1, child_handler);
+	signal(SIGALRM, child_handler);
 
 	/* Fork off the parent process */
-	pid = fork ();
-	if (pid < 0)
-	{
-		syslog (LOG_ERR, "unable to fork daemon, code=%d (%s)",
-			errno, strerror (errno));
-		exit (EXIT_FAILURE);
+	pid = fork();
+	if (pid < 0) {
+		syslog(LOG_ERR, "unable to fork daemon, code=%d (%s)",
+		       errno, strerror(errno));
+		exit(EXIT_FAILURE);
 	}
-	/* If we got a good PID, then we can exit the parent process. */
-	if (pid > 0)
-	{
 
+	/* If we got a good PID, then we can exit the parent process. */
+	if (pid > 0) {
 		/* Wait for confirmation from the child via SIGTERM or SIGCHLD, or
 		   for five seconds to elapse (SIGALRM).  pause() should not return. */
-		alarm (5);
-		pause ();
-		exit (EXIT_FAILURE);
+		alarm(5);
+		pause();
+		exit(EXIT_FAILURE);
 	}
 
 	/* At this point we are executing as the child process */
-	parent = getppid ();
+	parent = getppid();
 
 	/* Cancel certain signals */
-	signal (SIGCHLD, SIG_DFL);	/* A child process dies */
-	signal (SIGTSTP, SIG_IGN);	/* Various TTY signals */
-	signal (SIGTTOU, SIG_IGN);
-	signal (SIGTTIN, SIG_IGN);
-	signal (SIGHUP, SIG_IGN);	/* Ignore hangup signal */
-	signal (SIGINT, child_handler);
-	signal (SIGTERM, child_handler);
+	signal(SIGCHLD, SIG_DFL);	/* A child process dies */
+	signal(SIGTSTP, SIG_IGN);	/* Various TTY signals */
+	signal(SIGTTOU, SIG_IGN);
+	signal(SIGTTIN, SIG_IGN);
+	signal(SIGHUP, SIG_IGN);	/* Ignore hangup signal */
+	signal(SIGINT, child_handler);
+	signal(SIGTERM, child_handler);
 
 	/* Change the file mode mask */
-	umask (0);
+	umask(0);
 
 	/* Create a new SID for the child process */
-	sid = setsid ();
-	if (sid < 0)
-	{
-		syslog (LOG_ERR, "unable to create a new session, code %d (%s)",
-			errno, strerror (errno));
-		exit (EXIT_FAILURE);
+	sid = setsid();
+	if (sid < 0) {
+		syslog(LOG_ERR, "unable to create a new session, code %d (%s)",
+		       errno, strerror(errno));
+		exit(EXIT_FAILURE);
 	}
 
-	pFile = fopen (pidfile,"w");
-	if (NULL == pFile)
-	{
-		syslog (LOG_ERR, "unable to create pid file %s, code=%d (%s)",
-			pidfile, errno, strerror (errno));
-		exit (EXIT_FAILURE);
+	pFile = fopen(pidfile, "w");
+	if (NULL == pFile) {
+		syslog(LOG_ERR, "unable to create pid file %s, code=%d (%s)",
+		       pidfile, errno, strerror(errno));
+		exit(EXIT_FAILURE);
 	}
-	fprintf (pFile, "%d\n", sid);
-	fclose (pFile);
+	fprintf(pFile, "%d\n", sid);
+	fclose(pFile);
 
 	/* Change the current working directory.  This prevents the current
 	   directory from being locked; hence not being able to remove it. */
-	if ((chdir ("/")) < 0)
-	{
-		syslog (LOG_ERR, "unable to change directory to %s, code %d (%s)",
-			"/", errno, strerror (errno));
-		exit (EXIT_FAILURE);
+	if (chdir("/") < 0) {
+		syslog(LOG_ERR, "unable to change directory to %s, code %d (%s)",
+		       "/", errno, strerror(errno));
+		exit(EXIT_FAILURE);
 	}
 
 	/* Redirect standard files to /dev/null */
-	dummyFile = freopen ("/dev/null", "r", stdin);
-	dummyFile = freopen ("/dev/null", "w", stdout);
-	dummyFile = freopen ("/dev/null", "w", stderr);
+	dummyFile = freopen("/dev/null", "r", stdin);
+	dummyFile = freopen("/dev/null", "w", stdout);
+	dummyFile = freopen("/dev/null", "w", stderr);
 
 	/* Tell the parent process that we are A-okay */
-	//kill (parent, SIGUSR1);
+	/* kill(parent, SIGUSR1); */
 	return parent;
 }
 
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	char *tty = NULL;
 	char const *devprefix = "/dev/";
@@ -307,6 +304,9 @@ int main (int argc, char *argv[])
 	char *btr = NULL;
 	int run_as_daemon = 1;
 	pid_t parent_pid = 0;
+	char *pch;
+	int ldisc = LDISC_N_SLCAN;
+	int fd;
 
 	ttypath[0] = '\0';
 
@@ -354,53 +354,48 @@ int main (int argc, char *argv[])
 	}
 
 	/* Initialize the logging interface */
-	openlog (DAEMON_NAME, LOG_PID, LOG_LOCAL5);
+	openlog(DAEMON_NAME, LOG_PID, LOG_LOCAL5);
 
 	/* Parse serial device name and optional can interface name */
 	tty = argv[optind];
-	if(NULL == tty) {
+	if (NULL == tty)
 		print_usage(argv[0]);
-	}
+
 	name = argv[optind + 1];
 
 	/* Prepare the tty device name string */
-	char * pch;
-	pch = strstr (tty, devprefix);
-	if (pch == tty) {
+	pch = strstr(tty, devprefix);
+	if (pch == tty)
 		print_usage(argv[0]);
-	}
 
-	snprintf (ttypath, TTYPATH_LENGTH, "%s%s", devprefix, tty);
-	syslog (LOG_INFO, "starting on TTY device %s", ttypath);
+	snprintf(ttypath, TTYPATH_LENGTH, "%s%s", devprefix, tty);
+	syslog(LOG_INFO, "starting on TTY device %s", ttypath);
 
 	/* Daemonize */
-	if(run_as_daemon) {
-		parent_pid = daemonize ("/var/lock/" DAEMON_NAME, tty, name);
-	}
+	if (run_as_daemon)
+		parent_pid = daemonize("/var/lock/" DAEMON_NAME, tty, name);
 	else {
 		/* Trap signals that we expect to receive */
-		signal (SIGINT, child_handler);
-		signal (SIGTERM, child_handler);
+		signal(SIGINT, child_handler);
+		signal(SIGTERM, child_handler);
 	}
 
 	/* */
 	slcand_running = 1;
 
 	/* Now we are a daemon -- do the work for which we were paid */
-	int fd;
-	int ldisc = LDISC_N_SLCAN;
-
-	if ((fd = open (ttypath, O_RDWR | O_NONBLOCK | O_NOCTTY )) < 0) {
-	    syslog (LOG_NOTICE, "failed to open TTY device %s\n", ttypath);
+	fd = open(ttypath, O_RDWR | O_NONBLOCK | O_NOCTTY);
+	if (fd < 0) {
+		syslog(LOG_NOTICE, "failed to open TTY device %s\n", ttypath);
 		perror(ttypath);
 		exit(EXIT_FAILURE);
 	}
 
 	/* Configure baud rate */
 	memset(&tios, 0, sizeof(struct termios));
-	if(tcgetattr(fd, &tios) < 0) {
-		syslog (LOG_NOTICE, "failed to get attributes for TTY device %s: %s\n", ttypath, strerror(errno));
-		exit (EXIT_FAILURE);
+	if (tcgetattr(fd, &tios) < 0) {
+		syslog(LOG_NOTICE, "failed to get attributes for TTY device %s: %s\n", ttypath, strerror(errno));
+		exit(EXIT_FAILURE);
 	}
 
 	/* Get old values for later restore */
@@ -412,15 +407,12 @@ int main (int argc, char *argv[])
 	cfsetospeed(&tios, look_up_uart_speed(uart_speed));
 
 	/* apply changes */
-	if(tcsetattr(fd, TCSADRAIN, &tios) < 0) {
+	if (tcsetattr(fd, TCSADRAIN, &tios) < 0)
 		syslog(LOG_NOTICE, "Cannot set attributes for device \"%s\": %s!\n", ttypath, strerror(errno));
-	}
 
 	if (speed) {
 		sprintf(buf, "C\rS%s\r", speed);
-		if(write(fd, buf, strlen(buf)) < 0) {
-			//syslog (LO, "failed to get attributes for TTY device %s: %s\n", ttypath, strerror(errno));
-		}
+		write(fd, buf, strlen(buf));
 	}
 
 	if (btr) {
@@ -439,52 +431,51 @@ int main (int argc, char *argv[])
 	}
 
 	/* set slcan like discipline on given tty */
-	if (ioctl (fd, TIOCSETD, &ldisc) < 0) {
+	if (ioctl(fd, TIOCSETD, &ldisc) < 0) {
 		perror("ioctl TIOCSETD");
 		exit(1);
 	}
 	
 	/* retrieve the name of the created CAN netdevice */
-	if (ioctl (fd, SIOCGIFNAME, buf) < 0) {
+	if (ioctl(fd, SIOCGIFNAME, buf) < 0) {
 		perror("ioctl SIOCGIFNAME");
 		exit(1);
 	}
 
-	syslog (LOG_NOTICE, "attached TTY %s to netdevice %s\n", ttypath, buf);
+	syslog(LOG_NOTICE, "attached TTY %s to netdevice %s\n", ttypath, buf);
 	
 	/* try to rename the created netdevice */
 	if (name) {
 		struct ifreq ifr;
 		int s = socket(PF_INET, SOCK_DGRAM, 0);
+
 		if (s < 0)
 			perror("socket for interface rename");
 		else {
-			strncpy (ifr.ifr_name, buf, IFNAMSIZ);
-			strncpy (ifr.ifr_newname, name, IFNAMSIZ);
+			strncpy(ifr.ifr_name, buf, IFNAMSIZ);
+			strncpy(ifr.ifr_newname, name, IFNAMSIZ);
 
 			if (ioctl(s, SIOCSIFNAME, &ifr) < 0) {
-				syslog (LOG_NOTICE, "netdevice %s rename to %s failed\n", buf, name);
+				syslog(LOG_NOTICE, "netdevice %s rename to %s failed\n", buf, name);
 				perror("ioctl SIOCSIFNAME rename");
-                exit(1);
+				exit(1);
 			} else
-				syslog (LOG_NOTICE, "netdevice %s renamed to %s\n", buf, name);
+				syslog(LOG_NOTICE, "netdevice %s renamed to %s\n", buf, name);
 
 			close(s);
 		}	
 	}
-	if(parent_pid > 0) {
+	if (parent_pid > 0)
 		kill(parent_pid, SIGUSR1);
-	}
 
 	/* The Big Loop */
-	while (slcand_running) {
+	while (slcand_running)
 		sleep(1); /* wait 1 second */
-	}
 
 	/* Reset line discipline */
-	syslog (LOG_INFO, "stopping on TTY device %s", ttypath);
+	syslog(LOG_INFO, "stopping on TTY device %s", ttypath);
 	ldisc = N_TTY;
-	if (ioctl (fd, TIOCSETD, &ldisc) < 0) {
+	if (ioctl(fd, TIOCSETD, &ldisc) < 0) {
 		perror("ioctl TIOCSETD");
 		exit(EXIT_FAILURE);
 	}
@@ -499,17 +490,15 @@ int main (int argc, char *argv[])
 	cfsetospeed(&tios, old_ospeed);
 
 	/* apply changes */
-	if(tcsetattr(fd, TCSADRAIN, &tios) < 0) {
+	if (tcsetattr(fd, TCSADRAIN, &tios) < 0)
 		syslog(LOG_NOTICE, "Cannot set attributes for device \"%s\": %s!\n", ttypath, strerror(errno));
-	}
 
 	/* Remove pidfile */
-	if(run_as_daemon) {
+	if (run_as_daemon)
 		unlink(pidfile);
-	}
 
 	/* Finish up */
-	syslog (LOG_NOTICE, "terminated on %s", ttypath);
-	closelog ();
+	syslog(LOG_NOTICE, "terminated on %s", ttypath);
+	closelog();
 	return exit_code;
 }
