@@ -177,7 +177,6 @@ static pid_t daemonize(const char *lockfile, char *tty, char *name)
 	pid_t pid, sid, parent;
 	int lfp = -1;
 	FILE *pFile;
-	FILE *dummyFile;
 	char const *pidprefix = "/var/run/";
 	char const *pidsuffix = ".pid";
 
@@ -275,9 +274,9 @@ static pid_t daemonize(const char *lockfile, char *tty, char *name)
 	}
 
 	/* Redirect standard files to /dev/null */
-	dummyFile = freopen("/dev/null", "r", stdin);
-	dummyFile = freopen("/dev/null", "w", stdout);
-	dummyFile = freopen("/dev/null", "w", stderr);
+	pFile = freopen("/dev/null", "r", stdin);
+	pFile = freopen("/dev/null", "w", stdout);
+	pFile = freopen("/dev/null", "w", stderr);
 
 	/* Tell the parent process that we are A-okay */
 	/* kill(parent, SIGUSR1); */
