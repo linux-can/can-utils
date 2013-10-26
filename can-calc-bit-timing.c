@@ -192,7 +192,7 @@ static void printf_btr_mcp251x(struct can_bittiming *bt, int hdr)
 	if (hdr) {
 		printf("CNF1 CNF2 CNF3");
 	} else {
-		cnf1 = ((bt->sjw - 1) << 6) | bt->brp;
+		cnf1 = ((bt->sjw - 1) << 6) | (bt->brp - 1);
 		cnf2 = 0x80 | ((bt->phase_seg1 - 1) << 3) | (bt->prop_seg - 1);
 		cnf3 = bt->phase_seg2 - 1;
 		printf("0x%02x 0x%02x 0x%02x", cnf1, cnf2, cnf3);
