@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>page: <?theme title?></title>
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<style>
+
+div#toc li {
+	list-style	: none;
+}
+	</style>
+</head>
+<body>
+<div id='toc'>
+<?theme toc?>
+</div>
+<?theme body?>
+</div>
+</body>
+</html>
+
