@@ -163,7 +163,11 @@ int main(int argc, char *argv[])
 			dat[j] = ((2*j) << 4) + ((2*j+1) & 0xf);
 
 		/* send data */
-		if (valid_peername)
+		/*
+		 * when using connect, do not provide additional
+		 * destination information and use send()
+		 */
+		if (valid_peername && !todo_connect)
 			ret = sendto(sock, dat, todo_send, 0,
 					(void *)&peername, sizeof(peername));
 		else
