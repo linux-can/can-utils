@@ -305,6 +305,20 @@ static struct can_bittiming_const can_calc_consts[] = {
 		.printf_btr = printf_btr_sja1000,
 	},
 	{
+		.name = "mscan",
+		.tseg1_min = 4,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
+		.sjw_max = 4,
+		.brp_min = 1,
+		.brp_max = 64,
+		.brp_inc = 1,
+
+		.ref_clk = 66666666,	/* mpc5121 */
+		.printf_btr = printf_btr_sja1000,
+	},
+	{
 		.name = "at91",
 		.tseg1_min = 4,
 		.tseg1_max = 16,
@@ -388,6 +402,34 @@ static struct can_bittiming_const can_calc_consts[] = {
 
 		.ref_clk = 66500000,
 		.printf_btr = printf_btr_flexcan,
+	},
+	{
+		.name = "flexcan",
+		.tseg1_min = 4,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
+		.sjw_max = 4,
+		.brp_min = 1,
+		.brp_max = 256,
+		.brp_inc = 1,
+
+		.ref_clk = 66666666,
+		.printf_btr = printf_btr_flexcan,
+	},
+	{
+		.name = "flexcan",
+		.tseg1_min = 4,
+		.tseg1_max = 16,
+		.tseg2_min = 2,
+		.tseg2_max = 8,
+		.sjw_max = 4,
+		.brp_min = 1,
+		.brp_max = 256,
+		.brp_inc = 1,
+
+		.ref_clk = 83368421,
+		.printf_btr = printf_btr_flexcan, /* vybrid */
 	},
 	{
 		.name = "mcp251x",
