@@ -88,6 +88,7 @@ int main(int argc, char *argv[])
 		},
 	};
 	uint8_t dat[128];
+	int valid_peername = 0;
 	int todo_send = 0, todo_recv = 0, todo_echo = 0, todo_prio = -1;
 	int todo_connect = 0, todo_names = 0;
 
@@ -125,8 +126,10 @@ int main(int argc, char *argv[])
 	}
 
 	if (argv[optind]) {
-		if (strcmp("-", argv[optind]))
+		if (strcmp("-", argv[optind])) {
 			parse_canaddr(argv[optind], &peername);
+			valid_peername = 1;
+		}
 		++optind;
 	}
 
@@ -147,6 +150,8 @@ int main(int argc, char *argv[])
 		error(1, errno, "bind()");
 
 	if (todo_connect) {
+		if (!valid_peername)
+			error(1, 0, "no peername supplied");
 		ret = connect(sock, (void *)&peername, sizeof(peername));
 		if (ret < 0)
 			error(1, errno, "connect()");
@@ -158,8 +163,16 @@ int main(int argc, char *argv[])
 			dat[j] = ((2*j) << 4) + ((2*j+1) & 0xf);
 
 		/* send data */
-		ret = sendto(sock, dat, todo_send, 0,
-				(void *)&peername, sizeof(peername));
+		if (valid_peername)
+			ret = sendto(sock, dat, todo_send, 0,
+					(void *)&peername, sizeof(peername));
+		else
+			/*
+			 * we may do sendto(sock, dat, todo_send, 0, NULL, 0)
+			 * as well, but using send() demonstrates the API better
+			 */
+			ret = send(sock, dat, todo_send, 0);
+
 		if (ret < 0)
 			error(1, errno, "sendto");
 	}
