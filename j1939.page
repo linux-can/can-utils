@@ -152,9 +152,7 @@ Most of the subsequent examples will use 2 sockets programs (in 2 terminals).
 One will use CAN_J1939 sockets using *testj1939*,
 and the other will use CAN_RAW sockets using cansend+candump.
 
-Where I think it's relevant, I added the core API calls that *testj1939* used
-because *testj1939* may look too generic to appreciate the degree of control
-that the API exposes.
+testj1939 can be told to print the used API calls by adding **-v** program argument.
 
 ### receive without source address
 
@@ -180,14 +178,6 @@ now emit this CAN message:
 In J1939, this means that ECU 0x40 sends directly to ECU 0x41
 Since we did not bind to address 0x41, this traffic
 is not meant for us and *testj1939* does not receive it.
-
-*testj1939* used these calls:
-
-	sock = ret = socket(PF_CAN, SOCK_DGRAM, CAN_J1939);
-	ret = bind(sock, (void *)&sockname, sizeof(sockname));
-	while (1)
-		ret = recvfrom(sock, dat, sizeof(dat), 0,
-				(void *)&peername, &peernamelen);
 
 ### Use source address
 
@@ -242,12 +232,6 @@ This produces **1BFFFF80#0123456789ABCDEF** on CAN.
 will produce exactly the same because **0x80** is the only
 address currently assigned to **can0:** and is used by default.
 
-*testj1939* used these calls:
-
-	sock = ret = socket(PF_CAN, SOCK_DGRAM, CAN_J1939);
-	ret = bind(sock, (void *)&sockname, sizeof(sockname));
-			ret = send(sock, dat, todo_send, 0);
-
 ### Multiple source addresses on 1 CAN device
 
 	ip addr add j1939 0x90 dev can0
@@ -297,13 +281,6 @@ Specifing one during bind is therefore sufficient.
 
 emits the very same.
 
-*testj1939* used these calls:
-
-	sock = ret = socket(PF_CAN, SOCK_DGRAM, CAN_J1939);
-	ret = bind(sock, (void *)&sockname, sizeof(sockname));
-			ret = sendto(sock, dat, todo_send, 0,
-					(void *)&peername, sizeof(peername));
-
 ### Emit different PGNs using the same socket
 
 The PGN is provided in both __bind( *sockname* )__ and
@@ -324,13 +301,6 @@ emits **1B214080#0123456789ABCDEF** .
 
 It makes sometimes sense to omit the PGN in __bind( *sockname* )__ .
 
-*testj1939* used these calls, even for the broadcasted transmission:
-
-	sock = ret = socket(PF_CAN, SOCK_DGRAM, CAN_J1939);
-	ret = bind(sock, (void *)&sockname, sizeof(sockname));
-			ret = sendto(sock, dat, todo_send, 0,
-					(void *)&peername, sizeof(peername));
-
 ### Larger packets
 
 J1939 transparently switches to *Transport Protocol* when packets
@@ -344,13 +314,6 @@ emits:
 	18EBFF80#010123456789ABCD
 	18EBFF80#02EF0123456789AB
 	18EBFF80#03CDEF01234567
-
-*testj1939* used these same calls:
-
-	sock = ret = socket(PF_CAN, SOCK_DGRAM, CAN_J1939);
-	ret = bind(sock, (void *)&sockname, sizeof(sockname));
-			ret = sendto(sock, dat, todo_send, 0,
-					(void *)&peername, sizeof(peername));
 
 The fragments for broadcasted *Transport Protocol* are seperated
 __50ms__ from each other.  
@@ -382,14 +345,6 @@ emits
 	
 	1801FF80#0123456789ABCDEF	
 	0C02FF80#0123456789ABCDEF
-
-*testj1939* used these calls for modified priority:
-
-	sock = ret = socket(PF_CAN, SOCK_DGRAM, CAN_J1939);
-		ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_SEND_PRIO,
-				&todo_prio, sizeof(todo_prio));
-	ret = bind(sock, (void *)&sockname, sizeof(sockname));
-			ret = send(sock, dat, todo_send, 0);
 
 ### using connect
 
