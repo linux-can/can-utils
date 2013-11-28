@@ -120,28 +120,37 @@ This API is dropped for kernels with netlink support!
 
 	ip addr add j1939 name 0x012345678abcdef dev can0
 
-# First steps with j1939
+# Kickstart guide to j1939 on linux
+
+## Prepare using VCAN
+
+You may skip this step entirely if you have a functional
+**can0** bus on your system.
+
+Load module, when *vcan* is not in-kernel
+
+	modprobe vcan
+
+Create a virtual can0 device and start the device
+
+	ip link add can0 type vcan
+	ip link set can0 up
+
+## First steps with j1939
 
 Use [testj1939](testj1939.c)
 
-Load modules, when vcan & can-j1939 are not in-kernel
-
-	modprobe vcan
-	modprobe can-j1939
-
-### create virtual CAN bus
-
-Make sure *can0* is available, or replace *can0* with *vcan0*
-
-	ip link add can0 type vcan
-
-### enable CAN
-
-	ip link set can0 up
-
-### enable j1939
+When *can-j1939* is compiled as module, load it.
 
 	modprobe can-j1939
+
+Enable the j1939 protocol stack on the CAN device
+
+	ip link set can0 j1939 on
+
+Most of the subsequent examples will use 2 sockets programs (in 2 terminals).
+One will use CAN_J1939 sockets using *testj1939*,
+and the other will use CAN_RAW sockets using cansend+candump.
 
 ### receive without source address
 
@@ -166,7 +175,7 @@ now emit this CAN message:
 
 In J1939, this means that ECU 0x40 sends directly to ECU 0x41
 Since we did not bind to address 0x41, this traffic
-is not meant for us.
+is not meant for us and *testj1939* does not receive it.
 
 ### Use source address
 
@@ -215,6 +224,11 @@ And to these test in another terminal
 	./testj1939 -s can0:0x80
 
 This produces **1BFFFF80#0123456789ABCDEF** on CAN.
+
+	./testj1939 -s can0:
+
+will produce exactly the same because **0x80** is the only
+address currently assigned to **can0:** and is used by default.
 
 ### Multiple source addresses on 1 CAN device
 
@@ -271,9 +285,18 @@ The PGN is provided in both __bind( *sockname* )__ and
 __sendto( *peername* )__ , and only one is used.
 *peername* PGN has highest precedence.
 
+For broadcasted transmissions
+
+	./testj1939 -s can0:,0x12300 :,0x32100
+
+emits **1B21FF80#0123456789ABCDEF** rather than 1923FF80#012345678ABCDEF
+
+Desitination specific transmissions
+
 	./testj1939 -s can0:,0x12300 :0x40,0x32100
 
 emits **1B214080#0123456789ABCDEF** .
+
 It makes sometimes sense to omit the PGN in __bind( *sockname* )__ .
 
 ### Larger packets
@@ -309,7 +332,7 @@ emits:
 The flow control causes a bit overhead.
 This overhead scales very good for larger J1939 packets.
 
-# Advanced topics with j1939
+## Advanced topics with j1939
 
 ### Change priority of J1939 packets
 
@@ -322,6 +345,8 @@ emits
 	0C02FF80#0123456789ABCDEF
 
 ### using connect
+
+### advanced filtering
 
 ## dynamic addressing
 
