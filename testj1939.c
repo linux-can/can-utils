@@ -31,6 +31,7 @@ static const char help_msg[] =
 	"Usage: testj1939 FROM TO\n"
 	" FROM / TO	- or [IFACE][:[SA][,[PGN][,NAME]]]\n"
 	"Options:\n"
+	" -v		Print relevant API calls\n"
 	" -s[=LEN]	Initial send of LEN bytes dummy data\n"
 	" -r		Receive (and print) data\n"
 	" -e		Echo incoming packets back\n"
@@ -67,10 +68,32 @@ static void parse_canaddr(char *spec, struct sockaddr_can *paddr)
 		paddr->can_addr.j1939.name = strtoul(str, NULL, 0);
 }
 
+static const char *canaddr2str(const struct sockaddr_can *paddr)
+{
+	static char buf[128];
+	char *str = buf;
+	char ifname[IF_NAMESIZE];
+
+	if (paddr->can_ifindex)
+		str += sprintf(str, "%s", if_indextoname(paddr->can_ifindex, ifname));
+	*str++ = ':';
+
+	if (paddr->can_addr.j1939.addr != J1939_NO_ADDR)
+		str += sprintf(str, "%02x", paddr->can_addr.j1939.addr);
+	*str++ = ',';
+	if (paddr->can_addr.j1939.pgn != J1939_NO_PGN)
+		str += sprintf(str, "%05x", paddr->can_addr.j1939.pgn);
+	*str++ = ',';
+	if (paddr->can_addr.j1939.name != J1939_NO_NAME)
+		str += sprintf(str, "%016llx", paddr->can_addr.j1939.name);
+	*str++ = 0;
+	return buf;
+}
+
 /* main */
 int main(int argc, char *argv[])
 {
-	int ret, sock, opt, j;
+	int ret, sock, opt, j, verbose;
 	socklen_t peernamelen;
 	struct sockaddr_can sockname = {
 		.can_family = AF_CAN,
@@ -95,6 +118,9 @@ int main(int argc, char *argv[])
 	/* argument parsing */
 	while ((opt = getopt(argc, argv, optstring)) != -1)
 	switch (opt) {
+	case 'v':
+		verbose = 1;
+		break;
 	case 's':
 		todo_send = strtoul(optarg ?: "8", NULL, 0);
 		break;
@@ -134,17 +160,23 @@ int main(int argc, char *argv[])
 	}
 
 	/* open socket */
+	if (verbose)
+		fprintf(stderr, "- socket(PF_CAN, SOCK_DGRAM, CAN_J1939);\n");
 	sock = ret = socket(PF_CAN, SOCK_DGRAM, CAN_J1939);
 	if (ret < 0)
 		error(1, errno, "socket(j1939)");
 
 	if (todo_prio >= 0) {
+		if (verbose)
+			fprintf(stderr, "- setsockopt(, SOL_CAN_J1939, SO_J1939_SEND_PRIO, &%i);\n", todo_prio);
 		ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_SEND_PRIO,
 				&todo_prio, sizeof(todo_prio));
 		if (ret < 0)
 			error(1, errno, "set priority %i", todo_prio);
 	}
 
+	if (verbose)
+		fprintf(stderr, "- bind(, %s, %li);\n", canaddr2str(&sockname), sizeof(sockname));
 	ret = bind(sock, (void *)&sockname, sizeof(sockname));
 	if (ret < 0)
 		error(1, errno, "bind()");
@@ -152,6 +184,8 @@ int main(int argc, char *argv[])
 	if (todo_connect) {
 		if (!valid_peername)
 			error(1, 0, "no peername supplied");
+		if (verbose)
+			fprintf(stderr, "- connect(, %s, %li);\n", canaddr2str(&peername), sizeof(peername));
 		ret = connect(sock, (void *)&peername, sizeof(peername));
 		if (ret < 0)
 			error(1, errno, "connect()");
@@ -167,36 +201,50 @@ int main(int argc, char *argv[])
 		 * when using connect, do not provide additional
 		 * destination information and use send()
 		 */
-		if (valid_peername && !todo_connect)
+		if (valid_peername && !todo_connect) {
+			if (verbose)
+				fprintf(stderr, "- sendto(, <dat>, %i, 0, %s, %li);\n", todo_send, canaddr2str(&peername), sizeof(peername));
 			ret = sendto(sock, dat, todo_send, 0,
 					(void *)&peername, sizeof(peername));
-		else
+		} else {
 			/*
 			 * we may do sendto(sock, dat, todo_send, 0, NULL, 0)
 			 * as well, but using send() demonstrates the API better
 			 */
+			if (verbose)
+				fprintf(stderr, "- send(, <dat>, %i, 0);\n", todo_send);
 			ret = send(sock, dat, todo_send, 0);
+		}
 
 		if (ret < 0)
 			error(1, errno, "sendto");
 	}
 
 	/* main loop */
+	if ((todo_echo || todo_recv) && verbose)
+		fprintf(stderr, "- while (1)\n");
 	while (todo_echo || todo_recv) {
 		/*
 		 * re-use peername for storing the sender's peername of
 		 * received packets
 		 */
+		if (verbose)
+			fprintf(stderr, "- recvfrom(, <dat>, %li, 0, &<peername>, %li);\n", sizeof(peername), sizeof(peername));
 		peernamelen = sizeof(peername);
 		ret = recvfrom(sock, dat, sizeof(dat), 0,
 				(void *)&peername, &peernamelen);
 		if (ret < 0) {
-			if (EINTR == errno)
+			if (EINTR == errno) {
+				if (verbose)
+					fprintf(stderr, "-\t<interrupted>\n");
 				continue;
+			}
 			error(1, errno, "recvfrom()");
 		}
 
 		if (todo_echo) {
+			if (verbose)
+				fprintf(stderr, "- sendto(, <dat>, %i, 0, %s, %i);\n", ret, canaddr2str(&peername), peernamelen);
 			ret = sendto(sock, dat, ret, 0,
 					(void *)&peername, peernamelen);
 			if (ret < 0)
