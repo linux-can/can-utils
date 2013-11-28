@@ -132,8 +132,10 @@ int get_date(struct timeval *tv, char *date) {
 	if (sscanf(date, "%9s %d %9s %9s %d", ctmp, &itmp, ctmp, ctmp, &itmp) == 5) {
 		/* assume EN/US date due to existing am/pm field */
 
-		if (!setlocale(LC_TIME, "en_US"))
+		if (!setlocale(LC_TIME, "en_US")) {
+			fprintf(stderr, "Setting locale to 'en_US' failed!\n");
 			return 1;
+		}
 
 		if (!strptime(date, "%B %d %r %Y", &tms))
 			return 1;
@@ -144,8 +146,10 @@ int get_date(struct timeval *tv, char *date) {
 		if (sscanf(date, "%9s %d %9s %d", ctmp, &itmp, ctmp, &itmp) != 4)
 			return 1;
 
-		if (!setlocale(LC_TIME, "de_DE"))
+		if (!setlocale(LC_TIME, "de_DE")) {
+			fprintf(stderr, "Setting locale to 'de_DE' failed!\n");
 			return 1;
+		}
 
 		if (!strptime(date, "%B %d %T %Y", &tms))
 			return 1;
