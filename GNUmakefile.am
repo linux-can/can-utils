@@ -16,14 +16,7 @@ noinst_HEADERS = \
 	include/linux/can.h \
 	include/linux/can/isotp.h \
 	include/linux/can/netlink.h \
-	include/linux/can/raw.h \
-	include/socketcan/can/bcm.h \
-	include/socketcan/can/error.h \
-	include/socketcan/can/gw.h \
-	include/socketcan/can.h \
-	include/socketcan/can/isotp.h \
-	include/socketcan/can/netlink.h \
-	include/socketcan/can/raw.h
+	include/linux/can/raw.h
 
 
 noinst_LTLIBRARIES = \
