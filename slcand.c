@@ -69,6 +69,11 @@
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
 
+/* UART flow control types */
+#define FLOW_NONE 0
+#define FLOW_HW 1
+#define FLOW_SW 2
+
 void print_usage(char *prg)
 {
 	fprintf(stderr, "\nUsage: %s [options] <tty> [canif-name]\n\n", prg);
@@ -77,6 +82,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -f         (read status flags with 'F\\r' to reset error states)\n");
 	fprintf(stderr, "         -s <speed> (set CAN speed 0..8)\n");
 	fprintf(stderr, "         -S <speed> (set UART speed in baud)\n");
+	fprintf(stderr, "         -t <type>  (set UART flow control type 'hw' or 'sw')\n");
 	fprintf(stderr, "         -b <btr>   (set bit time register value)\n");
 	fprintf(stderr, "         -F         (stay in foreground; no daemonize)\n");
 	fprintf(stderr, "         -h         (show this help page)\n");
@@ -300,6 +306,7 @@ int main(int argc, char *argv[])
 	char *speed = NULL;
 	char *uart_speed_str = NULL;
 	long int uart_speed = 0;
+	int flow_type = FLOW_NONE;
 	char *btr = NULL;
 	int run_as_daemon = 1;
 	pid_t parent_pid = 0;
@@ -309,7 +316,7 @@ int main(int argc, char *argv[])
 
 	ttypath[0] = '\0';
 
-	while ((opt = getopt(argc, argv, "ocfs:S:b:?hF")) != -1) {
+	while ((opt = getopt(argc, argv, "ocfs:S:t:b:?hF")) != -1) {
 		switch (opt) {
 		case 'o':
 			send_open = 1;
@@ -333,6 +340,16 @@ int main(int argc, char *argv[])
 				print_usage(argv[0]);
 			if (look_up_uart_speed(uart_speed) == -1) {
 				fprintf(stderr, "Unsupported UART speed (%lu)\n", uart_speed);
+				exit(EXIT_FAILURE);
+			}
+			break;
+		case 't':
+			if (!strcmp(optarg, "hw")) {
+				flow_type = FLOW_HW;
+			} else if (!strcmp(optarg, "sw")) {
+				flow_type = FLOW_SW;
+			} else {
+				fprintf(stderr, "Unsupported flow type (%s)\n", optarg);
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -401,9 +418,20 @@ int main(int argc, char *argv[])
 	old_ispeed = cfgetispeed(&tios);
 	old_ospeed = cfgetospeed(&tios);
 
+	/* Reset UART settings */
+	cfmakeraw(&tios);
+	tios.c_iflag &= ~IXOFF;
+	tios.c_cflag &= ~CRTSCTS;
+
 	/* Baud Rate */
 	cfsetispeed(&tios, look_up_uart_speed(uart_speed));
 	cfsetospeed(&tios, look_up_uart_speed(uart_speed));
+
+	/* Flow control */
+	if (flow_type == FLOW_HW)
+		tios.c_cflag |= CRTSCTS;
+	else if (flow_type == FLOW_SW)
+		tios.c_iflag |= (IXON | IXOFF);
 
 	/* apply changes */
 	if (tcsetattr(fd, TCSADRAIN, &tios) < 0)
