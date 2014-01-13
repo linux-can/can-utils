@@ -21,7 +21,6 @@ noinst_HEADERS = \
 	include/socketcan/can/error.h \
 	include/socketcan/can/gw.h \
 	include/socketcan/can.h \
-	include/socketcan/can/ioctl.h \
 	include/socketcan/can/isotp.h \
 	include/socketcan/can/netlink.h \
 	include/socketcan/can/raw.h
