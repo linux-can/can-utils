@@ -11,8 +11,6 @@ noinst_HEADERS = \
 	lib.h \
 	terminal.h \
 	include/linux/can/bcm.h \
-	include/linux/can/core.h \
-	include/linux/can/dev.h \
 	include/linux/can/error.h \
 	include/linux/can/gw.h \
 	include/linux/can.h \
