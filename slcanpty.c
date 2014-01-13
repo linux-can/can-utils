@@ -68,7 +68,7 @@ int pty2can(int pty, int socket, struct can_filter *fi,
 {
 	int nbytes;
 	char cmd;
-	char buf[200];
+	static char buf[200];
 	char replybuf[10]; /* for answers to received commands */
 	int ptr;
 	struct can_frame frame;
