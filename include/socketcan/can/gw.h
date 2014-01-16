@@ -13,7 +13,7 @@
 #define CAN_GW_H
 
 #include <linux/types.h>
-#include <socketcan/can.h>
+#include <linux/can.h>
 
 struct rtcanmsg {
 	__u8  can_family;

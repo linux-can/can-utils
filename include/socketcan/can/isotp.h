@@ -46,7 +46,7 @@
 #ifndef CAN_ISOTP_H
 #define CAN_ISOTP_H
 
-#include <socketcan/can.h>
+#include <linux/can.h>
 
 #define SOL_CAN_ISOTP (SOL_CAN_BASE + CAN_ISOTP)
 
