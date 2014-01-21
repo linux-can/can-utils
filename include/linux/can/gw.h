@@ -128,7 +128,7 @@ enum {
  * Limit the number of hops of this specific rule. Usually the received CAN
  * frame can be processed as much as 'max_hops' times (which is given at module
  * load time of the can-gw module). This value is used to reduce the number of
- * possible hops for this gateway job to a value smaller then max_hops.
+ * possible hops for this gateway rule to a value smaller then max_hops.
  *
  * CGW_CS_XOR (length 4 bytes):
  * Set a simple XOR checksum starting with an initial value into
