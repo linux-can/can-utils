@@ -1,5 +1,5 @@
 /*
- * socketcan/can/error.h
+ * linux/can/error.h
  *
  * Definitions of the CAN error messages to be filtered and passed to the user.
  *

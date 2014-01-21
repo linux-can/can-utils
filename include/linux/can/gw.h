@@ -1,5 +1,5 @@
 /*
- * socketcan/can/gw.h
+ * linux/can/gw.h
  *
  * Definitions for CAN frame Gateway/Router/Bridge
  *

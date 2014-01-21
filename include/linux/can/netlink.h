@@ -1,5 +1,5 @@
 /*
- * socketcan/can/netlink.h
+ * linux/can/netlink.h
  *
  * Definitions for the CAN netlink interface
  *

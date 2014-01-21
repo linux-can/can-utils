@@ -1,5 +1,5 @@
 /*
- * socketcan/can.h
+ * linux/can.h
  *
  * Definitions for CAN network layer (socket addr / CAN frame / CAN filter)
  *
@@ -45,7 +45,7 @@ typedef __u32 canid_t;
 /*
  * Controller Area Network Error Message Frame Mask structure
  *
- * bit 0-28	: error class mask (see include/socketcan/can/error.h)
+ * bit 0-28	: error class mask (see include/linux/can/error.h)
  * bit 29-31	: set to zero
  */
 typedef __u32 can_err_mask_t;

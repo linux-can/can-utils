@@ -1,5 +1,5 @@
 /*
- * socketcan/can/raw.h
+ * linux/can/raw.h
  *
  * Definitions for raw CAN sockets
  *

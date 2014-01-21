@@ -1,5 +1,5 @@
 /*
- * socketcan/can/bcm.h
+ * linux/can/bcm.h
  *
  * Definitions for CAN Broadcast Manager (BCM)
  *
