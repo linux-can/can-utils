@@ -122,8 +122,13 @@ struct canfd_frame {
 
 #define SOL_CAN_BASE 100
 
-// typedef unsigned short __kernel_sa_family_t;
-// introduced in Linux 3.2 commit 6602a4baf4d1a73cc4685a39ef859e1c5ddf654c
+/*
+ * This typedef was introduced in Linux v3.1-rc2
+ * (commit 6602a4b net: Make userland include of netlink.h more sane)
+ * in <linux/socket.h>. It must be duplicated here to make the CAN
+ * headers self-contained.
+ */
+typedef unsigned short __kernel_sa_family_t;
 
 /**
  * struct sockaddr_can - the sockaddr structure for CAN sockets
@@ -132,8 +137,7 @@ struct canfd_frame {
  * @can_addr:    protocol specific address information
  */
 struct sockaddr_can {
-	sa_family_t can_family;
-//	__kernel_sa_family_t can_family;
+	__kernel_sa_family_t can_family;
 	int         can_ifindex;
 	union {
 		/* transport protocol class address information (e.g. ISOTP) */
