@@ -251,10 +251,11 @@ int main(int argc, char *argv[])
 
 	/* Prepare the tty device name string */
 	pch = strstr(tty, devprefix);
-	if (pch == tty)
-		print_usage(argv[0]);
+	if (pch != tty)
+		snprintf(ttypath, TTYPATH_LENGTH, "%s%s", devprefix, tty);
+	else
+		snprintf(ttypath, TTYPATH_LENGTH, "%s", tty);
 
-	snprintf(ttypath, TTYPATH_LENGTH, "%s%s", devprefix, tty);
 	syslog(LOG_INFO, "starting on TTY device %s", ttypath);
 
 	/* Daemonize */
