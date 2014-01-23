@@ -1,5 +1,5 @@
 /*
- * socketcan/can/isotp.h
+ * linux/can/isotp.h
  *
  * Definitions for isotp CAN sockets
  *
