@@ -95,7 +95,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -c (colorize lines)\n");
 	fprintf(stderr, "         -b (show bargraph in %d%% resolution)\n", PERCENTRES);
 	fprintf(stderr, "         -r (redraw the terminal - similar to top)\n");
-	fprintf(stderr, "         -i (ignore bitstuffing estimation in bandwith calculation)\n");
+	fprintf(stderr, "         -i (ignore bitstuffing estimation in bandwidth calculation)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with mandatory bitrate can be specified on the \n", MAXSOCK);
 	fprintf(stderr, "commandline in the form: <ifname>@<bitrate>\n\n");
