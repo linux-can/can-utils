@@ -246,7 +246,7 @@ unsigned can_frame_length(struct canfd_frame *frame, enum cfl_mode mode, int mtu
 	case CFL_NO_BITSTUFFING:
 		return (eff ? 67 : 47) + frame->len * 8;
 	case CFL_WORSTCASE:
-		return ((eff ? 389 : 269) + frame->len * 48) / 5;
+		return (eff ? 80 : 55) + frame->len * 10;
 	case CFL_EXACT:
 		return cfl_exact((struct can_frame*)frame);
 	}
