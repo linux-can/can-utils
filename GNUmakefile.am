@@ -23,7 +23,8 @@ noinst_LTLIBRARIES = \
 	libcan.la
 
 libcan_la_SOURCES = \
-	lib.c
+	lib.c \
+	canframelen.c
 
 
 bin_PROGRAMS = \
@@ -77,4 +78,3 @@ MAINTAINERCLEANFILES = \
 maintainer-clean-local:
 	-chmod -R a+rw $(distdir)
 	-rm -fr $(distdir)
-

@@ -61,6 +61,7 @@
 #include <linux/can/raw.h>
 
 #include "terminal.h"
+#include "canframelen.h"
 
 #define MAXSOCK 16    /* max. number of CAN interfaces given on the cmdline */
 
@@ -84,7 +85,7 @@ static unsigned char redraw;
 static unsigned char timestamp;
 static unsigned char color;
 static unsigned char bargraph;
-static unsigned char ignore_bitstuffing;
+static enum cfl_mode mode = CFL_WORSTCASE;
 static char *prg;
 
 void print_usage(char *prg)
@@ -95,7 +96,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -c (colorize lines)\n");
 	fprintf(stderr, "         -b (show bargraph in %d%% resolution)\n", PERCENTRES);
 	fprintf(stderr, "         -r (redraw the terminal - similar to top)\n");
-	fprintf(stderr, "         -i (ignore bitstuffing estimation in bandwidth calculation)\n");
+	fprintf(stderr, "         -i (ignore bitstuffing in bandwidth calculation)\n");
+	fprintf(stderr, "         -e (exact calculation of stuffed bits)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with mandatory bitrate can be specified on the \n", MAXSOCK);
 	fprintf(stderr, "commandline in the form: <ifname>@<bitrate>\n\n");
@@ -223,7 +225,7 @@ int main(int argc, char **argv)
 
 	prg = basename(argv[0]);
 
-	while ((opt = getopt(argc, argv, "rtbcih?")) != -1) {
+	while ((opt = getopt(argc, argv, "rtbcieh?")) != -1) {
 		switch (opt) {
 		case 'r':
 			redraw = 1;
@@ -242,7 +244,11 @@ int main(int argc, char **argv)
 			break;
 
 		case 'i':
-			ignore_bitstuffing = 1;
+			mode = CFL_NO_BITSTUFFING;
+			break;
+
+		case 'e':
+			mode = CFL_EXACT;
 			break;
 
 		default:
@@ -372,32 +378,8 @@ int main(int argc, char **argv)
 
 				stat[i].recv_frames++;
 				stat[i].recv_bits_payload += frame.can_dlc*8;
-
-				/*
-				 * Following Ken Tindells *worst* case calculation for stuff-bits
-				 * (see "Guaranteeing Message Latencies on Controller Area Network" 1st ICC'94)
-				 * the needed bits on the wire can be calculated as:
-				 *
-				 * (34 + 8n)/5 + 47 + 8n for SFF frames (11 bit CAN-ID) => (269 + 48n)/5 
-				 * (54 + 8n)/5 + 67 + 8n for EFF frames (29 bit CAN-ID) => (389 + 48n)/5 
-				 *
-				 * while 'n' is the data length code (number of payload bytes)
-				 *
-				 */
-
-				if (ignore_bitstuffing) {
-					/* calculation without bitstuffing */
-					if (frame.can_id & CAN_EFF_FLAG)
-						stat[i].recv_bits_total += 67 + frame.can_dlc*8;
-					else
-						stat[i].recv_bits_total += 47 + frame.can_dlc*8;
-				} else {
-					/* needed bits including estimated worst case stuff bits */
-					if (frame.can_id & CAN_EFF_FLAG)
-						stat[i].recv_bits_total += (389 + frame.can_dlc*48)/5;
-					else
-						stat[i].recv_bits_total += (269 + frame.can_dlc*48)/5;
-				}
+				stat[i].recv_bits_total += can_frame_length((struct canfd_frame*)&frame,
+									    mode, sizeof(frame));
 			}
 		}
 	}
