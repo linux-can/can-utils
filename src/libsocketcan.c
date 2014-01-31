@@ -715,7 +715,6 @@ int can_do_stop(const char *name)
  */
 int can_do_restart(const char *name)
 {
-	int fd;
 	int err = -1;
 	int state;
 	__u32 restart_ms;
@@ -746,16 +745,8 @@ int can_do_restart(const char *name)
 		.restart = 1,
 	};
 
-	fd = open_nl_sock();
-	if (fd < 0)
-		goto err_out;
+	err = set_link(name, 0, &req_info);
 
-	err = do_set_nl_link(fd, 0, name, &req_info);
-	if (err < 0)
-		goto close_out;
-
-close_out:
-	close(fd);
 err_out:
 	return err;
 }
