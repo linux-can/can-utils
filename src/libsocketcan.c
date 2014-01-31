@@ -286,7 +286,7 @@ static int open_nl_sock()
 		return -1;
 	}
 	if (addr_len != sizeof(local)) {
-		fprintf(stderr, "Wrong address length %d\n", addr_len);
+		fprintf(stderr, "Wrong address length %u\n", addr_len);
 		return -1;
 	}
 	if (local.nl_family != AF_NETLINK) {
