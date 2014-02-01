@@ -108,7 +108,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "(interface) (received CAN frames) (used bits total) (used bits for payload)\n");
 	fprintf(stderr, "\nExample:\n");
 	fprintf(stderr, "\nuser$> canbusload can0@100000 can1@500000 can2@500000 can3@500000 -r -t -b -c\n\n");
-	fprintf(stderr, "%s 2008-05-27 15:18:49\n", prg);
+	fprintf(stderr, "%s 2014-02-01 21:13:16 (worst case bitstuffing)\n", prg);
 	fprintf(stderr, " can0@100000   805   74491  36656  74%% |XXXXXXXXXXXXXX......|\n");
 	fprintf(stderr, " can1@500000   796   75140  37728  15%% |XXX.................|\n");
 	fprintf(stderr, " can2@500000     0       0      0   0%% |....................|\n");
@@ -139,7 +139,7 @@ void printstats(int signo)
 
 		localtime_r(&currtime, &now);
 
-		printf("%s %04d-%02d-%02d %02d:%02d:%02d\n",
+		printf("%s %04d-%02d-%02d %02d:%02d:%02d ",
 		       prg,
 		       now.tm_year + 1900,
 		       now.tm_mon + 1,
@@ -147,6 +147,28 @@ void printstats(int signo)
 		       now.tm_hour,
 		       now.tm_min,
 		       now.tm_sec);
+
+		switch (mode) {
+
+		case CFL_NO_BITSTUFFING:
+			/* plain bit calculation without bitstuffing */
+			printf("(ignore bitstuffing)\n");
+			break;
+
+		case CFL_WORSTCASE:
+			/* worst case estimation - see above */
+			printf("(worst case bitstuffing)\n");
+			break;
+
+		case CFL_EXACT:
+			/* exact calculation of stuffed bits based on frame content and CRC */
+			printf("(exact bitstuffing)\n");
+			break;
+
+		default:
+			printf("(unknown bitstuffing)\n");
+			break;
+		}
 	}
 
 	for (i=0; i<currmax; i++) {
