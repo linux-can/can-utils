@@ -508,20 +508,15 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
  */
 static int get_link(const char *name, __u8 acquire, void *res)
 {
-	int fd;
-	int err = -1;
+	int err, fd;
 
 	fd = open_nl_sock();
 	if (fd < 0)
-		goto err_out;
+		return -1;
 
 	err = do_get_nl_link(fd, acquire, name, res);
-	if (err < 0)
-		goto close_out;
-
-close_out:
 	close(fd);
-err_out:
+
 	return err;
 
 }
@@ -643,20 +638,15 @@ static int do_set_nl_link(int fd, __u8 if_state, const char *name,
  */
 static int set_link(const char *name, __u8 if_state, struct req_info *req_info)
 {
-	int fd;
-	int err = 0;
+	int err, fd;
 
 	fd = open_nl_sock();
 	if (fd < 0)
-		goto err_out;
+		return -1;
 
 	err = do_set_nl_link(fd, if_state, name, req_info);
-	if (err < 0)
-		goto close_out;
-
-close_out:
 	close(fd);
-err_out:
+
 	return err;
 }
 
