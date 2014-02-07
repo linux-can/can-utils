@@ -705,7 +705,6 @@ int can_do_stop(const char *name)
  */
 int can_do_restart(const char *name)
 {
-	int err = -1;
 	int state;
 	__u32 restart_ms;
 
@@ -713,32 +712,29 @@ int can_do_restart(const char *name)
 	if ((can_get_state(name, &state)) < 0) {
 		fprintf(stderr, "cannot get bustate, "
 			"something is seriously wrong\n");
-		goto err_out;
+		return -1;
 	} else if (state != CAN_STATE_BUS_OFF) {
 		fprintf(stderr,
 			"Device is not in BUS_OFF," " no use to restart\n");
-		goto err_out;
+		return -1;
 	}
 
 	if ((can_get_restart_ms(name, &restart_ms)) < 0) {
 		fprintf(stderr, "cannot get restart_ms, "
 			"something is seriously wrong\n");
-		goto err_out;
+		return -1;
 	} else if (restart_ms > 0) {
 		fprintf(stderr,
 			"auto restart with %ums interval is turned on,"
 			" no use to restart\n", restart_ms);
-		goto err_out;
+		return -1;
 	}
 
 	struct req_info req_info = {
 		.restart = 1,
 	};
 
-	err = set_link(name, 0, &req_info);
-
-err_out:
-	return err;
+	return set_link(name, 0, &req_info);
 }
 
 /**
