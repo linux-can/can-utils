@@ -47,6 +47,7 @@ CFLAGS    = -O2 -Wall -Wno-parentheses \
 	    -fno-strict-aliasing
 
 CPPFLAGS += -Iinclude \
+	    -D_FILE_OFFSET_BITS=64 \
 	    -DSO_RXQ_OVFL=40 \
 	    -DPF_CAN=29 \
 	    -DAF_CAN=PF_CAN
