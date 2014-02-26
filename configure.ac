@@ -54,6 +54,8 @@ AC_CHECK_HEADERS([ \
 # Checks for typedefs, structures, and compiler characteristics.
 #
 AC_C_INLINE
+AC_SYS_LARGEFILE
+AC_TYPE_OFF_T
 AC_TYPE_PID_T
 AC_TYPE_UINT64_T
 
