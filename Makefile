@@ -43,8 +43,10 @@ PREFIX ?= /usr/local
 
 MAKEFLAGS = -k
 
-CFLAGS    = -O2 -Wall -Wno-parentheses -Iinclude \
-	    -fno-strict-aliasing \
+CFLAGS    = -O2 -Wall -Wno-parentheses \
+	    -fno-strict-aliasing
+
+CPPFLAGS += -Iinclude \
 	    -DSO_RXQ_OVFL=40 \
 	    -DPF_CAN=29 \
 	    -DAF_CAN=PF_CAN
