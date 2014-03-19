@@ -1,6 +1,6 @@
 # -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
-AC_PREREQ(2.59)
+AC_PREREQ([2.69])
 
 AC_INIT([libsocketcan], [trunk], [bugs@pengutronix.de])
 AC_CONFIG_HEADERS([include/libsocketcan_config.h])
@@ -31,13 +31,7 @@ AC_SUBST(LT_AGE)
 # Checks for programs.
 #
 AC_PROG_CC
-dnl AM_MISSING_PROG(PERL, perl, $missing_dir)
-# libtool, old:
-AC_LIBTOOL_WIN32_DLL
-dnl AC_LIBTOOL_TAGS([])
-AC_PROG_LIBTOOL
-# libtool, new:
-dnl LT_INIT(win32-dll)
+LT_INIT(win32-dll)
 
 AM_INIT_AUTOMAKE([foreign no-exeext dist-bzip2])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
@@ -80,7 +74,6 @@ AC_HEADER_TIME
 # Checks for library functions.
 #
 AC_FUNC_MEMCMP
-AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_UTIME_NULL
 AC_CHECK_FUNCS([gethostbyaddr gethostbyname gethostname gettimeofday memset mkdir socket utime])
