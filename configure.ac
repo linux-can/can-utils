@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.69])
 
-AC_INIT([libsocketcan], [trunk], [bugs@pengutronix.de])
+AC_INIT([libsocketcan], [0.0.10], [bugs@pengutronix.de])
 AC_CONFIG_HEADERS([include/libsocketcan_config.h])
 AC_CONFIG_SRCDIR([src/libsocketcan.c])
 AC_CONFIG_MACRO_DIR([config/m4])
@@ -20,7 +20,7 @@ CFLAGS="${CFLAGS} -Wall"
 # Interfaces added:		    AGE++
 # Interfaces removed:		    AGE=0
 LT_CURRENT=4
-LT_REVISION=0
+LT_REVISION=1
 LT_AGE=2
 AC_SUBST(LT_CURRENT)
 AC_SUBST(LT_REVISION)
