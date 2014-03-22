@@ -28,7 +28,7 @@
 extern int optind, opterr, optopt;
 
 static int s = -1;
-static int running = 1;
+static bool running = true;
 static bool infinite = true;
 static bool sequence_init = true;
 static bool quit = false;
@@ -72,7 +72,7 @@ static void print_usage(char *prg)
 
 static void sigterm(int signo)
 {
-	running = 0;
+	running = false;
 }
 
 
@@ -199,7 +199,7 @@ int main(int argc, char **argv)
 	while ((opt = getopt_long(argc, argv, "ehpqrvi:l:", long_options, NULL)) != -1) {
 		switch (opt) {
 		case 'e':
-			extended = 1;
+			extended = true;
 			break;
 
 		case 'h':
@@ -208,7 +208,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 'p':
-			use_poll = 1;
+			use_poll = true;
 			break;
 
 		case 'q':
@@ -216,7 +216,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 'r':
-			receive = 1;
+			receive = true;
 			break;
 
 		case 'v':
@@ -231,15 +231,15 @@ int main(int argc, char **argv)
 		case 'l':
 			if (optarg) {
 				loopcount = strtoul(optarg, NULL, 0);
-				infinite = 0;
-			} else
-				infinite = 1;
+				infinite = false;
+			} else {
+				infinite = true;
+			}
 			break;
 
 		case 'i':
 			filter->can_id = strtoul(optarg, NULL, 0);
 			break;
-
 
 		default:
 			fprintf(stderr, "Unknown option %c\n", opt);
