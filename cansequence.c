@@ -32,7 +32,7 @@ enum {
 
 #define CAN_ID_DEFAULT	(2)
 
-void print_usage(char *prg)
+static void print_usage(char *prg)
 {
 	fprintf(stderr, "Usage: %s [<can-interface>] [Options]\n"
 		"\n"
@@ -54,7 +54,7 @@ void print_usage(char *prg)
 		prg, CAN_ID_DEFAULT);
 }
 
-void sigterm(int signo)
+static void sigterm(int signo)
 {
 	running = 0;
 }
