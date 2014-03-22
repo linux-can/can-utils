@@ -265,27 +265,27 @@ int main(int argc, char **argv)
 
 	s = socket(family, type, proto);
 	if (s < 0) {
-		perror("socket");
-		return 1;
+		perror("socket()");
+		exit(EXIT_FAILURE);
 	}
 
 	addr.can_family = family;
 	strncpy(ifr.ifr_name, interface, sizeof(ifr.ifr_name));
 	if (ioctl(s, SIOCGIFINDEX, &ifr)) {
-		perror("ioctl");
-		return 1;
+		perror("ioctl()");
+		exit(EXIT_FAILURE);
 	}
 	addr.can_ifindex = ifr.ifr_ifindex;
 
 	/* first don't recv. any msgs */
 	if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0)) {
-		perror("setsockopt");
+		perror("setsockopt()");
 		exit(EXIT_FAILURE);
 	}
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-		perror("bind");
-		return 1;
+		perror("bind()");
+		exit(EXIT_FAILURE);
 	}
 
 	if (receive)
