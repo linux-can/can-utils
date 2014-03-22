@@ -6,6 +6,8 @@
 #include <limits.h>
 #include <poll.h>
 #include <signal.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,16 +23,30 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
+#define CAN_ID_DEFAULT	(2)
+
 extern int optind, opterr, optopt;
 
 static int s = -1;
 static int running = 1;
+static bool infinite = true;
+static bool sequence_init = true;
+static bool quit = false;
+static bool use_poll = false;
 
+static unsigned int loopcount = 1;
+static int verbose;
+
+static struct can_frame frame = {
+	.can_dlc = 1,
+};
+static struct can_filter filter[] = {
+	{ .can_id = CAN_ID_DEFAULT, },
+};
 enum {
 	VERSION_OPTION = CHAR_MAX + 1,
 };
 
-#define CAN_ID_DEFAULT	(2)
 
 static void print_usage(char *prg)
 {
@@ -59,31 +75,110 @@ static void sigterm(int signo)
 	running = 0;
 }
 
+
+static void do_receive()
+{
+	unsigned int seq_wrap = 0;
+	uint8_t sequence = 0;
+	ssize_t nbytes;
+
+	/* enable recv. now */
+	if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, filter, sizeof(filter))) {
+		perror("setsockopt()");
+		exit(EXIT_FAILURE);
+	}
+
+	while ((infinite || loopcount--) && running) {
+		nbytes = read(s, &frame, sizeof(struct can_frame));
+		if (nbytes < 0) {
+			perror("read()");
+			exit(EXIT_FAILURE);
+		}
+
+		if (sequence_init) {
+			sequence_init = 0;
+			sequence = frame.data[0];
+		}
+
+		if (verbose > 1)
+			printf("received frame. sequence number: %d\n", frame.data[0]);
+
+		if (frame.data[0] != sequence) {
+			printf("received wrong sequence count. expected: %d, got: %d\n",
+			       sequence, frame.data[0]);
+			if (quit)
+				exit(EXIT_FAILURE);
+
+			sequence = frame.data[0];
+		}
+
+		sequence++;
+		if (verbose && !sequence)
+			printf("sequence wrap around (%d)\n", seq_wrap++);
+
+	}
+}
+
+static void do_send()
+{
+	unsigned int seq_wrap = 0;
+	uint8_t sequence = 0;
+
+	while ((infinite || loopcount--) && running) {
+		ssize_t len;
+
+		if (verbose > 1)
+			printf("sending frame. sequence number: %d\n", sequence);
+
+	again:
+		len = write(s, &frame, sizeof(frame));
+		if (len == -1) {
+			switch (errno) {
+			case ENOBUFS: {
+				int err;
+				struct pollfd fds[] = {
+					{
+						.fd	= s,
+						.events	= POLLOUT,
+					},
+				};
+
+				if (!use_poll) {
+					perror("write");
+					exit(EXIT_FAILURE);
+				}
+
+				err = poll(fds, 1, 1000);
+				if (err == -1 && errno != -EINTR) {
+					perror("poll()");
+					exit(EXIT_FAILURE);
+				}
+			}
+			case EINTR:	/* fallthrough */
+				goto again;
+			default:
+				perror("write");
+				exit(EXIT_FAILURE);
+			}
+		}
+
+		(unsigned char)frame.data[0]++;
+		sequence++;
+
+		if (verbose && !sequence)
+			printf("sequence wrap around (%d)\n", seq_wrap++);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	struct ifreq ifr;
 	struct sockaddr_can addr;
-	struct can_frame frame = {
-		.can_dlc = 1,
-	};
-	struct can_filter filter[] = {
-		{
-			.can_id = CAN_ID_DEFAULT,
-		},
-	};
 	char *interface = "can0";
-	unsigned char sequence = 0;
-	int seq_wrap = 0;
 	int family = PF_CAN, type = SOCK_RAW, proto = CAN_RAW;
-	int loopcount = 1, infinite = 1;
-	int use_poll = 0;
 	int extended = 0;
-	int nbytes;
-	int opt;
 	int receive = 0;
-	int sequence_init = 1;
-	int verbose = 0, quit = 0;
-	int exit_value = EXIT_SUCCESS;
+	int opt;
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -117,7 +212,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 'q':
-			quit = 1;
+			quit = true;
 			break;
 
 		case 'r':
@@ -193,89 +288,10 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (receive) {
-		/* enable recv. now */
-		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, filter, sizeof(filter))) {
-			perror("setsockopt");
-			exit(EXIT_FAILURE);
-		}
+	if (receive)
+		do_receive();
+	else
+		do_send();
 
-		while ((infinite || loopcount--) && running) {
-			nbytes = read(s, &frame, sizeof(struct can_frame));
-			if (nbytes < 0) {
-				perror("read");
-				return 1;
-			}
-
-			if (sequence_init) {
-				sequence_init = 0;
-				sequence = frame.data[0];
-			}
-
-			if (verbose > 1)
-				printf("received frame. sequence number: %d\n", frame.data[0]);
-
-			if (frame.data[0] != sequence) {
-				printf("received wrong sequence count. expected: %d, got: %d\n",
-				       sequence, frame.data[0]);
-				if (quit) {
-					exit_value = EXIT_FAILURE;
-					break;
-				}
-				sequence = frame.data[0];
-			}
-
-			sequence++;
-			if (verbose && !sequence)
-				printf("sequence wrap around (%d)\n", seq_wrap++);
-
-		}
-	} else {
-		while ((infinite || loopcount--) && running) {
-			ssize_t len;
-
-			if (verbose > 1)
-				printf("sending frame. sequence number: %d\n", sequence);
-
-		again:
-			len = write(s, &frame, sizeof(frame));
-			if (len == -1) {
-				switch (errno) {
-				case ENOBUFS: {
-					int err;
-					struct pollfd fds[] = {
-						{
-							.fd	= s,
-							.events	= POLLOUT,
-						},
-					};
-
-					if (!use_poll) {
-						perror("write");
-						exit(EXIT_FAILURE);
-					}
-
-					err = poll(fds, 1, 1000);
-					if (err == -1 && errno != -EINTR) {
-						perror("poll()");
-						exit(EXIT_FAILURE);
-					}
-				}
-				case EINTR:	/* fallthrough */
-					goto again;
-				default:
-					perror("write");
-					exit(EXIT_FAILURE);
-				}
-			}
-
-			(unsigned char)frame.data[0]++;
-			sequence++;
-
-			if (verbose && !sequence)
-				printf("sequence wrap around (%d)\n", seq_wrap++);
-		}
-	}
-
-	exit(exit_value);
+	exit(EXIT_SUCCESS);
 }
