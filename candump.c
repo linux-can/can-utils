@@ -698,18 +698,23 @@ int main(int argc, char **argv)
 					view |= CANLIB_VIEW_INDENT_SFF;
 
 				if (log) {
+					char buf[CL_CFSZ]; /* max length */
+
 					/* log CAN frame with absolute timestamp & device */
-					fprintf(logfile, "(%010ld.%06ld) ", tv.tv_sec, tv.tv_usec);
-					fprintf(logfile, "%*s ", max_devname_len, devname[idx]);
-					/* without separator as logfile use-case is parsing */
-					fprint_canframe(logfile, &frame, "\n", 0, maxdlen);
+					sprint_canframe(buf, &frame, 0, maxdlen);
+					fprintf(logfile, "(%010ld.%06ld) %*s %s\n",
+						tv.tv_sec, tv.tv_usec,
+						max_devname_len, devname[idx], buf);
 				}
 
 				if (logfrmt) {
+					char buf[CL_CFSZ]; /* max length */
+
 					/* print CAN frame in log file style to stdout */
-					printf("(%010ld.%06ld) ", tv.tv_sec, tv.tv_usec);
-					printf("%*s ", max_devname_len, devname[idx]);
-					fprint_canframe(stdout, &frame, "\n", 0, maxdlen);
+					sprint_canframe(buf, &frame, 0, maxdlen);
+					printf("(%010ld.%06ld) %*s %s\n",
+					       tv.tv_sec, tv.tv_usec,
+					       max_devname_len, devname[idx], buf);
 					goto out_fflush; /* no other output to stdout */
 				}
 
