@@ -54,6 +54,29 @@
 #define CANID_DELIM '#'
 #define DATA_SEPERATOR '.'
 
+const char hex_asc_upper[] = "0123456789ABCDEF";
+
+#define hex_asc_upper_lo(x)	hex_asc_upper[((x) & 0x0F)]
+#define hex_asc_upper_hi(x)	hex_asc_upper[((x) & 0xF0) >> 4]
+
+static inline void put_hex_byte(char *buf, __u8 byte)
+{
+	buf[0] = hex_asc_upper_hi(byte);
+	buf[1] = hex_asc_upper_lo(byte);
+}
+
+static inline void _put_id(char *buf, int end_offset, canid_t id)
+{
+	/* build 3 (SFF) or 8 (EFF) digit CAN identifier */
+	while (end_offset >= 0) {
+		buf[end_offset--] = hex_asc_upper[id & 0xF];
+		id >>= 4;
+	}
+}
+
+#define put_sff_id(buf, id) _put_id(buf, 2, id)
+#define put_eff_id(buf, id) _put_id(buf, 7, id)
+
 /* CAN DLC to real data length conversion helpers */
 
 static const unsigned char dlc2len[] = {0, 1, 2, 3, 4, 5, 6, 7,
@@ -229,42 +252,46 @@ void sprint_canframe(char *buf , struct canfd_frame *cf, int sep, int maxdlen) {
 	int len = (cf->len > maxdlen) ? maxdlen : cf->len;
 
 	if (cf->can_id & CAN_ERR_FLAG) {
-		sprintf(buf, "%08X#", cf->can_id & (CAN_ERR_MASK|CAN_ERR_FLAG));
+		put_eff_id(buf, cf->can_id & (CAN_ERR_MASK|CAN_ERR_FLAG));
+		buf[8] = '#';
 		offset = 9;
 	} else if (cf->can_id & CAN_EFF_FLAG) {
-		sprintf(buf, "%08X#", cf->can_id & CAN_EFF_MASK);
+		put_eff_id(buf, cf->can_id & CAN_EFF_MASK);
+		buf[8] = '#';
 		offset = 9;
 	} else {
-		sprintf(buf, "%03X#", cf->can_id & CAN_SFF_MASK);
+		put_sff_id(buf, cf->can_id & CAN_SFF_MASK);
+		buf[3] = '#';
 		offset = 4;
 	}
 
 	/* standard CAN frames may have RTR enabled. There are no ERR frames with RTR */
 	if (maxdlen == CAN_MAX_DLEN && cf->can_id & CAN_RTR_FLAG) {
-
+		buf[offset++] = 'R';
 		/* print a given CAN 2.0B DLC if it's not zero */
 		if (cf->len && cf->len <= CAN_MAX_DLC)
-			sprintf(buf+offset, "R%d", cf->len);
-		else
-			sprintf(buf+offset, "R");
+			buf[offset++] = hex_asc_upper[cf->len & 0xF];
 
+		buf[offset] = 0;
 		return;
 	}
 
 	if (maxdlen == CANFD_MAX_DLEN) {
 		/* add CAN FD specific escape char and flags */
-		sprintf(buf+offset, "#%X", cf->flags & 0xF);
-		offset += 2;
+		buf[offset++] = '#';
+		buf[offset++] = hex_asc_upper[cf->flags & 0xF];
 		if (sep && len)
-			sprintf(buf+offset++, ".");
+			buf[offset++] = '.';
 	}
 
 	for (i = 0; i < len; i++) {
-		sprintf(buf+offset, "%02X", cf->data[i]);
+		put_hex_byte(buf + offset, cf->data[i]);
 		offset += 2;
 		if (sep && (i+1 < len))
-			sprintf(buf+offset++, ".");
+			buf[offset++] = '.';
 	}
+
+	buf[offset] = 0;
 }
 
 void fprint_long_canframe(FILE *stream , struct canfd_frame *cf, char *eol, int view, int maxdlen) {
@@ -288,31 +315,41 @@ void sprint_long_canframe(char *buf , struct canfd_frame *cf, int view, int maxd
 	int i, j, dlen, offset;
 	int len = (cf->len > maxdlen)? maxdlen : cf->len;
 
+	/* initialize space for CAN-ID and length information */
+	memset(buf, ' ', 15);
+
 	if (cf->can_id & CAN_ERR_FLAG) {
-		sprintf(buf, "%08X  ", cf->can_id & (CAN_ERR_MASK|CAN_ERR_FLAG));
+		put_eff_id(buf, cf->can_id & (CAN_ERR_MASK|CAN_ERR_FLAG));
 		offset = 10;
 	} else if (cf->can_id & CAN_EFF_FLAG) {
-		sprintf(buf, "%08X  ", cf->can_id & CAN_EFF_MASK);
+		put_eff_id(buf, cf->can_id & CAN_EFF_MASK);
 		offset = 10;
 	} else {
 		if (view & CANLIB_VIEW_INDENT_SFF) {
-			sprintf(buf, "     %03X  ", cf->can_id & CAN_SFF_MASK);
+			put_sff_id(buf + 5, cf->can_id & CAN_SFF_MASK);
 			offset = 10;
 		} else {
-			sprintf(buf, "%03X  ", cf->can_id & CAN_SFF_MASK);
+			put_sff_id(buf, cf->can_id & CAN_SFF_MASK);
 			offset = 5;
 		}
 	}
 
+	/* The len value is sanitized by maxdlen (see above) */
 	if (maxdlen == CAN_MAX_DLEN) {
-		sprintf(buf+offset, " [%d] ", len);
+		buf[offset + 1] = '[';
+		buf[offset + 2] = len + '0';
+		buf[offset + 3] = ']';
+
 		/* standard CAN frames may have RTR enabled */
 		if (cf->can_id & CAN_RTR_FLAG) {
 			sprintf(buf+offset+5, " remote request");
 			return;
 		}
 	} else {
-		sprintf(buf+offset, "[%02d] ", len);
+		buf[offset] = '[';
+		buf[offset + 1] = (len/10) + '0';
+		buf[offset + 2] = (len%10) + '0';
+		buf[offset + 3] = ']';
 	}
 	offset += 5;
 
@@ -331,23 +368,28 @@ void sprint_long_canframe(char *buf , struct canfd_frame *cf, int view, int maxd
 					buf[offset++] = (1<<j & cf->data[i])?'1':'0';
 			}
 		}
-		buf[offset] = 0; /* terminate string */
 	} else {
 		dlen = 3; /* _AA */
 		if (view & CANLIB_VIEW_SWAP) {
 			for (i = len - 1; i >= 0; i--) {
-				sprintf(buf+offset, "%c%02X",
-					(i == len-1)?' ':SWAP_DELIMITER,
-					cf->data[i]);
-				offset += dlen;
+				if (i == len-1)
+					buf[offset++] = ' ';
+				else
+					buf[offset++] = SWAP_DELIMITER;
+
+				put_hex_byte(buf + offset, cf->data[i]);
+				offset += 2;
 			}
 		} else {
 			for (i = 0; i < len; i++) {
-				sprintf(buf+offset, " %02X", cf->data[i]);
-				offset += dlen;
+				buf[offset++] = ' ';
+				put_hex_byte(buf + offset, cf->data[i]);
+				offset += 2;
 			}
 		}
 	}
+
+	buf[offset] = 0; /* terminate string */
 
 	/*
 	 * The ASCII & ERRORFRAME output is put at a fixed len behind the data.
