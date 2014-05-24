@@ -43,6 +43,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
@@ -678,7 +679,7 @@ int main(int argc, char **argv)
 					if (dropcnt[i] > last_dropcnt[i])
 						frames = dropcnt[i] - last_dropcnt[i];
 					else
-						frames = 4294967295U - last_dropcnt[i] + dropcnt[i]; /* 4294967295U == UINT32_MAX */
+						frames = UINT32_MAX - last_dropcnt[i] + dropcnt[i];
 
 					if (silent != SILENT_ON)
 						printf("DROPCOUNT: dropped %d CAN frame%s on '%s' socket (total drops %d)\n",
