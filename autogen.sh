@@ -17,6 +17,6 @@ banner() {
 
 banner "autoreconf"
 
-autoreconf --force --install --symlink -Wall || exit $?
+autoreconf --force --install -Wall || exit $?
 
 banner "Finished"
