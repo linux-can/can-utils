@@ -8,6 +8,7 @@ LDADD = \
 	libcan.la
 
 noinst_HEADERS = \
+	canframelen.h \
 	lib.h \
 	terminal.h \
 	include/linux/can/bcm.h \
