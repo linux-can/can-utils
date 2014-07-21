@@ -774,13 +774,20 @@ int can_set_restart_ms(const char *name, __u32 restart_ms)
  *
  * @param cm pointer of a can_ctrlmode struct
  *
- * This sets the control mode of the can device. There're currently three
- * different control modes:
- * - LOOPBACK
- * - LISTEN_ONLY
- * - TRIPPLE_SAMPLING
+ * This sets the control mode of the can device. There are currently the
+ * following modes available (each mapped to its own macro):
  *
- * You have to define the control mode struct yourself. a can_ctrlmode struct
+ * @code
+ * #define CAN_CTRLMODE_LOOPBACK           0x01    // Loopback mode
+ * #define CAN_CTRLMODE_LISTENONLY         0x02    // Listen-only mode
+ * #define CAN_CTRLMODE_3_SAMPLES          0x04    // Triple sampling mode
+ * #define CAN_CTRLMODE_ONE_SHOT           0x08    // One-Shot mode
+ * #define CAN_CTRLMODE_BERR_REPORTING     0x10    // Bus-error reporting
+ * #define CAN_CTRLMODE_FD                 0x20    // CAN FD mode
+ * #define CAN_CTRLMODE_PRESUME_ACK        0x40    // Ignore missing CAN ACKs
+ * @endcode
+ *
+ * You have to define the control mode struct yourself. A can_ctrlmode struct
  * is declared as:
  *
  * @code
@@ -791,16 +798,8 @@ int can_set_restart_ms(const char *name, __u32 restart_ms)
  * @endcode
  *
  * You can use mask to select modes you want to control and flags to determine
- * if you want to turn the selected mode(s) on or off. Every control mode is
- * mapped to an own macro
- *
- * @code
- * #define CAN_CTRLMODE_LOOPBACK   0x1
- * #define CAN_CTRLMODE_LISTENONLY 0x2
- * #define CAN_CTRLMODE_3_SAMPLES  0x4
- * @endcode
- *
- * e.g. the following pseudocode
+ * if you want to turn the selected mode(s) on or off. E. g. the following
+ * pseudocode will turn the loopback mode on and listenonly mode off:
  *
  * @code
  * struct can_ctrlmode cm;
@@ -809,8 +808,6 @@ int can_set_restart_ms(const char *name, __u32 restart_ms)
  * cm.flags = CAN_CTRLMODE_LOOPBACK;
  * can_set_ctrlmode(candev, &cm);
  * @endcode
- *
- * will turn the loopback mode on and listenonly mode off.
  *
  * @return 0 if success
  * @return -1 if failed
