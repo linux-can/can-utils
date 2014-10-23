@@ -674,12 +674,7 @@ int main(int argc, char **argv)
 				/* check for (unlikely) dropped frames on this specific socket */
 				if (dropcnt[i] != last_dropcnt[i]) {
 
-					__u32 frames;
-
-					if (dropcnt[i] > last_dropcnt[i])
-						frames = dropcnt[i] - last_dropcnt[i];
-					else
-						frames = UINT32_MAX - last_dropcnt[i] + dropcnt[i];
+					__u32 frames = dropcnt[i] - last_dropcnt[i];
 
 					if (silent != SILENT_ON)
 						printf("DROPCOUNT: dropped %d CAN frame%s on '%s' socket (total drops %d)\n",
