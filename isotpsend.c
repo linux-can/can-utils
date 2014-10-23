@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 		    else if (optarg[0] == 'c')
 			    opts.flags |= CAN_ISOTP_CHK_PAD_DATA;
 		    else if (optarg[0] == 'a')
-			    opts.flags |= (CAN_ISOTP_CHK_PAD_DATA | CAN_ISOTP_CHK_PAD_DATA);
+			    opts.flags |= (CAN_ISOTP_CHK_PAD_LEN | CAN_ISOTP_CHK_PAD_DATA);
 		    else {
 			    printf("unknown padding check option '%c'.\n", optarg[0]);
 			    print_usage(basename(argv[0]));
