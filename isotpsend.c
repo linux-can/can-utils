@@ -56,6 +56,7 @@
 #include <linux/can/isotp.h>
 
 #define NO_CAN_ID 0xFFFFFFFFU
+#define BUFSIZE 5000 /* size > 4095 to check socket API internal checks */
 
 void print_usage(char *prg)
 {
@@ -81,8 +82,9 @@ int main(int argc, char **argv)
     int opt;
     extern int optind, opterr, optopt;
     __u32 force_tx_stmin = 0;
-    unsigned char buf[4096];
+    unsigned char buf[BUFSIZE];
     int buflen = 0;
+    int retval = 0;
 
     addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
@@ -174,10 +176,17 @@ int main(int argc, char **argv)
 	exit(1);
     }
 
-    while (buflen < 4096 && scanf("%hhx", &buf[buflen]) == 1)
+    while (buflen < BUFSIZE && scanf("%hhx", &buf[buflen]) == 1)
 	    buflen++;
 
-    write(s, buf, buflen);
+    retval = write(s, buf, buflen);
+    if (retval < 0) {
+	    perror("write");
+	    return retval;
+    }
+
+    if (retval != buflen)
+	    fprintf(stderr, "wrote only %d from %d byte\n", retval, buflen);
 
     /* 
      * due to a Kernel internal wait queue the PDU is sent completely

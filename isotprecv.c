@@ -56,6 +56,7 @@
 #include <linux/can/isotp.h>
 
 #define NO_CAN_ID 0xFFFFFFFFU
+#define BUFSIZE 5000 /* size > 4095 to check socket API internal checks */
 
 void print_usage(char *prg)
 {
@@ -87,7 +88,7 @@ int main(int argc, char **argv)
     __u32 force_rx_stmin = 0;
     int loop = 0;
 
-    unsigned char msg[4096];
+    unsigned char msg[BUFSIZE];
     int nbytes;
 
     addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
@@ -194,8 +195,8 @@ int main(int argc, char **argv)
     }
 
     do {
-	    nbytes = read(s, msg, 4096);
-	    if (nbytes > 0 && nbytes < 4096)
+	    nbytes = read(s, msg, BUFSIZE);
+	    if (nbytes > 0 && nbytes < BUFSIZE)
 		    for (i=0; i < nbytes; i++)
 			    printf("%02X ", msg[i]);
 	    printf("\n");
