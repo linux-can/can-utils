@@ -68,6 +68,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -P <mode>    (check padding in FC. (l)ength (c)ontent (a)ll)\n");
 	fprintf(stderr, "         -t <time ns> (frame transmit time (N_As) in nanosecs)\n");
 	fprintf(stderr, "         -f <time ns> (ignore FC and force local tx stmin value in nanosecs)\n");
+	fprintf(stderr, "         -D <len>     (send a fixed PDU with len bytes - no STDIN data)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "The pdu data is expected on STDIN in space separated ASCII hex values.\n");
 	fprintf(stderr, "\n");
@@ -84,11 +85,12 @@ int main(int argc, char **argv)
     __u32 force_tx_stmin = 0;
     unsigned char buf[BUFSIZE];
     int buflen = 0;
+    int datalen = 0;
     int retval = 0;
 
     addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-    while ((opt = getopt(argc, argv, "s:d:x:p:P:t:f:?")) != -1) {
+    while ((opt = getopt(argc, argv, "s:d:x:p:P:t:f:D:?")) != -1) {
 	    switch (opt) {
 	    case 's':
 		    addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
@@ -135,6 +137,14 @@ int main(int argc, char **argv)
 		    force_tx_stmin = strtoul(optarg, (char **)NULL, 10);
 		    break;
 
+	    case 'D':
+		    datalen = strtoul(optarg, (char **)NULL, 10);
+		    if (!datalen || datalen >= BUFSIZE) {
+			    print_usage(basename(argv[0]));
+			    exit(0);
+		    }
+		    break;
+
 	    case '?':
 		    print_usage(basename(argv[0]));
 		    exit(0);
@@ -176,8 +186,14 @@ int main(int argc, char **argv)
 	exit(1);
     }
 
-    while (buflen < BUFSIZE && scanf("%hhx", &buf[buflen]) == 1)
-	    buflen++;
+    if (!datalen) {
+	    while (buflen < BUFSIZE && scanf("%hhx", &buf[buflen]) == 1)
+		    buflen++;
+    } else {
+	    for (buflen = 0; buflen < datalen; buflen++)
+		    buf[buflen] = ((buflen % 0xFF) + 1) & 0xFF;
+    }
+
 
     retval = write(s, buf, buflen);
     if (retval < 0) {
