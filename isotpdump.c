@@ -94,6 +94,7 @@ int main(int argc, char **argv)
 	int color = 0;
 	int timestamp = 0;
 	int datidx = 0;
+	unsigned long fflen = 0;
 	struct ifreq ifr;
 	int ifindex;
 	struct timeval tv, last_tv;
@@ -295,9 +296,17 @@ int main(int argc, char **argv)
 				break;
 
 			case 0x10:
-				printf("[FF] ln: %-4d data:",
-				       ((n_pci & 0x0F)<<8) + frame.data[ext+1] );
-				datidx = ext+2;
+				fflen = ((n_pci & 0x0F)<<8) + frame.data[ext+1];
+				if (fflen)
+					datidx = ext+2;
+				else {
+					fflen = (frame.data[ext+2]<<24) +
+						(frame.data[ext+3]<<16) +
+						(frame.data[ext+4]<<8) +
+						frame.data[ext+5];
+					datidx = ext+6;
+				}
+				printf("[FF] ln: %-4lu data:", fflen);
 				break;
 
 			case 0x20:
