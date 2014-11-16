@@ -72,6 +72,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -f <time ns> (force rx stmin value in nanosecs)\n");
 	fprintf(stderr, "         -w <num>     (max. wait frame transmissions.)\n");
 	fprintf(stderr, "         -l           (loop: do not exit after pdu receiption.)\n");
+	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags> (link layer options for CAN FD)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "The pdu data is written on STDOUT in space separated ASCII hex values.\n");
 	fprintf(stderr, "\n");
@@ -84,6 +85,7 @@ int main(int argc, char **argv)
     struct ifreq ifr;
     static struct can_isotp_options opts;
     static struct can_isotp_fc_options fcopts;
+    static struct can_isotp_ll_options llopts;
     int opt, i;
     extern int optind, opterr, optopt;
     __u32 force_rx_stmin = 0;
@@ -94,7 +96,7 @@ int main(int argc, char **argv)
 
     addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-    while ((opt = getopt(argc, argv, "s:d:x:X:p:P:b:m:w:f:l?")) != -1) {
+    while ((opt = getopt(argc, argv, "s:d:x:X:p:P:b:m:w:f:lL:?")) != -1) {
 	    switch (opt) {
 	    case 's':
 		    addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
@@ -158,6 +160,17 @@ int main(int argc, char **argv)
 		    loop = 1;
 		    break;
 
+	    case 'L':
+		    if (sscanf(optarg, "%hhu:%hhu:%hhu",
+			       &llopts.mtu,
+			       &llopts.tx_dl,
+			       &llopts.tx_flags) != 3) {
+			    printf("unknown link layer options '%s'.\n", optarg);
+			    print_usage(basename(argv[0]));
+			    exit(0);
+		    }
+		    break;
+
 	    case '?':
 		    print_usage(basename(argv[0]));
 		    exit(0);
@@ -190,6 +203,13 @@ int main(int argc, char **argv)
 
     setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
     setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_RECV_FC, &fcopts, sizeof(fcopts));
+
+    if (llopts.tx_dl) {
+	if (setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &llopts, sizeof(llopts)) < 0) {
+	    perror("link layer sockopt");
+	    exit(1);
+	}
+    }
 
     if (opts.flags & CAN_ISOTP_FORCE_RXSTMIN)
 	    setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_RX_STMIN, &force_rx_stmin, sizeof(force_rx_stmin));

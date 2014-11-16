@@ -70,6 +70,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -t <time ns> (frame transmit time (N_As) in nanosecs)\n");
 	fprintf(stderr, "         -f <time ns> (ignore FC and force local tx stmin value in nanosecs)\n");
 	fprintf(stderr, "         -D <len>     (send a fixed PDU with len bytes - no STDIN data)\n");
+	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags> (link layer options for CAN FD)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "The pdu data is expected on STDIN in space separated ASCII hex values.\n");
 	fprintf(stderr, "\n");
@@ -81,6 +82,7 @@ int main(int argc, char **argv)
     struct sockaddr_can addr;
     struct ifreq ifr;
     static struct can_isotp_options opts;
+    static struct can_isotp_ll_options llopts;
     int opt;
     extern int optind, opterr, optopt;
     __u32 force_tx_stmin = 0;
@@ -91,7 +93,7 @@ int main(int argc, char **argv)
 
     addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-    while ((opt = getopt(argc, argv, "s:d:x:X:p:P:t:f:D:?")) != -1) {
+    while ((opt = getopt(argc, argv, "s:d:x:X:p:P:t:f:D:L:?")) != -1) {
 	    switch (opt) {
 	    case 's':
 		    addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
@@ -151,6 +153,17 @@ int main(int argc, char **argv)
 		    }
 		    break;
 
+	    case 'L':
+		    if (sscanf(optarg, "%hhu:%hhu:%hhu",
+			       &llopts.mtu,
+			       &llopts.tx_dl,
+			       &llopts.tx_flags) != 3) {
+			    printf("unknown link layer options '%s'.\n", optarg);
+			    print_usage(basename(argv[0]));
+			    exit(0);
+		    }
+		    break;
+
 	    case '?':
 		    print_usage(basename(argv[0]));
 		    exit(0);
@@ -182,6 +195,13 @@ int main(int argc, char **argv)
     }
 
     setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
+
+    if (llopts.tx_dl) {
+	if (setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &llopts, sizeof(llopts)) < 0) {
+	    perror("link layer sockopt");
+	    exit(1);
+	}
+    }
 
     if (opts.flags & CAN_ISOTP_FORCE_TXSTMIN)
 	    setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_TX_STMIN, &force_tx_stmin, sizeof(force_tx_stmin));

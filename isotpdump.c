@@ -60,6 +60,7 @@
 #define NO_CAN_ID 0xFFFFFFFFU
 
 const char fc_info [4][9] = { "CTS", "WT", "OVFLW", "reserved" };
+const int canfd_on = 1;
 
 void print_usage(char *prg)
 {
@@ -80,7 +81,7 @@ int main(int argc, char **argv)
 	int s;
 	struct sockaddr_can addr;
 	struct can_filter rfilter[2];
-	struct can_frame frame;
+	struct canfd_frame frame;
 	int nbytes, i;
 	canid_t src = NO_CAN_ID;
 	canid_t dst = NO_CAN_ID;
@@ -180,6 +181,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	/* try to switch the socket into CAN FD mode */
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));
 
 	if (src & CAN_EFF_FLAG) {
 		rfilter[0].can_id   = src & (CAN_EFF_MASK | CAN_EFF_FLAG);
@@ -212,12 +215,12 @@ int main(int argc, char **argv)
 	}
 
 	while (1) {
-
-		if ((nbytes = read(s, &frame, sizeof(struct can_frame))) < 0) {
+		nbytes = read(s, &frame, sizeof(frame));
+		if (nbytes < 0) {
 			perror("read");
 			return 1;
-		} else if (nbytes < sizeof(struct can_frame)) {
-			fprintf(stderr, "read: incomplete CAN frame\n");
+		} else if (nbytes != CAN_MTU && nbytes != CANFD_MTU) {
+			fprintf(stderr, "read: incomplete CAN frame %lu %d\n", sizeof(frame), nbytes);
 			return 1;
 		} else {
 
@@ -284,15 +287,23 @@ int main(int argc, char **argv)
 			if (ext)
 				printf("{%02X}", frame.data[0]);
 
-			printf("  [%d]  ", frame.can_dlc);
+			if (nbytes == CAN_MTU)
+				printf("  [%d]  ", frame.len);
+			else
+				printf(" [%02d]  ", frame.len);
 
 			datidx = 0;
 			n_pci = frame.data[ext];
 	    
 			switch (n_pci & 0xF0) {
 			case 0x00:
-				printf("[SF] ln: %-4d data:", n_pci & 0x0F);
-				datidx = ext+1;
+				if (n_pci & 0xF) {
+					printf("[SF] ln: %-4d data:", n_pci & 0xF);
+					datidx = ext+1;
+				} else {
+					printf("[SF] ln: %-4d data:", frame.data[ext + 1]);
+					datidx = ext+2;
+				}
 				break;
 
 			case 0x10:
@@ -341,16 +352,16 @@ int main(int argc, char **argv)
 				printf("[??]");
 			}
 
-			if (datidx && frame.can_dlc > datidx) {
+			if (datidx && frame.len > datidx) {
 				printf(" ");
-				for (i = datidx; i < frame.can_dlc; i++) {
+				for (i = datidx; i < frame.len; i++) {
 					printf("%02X ", frame.data[i]);
 				}
 
 				if (asc) {
-					printf("%*s", ((7-ext) - (frame.can_dlc-datidx))*3 + 5 ,
+					printf("%*s", ((7-ext) - (frame.len-datidx))*3 + 5 ,
 					       "-  '");
-					for (i = datidx; i < frame.can_dlc; i++) {
+					for (i = datidx; i < frame.len; i++) {
 						printf("%c",((frame.data[i] > 0x1F) &&
 							     (frame.data[i] < 0x7F))?
 						       frame.data[i] : '.');
