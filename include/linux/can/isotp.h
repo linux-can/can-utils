@@ -82,6 +82,9 @@ struct can_isotp_options {
 
 	__u8  rxpad_content;	/* set content of padding byte (rx)	*/
 				/* __u8 value : content	on rx path	*/
+
+	__u8  rx_ext_address;	/* set address for extended addressing	*/
+				/* __u8 value : extended address (rx)	*/
 };
 
 struct can_isotp_fc_options {
@@ -112,6 +115,7 @@ struct can_isotp_fc_options {
 #define CAN_ISOTP_HALF_DUPLEX	0x040	/* half duplex error state handling */
 #define CAN_ISOTP_FORCE_TXSTMIN	0x080	/* ignore stmin from received FC */
 #define CAN_ISOTP_FORCE_RXSTMIN	0x100	/* ignore CFs depending on rx stmin */
+#define CAN_ISOTP_RX_EXT_ADDR	0x200	/* different rx extended addressing */
 
 
 /* default values */

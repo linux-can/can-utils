@@ -67,6 +67,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "Options: -s <can_id> (source can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -d <can_id> (destination can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -x <addr>   (extended addressing mode. Use 'any' for all addresses)\n");
+	fprintf(stderr, "         -X <addr>   (extended addressing mode (rx addr). Use 'any' for all)\n");
 	fprintf(stderr, "         -c          (color mode)\n");
 	fprintf(stderr, "         -a          (print data also in ASCII-chars)\n");
 	fprintf(stderr, "         -t <type>   (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
@@ -86,6 +87,9 @@ int main(int argc, char **argv)
 	int ext = 0;
 	int extaddr = 0;
 	int extany = 0;
+	int rx_ext = 0;
+	int rx_extaddr = 0;
+	int rx_extany = 0;
 	int asc = 0;
 	int color = 0;
 	int timestamp = 0;
@@ -99,7 +103,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "s:d:ax:ct:?")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:ax:X:ct:?")) != -1) {
 		switch (opt) {
 		case 's':
 			src = strtoul(optarg, (char **)NULL, 16);
@@ -127,7 +131,14 @@ int main(int argc, char **argv)
 				extany = 1;
 			else
 				extaddr = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+			break;
 
+		case 'X':
+			rx_ext = 1;
+			if (!strncmp(optarg, "any", 3))
+				rx_extany = 1;
+			else
+				rx_extaddr = strtoul(optarg, (char **)NULL, 16) & 0xFF;
 			break;
 
 		case 't':
@@ -151,6 +162,11 @@ int main(int argc, char **argv)
 			exit(1);
 			break;
 		}
+	}
+
+	if (rx_ext && !ext) {
+		print_usage(basename(argv[0]));
+		exit(0);
 	}
 
 	if ((argc - optind) != 1 || src == NO_CAN_ID || dst == NO_CAN_ID) {
@@ -204,7 +220,10 @@ int main(int argc, char **argv)
 			return 1;
 		} else {
 
-			if (ext && !extany && extaddr != frame.data[0])
+			if (frame.can_id == src && ext && !extany && extaddr != frame.data[0])
+				continue;
+
+			if (frame.can_id == dst && rx_ext && !rx_extany && rx_extaddr != frame.data[0])
 				continue;
 
 			if (color)

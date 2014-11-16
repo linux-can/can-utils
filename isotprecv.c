@@ -64,6 +64,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "Options: -s <can_id>  (source can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -d <can_id>  (destination can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -x <addr>    (extended addressing mode.)\n");
+	fprintf(stderr, "         -X <addr>    (extended addressing mode (rx addr).)\n");
 	fprintf(stderr, "         -p <byte>    (set and enable padding byte)\n");
 	fprintf(stderr, "         -P <mode>    (check padding in SF/CF. (l)ength (c)ontent (a)ll)\n");
 	fprintf(stderr, "         -b <bs>      (blocksize. 0 = off)\n");
@@ -93,7 +94,7 @@ int main(int argc, char **argv)
 
     addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-    while ((opt = getopt(argc, argv, "s:d:x:p:P:b:m:w:f:l?")) != -1) {
+    while ((opt = getopt(argc, argv, "s:d:x:X:p:P:b:m:w:f:l?")) != -1) {
 	    switch (opt) {
 	    case 's':
 		    addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
@@ -110,6 +111,11 @@ int main(int argc, char **argv)
 	    case 'x':
 		    opts.flags |= CAN_ISOTP_EXTEND_ADDR;
 		    opts.ext_address = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+		    break;
+
+	    case 'X':
+		    opts.flags |= CAN_ISOTP_RX_EXT_ADDR;
+		    opts.rx_ext_address = strtoul(optarg, (char **)NULL, 16) & 0xFF;
 		    break;
 
 	    case 'p':
@@ -172,6 +178,11 @@ int main(int argc, char **argv)
 	    exit(1);
     }
   
+    if ((opts.flags & CAN_ISOTP_RX_EXT_ADDR) && (!(opts.flags & CAN_ISOTP_EXTEND_ADDR))) {
+	    print_usage(basename(argv[0]));
+	    exit(1);
+    }
+
     if ((s = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP)) < 0) {
 	perror("socket");
 	exit(1);

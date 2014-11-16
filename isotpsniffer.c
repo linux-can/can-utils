@@ -68,7 +68,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>\n", prg);
 	fprintf(stderr, "Options: -s <can_id> (source can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -d <can_id> (destination can_id. Use 8 digits for extended IDs)\n");
-	fprintf(stderr, "         -x <addr>   (extended addressing mode.)\n");
+	fprintf(stderr, "         -x <addr>   (extended addressing mode)\n");
+	fprintf(stderr, "         -X <addr>   (extended addressing mode - rx addr)\n");
 	fprintf(stderr, "         -c          (color mode)\n");
 	fprintf(stderr, "         -t <type>   (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
 	fprintf(stderr, "         -f <format> (1 = HEX, 2 = ASCII, 3 = HEX & ASCII - default: %d)\n", FORMAT_DEFAULT);
@@ -189,7 +190,7 @@ int main(int argc, char **argv)
 	unsigned char buffer[4096];
 	int nbytes;
 
-	while ((opt = getopt(argc, argv, "s:d:x:h:ct:f:?")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:x:X:h:ct:f:?")) != -1) {
 		switch (opt) {
 		case 's':
 			src = strtoul(optarg, (char **)NULL, 16);
@@ -206,6 +207,11 @@ int main(int argc, char **argv)
 		case 'x':
 			opts.flags |= CAN_ISOTP_EXTEND_ADDR;
 			opts.ext_address = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+			break;
+
+		case 'X':
+			opts.flags |= CAN_ISOTP_RX_EXT_ADDR;
+			opts.rx_ext_address = strtoul(optarg, (char **)NULL, 16) & 0xFF;
 			break;
 
 		case 'f':
@@ -248,6 +254,11 @@ int main(int argc, char **argv)
 		exit(1);
 	}
   
+	if ((opts.flags & CAN_ISOTP_RX_EXT_ADDR) && (!(opts.flags & CAN_ISOTP_EXTEND_ADDR))) {
+		print_usage(basename(argv[0]));
+		exit(1);
+	}
+
 	if ((s = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP)) < 0) {
 		perror("socket");
 		exit(1);
@@ -260,16 +271,15 @@ int main(int argc, char **argv)
 
 	opts.flags |= CAN_ISOTP_LISTEN_MODE;
 
-	setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
-	setsockopt(t, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
-
 	addr.can_family = AF_CAN;
 	strcpy(ifr.ifr_name, argv[optind]);
 	ioctl(s, SIOCGIFINDEX, &ifr);
 	addr.can_ifindex = ifr.ifr_ifindex;
 
-	addr.can_addr.tp.tx_id = dst;
-	addr.can_addr.tp.rx_id = src;
+	setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
+
+	addr.can_addr.tp.tx_id = src;
+	addr.can_addr.tp.rx_id = dst;
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
@@ -277,8 +287,19 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	addr.can_addr.tp.tx_id = src;
-	addr.can_addr.tp.rx_id = dst;
+	if (opts.flags & CAN_ISOTP_RX_EXT_ADDR) {
+		/* flip extended address info due to separate rx ext addr */
+		__u8 tmpext;
+
+		tmpext = opts.ext_address;
+		opts.ext_address = opts.rx_ext_address;
+		opts.rx_ext_address = tmpext;
+	}
+
+	setsockopt(t, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
+
+	addr.can_addr.tp.tx_id = dst;
+	addr.can_addr.tp.rx_id = src;
 
 	if (bind(t, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
@@ -312,8 +333,8 @@ int main(int argc, char **argv)
 			}
 			if (nbytes > 4095)
 				return -1;
-			printbuf(buffer, nbytes, color?1:0, timestamp, format,
-				 &tv, &last_tv, src, s, ifr.ifr_name, head);
+			printbuf(buffer, nbytes, color?2:0, timestamp, format,
+				 &tv, &last_tv, dst, s, ifr.ifr_name, head);
 		}
 
 		if (FD_ISSET(t, &rdfs)) {
@@ -324,8 +345,8 @@ int main(int argc, char **argv)
 			}
 			if (nbytes > 4095)
 				return -1;
-			printbuf(buffer, nbytes, color?2:0, timestamp, format,
-				 &tv, &last_tv, dst, t, ifr.ifr_name, head);
+			printbuf(buffer, nbytes, color?1:0, timestamp, format,
+				 &tv, &last_tv, src, t, ifr.ifr_name, head);
 		}
 	}
 
