@@ -64,8 +64,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "Options: -s <can_id>  (source can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -d <can_id>  (destination can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -x <addr>[:<rxaddr>] (extended addressing / opt. separate rxaddr)\n");
-	fprintf(stderr, "         -p <byte>    (set and enable padding byte)\n");
-	fprintf(stderr, "         -P <mode>    (check padding in FC. (l)ength (c)ontent (a)ll)\n");
+	fprintf(stderr, "         -p [tx]:[rx] (set and enable tx/rx padding bytes)\n");
+	fprintf(stderr, "         -P <mode>    (check rx padding for (l)ength (c)ontent (a)ll)\n");
 	fprintf(stderr, "         -t <time ns> (frame transmit time (N_As) in nanosecs)\n");
 	fprintf(stderr, "         -f <time ns> (ignore FC and force local tx stmin value in nanosecs)\n");
 	fprintf(stderr, "         -D <len>     (send a fixed PDU with len bytes - no STDIN data)\n");
@@ -125,9 +125,24 @@ int main(int argc, char **argv)
 	    }
 
 	    case 'p':
-		    opts.flags |= CAN_ISOTP_TX_PADDING;
-		    opts.txpad_content = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+	    {
+		    int elements = sscanf(optarg, "%hhx:%hhx",
+					  &opts.txpad_content,
+					  &opts.rxpad_content);
+
+		    if (elements == 1)
+			    opts.flags |= CAN_ISOTP_TX_PADDING;
+		    else if (elements == 2)
+			    opts.flags |= (CAN_ISOTP_TX_PADDING | CAN_ISOTP_RX_PADDING);
+		    else if (sscanf(optarg, ":%hhx", &opts.rxpad_content) == 1)
+			    opts.flags |= CAN_ISOTP_RX_PADDING;
+		    else {
+			    printf("incorrect padding values '%s'.\n", optarg);
+			    print_usage(basename(argv[0]));
+			    exit(0);
+		    }
 		    break;
+	    }
 
 	    case 'P':
 		    if (optarg[0] == 'l')
