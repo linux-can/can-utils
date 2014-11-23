@@ -68,6 +68,10 @@
 #define NO_CAN_ID 0xFFFFFFFFU
 #define DEFAULT_NAME "ctun%d"
 
+/* stay on 4095 bytes for the max. PDU length which is still much more than the standard ethernet MTU */
+#define MAX_PDU_LENGTH 4095
+#define BUF_LEN (MAX_PDU_LENGTH + 1)
+
 static volatile int running = 1;
 
 void print_usage(char *prg)
@@ -78,10 +82,10 @@ void print_usage(char *prg)
 	fprintf(stderr, "Options: -s <can_id>  (source can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -d <can_id>  (destination can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -n <name>    (name of created IP netdevice. Default: '%s')\n", DEFAULT_NAME);
-	fprintf(stderr, "         -x <addr>    (extended addressing mode.)\n");
-	fprintf(stderr, "         -p <byte>    (padding byte rx path)\n");
-	fprintf(stderr, "         -q <byte>    (padding byte tx path)\n");
-	fprintf(stderr, "         -P <mode>    (check padding. (l)ength (c)ontent (a)ll)\n");
+	fprintf(stderr, "         -x <addr>[:<rxaddr>] (extended addressing / opt. separate rxaddr)\n");
+	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags> (link layer options for CAN FD)\n");
+	fprintf(stderr, "         -p [tx]:[rx] (set and enable tx/rx padding bytes)\n");
+	fprintf(stderr, "         -P <mode>    (check rx padding for (l)ength (c)ontent (a)ll)\n");
 	fprintf(stderr, "         -t <time ns> (transmit time in nanosecs)\n");
 	fprintf(stderr, "         -b <bs>      (blocksize. 0 = off)\n");
 	fprintf(stderr, "         -m <val>     (STmin in ms/ns. See spec.)\n");
@@ -107,10 +111,11 @@ int main(int argc, char **argv)
 	struct ifreq ifr;
 	static struct can_isotp_options opts;
 	static struct can_isotp_fc_options fcopts;
+	static struct can_isotp_ll_options llopts;
 	int opt, ret;
 	extern int optind, opterr, optopt;
 	static int verbose;
-	unsigned char buffer[4096];
+	unsigned char buffer[BUF_LEN];
 	static char name[IFNAMSIZ] = DEFAULT_NAME;
 	int nbytes;
 
@@ -120,7 +125,7 @@ int main(int argc, char **argv)
 
 	addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-	while ((opt = getopt(argc, argv, "s:d:n:x:p:q:P:t:b:m:whv?")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:n:x:p:P:t:b:m:whL:v?")) != -1) {
 		switch (opt) {
 		case 's':
 			addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
@@ -139,19 +144,42 @@ int main(int argc, char **argv)
 			break;
 
 		case 'x':
-			opts.flags |= CAN_ISOTP_EXTEND_ADDR;
-			opts.ext_address = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+		{
+			int elements = sscanf(optarg, "%hhx:%hhx",
+					      &opts.ext_address,
+					      &opts.rx_ext_address);
+
+			if (elements == 1)
+				opts.flags |= CAN_ISOTP_EXTEND_ADDR;
+			else if (elements == 2)
+				opts.flags |= (CAN_ISOTP_EXTEND_ADDR | CAN_ISOTP_RX_EXT_ADDR);
+			else {
+				printf("incorrect extended addr values '%s'.\n", optarg);
+				print_usage(basename(argv[0]));
+				exit(0);
+			}
 			break;
+		}
 
 		case 'p':
-			opts.flags |= CAN_ISOTP_RX_PADDING;
-			opts.rxpad_content = strtoul(optarg, (char **)NULL, 16) & 0xFF;
-			break;
+		{
+			int elements = sscanf(optarg, "%hhx:%hhx",
+					      &opts.txpad_content,
+					      &opts.rxpad_content);
 
-		case 'q':
-			opts.flags |= CAN_ISOTP_TX_PADDING;
-			opts.txpad_content = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+			if (elements == 1)
+				opts.flags |= CAN_ISOTP_TX_PADDING;
+			else if (elements == 2)
+				opts.flags |= (CAN_ISOTP_TX_PADDING | CAN_ISOTP_RX_PADDING);
+			else if (sscanf(optarg, ":%hhx", &opts.rxpad_content) == 1)
+				opts.flags |= CAN_ISOTP_RX_PADDING;
+			else {
+				printf("incorrect padding values '%s'.\n", optarg);
+				print_usage(basename(argv[0]));
+				exit(0);
+			}
 			break;
+		}
 
 		case 'P':
 			if (optarg[0] == 'l')
@@ -187,6 +215,17 @@ int main(int argc, char **argv)
 			opts.flags |= CAN_ISOTP_HALF_DUPLEX;
 			break;
 
+		case 'L':
+			if (sscanf(optarg, "%hhu:%hhu:%hhu",
+				   &llopts.mtu,
+				   &llopts.tx_dl,
+				   &llopts.tx_flags) != 3) {
+				printf("unknown link layer options '%s'.\n", optarg);
+				print_usage(basename(argv[0]));
+				exit(0);
+			}
+			break;
+
 		case 'v':
 			verbose = 1;
 			break;
@@ -218,6 +257,13 @@ int main(int argc, char **argv)
 
 	setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
 	setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_RECV_FC, &fcopts, sizeof(fcopts));
+
+	if (llopts.tx_dl) {
+		if (setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &llopts, sizeof(llopts)) < 0) {
+			perror("link layer sockopt");
+			exit(1);
+		}
+	}
 
 	addr.can_family = AF_CAN;
 	strcpy(ifr.ifr_name, argv[optind]);
@@ -260,12 +306,12 @@ int main(int argc, char **argv)
 		}
 
 		if (FD_ISSET(s, &rdfs)) {
-			nbytes = read(s, buffer, 4096);
+			nbytes = read(s, buffer, BUF_LEN);
 			if (nbytes < 0) {
 				perror("read isotp socket");
 				return -1;
 			}
-			if (nbytes > 4095)
+			if (nbytes > MAX_PDU_LENGTH)
 				return -1;
 			ret = write(t, buffer, nbytes);
 			if (verbose) {
@@ -278,12 +324,12 @@ int main(int argc, char **argv)
 		}
 
 		if (FD_ISSET(t, &rdfs)) {
-			nbytes = read(t, buffer, 4096);
+			nbytes = read(t, buffer, BUF_LEN);
 			if (nbytes < 0) {
 				perror("read tunfd");
 				return -1;
 			}
-			if (nbytes > 4095)
+			if (nbytes > MAX_PDU_LENGTH)
 				return -1;
 			ret = write(s, buffer, nbytes);
 			if (verbose) {
