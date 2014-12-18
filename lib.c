@@ -446,6 +446,7 @@ static const char *controller_problems[] = {
 	"tx-error-warning",
 	"rx-error-passive",
 	"tx-error-passive",
+	"back-to-error-active",
 };
 
 static const char *protocol_violation_types[] = {
@@ -455,7 +456,7 @@ static const char *protocol_violation_types[] = {
 	"tx-dominant-bit-error",
 	"tx-recessive-bit-error",
 	"bus-overload",
-	"back-to-error-active",
+	"active-error",
 	"error-on-tx",
 };
 
