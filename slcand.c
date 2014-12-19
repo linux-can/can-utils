@@ -334,13 +334,13 @@ int main(int argc, char *argv[])
 	/* set slcan like discipline on given tty */
 	if (ioctl(fd, TIOCSETD, &ldisc) < 0) {
 		perror("ioctl TIOCSETD");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	
 	/* retrieve the name of the created CAN netdevice */
 	if (ioctl(fd, SIOCGIFNAME, buf) < 0) {
 		perror("ioctl SIOCGIFNAME");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	syslog(LOG_NOTICE, "attached TTY %s to netdevice %s\n", ttypath, buf);
@@ -359,7 +359,7 @@ int main(int argc, char *argv[])
 			if (ioctl(s, SIOCSIFNAME, &ifr) < 0) {
 				syslog(LOG_NOTICE, "netdevice %s rename to %s failed\n", buf, name);
 				perror("ioctl SIOCSIFNAME rename");
-				exit(1);
+				exit(EXIT_FAILURE);
 			} else
 				syslog(LOG_NOTICE, "netdevice %s renamed to %s\n", buf, name);
 
