@@ -37,9 +37,7 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <termios.h>
-
-/* default slcan line discipline since Kernel 2.6.25 */
-#define LDISC_N_SLCAN 17
+#include <linux/tty.h>
 
 /* Change this to whatever your daemon is called */
 #define DAEMON_NAME "slcand"
@@ -180,7 +178,7 @@ int main(int argc, char *argv[])
 	char *btr = NULL;
 	int run_as_daemon = 1;
 	char *pch;
-	int ldisc = LDISC_N_SLCAN;
+	int ldisc = N_SLCAN;
 	int fd;
 
 	ttypath[0] = '\0';

@@ -51,8 +51,7 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <termios.h>
-
-#define LDISC_N_SLCAN 17 /* default slcan line discipline since Kernel 2.6.25 */
+#include <linux/tty.h>
 
 void print_usage(char *prg)
 {
@@ -77,7 +76,7 @@ void print_usage(char *prg)
 int main(int argc, char **argv)
 {
 	int fd;
-	int ldisc = LDISC_N_SLCAN;
+	int ldisc = N_SLCAN;
 	int detach = 0;
 	int waitkey = 0;
 	int send_open = 0;
