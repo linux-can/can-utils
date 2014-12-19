@@ -50,9 +50,6 @@
 /* The length of ttypath buffer */
 #define TTYPATH_LENGTH	64
 
-#define EXIT_SUCCESS 0
-#define EXIT_FAILURE 1
-
 /* UART flow control types */
 #define FLOW_NONE 0
 #define FLOW_HW 1
