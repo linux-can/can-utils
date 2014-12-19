@@ -71,8 +71,9 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -F         (stay in foreground; no daemonize)\n");
 	fprintf(stderr, "         -h         (show this help page)\n");
 	fprintf(stderr, "\nExamples:\n");
-	fprintf(stderr, "slcand -o -c -f -s6 ttyslcan0\n");
-	fprintf(stderr, "slcand -o -c -f -s6 ttyslcan0 can0\n");
+	fprintf(stderr, "slcand -o -c -f -s6 ttyUSB0\n");
+	fprintf(stderr, "slcand -o -c -f -s6 ttyUSB0 can0\n");
+	fprintf(stderr, "slcand -o -c -f -s6 /dev/ttyUSB0\n");
 	fprintf(stderr, "\n");
 	exit(EXIT_FAILURE);
 }
