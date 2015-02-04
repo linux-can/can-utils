@@ -42,6 +42,7 @@ bin_PROGRAMS = \
 	cansend \
 	cansniffer \
 	isotpdump \
+	isotpperf \
 	isotprecv \
 	isotpsend \
 	isotpserver \

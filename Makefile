@@ -52,7 +52,7 @@ CPPFLAGS += -Iinclude \
 	    -DPF_CAN=29 \
 	    -DAF_CAN=PF_CAN
 
-PROGRAMS_ISOTP = isotpdump isotprecv isotpsend isotpsniffer isotptun isotpserver
+PROGRAMS_ISOTP = isotpdump isotprecv isotpsend isotpsniffer isotptun isotpserver isotpperf
 PROGRAMS_CANGW = cangw
 PROGRAMS_SLCAN = slcan_attach slcand
 PROGRAMS = can-calc-bit-timing candump cansniffer cansend canplayer cangen canbusload\

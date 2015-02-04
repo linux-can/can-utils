@@ -264,6 +264,20 @@ LOCAL_CFLAGS := $(PRIVATE_LOCAL_CFLAGS)
 include $(BUILD_EXECUTABLE)
 
 #
+# isotpperf
+#
+
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := isotpperf.c
+LOCAL_MODULE := isotpperf
+LOCAL_MODULE_TAGS := optional
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/include/
+LOCAL_CFLAGS := $(PRIVATE_LOCAL_CFLAGS)
+
+include $(BUILD_EXECUTABLE)
+
+#
 # log2asc
 #
 
