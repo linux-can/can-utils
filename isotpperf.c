@@ -68,7 +68,6 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -d <can_id> (destination can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -x <addr>   (extended addressing mode)\n");
 	fprintf(stderr, "         -X <addr>   (extended addressing mode (rx addr))\n");
-	fprintf(stderr, "         -f          (CAN FD mode - only process CAN FD frames)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "\n");
 }
@@ -365,7 +364,7 @@ int main(int argc, char **argv)
 				if (stmin < 0x80)
 					printf("STmin:%3hhu msec)", stmin);
 				else if (stmin > 0xF0 && stmin < 0xFA)
-					printf("STmin:3%u usec)", (stmin & 0xF) * 100);
+					printf("STmin:%3u usec)", (stmin & 0xF) * 100);
 				else
 					printf("STmin: invalid   )");
 
