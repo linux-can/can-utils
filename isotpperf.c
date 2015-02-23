@@ -103,6 +103,7 @@ int main(int argc, char **argv)
 	int datidx = 0;
 	unsigned char bs = 0;
 	unsigned char stmin = 0;
+	unsigned char brs = 0;
 	unsigned long fflen = 0;
 	unsigned fflen_digits = 0;
 	unsigned long rcvlen = 0;
@@ -273,6 +274,9 @@ int main(int argc, char **argv)
 				/* get number of digits for printing */
 				fflen_digits = getdigits(fflen);
 
+				/* get CAN FD bitrate setting information */
+				brs = frame.flags & CANFD_BRS;
+
 				ioctl(s, SIOCGSTAMP, &start_tv);
 
 				/* determine CAN frame mode for this PDU */
@@ -308,6 +312,9 @@ int main(int argc, char **argv)
 
 				/* get number of digits for printing */
 				fflen_digits = getdigits(fflen);
+
+				/* get CAN FD bitrate setting information */
+				brs = frame.flags & CANFD_BRS;
 
 				ioctl(s, SIOCGSTAMP, &start_tv);
 
@@ -360,7 +367,7 @@ int main(int argc, char **argv)
 			/* PDU complete */
 			if (rcvlen && rcvlen >= fflen) {
 
-				printf("\r%s (BS:%2hhu # ", canfd_on?"CAN-FD":"CAN2.0", bs);
+				printf("\r%s%c (BS:%2hhu # ", canfd_on?"CAN-FD":"CAN2.0", brs?'*':' ', bs);
 				if (stmin < 0x80)
 					printf("STmin:%3hhu msec)", stmin);
 				else if (stmin > 0xF0 && stmin < 0xFA)
