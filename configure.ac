@@ -1,8 +1,8 @@
 # -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
-AC_PREREQ(2.59)
+AC_PREREQ([2.59])
 
-AC_INIT([can-utils], [trunk], [linux-can@vger.kernel.org])
+AC_INIT([can-utils],[trunk],[linux-can@vger.kernel.org])
 AC_CONFIG_SRCDIR([lib.c])
 AC_CONFIG_MACRO_DIR([config/m4])
 AC_CONFIG_AUX_DIR([config/autoconf])
@@ -17,13 +17,7 @@ CFLAGS="${CFLAGS} -Wall"
 # Checks for programs.
 #
 AC_PROG_CC
-#AM_MISSING_PROG(PERL, perl, $missing_dir)
-# libtool, old:
-AC_LIBTOOL_WIN32_DLL
-#AC_LIBTOOL_TAGS([])
-AC_PROG_LIBTOOL
-# libtool, new:
-# LT_INIT(win32-dll)
+LT_INIT(win32-dll)
 
 AM_INIT_AUTOMAKE([foreign no-exeext dist-bzip2])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes]]))
