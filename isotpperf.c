@@ -220,7 +220,7 @@ int main(int argc, char **argv)
 			running = 0;
 			continue;
 		} else if (nbytes != CAN_MTU && nbytes != CANFD_MTU) {
-			fprintf(stderr, "read: incomplete CAN frame %lu %d\n", sizeof(frame), nbytes);
+			fprintf(stderr, "read: incomplete CAN frame %zu %d\n", sizeof(frame), nbytes);
 			ret = nbytes;
 			running = 0;
 			continue;
