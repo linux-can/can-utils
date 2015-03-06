@@ -198,6 +198,8 @@ int main(int argc, char **argv)
 		}
 	}
 	fflush(outfile);
+	fclose(outfile);
+	fclose(infile);
 
 	return 0;
 }
