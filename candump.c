@@ -131,6 +131,7 @@ void print_usage(char *prg)
 	fprintf(stderr, " <can_id>:<can_mask> (matches when <received_can_id> & mask == can_id & mask)\n");
 	fprintf(stderr, " <can_id>~<can_mask> (matches when <received_can_id> & mask != can_id & mask)\n");
 	fprintf(stderr, " #<error_mask>       (set error frame filter, see include/linux/can/error.h)\n");
+	fprintf(stderr, " [j|J]               (join the given CAN filters - logical AND semantic)\n");
 	fprintf(stderr, "\nCAN IDs, masks and data content are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "When can_id and can_mask are both 8 digits, they are assumed to be 29 bit EFF.\n");
 	fprintf(stderr, "Without any given filter all data frames are received ('0:0' default filter).\n");
@@ -218,6 +219,7 @@ int main(int argc, char **argv)
 	int rcvbuf_size = 0;
 	int opt, ret;
 	int currmax, numfilter;
+	int join_filter;
 	char *ptr, *nptr;
 	struct sockaddr_can addr;
 	char ctrlmsg[CMSG_SPACE(sizeof(struct timeval)) + CMSG_SPACE(sizeof(__u32))];
@@ -467,6 +469,7 @@ int main(int argc, char **argv)
 
 			numfilter = 0;
 			err_mask = 0;
+			join_filter = 0;
 
 			while (nptr) {
 
@@ -484,6 +487,8 @@ int main(int argc, char **argv)
  					rfilter[numfilter].can_id |= CAN_INV_FILTER;
  					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
 					numfilter++;
+				} else if (*ptr == 'j' || *ptr == 'J') {
+					join_filter = 1;
 				} else if (sscanf(ptr, "#%x", &err_mask) != 1) { 
 					fprintf(stderr, "Error in filter option parsing: '%s'\n", ptr);
 					return 1;
@@ -497,6 +502,10 @@ int main(int argc, char **argv)
 			if (numfilter)
 				setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_FILTER,
 					   rfilter, numfilter * sizeof(struct can_filter));
+
+			if (join_filter)
+				setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_JOIN_FILTERS,
+					   &join_filter, sizeof(join_filter));
 
 			free(rfilter);
 
