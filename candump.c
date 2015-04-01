@@ -499,13 +499,15 @@ int main(int argc, char **argv)
 				setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_ERR_FILTER,
 					   &err_mask, sizeof(err_mask));
 
+			if (join_filter && setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_JOIN_FILTERS,
+						      &join_filter, sizeof(join_filter)) < 0) {
+				perror("setsockopt CAN_RAW_JOIN_FILTERS not supported by your Linux Kernel");
+				return 1;
+			}
+
 			if (numfilter)
 				setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_FILTER,
 					   rfilter, numfilter * sizeof(struct can_filter));
-
-			if (join_filter)
-				setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_JOIN_FILTERS,
-					   &join_filter, sizeof(join_filter));
 
 			free(rfilter);
 
