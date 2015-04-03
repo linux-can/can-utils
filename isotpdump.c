@@ -202,6 +202,10 @@ int main(int argc, char **argv)
 
 	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, &rfilter, sizeof(rfilter));
 
+	if (strlen(argv[optind]) >= IFNAMSIZ) {
+		printf("name of CAN device '%s' is too long!\n", argv[optind]);
+		return 1;
+	}
 	strcpy(ifr.ifr_name, argv[optind]);
 	ioctl(s, SIOCGIFINDEX, &ifr);
 	ifindex = ifr.ifr_ifindex;
