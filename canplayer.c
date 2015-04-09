@@ -86,7 +86,7 @@ void print_usage(char *prg)
 		"send frames immediately)\n");
 	fprintf(stderr, "                      -g <ms>      (gap in milli "
 		"seconds - default: %d ms)\n", DEFAULT_GAP);
-	fprintf(stderr, "                      -s <s>      (skip gaps in "
+	fprintf(stderr, "                      -s <s>       (skip gaps in "
 		"timestamps > 's' seconds)\n");
 	fprintf(stderr, "                      -x           (disable local "
 		"loopback of sent CAN frames)\n");
@@ -241,7 +241,8 @@ int main(int argc, char **argv)
 	FILE *infile = stdin;
 	unsigned long gap = DEFAULT_GAP; 
 	int use_timestamps = 1;
-	static int verbose, opt, delay_loops, skipgap;
+	static int verbose, opt, delay_loops;
+	static unsigned long skipgap;
 	static int loopback_disable = 0;
 	static int infinite_loops = 0;
 	static int loops = DEFAULT_LOOPS;
@@ -482,7 +483,7 @@ int main(int argc, char **argv)
 					/* test for logfile timestamps jumping backwards OR      */
 					/* if the user likes to skip long gaps in the timestamps */
 					if ((last_log_tv.tv_sec > log_tv.tv_sec) ||
-					    (skipgap && abs(last_log_tv.tv_sec - log_tv.tv_sec) > skipgap))
+					    (skipgap && labs(last_log_tv.tv_sec - log_tv.tv_sec) > skipgap))
 						create_diff_tv(&today_tv, &diff_tv, &log_tv);
 
 					last_log_tv = log_tv;
