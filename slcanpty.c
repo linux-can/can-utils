@@ -185,6 +185,13 @@ rx_restart:
 		ptr = 1;
 		goto rx_out;
 	}
+	/* check for 'v'ersion command */
+	if (cmd == 'v') {
+		sprintf(replybuf, "v1014\r");
+		tmp = strlen(replybuf);
+		ptr = 1;
+		goto rx_out;
+	}
 
 	/* check for serial 'N'umber command */
 	if (cmd == 'N') {
