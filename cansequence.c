@@ -78,9 +78,25 @@ static void sigterm(int signo)
 
 static void do_receive()
 {
+	uint8_t ctrlmsg[CMSG_SPACE(sizeof(struct timeval)) + CMSG_SPACE(sizeof(__u32))];
+	struct iovec iov = {
+		.iov_base = &frame,
+	};
+	struct msghdr msg = {
+		.msg_iov = &iov,
+		.msg_iovlen = 1,
+		.msg_control = &ctrlmsg,
+	};
+	struct cmsghdr *cmsg;
+	const int dropmonitor_on = 1;
 	unsigned int seq_wrap = 0;
 	uint8_t sequence = 0;
 	ssize_t nbytes;
+
+	if (setsockopt(s, SOL_SOCKET, SO_RXQ_OVFL,
+		       &dropmonitor_on, sizeof(dropmonitor_on)) < 0) {
+		perror("setsockopt() SO_RXQ_OVFL not supported by your Linux Kernel");
+	}
 
 	/* enable recv. now */
 	if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, filter, sizeof(filter))) {
@@ -89,7 +105,11 @@ static void do_receive()
 	}
 
 	while ((infinite || loopcount--) && running) {
-		nbytes = read(s, &frame, sizeof(struct can_frame));
+		msg.msg_iov[0].iov_len = sizeof(frame);
+		msg.msg_controllen = sizeof(ctrlmsg);
+		msg.msg_flags = 0;
+		nbytes = recvmsg(s, &msg, 0);
+
 		if (nbytes < 0) {
 			perror("read()");
 			exit(EXIT_FAILURE);
@@ -104,8 +124,20 @@ static void do_receive()
 			printf("received frame. sequence number: %d\n", frame.data[0]);
 
 		if (frame.data[0] != sequence) {
-			printf("received wrong sequence count. expected: %d, got: %d\n",
-			       sequence, frame.data[0]);
+			uint32_t overflows = 0;
+
+			for (cmsg = CMSG_FIRSTHDR(&msg);
+			     cmsg && (cmsg->cmsg_level == SOL_SOCKET);
+			     cmsg = CMSG_NXTHDR(&msg,cmsg)) {
+				if (cmsg->cmsg_type == SO_RXQ_OVFL) {
+					memcpy(&overflows, CMSG_DATA(cmsg), sizeof(overflows));
+					break;
+				}
+			}
+
+			fprintf(stderr, "received wrong sequence count. expected: %d, got: %d, socket overflows: %u\n",
+				sequence, frame.data[0], overflows);
+
 			if (quit)
 				exit(EXIT_FAILURE);
 
