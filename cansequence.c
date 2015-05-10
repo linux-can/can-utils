@@ -31,7 +31,8 @@ static int s = -1;
 static bool running = true;
 static bool infinite = true;
 static bool sequence_init = true;
-static bool quit = false;
+static unsigned int drop_until_quit;
+static unsigned int drop_count;
 static bool use_poll = false;
 
 static unsigned int loopcount = 1;
@@ -63,7 +64,7 @@ static void print_usage(char *prg)
 		" -r, --receive		work as receiver\n"
 		"     --loop=COUNT	send message COUNT times\n"
 		" -p  --poll		use poll(2) to wait for buffer space while sending\n"
-		" -q  --quit		quit if a wrong sequence is encountered\n"
+		" -q  --quit <num>	quit if <num> wrong sequences are encountered\n"
 		" -v, --verbose		be verbose (twice to be even more verbose\n"
 		" -h  --help		this help\n"
 		"     --version		print version information and exit\n",
@@ -126,6 +127,8 @@ static void do_receive()
 		if (frame.data[0] != sequence) {
 			uint32_t overflows = 0;
 
+			drop_count++;
+
 			for (cmsg = CMSG_FIRSTHDR(&msg);
 			     cmsg && (cmsg->cmsg_level == SOL_SOCKET);
 			     cmsg = CMSG_NXTHDR(&msg,cmsg)) {
@@ -135,10 +138,10 @@ static void do_receive()
 				}
 			}
 
-			fprintf(stderr, "received wrong sequence count. expected: %d, got: %d, socket overflows: %u\n",
-				sequence, frame.data[0], overflows);
+			fprintf(stderr, "[%d] received wrong sequence count. expected: %d, got: %d, socket overflows: %u\n",
+				drop_count, sequence, frame.data[0], overflows);
 
-			if (quit)
+			if (drop_count == drop_until_quit)
 				exit(EXIT_FAILURE);
 
 			sequence = frame.data[0];
@@ -219,7 +222,7 @@ int main(int argc, char **argv)
 		{ "extended",	no_argument,		0, 'e' },
 		{ "help",	no_argument,		0, 'h' },
 		{ "poll",	no_argument,		0, 'p' },
-		{ "quit",	no_argument,		0, 'q' },
+		{ "quit",	optional_argument,	0, 'q' },
 		{ "receive",	no_argument,		0, 'r' },
 		{ "verbose",	no_argument,		0, 'v' },
 		{ "version",	no_argument,		0, VERSION_OPTION},
@@ -228,7 +231,7 @@ int main(int argc, char **argv)
 		{ 0,		0,			0, 0},
 	};
 
-	while ((opt = getopt_long(argc, argv, "ehpqrvi:l:", long_options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "ehpq:rvi:l:", long_options, NULL)) != -1) {
 		switch (opt) {
 		case 'e':
 			extended = true;
@@ -244,7 +247,10 @@ int main(int argc, char **argv)
 			break;
 
 		case 'q':
-			quit = true;
+			if (optarg)
+				drop_until_quit = strtoul(optarg, NULL, 0);
+			else
+				drop_until_quit = 1;
 			break;
 
 		case 'r':
