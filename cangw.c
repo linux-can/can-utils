@@ -196,6 +196,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "Options:   -t (preserve src_dev rx timestamp)\n");
 	fprintf(stderr, "           -e (echo sent frames - recommended on vcanx)\n");
 	fprintf(stderr, "           -i (allow to route to incoming interface)\n");
+	fprintf(stderr, "           -u <uid> (user defined modification identifier)\n");
 	fprintf(stderr, "           -l <hops> (limit the number of frame hops / routings)\n");
 	fprintf(stderr, "           -f <filter> (set CAN filter)\n");
 	fprintf(stderr, "           -m <mod> (set frame modifications)\n");
@@ -418,6 +419,7 @@ int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
 			case CGW_MOD_OR:
 			case CGW_MOD_XOR:
 			case CGW_MOD_SET:
+			case CGW_MOD_UID:
 			case CGW_LIM_HOPS:
 			case CGW_CS_XOR:
 			case CGW_CS_CRC8:
@@ -491,6 +493,10 @@ int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
 				printmod("SET", RTA_DATA(rta));
 				break;
 
+			case CGW_MOD_UID:
+				printf("-u %X ", *(__u32 *)RTA_DATA(rta));
+				break;
+
 			case CGW_LIM_HOPS:
 				printf("-l %d ", *(__u8 *)RTA_DATA(rta));
 				break;
@@ -551,6 +557,7 @@ int main(int argc, char **argv)
 	struct nlmsgerr *rte;
 	unsigned int src_ifindex = 0;
 	unsigned int dst_ifindex = 0;
+	__u32 uid = 0;
 	__u8 limit_hops = 0;
 	__u16 flags = 0;
 	int len;
@@ -570,7 +577,7 @@ int main(int argc, char **argv)
 	memset(&cs_xor, 0, sizeof(cs_xor));
 	memset(&cs_crc8, 0, sizeof(cs_crc8));
 
-	while ((opt = getopt(argc, argv, "ADFLs:d:teil:f:c:p:x:m:?")) != -1) {
+	while ((opt = getopt(argc, argv, "ADFLs:d:teiu:l:f:c:p:x:m:?")) != -1) {
 		switch (opt) {
 
 		case 'A':
@@ -611,6 +618,10 @@ int main(int argc, char **argv)
 
 		case 'i':
 			flags |= CGW_FLAGS_CAN_IIF_TX_OK;
+			break;
+
+		case 'u':
+			uid = strtoul(optarg, (char **)NULL, 16);
 			break;
 
 		case 'l':
@@ -756,6 +767,9 @@ int main(int argc, char **argv)
 
 	if (have_cs_xor)
 		addattr_l(&req.nh, sizeof(req), CGW_CS_XOR, &cs_xor, sizeof(cs_xor));
+
+	if (uid)
+		addattr_l(&req.nh, sizeof(req), CGW_MOD_UID, &uid, sizeof(__u32));
 
 	if (limit_hops)
 		addattr_l(&req.nh, sizeof(req), CGW_LIM_HOPS, &limit_hops, sizeof(__u8));
