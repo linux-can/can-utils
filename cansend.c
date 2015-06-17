@@ -96,6 +96,10 @@ int main(int argc, char **argv)
 
 	addr.can_family = AF_CAN;
 
+	if (strlen(argv[1]) >= IFNAMSIZ) {
+		printf("name of CAN device '%s' is too long!\n", argv[1]);
+		return 1;
+	}
 	strcpy(ifr.ifr_name, argv[1]);
 	if (ioctl(s, SIOCGIFINDEX, &ifr) < 0) {
 		perror("SIOCGIFINDEX");

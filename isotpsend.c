@@ -224,6 +224,10 @@ int main(int argc, char **argv)
 	    setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_TX_STMIN, &force_tx_stmin, sizeof(force_tx_stmin));
 
     addr.can_family = AF_CAN;
+    if (strlen(argv[optind]) >= IFNAMSIZ) {
+	    printf("name of CAN device '%s' is too long!\n", argv[optind]);
+	    return 1;
+    }
     strcpy(ifr.ifr_name, argv[optind]);
     ioctl(s, SIOCGIFINDEX, &ifr);
     addr.can_ifindex = ifr.ifr_ifindex;
