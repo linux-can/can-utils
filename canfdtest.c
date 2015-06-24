@@ -312,7 +312,6 @@ static int can_echo_gen(void)
 
 int main(int argc, char *argv[])
 {
-	struct ifreq ifr;
 	struct sockaddr_can addr;
 	char *intf_name;
 	int family = PF_CAN, type = SOCK_RAW, proto = CAN_RAW;
@@ -356,9 +355,7 @@ int main(int argc, char *argv[])
 	}
 
 	addr.can_family = family;
-	strcpy(ifr.ifr_name, intf_name);
-	ioctl(sockfd, SIOCGIFINDEX, &ifr);
-	addr.can_ifindex = ifr.ifr_ifindex;
+	addr.can_ifindex = if_nametoindex(intf_name);
 
 	if (bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");

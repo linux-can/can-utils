@@ -81,7 +81,6 @@ int main(int argc, char **argv)
 {
     int s;
     struct sockaddr_can addr;
-    struct ifreq ifr;
     static struct can_isotp_options opts;
     static struct can_isotp_fc_options fcopts;
     static struct can_isotp_ll_options llopts;
@@ -232,9 +231,7 @@ int main(int argc, char **argv)
 	    setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_RX_STMIN, &force_rx_stmin, sizeof(force_rx_stmin));
 
     addr.can_family = AF_CAN;
-    strcpy(ifr.ifr_name, argv[optind]);
-    ioctl(s, SIOCGIFINDEX, &ifr);
-    addr.can_ifindex = ifr.ifr_ifindex;
+    addr.can_ifindex = if_nametoindex(argv[optind]);
 
     if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 	perror("bind");
