@@ -265,9 +265,15 @@ int main(int argc, char **argv)
 		}
 	}
 
+	strncpy(ifr.ifr_name, argv[optind], IFNAMSIZ);
+	ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
+	if (!ifr.ifr_ifindex) {
+		perror("if_nametoindex");
+		close(s);
+		exit(1);
+	}
+
 	addr.can_family = AF_CAN;
-	strcpy(ifr.ifr_name, argv[optind]);
-	ioctl(s, SIOCGIFINDEX, &ifr);
 	addr.can_ifindex = ifr.ifr_ifindex;
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -285,7 +291,8 @@ int main(int argc, char **argv)
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
-	strncpy(ifr.ifr_name, name, IFNAMSIZ);
+	strncpy(ifr.ifr_name, name, IFNAMSIZ - 1);
+	ifr.ifr_name[IFNAMSIZ - 1] = '\0';
 
 	if (ioctl(t, TUNSETIFF, (void *) &ifr) < 0) {
 		perror("ioctl tunfd");

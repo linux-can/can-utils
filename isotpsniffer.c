@@ -175,7 +175,7 @@ int main(int argc, char **argv)
 	fd_set rdfs;
 	int s, t;
 	struct sockaddr_can addr;
-	struct ifreq ifr;
+	char if_name[IFNAMSIZ];
 	static struct can_isotp_options opts;
 	int opt, quit = 0;
 	int color = 0;
@@ -271,10 +271,11 @@ int main(int argc, char **argv)
 
 	opts.flags |= CAN_ISOTP_LISTEN_MODE;
 
+	strncpy(if_name, argv[optind], IFNAMSIZ - 1);
+	if_name[IFNAMSIZ - 1] = '\0';
+
 	addr.can_family = AF_CAN;
-	strcpy(ifr.ifr_name, argv[optind]);
-	ioctl(s, SIOCGIFINDEX, &ifr);
-	addr.can_ifindex = ifr.ifr_ifindex;
+	addr.can_ifindex = if_nametoindex(if_name);
 
 	setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
 
@@ -334,7 +335,7 @@ int main(int argc, char **argv)
 			if (nbytes > 4095)
 				return -1;
 			printbuf(buffer, nbytes, color?2:0, timestamp, format,
-				 &tv, &last_tv, dst, s, ifr.ifr_name, head);
+				 &tv, &last_tv, dst, s, if_name, head);
 		}
 
 		if (FD_ISSET(t, &rdfs)) {
@@ -346,7 +347,7 @@ int main(int argc, char **argv)
 			if (nbytes > 4095)
 				return -1;
 			printbuf(buffer, nbytes, color?1:0, timestamp, format,
-				 &tv, &last_tv, src, t, ifr.ifr_name, head);
+				 &tv, &last_tv, src, t, if_name, head);
 		}
 	}
 

@@ -94,13 +94,15 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	addr.can_family = AF_CAN;
-
-	strcpy(ifr.ifr_name, argv[1]);
-	if (ioctl(s, SIOCGIFINDEX, &ifr) < 0) {
-		perror("SIOCGIFINDEX");
+	strncpy(ifr.ifr_name, argv[1], IFNAMSIZ - 1);
+	ifr.ifr_name[IFNAMSIZ - 1] = '\0';
+	ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
+	if (!ifr.ifr_ifindex) {
+		perror("if_nametoindex");
 		return 1;
 	}
+
+	addr.can_family = AF_CAN;
 	addr.can_ifindex = ifr.ifr_ifindex;
 
 	if (required_mtu > CAN_MTU) {

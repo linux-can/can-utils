@@ -137,7 +137,6 @@ int main(int argc, char **argv)
 	static struct can_isotp_options opts;
 	static struct can_isotp_fc_options fcopts;
 	static struct can_isotp_ll_options llopts;
-	struct ifreq ifr;
 	socklen_t sin_size = sizeof(clientaddr);
 	socklen_t caddrlen = sizeof(caddr);
 
@@ -345,12 +344,7 @@ int main(int argc, char **argv)
 	}
 
 	caddr.can_family = AF_CAN;
-	strcpy(ifr.ifr_name, argv[optind]);
-	if (ioctl(sc, SIOCGIFINDEX, &ifr) < 0) {
-		perror("SIOCGIFINDEX");
-		exit(1);
-	}
-	caddr.can_ifindex = ifr.ifr_ifindex;
+	caddr.can_ifindex = if_nametoindex(argv[optind]);
 
 	if (bind(sc, (struct sockaddr *)&caddr, caddrlen) < 0) {
 		perror("bind");
