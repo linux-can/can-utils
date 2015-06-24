@@ -271,9 +271,14 @@ int main(int argc, char **argv)
 
 	opts.flags |= CAN_ISOTP_LISTEN_MODE;
 
+	strncpy(ifr.ifr_name, argv[optind], IFNAMSIZ);
+	ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
+	if (!ifr.ifr_ifindex) {
+		perror("if_nametoindex");
+		return 1;
+	}
+
 	addr.can_family = AF_CAN;
-	strcpy(ifr.ifr_name, argv[optind]);
-	ioctl(s, SIOCGIFINDEX, &ifr);
 	addr.can_ifindex = ifr.ifr_ifindex;
 
 	setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));

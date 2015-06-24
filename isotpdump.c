@@ -96,8 +96,6 @@ int main(int argc, char **argv)
 	int timestamp = 0;
 	int datidx = 0;
 	unsigned long fflen = 0;
-	struct ifreq ifr;
-	int ifindex;
 	struct timeval tv, last_tv;
 	unsigned int n_pci;
 	int opt;
@@ -202,12 +200,8 @@ int main(int argc, char **argv)
 
 	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, &rfilter, sizeof(rfilter));
 
-	strcpy(ifr.ifr_name, argv[optind]);
-	ioctl(s, SIOCGIFINDEX, &ifr);
-	ifindex = ifr.ifr_ifindex;
-
 	addr.can_family = AF_CAN;
-	addr.can_ifindex = ifindex;
+	addr.can_ifindex = if_nametoindex(argv[optind]);
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
