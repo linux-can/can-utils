@@ -94,8 +94,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	strncpy(ifr.ifr_name, argv[1], IFNAMSIZ-1);
-	ifr.ifr_name[IFNAMSIZ-1] = '\0';
+	strncpy(ifr.ifr_name, argv[1], IFNAMSIZ - 1);
+	ifr.ifr_name[IFNAMSIZ - 1] = '\0';
 	ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
 	if (!ifr.ifr_ifindex) {
 		perror("if_nametoindex");

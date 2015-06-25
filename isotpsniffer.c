@@ -271,8 +271,8 @@ int main(int argc, char **argv)
 
 	opts.flags |= CAN_ISOTP_LISTEN_MODE;
 
-	strncpy(if_name, argv[optind], IFNAMSIZ-1);
-	if_name[IFNAMSIZ-1] = '\0';
+	strncpy(if_name, argv[optind], IFNAMSIZ - 1);
+	if_name[IFNAMSIZ - 1] = '\0';
 
 	addr.can_family = AF_CAN;
 	addr.can_ifindex = if_nametoindex(if_name);
