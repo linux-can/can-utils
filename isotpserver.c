@@ -137,7 +137,6 @@ int main(int argc, char **argv)
 	static struct can_isotp_options opts;
 	static struct can_isotp_fc_options fcopts;
 	static struct can_isotp_ll_options llopts;
-	struct ifreq ifr;
 	socklen_t sin_size = sizeof(clientaddr);
 	socklen_t caddrlen = sizeof(caddr);
 
