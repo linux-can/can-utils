@@ -291,7 +291,8 @@ int main(int argc, char **argv)
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
-	strncpy(ifr.ifr_name, name, IFNAMSIZ);
+	strncpy(ifr.ifr_name, name, IFNAMSIZ-1);
+	ifr.ifr_name[IFNAMSIZ-1] = '\0';
 
 	if (ioctl(t, TUNSETIFF, (void *) &ifr) < 0) {
 		perror("ioctl tunfd");
