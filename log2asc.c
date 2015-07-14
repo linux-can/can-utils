@@ -48,6 +48,7 @@
 #include <unistd.h>
 
 #include <net/if.h>
+#include <sys/time.h>
 #include <linux/can.h>
 
 #include "lib.h"
