@@ -38,6 +38,7 @@
 #include <net/if.h>
 #include <termios.h>
 #include <linux/tty.h>
+#include <linux/sockios.h>
 
 /* Change this to whatever your daemon is called */
 #define DAEMON_NAME "slcand"

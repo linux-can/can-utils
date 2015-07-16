@@ -52,6 +52,7 @@
 #include <net/if.h>
 #include <termios.h>
 #include <linux/tty.h>
+#include <linux/sockios.h>
 
 void print_usage(char *prg)
 {
