@@ -20,7 +20,7 @@ AC_PROG_CC
 LT_INIT(win32-dll)
 
 AM_INIT_AUTOMAKE([foreign no-exeext dist-bzip2])
-m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes]]))
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 #
 # Checks for header files.
