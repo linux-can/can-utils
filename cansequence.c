@@ -87,12 +87,10 @@ static void do_receive()
 		.msg_iovlen = 1,
 		.msg_control = &ctrlmsg,
 	};
-	struct cmsghdr *cmsg;
 	const int dropmonitor_on = 1;
 	bool sequence_init = true;
 	unsigned int seq_wrap = 0;
 	uint8_t sequence = 0;
-	ssize_t nbytes;
 
 	if (setsockopt(s, SOL_SOCKET, SO_RXQ_OVFL,
 		       &dropmonitor_on, sizeof(dropmonitor_on)) < 0) {
@@ -106,11 +104,13 @@ static void do_receive()
 	}
 
 	while ((infinite || loopcount--) && running) {
+		ssize_t nbytes;
+
 		msg.msg_iov[0].iov_len = sizeof(frame);
 		msg.msg_controllen = sizeof(ctrlmsg);
 		msg.msg_flags = 0;
-		nbytes = recvmsg(s, &msg, 0);
 
+		nbytes = recvmsg(s, &msg, 0);
 		if (nbytes < 0) {
 			perror("read()");
 			exit(EXIT_FAILURE);
@@ -125,6 +125,7 @@ static void do_receive()
 			printf("received frame. sequence number: %d\n", frame.data[0]);
 
 		if (frame.data[0] != sequence) {
+			struct cmsghdr *cmsg;
 			uint32_t overflows = 0;
 
 			drop_count++;
