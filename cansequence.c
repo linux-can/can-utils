@@ -94,6 +94,7 @@ static void do_receive()
 	uint32_t sequence_rx = 0;
 	uint32_t sequence_delta = 0;
 	uint32_t sequence = 0;
+	unsigned int overflow_old = 0;
 
 	if (setsockopt(s, SOL_SOCKET, SO_RXQ_OVFL,
 		       &dropmonitor_on, sizeof(dropmonitor_on)) < 0) {
@@ -129,7 +130,8 @@ static void do_receive()
 		sequence_delta = (sequence_rx - sequence) & sequence_mask;
 		if (sequence_delta) {
 			struct cmsghdr *cmsg;
-			uint32_t overflows = 0;
+			uint32_t overflow = 0;
+			uint32_t overflow_delta;
 
 			drop_count++;
 
@@ -137,18 +139,26 @@ static void do_receive()
 			     cmsg && (cmsg->cmsg_level == SOL_SOCKET);
 			     cmsg = CMSG_NXTHDR(&msg,cmsg)) {
 				if (cmsg->cmsg_type == SO_RXQ_OVFL) {
-					memcpy(&overflows, CMSG_DATA(cmsg), sizeof(overflows));
+					memcpy(&overflow, CMSG_DATA(cmsg), sizeof(overflow));
 					break;
 				}
 			}
 
-			fprintf(stderr, "[%d] received wrong sequence count. expected: %d, got: %d, socket overflows: %u\n",
-				drop_count, sequence & sequence_mask, sequence_rx, overflows);
+			overflow_delta = overflow - overflow_old;
+
+			fprintf(stderr,
+				"sequence CNT: %6u, RX: %6u    expected: %3u    missing: %4u    skt overfl d: %4u a: %4u    delta: %3u    incident: %u\n",
+				sequence, sequence_rx,
+				sequence & sequence_mask, sequence_delta,
+				overflow_delta, overflow,
+				sequence_delta - overflow_delta,
+				drop_count);
 
 			if (drop_count == drop_until_quit)
 				exit(EXIT_FAILURE);
 
 			sequence = sequence_rx;
+			overflow_old = overflow;
 		} else 	if (verbose > 1) {
 			printf("sequence CNT: %6u, RX: %6u\n", sequence, sequence_rx);
 		}
