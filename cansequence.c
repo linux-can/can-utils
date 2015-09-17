@@ -58,14 +58,14 @@ static void print_usage(char *prg)
 		"The main purpose of this program is to test the reliability of CAN links.\n"
 		"\n"
 		"Options:\n"
-		" -e  --extended		send extended frame\n"
+		" -e, --extended		send extended frame\n"
 		" -i, --identifier=ID	CAN Identifier (default = %u)\n"
-		" -r, --receive		work as receiver\n"
 		"     --loop=COUNT	send message COUNT times\n"
-		" -p  --poll		use poll(2) to wait for buffer space while sending\n"
-		" -q  --quit <num>	quit if <num> wrong sequences are encountered\n"
+		" -p, --poll		use poll(2) to wait for buffer space while sending\n"
+		" -q, --quit <num>	quit if <num> wrong sequences are encountered\n"
+		" -r, --receive		work as receiver\n"
 		" -v, --verbose		be verbose (twice to be even more verbose\n"
-		" -h  --help		this help\n"
+		" -h, --help		this help\n"
 		"     --version		print version information and exit\n",
 		prg, CAN_ID_DEFAULT);
 }
@@ -220,26 +220,38 @@ int main(int argc, char **argv)
 
 	struct option long_options[] = {
 		{ "extended",	no_argument,		0, 'e' },
-		{ "help",	no_argument,		0, 'h' },
+		{ "identifier",	required_argument,	0, 'i' },
+		{ "loop",	required_argument,	0, 'l' },
 		{ "poll",	no_argument,		0, 'p' },
 		{ "quit",	optional_argument,	0, 'q' },
 		{ "receive",	no_argument,		0, 'r' },
 		{ "verbose",	no_argument,		0, 'v' },
 		{ "version",	no_argument,		0, VERSION_OPTION},
-		{ "identifier",	required_argument,	0, 'i' },
-		{ "loop",	required_argument,	0, 'l' },
+		{ "help",	no_argument,		0, 'h' },
 		{ 0,		0,			0, 0},
 	};
 
-	while ((opt = getopt_long(argc, argv, "ehpq:rvi:l:", long_options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "ei:pq::rvh", long_options, NULL)) != -1) {
 		switch (opt) {
 		case 'e':
 			extended = true;
 			break;
 
-		case 'h':
-			print_usage(basename(argv[0]));
-			exit(EXIT_SUCCESS);
+		case 'i':
+			filter->can_id = strtoul(optarg, NULL, 0);
+			break;
+
+		case 'r':
+			receive = true;
+			break;
+
+		case 'l':
+			if (optarg) {
+				loopcount = strtoul(optarg, NULL, 0);
+				infinite = false;
+			} else {
+				infinite = true;
+			}
 			break;
 
 		case 'p':
@@ -253,30 +265,18 @@ int main(int argc, char **argv)
 				drop_until_quit = 1;
 			break;
 
-		case 'r':
-			receive = true;
-			break;
-
 		case 'v':
 			verbose++;
+			break;
+
+		case 'h':
+			print_usage(basename(argv[0]));
+			exit(EXIT_SUCCESS);
 			break;
 
 		case VERSION_OPTION:
 			printf("cansequence %s\n", VERSION);
 			exit(EXIT_SUCCESS);
-			break;
-
-		case 'l':
-			if (optarg) {
-				loopcount = strtoul(optarg, NULL, 0);
-				infinite = false;
-			} else {
-				infinite = true;
-			}
-			break;
-
-		case 'i':
-			filter->can_id = strtoul(optarg, NULL, 0);
 			break;
 
 		default:
