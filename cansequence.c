@@ -70,7 +70,7 @@ static void print_usage(char *prg)
 		prg, CAN_ID_DEFAULT);
 }
 
-static void sigterm(int signo)
+static void sig_handler(int signo)
 {
 	running = false;
 }
@@ -208,6 +208,9 @@ static void do_send()
 
 int main(int argc, char **argv)
 {
+	struct sigaction act = {
+		.sa_handler = sig_handler,
+	};
 	struct ifreq ifr;
 	struct sockaddr_can addr;
 	char *interface = "can0";
@@ -216,8 +219,9 @@ int main(int argc, char **argv)
 	int receive = 0;
 	int opt;
 
-	signal(SIGTERM, sigterm);
-	signal(SIGHUP, sigterm);
+	sigaction(SIGINT, &act, NULL);
+	sigaction(SIGTERM, &act, NULL);
+	sigaction(SIGHUP, &act, NULL);
 
 	struct option long_options[] = {
 		{ "extended",	no_argument,		0, 'e' },
