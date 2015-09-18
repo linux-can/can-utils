@@ -281,7 +281,8 @@ int main(int argc, char **argv)
 			break;
 
 		default:
-			fprintf(stderr, "Unknown option %c\n", opt);
+			print_usage(basename(argv[0]));
+			exit(EXIT_FAILURE);
 			break;
 		}
 	}
