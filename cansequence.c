@@ -89,8 +89,11 @@ static void do_receive()
 	};
 	const int dropmonitor_on = 1;
 	bool sequence_init = true;
-	unsigned int seq_wrap = 0;
-	uint8_t sequence = 0;
+	unsigned int sequence_wrap = 0;
+	uint32_t sequence_mask = 0xff;
+	uint32_t sequence_rx = 0;
+	uint32_t sequence_delta = 0;
+	uint32_t sequence = 0;
 
 	if (setsockopt(s, SOL_SOCKET, SO_RXQ_OVFL,
 		       &dropmonitor_on, sizeof(dropmonitor_on)) < 0) {
@@ -116,15 +119,15 @@ static void do_receive()
 			exit(EXIT_FAILURE);
 		}
 
+		sequence_rx = frame.data[0];
+
 		if (sequence_init) {
 			sequence_init = false;
-			sequence = frame.data[0];
+			sequence = sequence_rx;
 		}
 
-		if (verbose > 1)
-			printf("received frame. sequence number: %d\n", frame.data[0]);
-
-		if (frame.data[0] != sequence) {
+		sequence_delta = (sequence_rx - sequence) & sequence_mask;
+		if (sequence_delta) {
 			struct cmsghdr *cmsg;
 			uint32_t overflows = 0;
 
@@ -140,17 +143,19 @@ static void do_receive()
 			}
 
 			fprintf(stderr, "[%d] received wrong sequence count. expected: %d, got: %d, socket overflows: %u\n",
-				drop_count, sequence, frame.data[0], overflows);
+				drop_count, sequence & sequence_mask, sequence_rx, overflows);
 
 			if (drop_count == drop_until_quit)
 				exit(EXIT_FAILURE);
 
-			sequence = frame.data[0];
+			sequence = sequence_rx;
+		} else 	if (verbose > 1) {
+			printf("sequence CNT: %6u, RX: %6u\n", sequence, sequence_rx);
 		}
 
 		sequence++;
-		if (verbose && !sequence)
-			printf("sequence wrap around (%d)\n", seq_wrap++);
+		if (verbose && !(sequence & sequence_mask))
+			printf("sequence wrap around (%d)\n", sequence_wrap++);
 
 	}
 }
