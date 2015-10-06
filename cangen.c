@@ -83,7 +83,7 @@ void print_usage(char *prg)
 		"- default: %d ms)\n", DEFAULT_GAP);
 	fprintf(stderr, "         -e            (generate extended frame mode "
 		"(EFF) CAN frames)\n");
-	fprintf(stderr, "         -f            (generate CAN FD CAN frames)\n");
+	fprintf(stderr, "         -f [b]        (generate CAN FD CAN frames [with bitrate switch])\n");
 	fprintf(stderr, "         -R            (send RTR frame)\n");
 	fprintf(stderr, "         -m            (mix -e -f -R frames)\n");
 	fprintf(stderr, "         -I <mode>     (CAN ID"
@@ -136,6 +136,7 @@ int main(int argc, char **argv)
 	unsigned char ignore_enobufs = 0;
 	unsigned char extended = 0;
 	unsigned char canfd = 0;
+	unsigned char brs = 0;
 	unsigned char mix = 0;
 	unsigned char id_mode = MODE_RANDOM;
 	unsigned char data_mode = MODE_RANDOM;
@@ -170,7 +171,7 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	while ((opt = getopt(argc, argv, "ig:efmI:L:D:xp:n:vRh?")) != -1) {
+	while ((opt = getopt(argc, argv, "ig:ef:mI:L:D:xp:n:vRh?")) != -1) {
 		switch (opt) {
 
 		case 'i':
@@ -186,6 +187,8 @@ int main(int argc, char **argv)
 			break;
 
 		case 'f':
+			if (optarg[0] == 'b') /* bitrate switch */
+				brs = 1;
 			canfd = 1;
 			break;
 
@@ -356,6 +359,8 @@ int main(int argc, char **argv)
 		if (canfd){
 			mtu = CANFD_MTU;
 			maxdlen = CANFD_MAX_DLEN;
+			if(brs)
+				frame.flags |= CANFD_BRS;
 		} else {
 			mtu = CAN_MTU;
 			maxdlen = CAN_MAX_DLEN;
