@@ -83,9 +83,11 @@ void print_usage(char *prg)
 		"- default: %d ms)\n", DEFAULT_GAP);
 	fprintf(stderr, "         -e            (generate extended frame mode "
 		"(EFF) CAN frames)\n");
-	fprintf(stderr, "         -f [b]        (generate CAN FD CAN frames [with bitrate switch])\n");
+	fprintf(stderr, "         -b            (generate CAN FD CAN frames"
+		" with bitrate switch (BRS))\n");
+	fprintf(stderr, "         -f            (generate CAN FD CAN frames)\n");
 	fprintf(stderr, "         -R            (send RTR frame)\n");
-	fprintf(stderr, "         -m            (mix -e -f -R frames)\n");
+	fprintf(stderr, "         -m            (mix -e -f -b -R frames)\n");
 	fprintf(stderr, "         -I <mode>     (CAN ID"
 		" generation mode - see below)\n");
 	fprintf(stderr, "         -L <mode>     (CAN data length code (dlc)"
@@ -171,7 +173,7 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	while ((opt = getopt(argc, argv, "ig:ef:mI:L:D:xp:n:vRh?")) != -1) {
+	while ((opt = getopt(argc, argv, "ig:ebfmI:L:D:xp:n:vRh?")) != -1) {
 		switch (opt) {
 
 		case 'i':
@@ -185,10 +187,12 @@ int main(int argc, char **argv)
 		case 'e':
 			extended = 1;
 			break;
+		case 'b':
+			brs = 1; /* bitrate switch implies CAN FD */
+			canfd = 1;
+			break;
 
 		case 'f':
-			if (optarg[0] == 'b') /* bitrate switch */
-				brs = 1;
 			canfd = 1;
 			break;
 
@@ -481,7 +485,9 @@ resend:
 			i = random();
 			extended = i&1;
 			canfd = i&2;
-			rtr_frame = ((i&12) == 12); /* reduce RTR frames to 1/4 */
+			if(canfd)
+				brs = i&4;
+			rtr_frame = ((i&24) == 24); /* reduce RTR frames to 1/4 */
 		}
 	}
 
