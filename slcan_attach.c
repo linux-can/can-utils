@@ -58,6 +58,7 @@ void print_usage(char *prg)
 {
 	fprintf(stderr, "\nUsage: %s [options] tty\n\n", prg);
 	fprintf(stderr, "Options: -o         (send open command 'O\\r')\n");
+	fprintf(stderr, "         -l         (send listen only command 'L\\r', overrides -o)\n");
 	fprintf(stderr, "         -c         (send close command 'C\\r')\n");
 	fprintf(stderr, "         -f         (read status flags with 'F\\r' to reset error states)\n");
 	fprintf(stderr, "         -s <speed> (set CAN speed 0..8)\n");
@@ -81,6 +82,7 @@ int main(int argc, char **argv)
 	int detach = 0;
 	int waitkey = 0;
 	int send_open = 0;
+	int send_listen = 0;
 	int send_close = 0;
 	int send_read_status_flags = 0;
 	char *speed = NULL;
@@ -90,12 +92,8 @@ int main(int argc, char **argv)
 	char *name = NULL;
 	int opt;
 
-	while ((opt = getopt(argc, argv, "l:dwocfs:b:n:?")) != -1) {
+	while ((opt = getopt(argc, argv, "ldwocfs:b:n:?")) != -1) {
 		switch (opt) {
-		case 'l':
-			fprintf(stderr, "Ignored option '-l'\n");
-			break;
-
 		case 'd':
 			detach = 1;
 			break;
@@ -106,6 +104,10 @@ int main(int argc, char **argv)
 
 		case 'o':
 			send_open = 1;
+			break;
+
+		case 'l':
+			send_listen = 1;
 			break;
 
 		case 'c':
@@ -168,7 +170,10 @@ int main(int argc, char **argv)
 			write(fd, buf, strlen(buf));
 		}
 
-		if (send_open) {
+		if (send_listen) {
+			sprintf(buf, "L\r");
+			write(fd, buf, strlen(buf));
+		} else if (send_open) {
 			sprintf(buf, "O\r");
 			write(fd, buf, strlen(buf));
 		}
