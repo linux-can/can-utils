@@ -363,7 +363,7 @@ int main(int argc, char **argv)
 		if (canfd){
 			mtu = CANFD_MTU;
 			maxdlen = CANFD_MAX_DLEN;
-			if(brs)
+			if (brs)
 				frame.flags |= CANFD_BRS;
 		} else {
 			mtu = CAN_MTU;
@@ -456,7 +456,7 @@ resend:
 		if (gap) /* gap == 0 => performance test :-] */
 			if (nanosleep(&ts, NULL))
 				return 1;
-		    
+
 		if (id_mode == MODE_INCREMENT)
 			frame.can_id++;
 
@@ -485,7 +485,7 @@ resend:
 			i = random();
 			extended = i&1;
 			canfd = i&2;
-			if(canfd)
+			if (canfd)
 				brs = i&4;
 			rtr_frame = ((i&24) == 24); /* reduce RTR frames to 1/4 */
 		}
