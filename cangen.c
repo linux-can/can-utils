@@ -447,7 +447,7 @@ resend:
 		if (gap) /* gap == 0 => performance test :-] */
 			if (nanosleep(&ts, NULL))
 				return 1;
-		    
+
 		if (id_mode == MODE_INCREMENT)
 			frame.can_id++;
 
