@@ -177,7 +177,6 @@ int main(int argc, char **argv)
 
 			if (send_open)
 				printf("ignoring -o, due to listen-only option -l\n");
-
 		} else if (send_open) {
 			sprintf(buf, "O\r");
 			write(fd, buf, strlen(buf));
