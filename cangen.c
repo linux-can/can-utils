@@ -83,9 +83,9 @@ void print_usage(char *prg)
 		"- default: %d ms)\n", DEFAULT_GAP);
 	fprintf(stderr, "         -e            (generate extended frame mode "
 		"(EFF) CAN frames)\n");
+	fprintf(stderr, "         -f            (generate CAN FD CAN frames)\n");
 	fprintf(stderr, "         -b            (generate CAN FD CAN frames"
 		" with bitrate switch (BRS))\n");
-	fprintf(stderr, "         -f            (generate CAN FD CAN frames)\n");
 	fprintf(stderr, "         -R            (send RTR frame)\n");
 	fprintf(stderr, "         -m            (mix -e -f -b -R frames)\n");
 	fprintf(stderr, "         -I <mode>     (CAN ID"
@@ -187,12 +187,13 @@ int main(int argc, char **argv)
 		case 'e':
 			extended = 1;
 			break;
-		case 'b':
-			brs = 1; /* bitrate switch implies CAN FD */
+
+		case 'f':
 			canfd = 1;
 			break;
 
-		case 'f':
+		case 'b':
+			brs = 1; /* bitrate switch implies CAN FD */
 			canfd = 1;
 			break;
 
