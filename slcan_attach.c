@@ -94,10 +94,6 @@ int main(int argc, char **argv)
 
 	while ((opt = getopt(argc, argv, "ldwocfs:b:n:?")) != -1) {
 		switch (opt) {
-		case 'l':
-			send_listen = 1;
-			break;
-
 		case 'd':
 			detach = 1;
 			break;
@@ -108,6 +104,10 @@ int main(int argc, char **argv)
 
 		case 'o':
 			send_open = 1;
+			break;
+
+		case 'l':
+			send_listen = 1;
 			break;
 
 		case 'c':
@@ -170,13 +170,9 @@ int main(int argc, char **argv)
 			write(fd, buf, strlen(buf));
 		}
 
-		/* prefer listen-only over normal open */
 		if (send_listen) {
 			sprintf(buf, "L\r");
 			write(fd, buf, strlen(buf));
-
-			if (send_open)
-				printf("ignoring -o, due to listen-only option -l\n");
 		} else if (send_open) {
 			sprintf(buf, "O\r");
 			write(fd, buf, strlen(buf));
