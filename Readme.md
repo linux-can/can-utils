@@ -1,6 +1,6 @@
 # CAN-J1939 on linux
 
-The [can-j1939-kickstart](Kickstart guide is here)
+The [Kickstart guide is here](can-j1939-kickstart)
 
 ## CAN on linux
 
