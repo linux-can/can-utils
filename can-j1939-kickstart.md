@@ -18,13 +18,10 @@ Create a virtual can0 device and start the device
 
 Use [testj1939](testj1939.c)
 
-When *can-j1939* is compiled as module, load it.
+When *can-j1939* is compiled as module, opening a socket will load it,
+__or__ you can load it manually
 
 	modprobe can-j1939
-
-Enable the j1939 protocol stack on the CAN device
-
-	ip link set can0 j1939 on
 
 Most of the subsequent examples will use 2 sockets programs (in 2 terminals).
 One will use CAN_J1939 sockets using *testj1939*,
@@ -59,23 +56,12 @@ is not meant for us and *testj1939* does not receive it.
 
 ### Use source address
 
+Binding a can-j1939 socket to a source address will register
+allow you to send packets.
+
 	./testj1939 can0:0x80
 
-will say
-
-	./testj1939: bind(): Cannot assign requested address
-
-Since J1939 maintains addressing, **0x80** has not yet been assigned
-as an address on **can0** . This behaviour is very similar to IP
-addressing: you cannot bind to an address that is not your own.
-
-Now tell the kernel that we *own* address 0x80.
-It will be available from now on.
-
-	ip addr add j1939 0x80 dev can0
-	./testj1939 can0:0x80
-
-now succeeds.
+Your system had, for a small moment, source address 0x80 assigned.
 
 ### receive with source address
 
@@ -101,54 +87,30 @@ Open in terminal 1:
 
 And to these test in another terminal
 
-	./testj1939 -s can0:0x80
+	./testj1939 -s can0:0x80,0x3ffff
 
 This produces **1BFFFF80#0123456789ABCDEF** on CAN.
 
-	./testj1939 -s can0:
-
-will produce exactly the same because **0x80** is the only
-address currently assigned to **can0:** and is used by default.
-
 ### Multiple source addresses on 1 CAN device
 
-	ip addr add j1939 0x90 dev can0
-
-	./testj1939 -s can0:0x90
+	./testj1939 -s can0:0x90,0x3ffff
 
 produces **1BFFFF90#0123456789ABCDEF** ,
 
-	./testj1939 -s can0:
+### Use PDU1 PGN
 
-still produces **1BFFFF80#0123456789ABCDEF** , since **0x80**
-is the default _source address_.
-Check
-
-	ip addr show can0
-
-emits
-
-	X: can0: <NOARP,UP,LOWER_UP> mtu 16 qdisc noqueue state UNKNOWN 
-	    link/can 
-	    can-j1939 0x80 scope link 
-	    can-j1939 0x90 scope link
-
-0x80 is the first address on can0.
-
-### Use specific PGN
-
-	./testj1939 -s can0:,0x12345
+	./testj1939 -s can0:0x80,0x12345
 
 emits **1923FF80#0123456789ABCDEF** .
 
 Note that the real PGN is **0x12300**, and destination address is **0xff**.
 
-### Emit destination specific packets
+### Use destination address info
 
 The destination field may be set during sendto().
 *testj1939* implements that like this
 
-	./testj1939 -s can0:,0x12345 can0:0x40
+	./testj1939 -s can0:0x80,0x12345 can0:0x40
 
 emits **19234080#0123456789ABCDEF** .
 
@@ -167,13 +129,13 @@ __sendto( *peername* )__ , and only one is used.
 
 For broadcasted transmissions
 
-	./testj1939 -s can0:,0x12300 :,0x32100
+	./testj1939 -s can0:0x80,0x12300 :,0x32100
 
 emits **1B21FF80#0123456789ABCDEF** rather than 1923FF80#012345678ABCDEF
 
 Desitination specific transmissions
 
-	./testj1939 -s can0:,0x12300 :0x40,0x32100
+	./testj1939 -s can0:0x80,0x12300 :0x40,0x32100
 
 emits **1B214080#0123456789ABCDEF** .
 
@@ -197,6 +159,14 @@ The fragments for broadcasted *Transport Protocol* are seperated
 __50ms__ from each other.  
 Destination specific *Transport Protocol* applies flow control
 and may emit CAN packets much faster.
+
+First assign 0x90 to the local system.  
+This becomes important because the kernel must interact in the
+transport protocol sessions before the complete packet is delivered.
+
+	./testj1939 can0:0x90 -r &
+
+Now test:
 
 	./testj1939 -s20 can0:0x80 :0x90,0x12300
 

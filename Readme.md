@@ -66,11 +66,19 @@ will use fragementation, emitting 1+ CAN frames.
 # Enable j1939
 
 CAN has no protocol id field.
-Enabling protocols must be done manually
+Actions need to be performed to enable can-j1939 for a network device
+
+### on socket connect
+
+Open a socket and bind to a network interface.
+
+This is the latest method, and preferred for mainline inclusion
 
 ### netlink
 
 	ip link set can0 j1939 on
+
+This method is obsoleted in favor of _on socket connect_.
 
 ### procfs for legacy kernel (2.6.25)
 
@@ -113,6 +121,11 @@ This API is dropped for kernels with netlink support!
     *name* != 0 indicates dynamic addressing
 
 ## iproute2
+
+Older versions of can-j1939 used a modified iproute2
+for manipulating the kernel lists of current addresses.
+
+This is now obsolete!
 
 ### Static addressing
 
