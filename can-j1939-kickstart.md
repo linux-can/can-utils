@@ -151,6 +151,20 @@ do not fit into single CAN packets.
 emits:
 
 	18ECFF80#20140003FF002301
+
+This is the first fragment for broadcasted *Transport Protocol*.
+_testj1939_ returns before the subsequent packets can leave, and
+as the last socket on the system closes, can-j1939 effectively
+cleans up all resources. Real-world applications will run like forever,
+and will not encounter this side-effect.
+
+Try again, and instruct _testj1939_ to keep the socket open for 1 second.
+
+	./testj1939 -w1.0 -s20 can0:0x80 :,0x12300
+
+emits:
+
+	18ECFF80#20140003FF002301
 	18EBFF80#010123456789ABCD
 	18EBFF80#02EF0123456789AB
 	18EBFF80#03CDEF01234567
