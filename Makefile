@@ -8,4 +8,4 @@ all: default $(patsubst %.md, %.html, $(wildcard *.md))
 CFLAGS	= -Wall -g3 -O0
 
 clean:
-	rm -f testj1939 j1939.html
+	rm -f testj1939 $(wildcard *.html)
