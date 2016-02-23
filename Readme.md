@@ -63,16 +63,13 @@ will emit a single CAN frame.
 
 will use fragementation, emitting 1+ CAN frames.
 
-# Enable j1939
+## Enable j1939 (obsolete!)
 
 CAN has no protocol id field.
-Actions need to be performed to enable can-j1939 for a network device
+The can-j1939 stack only activates when a socket opens
+for a network device.
 
-### on socket connect
-
-Open a socket and bind to a network interface.
-
-This is the latest method, and preferred for mainline inclusion
+The methods described here existed in earlier implementations.
 
 ### netlink
 
@@ -120,12 +117,10 @@ This API is dropped for kernels with netlink support!
   * When providing address information,  
     *name* != 0 indicates dynamic addressing
 
-## iproute2
+## iproute2 (obsolete!)
 
 Older versions of can-j1939 used a modified iproute2
 for manipulating the kernel lists of current addresses.
-
-This is now obsolete!
 
 ### Static addressing
 
