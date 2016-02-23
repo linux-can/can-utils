@@ -39,13 +39,14 @@ static const char help_msg[] =
 	" -c		Issue connect()\n"
 	" -p=PRIO	Set priority to PRIO\n"
 	" -n		Emit 64bit NAMEs in output\n"
+	" -w[TIME]	Return after TIME (default 1) seconds\n"
 	"\n"
 	"Example:\n"
 	"testj1939 can1 20\n"
 	"\n"
 	;
 
-static const char optstring[] = "?vs::rep:cn";
+static const char optstring[] = "?vs::rep:cnw::";
 
 static void parse_canaddr(char *spec, struct sockaddr_can *paddr)
 {
@@ -90,6 +91,22 @@ static const char *canaddr2str(const struct sockaddr_can *paddr)
 	return buf;
 }
 
+static void onsigalrm(int sig)
+{
+	error(0, 0, "exit as requested");
+	exit(0);
+}
+
+static void schedule_oneshot_itimer(double delay)
+{
+	struct itimerval it = {};
+
+	it.it_value.tv_sec = delay;
+	it.it_value.tv_usec = (long)(delay * 1e6) % 1000000;
+	if (setitimer(ITIMER_REAL, &it, NULL) < 0)
+		error(1, errno, "schedule itimer %.3lfs", delay);
+}
+
 /* main */
 int main(int argc, char *argv[])
 {
@@ -113,7 +130,7 @@ int main(int argc, char *argv[])
 	uint8_t dat[128];
 	int valid_peername = 0;
 	int todo_send = 0, todo_recv = 0, todo_echo = 0, todo_prio = -1;
-	int todo_connect = 0, todo_names = 0;
+	int todo_connect = 0, todo_names = 0, todo_wait = 0;
 
 	/* argument parsing */
 	while ((opt = getopt(argc, argv, optstring)) != -1)
@@ -138,6 +155,11 @@ int main(int argc, char *argv[])
 		break;
 	case 'n':
 		todo_names = 1;
+		break;
+	case 'w':
+		schedule_oneshot_itimer(strtod(optarg ?: "1", NULL));
+		signal(SIGALRM, onsigalrm);
+		todo_wait = 1;
 		break;
 	default:
 		fputs(help_msg, stderr);
@@ -260,6 +282,9 @@ int main(int argc, char *argv[])
 			printf("\n");
 		}
 	}
+	if (todo_wait)
+		for (;;)
+			sleep(1);
 	return 0;
 }
 
