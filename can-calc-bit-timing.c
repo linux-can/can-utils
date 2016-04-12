@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include <linux/types.h>
+#include <linux/can/netlink.h>
 
 /* seems not to be defined in errno.h */
 #ifndef ENOTSUPP
@@ -66,53 +67,12 @@
 typedef __u64 u64;
 typedef __u32 u32;
 
+struct calc_bittiming_const {
+	struct can_bittiming_const bittiming_const;
 
-/*
- * CAN bit-timing parameters
- *
- * For futher information, please read chapter "8 BIT TIMING
- * REQUIREMENTS" of the "Bosch CAN Specification version 2.0"
- * at http://www.semiconductors.bosch.de/pdf/can2spec.pdf.
- */
-struct can_bittiming {
-	__u32 bitrate;		/* Bit-rate in bits/second */
-	__u32 sample_point;	/* Sample point in one-tenth of a percent */
-	__u32 tq;		/* Time quanta (TQ) in nanoseconds */
-	__u32 prop_seg;		/* Propagation segment in TQs */
-	__u32 phase_seg1;	/* Phase buffer segment 1 in TQs */
-	__u32 phase_seg2;	/* Phase buffer segment 2 in TQs */
-	__u32 sjw;		/* Synchronisation jump width in TQs */
-	__u32 brp;		/* Bit-rate prescaler */
-};
-
-/*
- * CAN harware-dependent bit-timing constant
- *
- * Used for calculating and checking bit-timing parameters
- */
-struct can_bittiming_const {
-	char name[16];		/* Name of the CAN controller hardware */
-	__u32 tseg1_min;	/* Time segement 1 = prop_seg + phase_seg1 */
-	__u32 tseg1_max;
-	__u32 tseg2_min;	/* Time segement 2 = phase_seg2 */
-	__u32 tseg2_max;
-	__u32 sjw_max;		/* Synchronisation jump width */
-	__u32 brp_min;		/* Bit-rate prescaler */
-	__u32 brp_max;
-	__u32 brp_inc;
-
-	/* added for can-calc-bit-timing utility */
 	__u32 ref_clk;		/* CAN system clock frequency in Hz */
 	void (*printf_btr)(struct can_bittiming *bt, bool hdr);
 };
-
-/*
- * CAN clock parameters
- */
-struct can_clock {
-	__u32 freq;		/* CAN system clock frequency in Hz */
-};
-
 
 /*
  * minimal structs, just enough to be source level compatible
@@ -241,285 +201,286 @@ static void printf_btr_rcar_can(struct can_bittiming *bt, bool hdr)
 	}
 }
 
-static struct can_bittiming_const can_calc_consts[] = {
+static struct calc_bittiming_const can_calc_consts[] = {
 	{
-		.name = "sja1000",
-		.tseg1_min = 1,
-		.tseg1_max = 16,
-		.tseg2_min = 1,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 64,
-		.brp_inc = 1,
-
+		.bittiming_const = {
+			.name = "sja1000",
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
 		.ref_clk = 8000000,
 		.printf_btr = printf_btr_sja1000,
-	},
-	{
-		.name = "mscan",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 64,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "mscan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
 		.ref_clk = 32000000,
 		.printf_btr = printf_btr_sja1000,
-	},
-	{
-		.name = "mscan",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 64,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "mscan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
 		.ref_clk = 33000000,
 		.printf_btr = printf_btr_sja1000,
-	},
-	{
-		.name = "mscan",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 64,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "mscan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
 		.ref_clk = 33300000,
 		.printf_btr = printf_btr_sja1000,
-	},
-	{
-		.name = "mscan",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 64,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "mscan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
 		.ref_clk = 33333333,
 		.printf_btr = printf_btr_sja1000,
-	},
-	{
-		.name = "mscan",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 64,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "mscan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
 		.ref_clk = 66660000,	/* mpc5121 */
 		.printf_btr = printf_btr_sja1000,
-	},
-	{
-		.name = "mscan",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 64,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "mscan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
 		.ref_clk = 66666666,	/* mpc5121 */
 		.printf_btr = printf_btr_sja1000,
-	},
-	{
-		.name = "at91",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 2,
-		.brp_max = 128,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "at91",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 2,
+			.brp_max = 128,
+			.brp_inc = 1,
+		},
 		.ref_clk = 100000000,
 		.printf_btr = printf_btr_at91,
-	},
-	{
-		.name = "at91",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 2,
-		.brp_max = 128,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "at91",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 2,
+			.brp_max = 128,
+			.brp_inc = 1,
+		},
 		/* real world clock as found on the ronetix PM9263 */
 		.ref_clk = 99532800,
 		.printf_btr = printf_btr_at91,
-	},
-	{
-		.name = "flexcan",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 256,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "flexcan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
 		.ref_clk = 24000000,	/* mx28 */
 		.printf_btr = printf_btr_flexcan,
-	},
-	{
-		.name = "flexcan",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 256,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "flexcan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
 		.ref_clk = 30000000,	/* mx6 */
 		.printf_btr = printf_btr_flexcan,
-	},
-	{
-		.name = "flexcan",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 256,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "flexcan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
 		.ref_clk = 49875000,
 		.printf_btr = printf_btr_flexcan,
-	},
-	{
-		.name = "flexcan",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 256,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "flexcan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
 		.ref_clk = 66000000,
 		.printf_btr = printf_btr_flexcan,
-	},
-	{
-		.name = "flexcan",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 256,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "flexcan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
 		.ref_clk = 66500000,
 		.printf_btr = printf_btr_flexcan,
-	},
-	{
-		.name = "flexcan",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 256,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "flexcan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
 		.ref_clk = 66666666,
 		.printf_btr = printf_btr_flexcan,
-	},
-	{
-		.name = "flexcan",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 256,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "flexcan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
 		.ref_clk = 83368421,
 		.printf_btr = printf_btr_flexcan, /* vybrid */
-	},
-	{
-		.name = "mcp251x",
-		.tseg1_min = 3,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 64,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "mcp251x",
+			.tseg1_min = 3,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
 		.ref_clk = 8000000,
 		.printf_btr = printf_btr_mcp251x,
-	},
-	{
-		.name = "mcp251x",
-		.tseg1_min = 3,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 64,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "mcp251x",
+			.tseg1_min = 3,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
 		.ref_clk = 16000000,
 		.printf_btr = printf_btr_mcp251x,
-	},
-	{
-		.name = "ti_hecc",
-		.tseg1_min = 1,
-		.tseg1_max = 16,
-		.tseg2_min = 1,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 256,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "ti_hecc",
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
 		.ref_clk = 13000000,
 		.printf_btr = printf_btr_ti_hecc,
-	},
-	{
-		.name = "rcar_can",
-		.tseg1_min = 4,
-		.tseg1_max = 16,
-		.tseg2_min = 2,
-		.tseg2_max = 8,
-		.sjw_max = 4,
-		.brp_min = 1,
-		.brp_max = 1024,
-		.brp_inc = 1,
-
+	}, {
+		.bittiming_const = {
+			.name = "rcar_can",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 1024,
+			.brp_inc = 1,
+		},
 		.ref_clk = 65000000,
 		.printf_btr = printf_btr_rcar_can,
 	},
@@ -662,12 +623,12 @@ static __u32 get_cia_sample_point(__u32 bitrate)
 	return sampl_pt;
 }
 
-static void print_bit_timing(const struct can_bittiming_const *btc,
+static void print_bit_timing(const struct calc_bittiming_const *btc,
 			     __u32 bitrate, __u32 sample_point, __u32 ref_clk,
 			     bool quiet)
 {
 	struct net_device dev = {
-		.priv.bittiming_const = btc,
+		.priv.bittiming_const = &btc->bittiming_const,
 		.priv.clock.freq = ref_clk,
 	};
 	struct can_bittiming bt = {
@@ -680,7 +641,7 @@ static void print_bit_timing(const struct can_bittiming_const *btc,
 		printf("Bit timing parameters for %s with %.6f MHz ref clock\n"
 		       "nominal                                 real Bitrt   nom  real SampP\n"
 		       "Bitrate TQ[ns] PrS PhS1 PhS2 SJW BRP Bitrate Error SampP SampP Error ",
-		       btc->name,
+		       btc->bittiming_const.name,
 		       ref_clk / 1000000.0);
 
 		btc->printf_btr(&bt, true);
@@ -724,7 +685,7 @@ static void do_list(void)
 	unsigned int i;
 
 	for (i = 0; i < ARRAY_SIZE(can_calc_consts); i++)
-		printf("%s\n", can_calc_consts[i].name);
+		printf("%s\n", can_calc_consts[i].bittiming_const.name);
 }
 
 int main(int argc, char *argv[])
@@ -737,7 +698,7 @@ int main(int argc, char *argv[])
 	unsigned int i, j;
 	int opt;
 
-	const struct can_bittiming_const *btc = NULL;
+	const struct calc_bittiming_const *btc = NULL;
 
 	while ((opt = getopt(argc, argv, "b:c:lps:")) != -1) {
 		switch (opt) {
@@ -782,7 +743,7 @@ int main(int argc, char *argv[])
 		print_usage(argv[0]);
 
 	for (i = 0; i < ARRAY_SIZE(can_calc_consts); i++) {
-		if (name && strcmp(can_calc_consts[i].name, name))
+		if (name && strcmp(can_calc_consts[i].bittiming_const.name, name))
 			continue;
 
 		found = true;
