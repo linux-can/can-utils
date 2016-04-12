@@ -92,8 +92,8 @@
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 /* we don't want to see these prints */
-#define dev_err(dev, format, arg...)	do { } while (0)
-#define dev_warn(dev, format, arg...)	do { } while (0)
+#define netdev_err(dev, format, arg...) do { } while (0)
+#define netdev_warn(dev, format, arg...) do { } while (0)
 
 /* define in-kernel-types */
 typedef __u64 u64;
@@ -110,7 +110,6 @@ struct calc_bittiming_const {
  * minimal structs, just enough to be source level compatible
  */
 struct can_priv {
-	const struct can_bittiming_const *bittiming_const;
 	struct can_clock clock;
 };
 
@@ -532,6 +531,19 @@ static long common_bitrates[] = {
 
 #define CAN_CALC_MAX_ERROR 50 /* in one-tenth of a percent */
 
+/*
+ * Bit-timing calculation derived from:
+ *
+ * Code based on LinCAN sources and H8S2638 project
+ * Copyright 2004-2006 Pavel Pisa - DCE FELK CVUT cz
+ * Copyright 2005      Stanislav Marek
+ * email: pisa@cmp.felk.cvut.cz
+ *
+ * Calculates proper bit-timing parameters for a specified bit-rate
+ * and sample-point, which can then be used to set the bit-timing
+ * registers of the CAN controller. You can find more information
+ * in the header file linux/can/netlink.h.
+ */
 static int can_update_spt(const struct can_bittiming_const *btc,
 			  int sampl_pt, int tseg, int *tseg1, int *tseg2)
 {
@@ -548,21 +560,18 @@ static int can_update_spt(const struct can_bittiming_const *btc,
 	return 1000 * (tseg + 1 - *tseg2) / (tseg + 1);
 }
 
-static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt)
+static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
+			      const struct can_bittiming_const *btc)
 {
 	struct can_priv *priv = netdev_priv(dev);
-	const struct can_bittiming_const *btc = priv->bittiming_const;
-	long rate = 0;
 	long best_error = 1000000000, error = 0;
 	int best_tseg = 0, best_brp = 0, brp = 0;
 	int tsegall, tseg = 0, tseg1 = 0, tseg2 = 0;
 	int spt_error = 1000, spt = 0, sampl_pt;
+	long rate;
 	u64 v64;
 
-	if (!priv->bittiming_const)
-		return -ENOTSUPP;
-
-	/* Use CIA recommended sample points */
+	/* Use CiA recommended sample points */
 	if (bt->sample_point) {
 		sampl_pt = bt->sample_point;
 	} else {
@@ -612,13 +621,13 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt)
 		/* Error in one-tenth of a percent */
 		error = (best_error * 1000) / bt->bitrate;
 		if (error > CAN_CALC_MAX_ERROR) {
-			dev_err(dev->dev.parent,
-				"bitrate error %ld.%ld%% too high\n",
-				error / 10, error % 10);
+			netdev_err(dev,
+				   "bitrate error %ld.%ld%% too high\n",
+				   error / 10, error % 10);
 			return -EDOM;
 		} else {
-			dev_warn(dev->dev.parent, "bitrate error %ld.%ld%%\n",
-				 error / 10, error % 10);
+			netdev_warn(dev, "bitrate error %ld.%ld%%\n",
+				    error / 10, error % 10);
 		}
 	}
 
@@ -632,9 +641,20 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt)
 	bt->prop_seg = tseg1 / 2;
 	bt->phase_seg1 = tseg1 - bt->prop_seg;
 	bt->phase_seg2 = tseg2;
-	bt->sjw = 1;
-	bt->brp = best_brp;
 
+	/* check for sjw user settings */
+	if (!bt->sjw || !btc->sjw_max)
+		bt->sjw = 1;
+	else {
+		/* bt->sjw is at least 1 -> sanitize upper bound to sjw_max */
+		if (bt->sjw > btc->sjw_max)
+			bt->sjw = btc->sjw_max;
+		/* bt->sjw must not be higher than tseg2 */
+		if (tseg2 < bt->sjw)
+			bt->sjw = tseg2;
+	}
+
+	bt->brp = best_brp;
 	/* real bit-rate */
 	bt->bitrate = priv->clock.freq / (bt->brp * (tseg1 + tseg2 + 1));
 
@@ -660,7 +680,6 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 			     bool quiet)
 {
 	struct net_device dev = {
-		.priv.bittiming_const = &btc->bittiming_const,
 		.priv.clock.freq = ref_clk,
 	};
 	struct can_bittiming bt = {
@@ -680,7 +699,7 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 		printf("\n");
 	}
 
-	if (can_calc_bittiming(&dev, &bt)) {
+	if (can_calc_bittiming(&dev, &bt, &btc->bittiming_const)) {
 		printf("%7d ***bitrate not possible***\n", bitrate);
 		return;
 	}
