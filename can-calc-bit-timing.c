@@ -530,6 +530,7 @@ static long common_bitrates[] = {
 };
 
 #define CAN_CALC_MAX_ERROR 50 /* in one-tenth of a percent */
+#define CAN_CALC_SYNC_SEG 1
 
 /*
  * Bit-timing calculation derived from:
@@ -547,7 +548,8 @@ static long common_bitrates[] = {
 static int can_update_spt(const struct can_bittiming_const *btc,
 			  int sampl_pt, int tseg, int *tseg1, int *tseg2)
 {
-	*tseg2 = tseg + 1 - (sampl_pt * (tseg + 1)) / 1000;
+	*tseg2 = tseg + CAN_CALC_SYNC_SEG -
+		(sampl_pt * (tseg + CAN_CALC_SYNC_SEG)) / 1000;
 	if (*tseg2 < btc->tseg2_min)
 		*tseg2 = btc->tseg2_min;
 	if (*tseg2 > btc->tseg2_max)
@@ -557,7 +559,7 @@ static int can_update_spt(const struct can_bittiming_const *btc,
 		*tseg1 = btc->tseg1_max;
 		*tseg2 = tseg - *tseg1;
 	}
-	return 1000 * (tseg + 1 - *tseg2) / (tseg + 1);
+	return 1000 * (tseg + CAN_CALC_SYNC_SEG - *tseg2) / (tseg + CAN_CALC_SYNC_SEG);
 }
 
 static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
@@ -586,7 +588,8 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
 	/* tseg even = round down, odd = round up */
 	for (tseg = (btc->tseg1_max + btc->tseg2_max) * 2 + 1;
 	     tseg >= (btc->tseg1_min + btc->tseg2_min) * 2; tseg--) {
-		tsegall = 1 + tseg / 2;
+		tsegall = CAN_CALC_SYNC_SEG + tseg / 2;
+
 		/* Compute all possible tseg choices (tseg=tseg1+tseg2) */
 		brp = priv->clock.freq / (tsegall * bt->bitrate) + tseg % 2;
 		/* chose brp step which is possible in system */
@@ -655,7 +658,7 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
 
 	bt->brp = best_brp;
 	/* real bit-rate */
-	bt->bitrate = priv->clock.freq / (bt->brp * (tseg1 + tseg2 + 1));
+	bt->bitrate = priv->clock.freq / (bt->brp * (CAN_CALC_SYNC_SEG + tseg1 + tseg2));
 
 	return 0;
 }
