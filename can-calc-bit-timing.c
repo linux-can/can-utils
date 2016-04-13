@@ -130,7 +130,7 @@ static inline void *netdev_priv(const struct net_device *dev)
 	return (void *)&dev->priv;
 }
 
-static void print_usage(char* cmd)
+static void print_usage(char *cmd)
 {
 	printf("Usage: %s [options] [<CAN-contoller-name>]\n"
 	       "\tOptions:\n"
