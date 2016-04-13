@@ -17,6 +17,7 @@
 
 #include <errno.h>
 #include <getopt.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -102,7 +103,7 @@ struct can_bittiming_const {
 
 	/* added for can-calc-bit-timing utility */
 	__u32 ref_clk;		/* CAN system clock frequency in Hz */
-	void (*printf_btr)(struct can_bittiming *bt, int hdr);
+	void (*printf_btr)(struct can_bittiming *bt, bool hdr);
 };
 
 /*
@@ -145,7 +146,7 @@ static void print_usage(char *cmd)
 	exit(EXIT_FAILURE);
 }
 
-static void printf_btr_sja1000(struct can_bittiming *bt, int hdr)
+static void printf_btr_sja1000(struct can_bittiming *bt, bool hdr)
 {
 	uint8_t btr0, btr1;
 
@@ -159,7 +160,7 @@ static void printf_btr_sja1000(struct can_bittiming *bt, int hdr)
 	}
 }
 
-static void printf_btr_at91(struct can_bittiming *bt, int hdr)
+static void printf_btr_at91(struct can_bittiming *bt, bool hdr)
 {
 	if (hdr) {
 		printf("%10s", "CAN_BR");
@@ -173,7 +174,7 @@ static void printf_btr_at91(struct can_bittiming *bt, int hdr)
 	}
 }
 
-static void printf_btr_flexcan(struct can_bittiming *bt, int hdr)
+static void printf_btr_flexcan(struct can_bittiming *bt, bool hdr)
 {
 	if (hdr) {
 		printf("%10s", "CAN_CTRL");
@@ -188,7 +189,7 @@ static void printf_btr_flexcan(struct can_bittiming *bt, int hdr)
 	}
 }
 
-static void printf_btr_mcp251x(struct can_bittiming *bt, int hdr)
+static void printf_btr_mcp251x(struct can_bittiming *bt, bool hdr)
 {
 	uint8_t cnf1, cnf2, cnf3;
 
@@ -202,7 +203,7 @@ static void printf_btr_mcp251x(struct can_bittiming *bt, int hdr)
 	}
 }
 
-static void printf_btr_ti_hecc(struct can_bittiming *bt, int hdr)
+static void printf_btr_ti_hecc(struct can_bittiming *bt, bool hdr)
 {
 	if (hdr) {
 		printf("%10s", "CANBTC");
@@ -224,7 +225,7 @@ static void printf_btr_ti_hecc(struct can_bittiming *bt, int hdr)
 #define RCAR_CAN_BCR_SJW(x)	(((x) & 0x3) << 4)
 #define RCAR_CAN_BCR_TSEG2(x)	((x) & 0x07)
 
-static void printf_btr_rcar_can(struct can_bittiming *bt, int hdr)
+static void printf_btr_rcar_can(struct can_bittiming *bt, bool hdr)
 {
 	if (hdr) {
 		printf("%10s", "CiBCR");
@@ -663,7 +664,7 @@ static __u32 get_cia_sample_point(__u32 bitrate)
 
 static void print_bit_timing(const struct can_bittiming_const *btc,
 			     __u32 bitrate, __u32 sample_point, __u32 ref_clk,
-			     int quiet)
+			     bool quiet)
 {
 	struct net_device dev = {
 		.priv.bittiming_const = btc,
@@ -682,7 +683,7 @@ static void print_bit_timing(const struct can_bittiming_const *btc,
 		       btc->name,
 		       ref_clk / 1000000.0);
 
-		btc->printf_btr(&bt, 1);
+		btc->printf_btr(&bt, true);
 		printf("\n");
 	}
 
@@ -714,7 +715,7 @@ static void print_bit_timing(const struct can_bittiming_const *btc,
 	       bt.sample_point / 10.0,
 	       100.0 * spt_error / sample_point);
 
-	btc->printf_btr(&bt, 0);
+	btc->printf_btr(&bt, false);
 	printf("\n");
 }
 
@@ -731,11 +732,10 @@ int main(int argc, char *argv[])
 	__u32 bitrate = 0;
 	__u32 opt_ref_clk = 0, ref_clk;
 	int sampl_pt = 0;
-	int quiet = 0;
-	int list = 0;
+	bool quiet = false, list = false, found = false;
 	char *name = NULL;
 	unsigned int i, j;
-	int opt, found = 0;
+	int opt;
 
 	const struct can_bittiming_const *btc = NULL;
 
@@ -750,11 +750,11 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'l':
-			list = 1;
+			list = true;
 			break;
 
 		case 'q':
-			quiet = 1;
+			quiet = true;
 			break;
 
 		case 's':
@@ -785,7 +785,7 @@ int main(int argc, char *argv[])
 		if (name && strcmp(can_calc_consts[i].name, name))
 			continue;
 
-		found = 1;
+		found = true;
 		btc = &can_calc_consts[i];
 
 		if (opt_ref_clk)
