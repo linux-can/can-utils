@@ -625,10 +625,9 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
 				   "bitrate error %ld.%ld%% too high\n",
 				   error / 10, error % 10);
 			return -EDOM;
-		} else {
-			netdev_warn(dev, "bitrate error %ld.%ld%%\n",
-				    error / 10, error % 10);
 		}
+		netdev_warn(dev, "bitrate error %ld.%ld%%\n",
+			    error / 10, error % 10);
 	}
 
 	/* real sample point */
