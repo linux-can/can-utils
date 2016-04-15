@@ -548,7 +548,7 @@ static long common_bitrates[] = {
  * in the header file linux/can/netlink.h.
  */
 static int can_update_spt(const struct can_bittiming_const *btc,
-			  unsigned int spt_target, unsigned int tseg,
+			  unsigned int spt_nominal, unsigned int tseg,
 			  unsigned int *tseg1_ptr, unsigned int *tseg2_ptr,
 			  unsigned int *spt_error_ptr)
 {
@@ -558,7 +558,7 @@ static int can_update_spt(const struct can_bittiming_const *btc,
 	int i;
 
 	for (i = 0; i <= 1; i++) {
-		tseg2 = tseg + CAN_CALC_SYNC_SEG - (spt_target * (tseg + CAN_CALC_SYNC_SEG)) / 1000 - i;
+		tseg2 = tseg + CAN_CALC_SYNC_SEG - (spt_nominal * (tseg + CAN_CALC_SYNC_SEG)) / 1000 - i;
 		tseg2 = clamp(tseg2, btc->tseg2_min, btc->tseg2_max);
 		tseg1 = tseg - tseg2;
 		if (tseg1 > btc->tseg1_max) {
@@ -567,9 +567,9 @@ static int can_update_spt(const struct can_bittiming_const *btc,
 		}
 
 		spt = 1000 * (tseg + CAN_CALC_SYNC_SEG - tseg2) / (tseg + CAN_CALC_SYNC_SEG);
-		spt_error = abs(spt_target - spt);
+		spt_error = abs(spt_nominal - spt);
 
-		if ((spt <= spt_target) && (spt_error < best_spt_error)) {
+		if ((spt <= spt_nominal) && (spt_error < best_spt_error)) {
 			best_spt = spt;
 			best_spt_error = spt_error;
 			*tseg1_ptr = tseg1;
@@ -588,11 +588,11 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
 {
 	struct can_priv *priv = netdev_priv(dev);
 	unsigned int rate;		/* current bitrate */
-	unsigned int rate_error;	/* difference between current and target value */
+	unsigned int rate_error;	/* difference between current and nominal value */
 	unsigned int best_rate_error = UINT_MAX;
-	unsigned int spt_error;		/* difference between current and target value */
+	unsigned int spt_error;		/* difference between current and nominal value */
 	unsigned int best_spt_error = UINT_MAX;
-	unsigned int spt_target;	/* target sample point */
+	unsigned int spt_nominal;	/* nominal sample point */
 	unsigned int best_tseg = 0;	/* current best value for tseg */
 	unsigned int best_brp = 0;	/* current best value for brp */
 	unsigned int brp, tsegall, tseg, tseg1, tseg2;
@@ -600,14 +600,14 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
 
 	/* Use CiA recommended sample points */
 	if (bt->sample_point) {
-		spt_target = bt->sample_point;
+		spt_nominal = bt->sample_point;
 	} else {
 		if (bt->bitrate > 800000)
-			spt_target = 750;
+			spt_nominal = 750;
 		else if (bt->bitrate > 500000)
-			spt_target = 800;
+			spt_nominal = 800;
 		else
-			spt_target = 875;
+			spt_nominal = 875;
 	}
 
 	/* tseg even = round down, odd = round up */
@@ -634,7 +634,7 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
 		if (rate_error < best_rate_error)
 			best_spt_error = UINT_MAX;
 
-		can_update_spt(btc, spt_target, tseg / 2, &tseg1, &tseg2, &spt_error);
+		can_update_spt(btc, spt_nominal, tseg / 2, &tseg1, &tseg2, &spt_error);
 		if (spt_error > best_spt_error)
 			continue;
 
@@ -661,7 +661,7 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
 	}
 
 	/* real sample point */
-	bt->sample_point = can_update_spt(btc, spt_target, best_tseg,
+	bt->sample_point = can_update_spt(btc, spt_nominal, best_tseg,
 					  &tseg1, &tseg2, NULL);
 
 	v64 = (u64)best_brp * 1000 * 1000 * 1000;
@@ -773,7 +773,7 @@ int main(int argc, char *argv[])
 {
 	__u32 bitrate = 0;
 	__u32 opt_ref_clk = 0, ref_clk;
-	unsigned int spt_target = 0;
+	unsigned int spt_nominal = 0;
 	bool quiet = false, list = false, found = false;
 	char *name = NULL;
 	unsigned int i, j;
@@ -800,7 +800,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 's':
-			spt_target = strtoul(optarg, NULL, 10);
+			spt_nominal = strtoul(optarg, NULL, 10);
 			break;
 
 		default:
@@ -820,7 +820,7 @@ int main(int argc, char *argv[])
 		exit(EXIT_SUCCESS);
 	}
 
-	if (spt_target && (spt_target >= 1000 || spt_target < 100))
+	if (spt_nominal && (spt_nominal >= 1000 || spt_nominal < 100))
 		print_usage(argv[0]);
 
 	for (i = 0; i < ARRAY_SIZE(can_calc_consts); i++) {
@@ -836,11 +836,11 @@ int main(int argc, char *argv[])
 			ref_clk = btc->ref_clk;
 
 		if (bitrate) {
-			print_bit_timing(btc, bitrate, spt_target, ref_clk, quiet);
+			print_bit_timing(btc, bitrate, spt_nominal, ref_clk, quiet);
 		} else {
 			for (j = 0; j < ARRAY_SIZE(common_bitrates); j++)
 				print_bit_timing(btc, common_bitrates[j],
-						 spt_target, ref_clk, j);
+						 spt_nominal, ref_clk, j);
 		}
 		printf("\n");
 	}
