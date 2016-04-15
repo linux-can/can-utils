@@ -104,7 +104,7 @@ typedef __u32 u32;
 struct calc_bittiming_const {
 	struct can_bittiming_const bittiming_const;
 
-	__u32 ref_clk;		/* CAN system clock frequency in Hz */
+	__u32 ref_clk[16];	/* CAN system clock frequency in Hz */
 	void (*printf_btr)(struct can_bittiming *bt, bool hdr);
 };
 
@@ -247,7 +247,9 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_max = 64,
 			.brp_inc = 1,
 		},
-		.ref_clk = 8000000,
+		.ref_clk = {
+			8000000,
+		},
 		.printf_btr = printf_btr_sja1000,
 	}, {
 		.bittiming_const = {
@@ -261,77 +263,14 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_max = 64,
 			.brp_inc = 1,
 		},
-		.ref_clk = 32000000,
-		.printf_btr = printf_btr_sja1000,
-	}, {
-		.bittiming_const = {
-			.name = "mscan",
-			.tseg1_min = 4,
-			.tseg1_max = 16,
-			.tseg2_min = 2,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 1,
-			.brp_max = 64,
-			.brp_inc = 1,
+		.ref_clk = {
+			32000000,
+			33000000,
+			33300000,
+			33333333,
+			66660000,	/* mpc5121 */
+			66666666,	/* mpc5121 */
 		},
-		.ref_clk = 33000000,
-		.printf_btr = printf_btr_sja1000,
-	}, {
-		.bittiming_const = {
-			.name = "mscan",
-			.tseg1_min = 4,
-			.tseg1_max = 16,
-			.tseg2_min = 2,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 1,
-			.brp_max = 64,
-			.brp_inc = 1,
-		},
-		.ref_clk = 33300000,
-		.printf_btr = printf_btr_sja1000,
-	}, {
-		.bittiming_const = {
-			.name = "mscan",
-			.tseg1_min = 4,
-			.tseg1_max = 16,
-			.tseg2_min = 2,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 1,
-			.brp_max = 64,
-			.brp_inc = 1,
-		},
-		.ref_clk = 33333333,
-		.printf_btr = printf_btr_sja1000,
-	}, {
-		.bittiming_const = {
-			.name = "mscan",
-			.tseg1_min = 4,
-			.tseg1_max = 16,
-			.tseg2_min = 2,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 1,
-			.brp_max = 64,
-			.brp_inc = 1,
-		},
-		.ref_clk = 66660000,	/* mpc5121 */
-		.printf_btr = printf_btr_sja1000,
-	}, {
-		.bittiming_const = {
-			.name = "mscan",
-			.tseg1_min = 4,
-			.tseg1_max = 16,
-			.tseg2_min = 2,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 1,
-			.brp_max = 64,
-			.brp_inc = 1,
-		},
-		.ref_clk = 66666666,	/* mpc5121 */
 		.printf_btr = printf_btr_sja1000,
 	}, {
 		.bittiming_const = {
@@ -345,22 +284,10 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_max = 128,
 			.brp_inc = 1,
 		},
-		.ref_clk = 100000000,
-		.printf_btr = printf_btr_at91,
-	}, {
-		.bittiming_const = {
-			.name = "at91",
-			.tseg1_min = 4,
-			.tseg1_max = 16,
-			.tseg2_min = 2,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 2,
-			.brp_max = 128,
-			.brp_inc = 1,
+		.ref_clk = {
+			99532800,	/* ronetix PM9263 */
+			100000000,
 		},
-		/* real world clock as found on the ronetix PM9263 */
-		.ref_clk = 99532800,
 		.printf_btr = printf_btr_at91,
 	}, {
 		.bittiming_const = {
@@ -374,92 +301,16 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_max = 256,
 			.brp_inc = 1,
 		},
-		.ref_clk = 24000000,	/* mx28 */
-		.printf_btr = printf_btr_flexcan,
-	}, {
-		.bittiming_const = {
-			.name = "flexcan",
-			.tseg1_min = 4,
-			.tseg1_max = 16,
-			.tseg2_min = 2,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 1,
-			.brp_max = 256,
-			.brp_inc = 1,
+		.ref_clk = {
+			24000000,	/* mx28 */
+			30000000,	/* mx6 */
+			49875000,
+			66000000,
+			66500000,
+			66666666,
+			83368421,	/* vybrid */
 		},
-		.ref_clk = 30000000,	/* mx6 */
 		.printf_btr = printf_btr_flexcan,
-	}, {
-		.bittiming_const = {
-			.name = "flexcan",
-			.tseg1_min = 4,
-			.tseg1_max = 16,
-			.tseg2_min = 2,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 1,
-			.brp_max = 256,
-			.brp_inc = 1,
-		},
-		.ref_clk = 49875000,
-		.printf_btr = printf_btr_flexcan,
-	}, {
-		.bittiming_const = {
-			.name = "flexcan",
-			.tseg1_min = 4,
-			.tseg1_max = 16,
-			.tseg2_min = 2,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 1,
-			.brp_max = 256,
-			.brp_inc = 1,
-		},
-		.ref_clk = 66000000,
-		.printf_btr = printf_btr_flexcan,
-	}, {
-		.bittiming_const = {
-			.name = "flexcan",
-			.tseg1_min = 4,
-			.tseg1_max = 16,
-			.tseg2_min = 2,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 1,
-			.brp_max = 256,
-			.brp_inc = 1,
-		},
-		.ref_clk = 66500000,
-		.printf_btr = printf_btr_flexcan,
-	}, {
-		.bittiming_const = {
-			.name = "flexcan",
-			.tseg1_min = 4,
-			.tseg1_max = 16,
-			.tseg2_min = 2,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 1,
-			.brp_max = 256,
-			.brp_inc = 1,
-		},
-		.ref_clk = 66666666,
-		.printf_btr = printf_btr_flexcan,
-	}, {
-		.bittiming_const = {
-			.name = "flexcan",
-			.tseg1_min = 4,
-			.tseg1_max = 16,
-			.tseg2_min = 2,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 1,
-			.brp_max = 256,
-			.brp_inc = 1,
-		},
-		.ref_clk = 83368421,
-		.printf_btr = printf_btr_flexcan, /* vybrid */
 	}, {
 		.bittiming_const = {
 			.name = "mcp251x",
@@ -472,21 +323,10 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_max = 64,
 			.brp_inc = 1,
 		},
-		.ref_clk = 8000000,
-		.printf_btr = printf_btr_mcp251x,
-	}, {
-		.bittiming_const = {
-			.name = "mcp251x",
-			.tseg1_min = 3,
-			.tseg1_max = 16,
-			.tseg2_min = 2,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 1,
-			.brp_max = 64,
-			.brp_inc = 1,
+		.ref_clk = {
+			8000000,
+			16000000,
 		},
-		.ref_clk = 16000000,
 		.printf_btr = printf_btr_mcp251x,
 	}, {
 		.bittiming_const = {
@@ -500,7 +340,9 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_max = 256,
 			.brp_inc = 1,
 		},
-		.ref_clk = 13000000,
+		.ref_clk = {
+			13000000,
+		},
 		.printf_btr = printf_btr_ti_hecc,
 	}, {
 		.bittiming_const = {
@@ -514,7 +356,9 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_max = 1024,
 			.brp_inc = 1,
 		},
-		.ref_clk = 65000000,
+		.ref_clk = {
+			65000000,
+		},
 		.printf_btr = printf_btr_rcar_can,
 	},
 };
@@ -776,10 +620,10 @@ int main(int argc, char *argv[])
 	unsigned int spt_nominal = 0;
 	bool quiet = false, list = false, found = false;
 	char *name = NULL;
-	unsigned int i, j;
+	unsigned int i, j, k;
 	int opt;
 
-	const struct calc_bittiming_const *btc = NULL;
+	const struct calc_bittiming_const *btc;
 
 	while ((opt = getopt(argc, argv, "b:c:lps:")) != -1) {
 		switch (opt) {
@@ -830,19 +674,27 @@ int main(int argc, char *argv[])
 		found = true;
 		btc = &can_calc_consts[i];
 
-		if (opt_ref_clk)
-			ref_clk = opt_ref_clk;
-		else
-			ref_clk = btc->ref_clk;
+		for (j = 0; j < ARRAY_SIZE(btc->ref_clk); j++) {
+			if (opt_ref_clk)
+				ref_clk = opt_ref_clk;
+			else
+				ref_clk = btc->ref_clk[j];
 
-		if (bitrate_nominal) {
-			print_bit_timing(btc, bitrate_nominal, spt_nominal, ref_clk, quiet);
-		} else {
-			for (j = 0; j < ARRAY_SIZE(common_bitrates); j++)
-				print_bit_timing(btc, common_bitrates[j],
-						 spt_nominal, ref_clk, j);
+			if (!ref_clk)
+				break;
+
+			if (bitrate) {
+				print_bit_timing(btc, bitrate, spt_nominal, ref_clk, quiet);
+			} else {
+				for (k = 0; k < ARRAY_SIZE(common_bitrates); k++)
+					print_bit_timing(btc, common_bitrates[k],
+							 spt_nominal, ref_clk, k);
+			}
+			printf("\n");
+
+			if (opt_ref_clk)
+				break;
 		}
-		printf("\n");
 	}
 
 	if (!found) {
