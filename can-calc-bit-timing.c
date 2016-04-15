@@ -101,10 +101,15 @@
 typedef __u64 u64;
 typedef __u32 u32;
 
+struct calc_ref_clk {
+	__u32 clk;	/* CAN system clock frequency in Hz */
+	char *name;
+};
+
 struct calc_bittiming_const {
 	struct can_bittiming_const bittiming_const;
 
-	__u32 ref_clk[16];	/* CAN system clock frequency in Hz */
+	const struct calc_ref_clk ref_clk[16];
 	void (*printf_btr)(struct can_bittiming *bt, bool hdr);
 };
 
@@ -248,7 +253,7 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			8000000,
+			{ .clk = 8000000, },
 		},
 		.printf_btr = printf_btr_sja1000,
 	}, {
@@ -264,12 +269,12 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			32000000,
-			33000000,
-			33300000,
-			33333333,
-			66660000,	/* mpc5121 */
-			66666666,	/* mpc5121 */
+			{ .clk = 32000000, },
+			{ .clk = 33000000, },
+			{ .clk = 33300000, },
+			{ .clk = 33333333, },
+			{ .clk = 66660000, .name = "mpc5121", },
+			{ .clk = 66666666, .name = "mpc5121" },
 		},
 		.printf_btr = printf_btr_sja1000,
 	}, {
@@ -285,8 +290,8 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			99532800,	/* ronetix PM9263 */
-			100000000,
+			{ .clk = 99532800, .name = "ronetix PM9263", },
+			{ .clk = 100000000, },
 		},
 		.printf_btr = printf_btr_at91,
 	}, {
@@ -302,13 +307,13 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			24000000,	/* mx28 */
-			30000000,	/* mx6 */
-			49875000,
-			66000000,
-			66500000,
-			66666666,
-			83368421,	/* vybrid */
+			{ .clk = 24000000, .name = "mx28" },
+			{ .clk = 30000000, .name = "mx6" },
+			{ .clk = 49875000, },
+			{ .clk = 66000000, },
+			{ .clk = 66500000, },
+			{ .clk = 66666666, },
+			{ .clk = 83368421, .name = "vybrid" },
 		},
 		.printf_btr = printf_btr_flexcan,
 	}, {
@@ -324,8 +329,8 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			8000000,
-			16000000,
+			{ .clk =  8000000, },
+			{ .clk = 16000000, },
 		},
 		.printf_btr = printf_btr_mcp251x,
 	}, {
@@ -341,7 +346,7 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			13000000,
+			{ .clk = 13000000, },
 		},
 		.printf_btr = printf_btr_ti_hecc,
 	}, {
@@ -357,7 +362,7 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			65000000,
+			{ .clk = 65000000, },
 		},
 		.printf_btr = printf_btr_rcar_can,
 	},
@@ -550,11 +555,13 @@ static __u32 get_cia_sample_point(__u32 bitrate)
 }
 
 static void print_bit_timing(const struct calc_bittiming_const *btc,
-			     __u32 bitrate_nominal, __u32 spt_nominal, __u32 ref_clk,
+			     const struct calc_ref_clk *ref_clk,
+			     unsigned int bitrate_nominal,
+			     unsigned int spt_nominal,
 			     bool quiet)
 {
 	struct net_device dev = {
-		.priv.clock.freq = ref_clk,
+		.priv.clock.freq = ref_clk->clk,
 	};
 	struct can_bittiming bt = {
 		.bitrate = bitrate_nominal,
@@ -563,11 +570,14 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 	long rate_error, spt_error;
 
 	if (!quiet) {
-		printf("Bit timing parameters for %s with %.6f MHz ref clock\n"
+		printf("Bit timing parameters for %s%s%s%s with %.6f MHz ref clock\n"
 		       "nominal                                 real Bitrt   nom  real SampP\n"
 		       "Bitrate TQ[ns] PrS PhS1 PhS2 SJW BRP Bitrate Error SampP SampP Error ",
 		       btc->bittiming_const.name,
-		       ref_clk / 1000000.0);
+		       ref_clk->name ? " (" : "",
+		       ref_clk->name ? ref_clk->name : "",
+		       ref_clk->name ? ")" : "",
+		       ref_clk->clk / 1000000.0);
 
 		btc->printf_btr(&bt, true);
 		printf("\n");
@@ -616,7 +626,10 @@ static void do_list(void)
 int main(int argc, char *argv[])
 {
 	__u32 bitrate_nominal = 0;
-	__u32 opt_ref_clk = 0, ref_clk;
+	struct calc_ref_clk opt_ref_clk = {
+		.name = "cmd-line",
+	};
+	const struct calc_ref_clk *ref_clk;
 	unsigned int spt_nominal = 0;
 	bool quiet = false, list = false, found = false;
 	char *name = NULL;
@@ -632,7 +645,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'c':
-			opt_ref_clk = strtoul(optarg, NULL, 10);
+			opt_ref_clk.clk = strtoul(optarg, NULL, 10);
 			break;
 
 		case 'l':
@@ -675,24 +688,26 @@ int main(int argc, char *argv[])
 		btc = &can_calc_consts[i];
 
 		for (j = 0; j < ARRAY_SIZE(btc->ref_clk); j++) {
-			if (opt_ref_clk)
-				ref_clk = opt_ref_clk;
+			if (opt_ref_clk.clk)
+				ref_clk = &opt_ref_clk;
 			else
-				ref_clk = btc->ref_clk[j];
+				ref_clk = &btc->ref_clk[j];
 
-			if (!ref_clk)
+			if (!ref_clk->clk)
 				break;
 
-			if (bitrate) {
-				print_bit_timing(btc, bitrate, spt_nominal, ref_clk, quiet);
+			if (bitrate_nominal) {
+				print_bit_timing(btc, ref_clk, bitrate_nominal,
+						 spt_nominal, quiet);
 			} else {
 				for (k = 0; k < ARRAY_SIZE(common_bitrates); k++)
-					print_bit_timing(btc, common_bitrates[k],
-							 spt_nominal, ref_clk, k);
+					print_bit_timing(btc, ref_clk,
+							 common_bitrates[k],
+							 spt_nominal, k);
 			}
 			printf("\n");
 
-			if (opt_ref_clk)
+			if (opt_ref_clk.clk)
 				break;
 		}
 	}
