@@ -706,15 +706,15 @@ static __u32 get_cia_sample_point(__u32 bitrate)
 }
 
 static void print_bit_timing(const struct calc_bittiming_const *btc,
-			     __u32 bitrate, __u32 sample_point, __u32 ref_clk,
+			     __u32 bitrate_nominal, __u32 spt_nominal, __u32 ref_clk,
 			     bool quiet)
 {
 	struct net_device dev = {
 		.priv.clock.freq = ref_clk,
 	};
 	struct can_bittiming bt = {
-		.bitrate = bitrate,
-		.sample_point = sample_point,
+		.bitrate = bitrate_nominal,
+		.sample_point = spt_nominal,
 	};
 	long rate_error, spt_error;
 
@@ -730,32 +730,32 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 	}
 
 	if (can_calc_bittiming(&dev, &bt, &btc->bittiming_const)) {
-		printf("%7d ***bitrate not possible***\n", bitrate);
+		printf("%7d ***bitrate not possible***\n", bitrate_nominal);
 		return;
 	}
 
 	/* get nominal sample point */
-	if (!sample_point)
-		sample_point = get_cia_sample_point(bitrate);
+	if (!spt_nominal)
+		spt_nominal = get_cia_sample_point(bitrate_nominal);
 
-	rate_error = abs(bitrate - bt.bitrate);
-	spt_error = abs(sample_point - bt.sample_point);
+	rate_error = abs(bitrate_nominal - bt.bitrate);
+	spt_error = abs(spt_nominal - bt.sample_point);
 
 	printf("%7d "
 	       "%6d %3d %4d %4d "
 	       "%3d %3d "
 	       "%7d %4.1f%% "
 	       "%4.1f%% %4.1f%% %4.1f%% ",
-	       bitrate,
+	       bitrate_nominal,
 	       bt.tq, bt.prop_seg, bt.phase_seg1, bt.phase_seg2,
 	       bt.sjw, bt.brp,
 
 	       bt.bitrate,
-	       100.0 * rate_error / bitrate,
+	       100.0 * rate_error / bitrate_nominal,
 
-	       sample_point / 10.0,
+	       spt_nominal / 10.0,
 	       bt.sample_point / 10.0,
-	       100.0 * spt_error / sample_point);
+	       100.0 * spt_error / spt_nominal);
 
 	btc->printf_btr(&bt, false);
 	printf("\n");
@@ -771,7 +771,7 @@ static void do_list(void)
 
 int main(int argc, char *argv[])
 {
-	__u32 bitrate = 0;
+	__u32 bitrate_nominal = 0;
 	__u32 opt_ref_clk = 0, ref_clk;
 	unsigned int spt_nominal = 0;
 	bool quiet = false, list = false, found = false;
@@ -784,7 +784,7 @@ int main(int argc, char *argv[])
 	while ((opt = getopt(argc, argv, "b:c:lps:")) != -1) {
 		switch (opt) {
 		case 'b':
-			bitrate = atoi(optarg);
+			bitrate_nominal = atoi(optarg);
 			break;
 
 		case 'c':
@@ -835,8 +835,8 @@ int main(int argc, char *argv[])
 		else
 			ref_clk = btc->ref_clk;
 
-		if (bitrate) {
-			print_bit_timing(btc, bitrate, spt_nominal, ref_clk, quiet);
+		if (bitrate_nominal) {
+			print_bit_timing(btc, bitrate_nominal, spt_nominal, ref_clk, quiet);
 		} else {
 			for (j = 0; j < ARRAY_SIZE(common_bitrates); j++)
 				print_bit_timing(btc, common_bitrates[j],
