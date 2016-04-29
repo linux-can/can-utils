@@ -759,7 +759,7 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 		.bitrate = bitrate_nominal,
 		.sample_point = sample_point_nominal,
 	};
-	unsigned int rate_error, sample_point_error;
+	unsigned int bitrate_error, sample_point_error;
 
 	if (!quiet) {
 		printf("Bit timing parameters for %s%s%s%s with %.6f MHz ref clock\n"
@@ -794,7 +794,7 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 	if (!sample_point_nominal)
 		sample_point_nominal = get_cia_sample_point(bitrate_nominal);
 
-	rate_error = abs(bitrate_nominal - bt.bitrate);
+	bitrate_error = abs(bitrate_nominal - bt.bitrate);
 	sample_point_error = abs(sample_point_nominal - bt.sample_point);
 
 	printf("%7d "				/* Bitrate */
@@ -806,11 +806,11 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 	       bt.sjw, bt.brp,
 	       bt.bitrate);
 
-	if (100.0 * rate_error / bitrate_nominal > 99.9)
+	if (100.0 * bitrate_error / bitrate_nominal > 99.9)
 		printf("≥100%% ");
 	else
 		printf("%4.1f%% ",
-		       100.0 * rate_error / bitrate_nominal);
+		       100.0 * bitrate_error / bitrate_nominal);
 
 	printf("%4.1f%% %4.1f%% ",		/* nom Sample Point, real Sample Point */
 	       sample_point_nominal / 10.0,
