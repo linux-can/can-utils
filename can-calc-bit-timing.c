@@ -749,7 +749,7 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 			     const struct can_bittiming *ref_bt,
 			     const struct calc_ref_clk *ref_clk,
 			     unsigned int bitrate_nominal,
-			     unsigned int spt_nominal,
+			     unsigned int sample_point_nominal,
 			     bool quiet)
 {
 	struct net_device dev = {
@@ -757,9 +757,9 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 	};
 	struct can_bittiming bt = {
 		.bitrate = bitrate_nominal,
-		.sample_point = spt_nominal,
+		.sample_point = sample_point_nominal,
 	};
-	long rate_error, spt_error;
+	unsigned int rate_error, sample_point_error;
 
 	if (!quiet) {
 		printf("Bit timing parameters for %s%s%s%s with %.6f MHz ref clock\n"
@@ -791,11 +791,11 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 	}
 
 	/* get nominal sample point */
-	if (!spt_nominal)
-		spt_nominal = get_cia_sample_point(bitrate_nominal);
+	if (!sample_point_nominal)
+		sample_point_nominal = get_cia_sample_point(bitrate_nominal);
 
 	rate_error = abs(bitrate_nominal - bt.bitrate);
-	spt_error = abs(spt_nominal - bt.sample_point);
+	sample_point_error = abs(sample_point_nominal - bt.sample_point);
 
 	printf("%7d "				/* Bitrate */
 	       "%6d %3d %4d %4d "		/* TQ[ns], PrS, PhS1, PhS2 */
@@ -812,15 +812,15 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 		printf("%4.1f%% ",
 		       100.0 * rate_error / bitrate_nominal);
 
-	printf("%4.1f%% %4.1f%% ",		/* nom SampP, real SampP */
-	       spt_nominal / 10.0,
+	printf("%4.1f%% %4.1f%% ",		/* nom Sample Point, real Sample Point */
+	       sample_point_nominal / 10.0,
 	       bt.sample_point / 10.0);
 
-	if (100.0 * spt_error / spt_nominal > 99.9)
+	if (100.0 * sample_point_error / sample_point_nominal > 99.9)
 		printf("≥100%% ");
 	else
-		printf("%4.1f%% ",		/* SampP Error */
-		       100.0 * spt_error / spt_nominal);
+		printf("%4.1f%% ",		/* Sample Point Error */
+		       100.0 * sample_point_error / sample_point_nominal);
 
 	if (btc->printf_btr)
 		btc->printf_btr(&bt, false);
