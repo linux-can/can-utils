@@ -60,6 +60,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "Options: -o         (send open command 'O\\r')\n");
 	fprintf(stderr, "         -c         (send close command 'C\\r')\n");
 	fprintf(stderr, "         -f         (read status flags with 'F\\r' to reset error states)\n");
+	fprintf(stderr, "         -l         (send listen only command 'L\\r', overrides -o)\n");
 	fprintf(stderr, "         -s <speed> (set CAN speed 0..8)\n");
 	fprintf(stderr, "         -S <speed> (set UART speed in baud)\n");
 	fprintf(stderr, "         -t <type>  (set UART flow control type 'hw' or 'sw')\n");
@@ -171,6 +172,7 @@ int main(int argc, char *argv[])
 	int opt;
 	int send_open = 0;
 	int send_close = 0;
+	int send_listen = 0;
 	int send_read_status_flags = 0;
 	char *speed = NULL;
 	char *uart_speed_str = NULL;
@@ -184,7 +186,7 @@ int main(int argc, char *argv[])
 
 	ttypath[0] = '\0';
 
-	while ((opt = getopt(argc, argv, "ocfs:S:t:b:?hF")) != -1) {
+	while ((opt = getopt(argc, argv, "ocfls:S:t:b:?hF")) != -1) {
 		switch (opt) {
 		case 'o':
 			send_open = 1;
@@ -194,6 +196,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'f':
 			send_read_status_flags = 1;
+			break;
+		case 'l':
+			send_listen = 1;
 			break;
 		case 's':
 			speed = optarg;
@@ -325,7 +330,10 @@ int main(int argc, char *argv[])
 		write(fd, buf, strlen(buf));
 	}
 
-	if (send_open) {
+	if (send_listen) {
+		sprintf(buf, "L\r");
+		write(fd, buf, strlen(buf));
+	} else if (send_open) {
 		sprintf(buf, "O\r");
 		write(fd, buf, strlen(buf));
 	}
