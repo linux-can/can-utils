@@ -638,7 +638,7 @@ int main(int argc, char *argv[])
 
 	const struct calc_bittiming_const *btc;
 
-	while ((opt = getopt(argc, argv, "b:c:lps:")) != -1) {
+	while ((opt = getopt(argc, argv, "b:c:lqs:")) != -1) {
 		switch (opt) {
 		case 'b':
 			bitrate_nominal = atoi(optarg);
