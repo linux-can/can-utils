@@ -41,6 +41,11 @@
  *
  */
 
+#ifndef CAN_UTILS_LIB_H
+#define CAN_UTILS_LIB_H
+
+#include <stdio.h>
+
 /* buffer sizes for CAN frame string representations */
 
 #define CL_ID (sizeof("12345678##1"))
@@ -208,3 +213,5 @@ void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *c
 /*
  * Creates a CAN error frame output in user readable format.
  */
+
+#endif
