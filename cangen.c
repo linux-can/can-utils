@@ -357,6 +357,7 @@ int main(int argc, char **argv)
 	}
 
 	while (running) {
+		frame.flags = 0;
 
 		if (count && (--count == 0))
 			running = 0;
