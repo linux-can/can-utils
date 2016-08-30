@@ -61,6 +61,7 @@
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include <linux/rtnetlink.h>
 
 #include "terminal.h"
 #include "lib.h"
@@ -120,6 +121,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "         -n <count>  (terminate after receiption of <count> CAN frames)\n");
 	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
+	fprintf(stderr, "         -R          (Report down-and-up-again status for \"detected\" devices.\n");
+	fprintf(stderr, "                      For any device that is only matched via \"any\": Such a device is only \"detected\", once you have received at least one frame from that device.\n");
 	fprintf(stderr, "         -D          (Don't exit if a \"detected\" can device goes down.\n");
 	fprintf(stderr, "         -d          (monitor dropped CAN frames)\n");
 	fprintf(stderr, "         -e          (dump CAN error frames in human-readable format)\n");
@@ -150,6 +153,19 @@ void print_usage(char *prg)
 void sigterm(int signo)
 {
 	running = 0;
+}
+
+// idx of "detected" devices is cached
+int is_idx_cached(int ifidx) {
+	int cached = 0;
+	int i;
+	for (i=0; i < MAXIFNAMES; i++) {
+		if (dindex[i] == ifidx) {
+			cached = 1;
+			break;
+		}
+	}
+	return cached;
 }
 
 int idx2dindex(int ifidx, int socket) {
@@ -201,6 +217,32 @@ int idx2dindex(int ifidx, int socket) {
 	return i;
 }
 
+// http://git.pengutronix.de/?p=tools/libsocketcan.git;a=blob;f=src/libsocketcan.c;hb=HEAD
+static int send_dump_request(int fd, int family, int type)
+{
+    struct get_req {
+	struct nlmsghdr n;
+	struct rtgenmsg g;
+    } req;
+
+    memset(&req, 0, sizeof(req));
+
+    req.n.nlmsg_len = sizeof(req);
+    req.n.nlmsg_type = type;
+    req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_ROOT | NLM_F_MATCH;
+    req.n.nlmsg_pid = 0;
+    req.n.nlmsg_seq = 0;
+
+    req.g.rtgen_family = family;
+
+    return send(fd, (void *)&req, sizeof(req), 0);
+}
+/* altern: 
+   void netlink_getlink(int nsock)   from 
+   http://centaur.sch.bme.hu/~leait/projects/openwrt/
+   http://centaur.sch.bme.hu/~leait/projects/openwrt/files/sample.c
+*/
+
 int main(int argc, char **argv)
 {
 	fd_set rdfs;
@@ -209,6 +251,7 @@ int main(int argc, char **argv)
 	useconds_t bridge_delay = 0;
 	unsigned char timestamp = 0;
 	unsigned char down_causes_exit = 1;
+	unsigned char report_down_up = 0;
 	unsigned char dropmonitor = 0;
 	unsigned char extra_msg_info = 0;
 	unsigned char silent = SILENT_INI;
@@ -236,6 +279,10 @@ int main(int argc, char **argv)
 	struct timeval tv, last_tv;
 	struct timeval timeout, timeout_config = { 0, 0 }, *timeout_current = NULL;
 	FILE *logfile = NULL;
+	struct netlink_struc {
+		int s;
+		struct sockaddr_nl saddr;
+	} netlink_s;
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -244,7 +291,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:u:lDdxLn:r:heT:?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:u:lDdxLn:Rr:heT:?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -363,6 +410,10 @@ int main(int argc, char **argv)
 			}
 			break;
 
+		case 'R':
+			report_down_up = 1;
+			break;
+
 		case 'T':
 			errno = 0;
 			timeout_config.tv_usec = strtol(optarg, NULL, 0);
@@ -399,9 +450,21 @@ int main(int argc, char **argv)
 			silent = SILENT_OFF; /* default output */
 	}
 
+	// netlink to determine down/up
+	memset(&netlink_s.saddr, 0, sizeof(netlink_s.saddr));
+	netlink_s.saddr.nl_family = AF_NETLINK;
+	netlink_s.saddr.nl_groups = RTMGRP_LINK;
+	netlink_s.s = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	bind(netlink_s.s, (struct sockaddr *) &netlink_s.saddr, sizeof(netlink_s.saddr));
+	if (send_dump_request(netlink_s.s, AF_PACKET, RTM_GETLINK) < 0) {
+	    perror("Cannot send dump request");
+	    return ret;
+	}
+	//altern: netlink_getlink(netlink_s.s);
+	    
 	currmax = argc - optind; /* find real number of CAN devices */
 
-	if (currmax > MAXSOCK) {
+	if (currmax > MAXSOCK-1) { // minus one: one socket already used for netlink
 		fprintf(stderr, "More than %d CAN devices given on commandline!\n", MAXSOCK);
 		return 1;
 	}
@@ -451,6 +514,7 @@ int main(int argc, char **argv)
 				exit(1);
 			}
 			addr.can_ifindex = ifr.ifr_ifindex;
+			idx2dindex(addr.can_ifindex, s[i]);
 		} else
 			addr.can_ifindex = 0; /* any can interface */
 
@@ -623,6 +687,7 @@ int main(int argc, char **argv)
 	while (running) {
 
 		FD_ZERO(&rdfs);
+		FD_SET(netlink_s.s, &rdfs);
 		for (i=0; i<currmax; i++)
 			FD_SET(s[i], &rdfs);
 
@@ -635,6 +700,43 @@ int main(int argc, char **argv)
 			continue;
 		}
 
+		// check netlink socket
+		if (FD_ISSET(netlink_s.s, &rdfs)) {
+			char buf[4096];
+			struct iovec iov = { buf, sizeof(buf) };
+			struct msghdr msg = { &netlink_s.saddr, sizeof(netlink_s.saddr), &iov, 1, NULL, 0, 0 };
+
+			int len = recvmsg(netlink_s.s, &msg, 0);
+
+			struct nlmsghdr *nh;
+			for (nh = (struct nlmsghdr *) buf; NLMSG_OK (nh, len); nh = NLMSG_NEXT (nh, len)) {
+				if (nh->nlmsg_type == NLMSG_DONE){
+					break;
+				}
+				if (nh->nlmsg_type == NLMSG_ERROR){
+					continue;
+				}
+				if (nh->nlmsg_type == RTM_NEWLINK) {
+				/*if (nh->nlmsg_type < RTM_NEWADDR){*/
+					struct ifinfomsg *rtif = NLMSG_DATA(nh);
+
+					if (is_idx_cached(rtif->ifi_index)) {
+						char ifname[IF_NAMESIZE];
+						if_indextoname(rtif->ifi_index, ifname);
+
+						const int will_exit = (down_causes_exit && !(rtif->ifi_flags&IFF_RUNNING));
+						if (report_down_up || will_exit) {
+							printf("#%*s is %s\n", max_devname_len, ifname,
+							       (rtif->ifi_flags&IFF_RUNNING) ? "up" : "down");
+							fflush(stdout);
+						}
+						if (will_exit) {
+							return 1;
+						}
+					}
+				}
+			}
+		}
 		for (i=0; i<currmax; i++) {  /* check all CAN RAW sockets */
 
 			if (FD_ISSET(s[i], &rdfs)) {
@@ -647,16 +749,23 @@ int main(int argc, char **argv)
 				msg.msg_controllen = sizeof(ctrlmsg);  
 				msg.msg_flags = 0;
 
+				idx = idx2dindex(addr.can_ifindex, s[i]);
+
 				nbytes = recvmsg(s[i], &msg, 0);
 				if (nbytes < 0) {
-					if ((errno == ENETDOWN) && !down_causes_exit) {
-						fprintf(stderr, "read: %s \t\t(not exiting because of -D flag)\n", strerror(errno));
+					if (errno == ENETDOWN) {
+					    if (down_causes_exit) {
+						//if (!report_down_up) { /* no previous reporting message, so report here before exit */
+						    printf("#%*s is down!\n", max_devname_len, devname[idx]);
+						    //}
+					    } else {
 						continue;
+					    }
+					} else {
+						perror("read");
 					}
-					perror("read");
 					return 1;
 				}
-
 				if ((size_t)nbytes == CAN_MTU)
 					maxdlen = CAN_MAX_DLEN;
 				else if ((size_t)nbytes == CANFD_MTU)
@@ -707,8 +816,6 @@ int main(int argc, char **argv)
 
 					last_dropcnt[i] = dropcnt[i];
 				}
-
-				idx = idx2dindex(addr.can_ifindex, s[i]);
 
 				/* once we detected a EFF frame indent SFF frames accordingly */
 				if (frame.can_id & CAN_EFF_FLAG)
@@ -810,6 +917,7 @@ int main(int argc, char **argv)
 		}
 	}
 
+	close(netlink_s.s);
 	for (i=0; i<currmax; i++)
 		close(s[i]);
 
