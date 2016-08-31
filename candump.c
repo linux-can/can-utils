@@ -648,9 +648,11 @@ int main(int argc, char **argv)
 				msg.msg_flags = 0;
 
 				nbytes = recvmsg(s[i], &msg, 0);
+				idx = idx2dindex(addr.can_ifindex, s[i]);
+
 				if (nbytes < 0) {
 					if ((errno == ENETDOWN) && !down_causes_exit) {
-						fprintf(stderr, "read: %s \t\t(not exiting because of -D flag)\n", strerror(errno));
+						fprintf(stderr, "%s: interface down\n", devname[idx]);
 						continue;
 					}
 					perror("read");
@@ -699,16 +701,14 @@ int main(int argc, char **argv)
 
 					if (silent != SILENT_ON)
 						printf("DROPCOUNT: dropped %d CAN frame%s on '%s' socket (total drops %d)\n",
-						       frames, (frames > 1)?"s":"", cmdlinename[i], dropcnt[i]);
+						       frames, (frames > 1)?"s":"", devname[idx], dropcnt[i]);
 
 					if (log)
 						fprintf(logfile, "DROPCOUNT: dropped %d CAN frame%s on '%s' socket (total drops %d)\n",
-							frames, (frames > 1)?"s":"", cmdlinename[i], dropcnt[i]);
+							frames, (frames > 1)?"s":"", devname[idx], dropcnt[i]);
 
 					last_dropcnt[i] = dropcnt[i];
 				}
-
-				idx = idx2dindex(addr.can_ifindex, s[i]);
 
 				/* once we detected a EFF frame indent SFF frames accordingly */
 				if (frame.can_id & CAN_EFF_FLAG)
