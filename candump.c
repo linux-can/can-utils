@@ -104,6 +104,11 @@ extern int optind, opterr, optopt;
 
 static volatile int running = 1;
 
+struct netlink_struc {
+	int s;
+	struct sockaddr_nl saddr;
+};
+
 void print_usage(char *prg)
 {
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>+\n", prg);
@@ -160,7 +165,7 @@ int is_idx_cached(int ifidx) {
 	int cached = 0;
 	int i;
 
-	for (i=0; i < MAXIFNAMES; i++) {
+	for (i = 0; i < MAXIFNAMES; i++) {
 		if (dindex[i] == ifidx) {
 			cached = 1;
 			break;
@@ -245,6 +250,42 @@ static int send_dump_request(int fd, int family, int type)
    http://centaur.sch.bme.hu/~leait/projects/openwrt/files/sample.c
 */
 
+static void handle_netlink_socket(struct netlink_struc *netlink_s, unsigned char down_causes_exit, unsigned char report_down_up)
+{
+	char buf[4096];
+	struct iovec iov = { buf, sizeof(buf) };
+	struct msghdr msg = { &netlink_s->saddr, sizeof(netlink_s->saddr), &iov, 1, NULL, 0, 0 };
+
+	int len = recvmsg(netlink_s->s, &msg, 0);
+
+	struct nlmsghdr *nh;
+	for (nh = (struct nlmsghdr *) buf; NLMSG_OK (nh, len); nh = NLMSG_NEXT (nh, len)) {
+		if (nh->nlmsg_type == NLMSG_DONE){
+			break;
+		}
+		if (nh->nlmsg_type == NLMSG_ERROR)
+			continue;
+		if (nh->nlmsg_type == RTM_NEWLINK) {
+			struct ifinfomsg *rtif = NLMSG_DATA(nh);
+
+			if (is_idx_cached(rtif->ifi_index)) {
+				char ifname[IF_NAMESIZE];
+				const int will_exit = (down_causes_exit && !(rtif->ifi_flags&IFF_RUNNING));
+				if_indextoname(rtif->ifi_index, ifname);
+
+				if (report_down_up || will_exit) {
+					printf("# %*s is %s\n", max_devname_len, ifname,
+						(rtif->ifi_flags&IFF_RUNNING) ? "up" : "down");
+					fflush(stdout);
+				}
+				if (will_exit) {
+					exit(1);
+				}
+			}
+		}
+	}
+}
+
 int main(int argc, char **argv)
 {
 	fd_set rdfs;
@@ -281,16 +322,7 @@ int main(int argc, char **argv)
 	struct timeval tv, last_tv;
 	struct timeval timeout, timeout_config = { 0, 0 }, *timeout_current = NULL;
 	FILE *logfile = NULL;
-	struct netlink_struc {
-		int s;
-		struct sockaddr_nl saddr;
-	} netlink_s = {
-			.s = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE),
-			.saddr = {
-				.nl_family = AF_NETLINK,
-				.nl_groups = RTMGRP_LINK
-			}
-	};
+	struct netlink_struc netlink_s;
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -459,12 +491,17 @@ int main(int argc, char **argv)
 	}
 
 	// netlink to determine down/up
-	bind(netlink_s.s, (struct sockaddr *) &netlink_s.saddr, sizeof(netlink_s.saddr));
+	netlink_s.s = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	netlink_s.saddr.nl_family = AF_NETLINK;
+	netlink_s.saddr.nl_groups = RTMGRP_LINK;
+	if (bind(netlink_s.s, (struct sockaddr *)&netlink_s.saddr, sizeof(netlink_s.saddr)) < 0) {
+		perror("netlink bind");
+		return 1;
+	}
 	if (send_dump_request(netlink_s.s, AF_PACKET, RTM_GETLINK) < 0) {
 	    perror("Cannot send dump request");
 	    return 1;
 	}
-	//altern: netlink_getlink(netlink_s.s);
 	    
 	currmax = argc - optind; /* find real number of CAN devices */
 
@@ -705,40 +742,9 @@ int main(int argc, char **argv)
 		}
 
 		// check netlink socket
-		if (FD_ISSET(netlink_s.s, &rdfs)) {
-			char buf[4096];
-			struct iovec iov = { buf, sizeof(buf) };
-			struct msghdr msg = { &netlink_s.saddr, sizeof(netlink_s.saddr), &iov, 1, NULL, 0, 0 };
+		if (FD_ISSET(netlink_s.s, &rdfs))
+			handle_netlink_socket(&netlink_s, down_causes_exit, report_down_up);
 
-			int len = recvmsg(netlink_s.s, &msg, 0);
-
-			struct nlmsghdr *nh;
-			for (nh = (struct nlmsghdr *) buf; NLMSG_OK (nh, len); nh = NLMSG_NEXT (nh, len)) {
-				if (nh->nlmsg_type == NLMSG_DONE){
-					break;
-				}
-				if (nh->nlmsg_type == NLMSG_ERROR)
-					continue;
-				if (nh->nlmsg_type == RTM_NEWLINK) {
-					struct ifinfomsg *rtif = NLMSG_DATA(nh);
-
-					if (is_idx_cached(rtif->ifi_index)) {
-						char ifname[IF_NAMESIZE];
-						if_indextoname(rtif->ifi_index, ifname);
-
-						const int will_exit = (down_causes_exit && !(rtif->ifi_flags&IFF_RUNNING));
-						if (report_down_up || will_exit) {
-							printf("# %*s is %s\n", max_devname_len, ifname,
-							       (rtif->ifi_flags&IFF_RUNNING) ? "up" : "down");
-							fflush(stdout);
-						}
-						if (will_exit) {
-							return 1;
-						}
-					}
-				}
-			}
-		}
 		for (i=0; i<currmax; i++) {  /* check all CAN RAW sockets */
 
 			if (FD_ISSET(s[i], &rdfs)) {
@@ -751,18 +757,16 @@ int main(int argc, char **argv)
 				msg.msg_controllen = sizeof(ctrlmsg);  
 				msg.msg_flags = 0;
 
+				nbytes = recvmsg(s[i], &msg, 0);
 				idx = idx2dindex(addr.can_ifindex, s[i]);
 
-				nbytes = recvmsg(s[i], &msg, 0);
 				if (nbytes < 0) {
 					if (errno == ENETDOWN) {
-					    if (down_causes_exit) {
-						//if (!report_down_up) { /* no previous reporting message, so report here before exit */
-						    printf("# %*s is down!\n", max_devname_len, devname[idx]);
-						    //}
-					    } else {
-						continue;
-					    }
+						if (down_causes_exit) {
+							printf("# %*s is down!\n", max_devname_len, devname[idx]);
+						} else {
+							continue;
+						}
 					} else {
 						perror("read");
 					}
@@ -810,11 +814,11 @@ int main(int argc, char **argv)
 
 					if (silent != SILENT_ON)
 						printf("DROPCOUNT: dropped %d CAN frame%s on '%s' socket (total drops %d)\n",
-						       frames, (frames > 1)?"s":"", cmdlinename[i], dropcnt[i]);
+						       frames, (frames > 1)?"s":"", devname[idx], dropcnt[i]);
 
 					if (log)
 						fprintf(logfile, "DROPCOUNT: dropped %d CAN frame%s on '%s' socket (total drops %d)\n",
-							frames, (frames > 1)?"s":"", cmdlinename[i], dropcnt[i]);
+							frames, (frames > 1)?"s":"", devname[idx], dropcnt[i]);
 
 					last_dropcnt[i] = dropcnt[i];
 				}
