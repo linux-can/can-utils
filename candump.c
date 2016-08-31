@@ -120,6 +120,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "         -n <count>  (terminate after receiption of <count> CAN frames)\n");
 	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
+	fprintf(stderr, "         -D          (Don't exit if a \"detected\" can device goes down.\n");
 	fprintf(stderr, "         -d          (monitor dropped CAN frames)\n");
 	fprintf(stderr, "         -e          (dump CAN error frames in human-readable format)\n");
 	fprintf(stderr, "         -x          (print extra message infos, rx/tx brs esi)\n");
@@ -207,6 +208,7 @@ int main(int argc, char **argv)
 	int bridge = 0;
 	useconds_t bridge_delay = 0;
 	unsigned char timestamp = 0;
+	unsigned char down_causes_exit = 1;
 	unsigned char dropmonitor = 0;
 	unsigned char extra_msg_info = 0;
 	unsigned char silent = SILENT_INI;
@@ -242,7 +244,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:u:ldxLn:r:heT:?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:u:lDdxLn:r:heT:?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -327,6 +329,10 @@ int main(int argc, char **argv)
 
 		case 'l':
 			log = 1;
+			break;
+
+		case 'D':
+			down_causes_exit = 0;
 			break;
 
 		case 'd':
@@ -643,6 +649,10 @@ int main(int argc, char **argv)
 
 				nbytes = recvmsg(s[i], &msg, 0);
 				if (nbytes < 0) {
+					if ((errno == ENETDOWN) && !down_causes_exit) {
+						fprintf(stderr, "read: %s \t\t(not exiting because of -D flag)\n", strerror(errno));
+						continue;
+					}
 					perror("read");
 					return 1;
 				}
