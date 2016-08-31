@@ -159,6 +159,7 @@ void sigterm(int signo)
 int is_idx_cached(int ifidx) {
 	int cached = 0;
 	int i;
+
 	for (i=0; i < MAXIFNAMES; i++) {
 		if (dindex[i] == ifidx) {
 			cached = 1;
@@ -220,22 +221,23 @@ int idx2dindex(int ifidx, int socket) {
 // http://git.pengutronix.de/?p=tools/libsocketcan.git;a=blob;f=src/libsocketcan.c;hb=HEAD
 static int send_dump_request(int fd, int family, int type)
 {
-    struct get_req {
-	struct nlmsghdr n;
-	struct rtgenmsg g;
-    } req;
+	struct get_req {
+		struct nlmsghdr n;
+		struct rtgenmsg g;
+	} req = {
+		.n = {
+			.nlmsg_len = sizeof(req),
+			.nlmsg_type = type,
+			.nlmsg_flags = NLM_F_REQUEST | NLM_F_ROOT | NLM_F_MATCH,
+			.nlmsg_pid = 0,
+			.nlmsg_seq = 0
+		},
+		.g = {
+			.rtgen_family = family
+		}
+	};
 
-    memset(&req, 0, sizeof(req));
-
-    req.n.nlmsg_len = sizeof(req);
-    req.n.nlmsg_type = type;
-    req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_ROOT | NLM_F_MATCH;
-    req.n.nlmsg_pid = 0;
-    req.n.nlmsg_seq = 0;
-
-    req.g.rtgen_family = family;
-
-    return send(fd, (void *)&req, sizeof(req), 0);
+	return send(fd, &req, sizeof(req), 0);
 }
 /* altern: 
    void netlink_getlink(int nsock)   from 
@@ -282,7 +284,13 @@ int main(int argc, char **argv)
 	struct netlink_struc {
 		int s;
 		struct sockaddr_nl saddr;
-	} netlink_s;
+	} netlink_s = {
+			.s = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE),
+			.saddr = {
+				.nl_family = AF_NETLINK,
+				.nl_groups = RTMGRP_LINK
+			}
+	};
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -451,14 +459,10 @@ int main(int argc, char **argv)
 	}
 
 	// netlink to determine down/up
-	memset(&netlink_s.saddr, 0, sizeof(netlink_s.saddr));
-	netlink_s.saddr.nl_family = AF_NETLINK;
-	netlink_s.saddr.nl_groups = RTMGRP_LINK;
-	netlink_s.s = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 	bind(netlink_s.s, (struct sockaddr *) &netlink_s.saddr, sizeof(netlink_s.saddr));
 	if (send_dump_request(netlink_s.s, AF_PACKET, RTM_GETLINK) < 0) {
 	    perror("Cannot send dump request");
-	    return ret;
+	    return 1;
 	}
 	//altern: netlink_getlink(netlink_s.s);
 	    
@@ -713,11 +717,9 @@ int main(int argc, char **argv)
 				if (nh->nlmsg_type == NLMSG_DONE){
 					break;
 				}
-				if (nh->nlmsg_type == NLMSG_ERROR){
+				if (nh->nlmsg_type == NLMSG_ERROR)
 					continue;
-				}
 				if (nh->nlmsg_type == RTM_NEWLINK) {
-				/*if (nh->nlmsg_type < RTM_NEWADDR){*/
 					struct ifinfomsg *rtif = NLMSG_DATA(nh);
 
 					if (is_idx_cached(rtif->ifi_index)) {
@@ -726,7 +728,7 @@ int main(int argc, char **argv)
 
 						const int will_exit = (down_causes_exit && !(rtif->ifi_flags&IFF_RUNNING));
 						if (report_down_up || will_exit) {
-							printf("#%*s is %s\n", max_devname_len, ifname,
+							printf("# %*s is %s\n", max_devname_len, ifname,
 							       (rtif->ifi_flags&IFF_RUNNING) ? "up" : "down");
 							fflush(stdout);
 						}
@@ -756,7 +758,7 @@ int main(int argc, char **argv)
 					if (errno == ENETDOWN) {
 					    if (down_causes_exit) {
 						//if (!report_down_up) { /* no previous reporting message, so report here before exit */
-						    printf("#%*s is down!\n", max_devname_len, devname[idx]);
+						    printf("# %*s is down!\n", max_devname_len, devname[idx]);
 						    //}
 					    } else {
 						continue;
