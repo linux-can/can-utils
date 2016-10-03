@@ -44,7 +44,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
-#define __USE_XOPEN /* supress warning for strptime */
 #include <time.h>
 #include <libgen.h>
 #include <unistd.h>

@@ -22,9 +22,6 @@
  *
  */
 
-/* To get ptsname grantpt and unlockpt definitions from stdlib.h */
-#define _GNU_SOURCE
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
