@@ -55,7 +55,7 @@
 #define FLOW_HW 1
 #define FLOW_SW 2
 
-void fake_syslog(int priority, const char *format, ...)
+static void fake_syslog(int priority, const char *format, ...)
 {
 	va_list ap;
 
