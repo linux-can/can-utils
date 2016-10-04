@@ -6,6 +6,7 @@ all: default $(patsubst %.md, %.html, $(wildcard *.md))
 	theme -f -o $@ $< -p "$*"
 
 CFLAGS	= -Wall -g3 -O0
+CPPFLAGS += -Iinclude/uapi
 
 clean:
 	rm -f testj1939 $(wildcard *.html)
