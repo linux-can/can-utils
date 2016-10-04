@@ -39,6 +39,7 @@
 #include <termios.h>
 #include <linux/tty.h>
 #include <linux/sockios.h>
+#include <stdarg.h>
 
 /* Change this to whatever your daemon is called */
 #define DAEMON_NAME "slcand"
@@ -53,6 +54,19 @@
 #define FLOW_NONE 0
 #define FLOW_HW 1
 #define FLOW_SW 2
+
+void fake_syslog(int priority, const char*format, ...)
+{
+	va_list ap;
+	printf("[%d] ", priority);
+	va_start(ap, format);
+	vprintf(format, ap);
+	va_end(ap);
+	printf("\n");
+}
+typedef void (*syslog_t)(int priority, const char*format, ...);
+syslog_t syslogger;
+
 
 void print_usage(char *prg)
 {
@@ -89,13 +103,13 @@ static void child_handler(int signum)
 		break;
 	case SIGALRM:
 	case SIGCHLD:
-		syslog(LOG_NOTICE, "received signal %i on %s", signum, ttypath);
+		syslogger(LOG_NOTICE, "received signal %i on %s", signum, ttypath);
 		exit_code = EXIT_FAILURE;
 		slcand_running = 0;
 		break;
 	case SIGINT:
 	case SIGTERM:
-		syslog(LOG_NOTICE, "received signal %i on %s", signum, ttypath);
+		syslogger(LOG_NOTICE, "received signal %i on %s", signum, ttypath);
 		exit_code = EXIT_SUCCESS;
 		slcand_running = 0;
 		break;
@@ -185,6 +199,7 @@ int main(int argc, char *argv[])
 	int fd;
 
 	ttypath[0] = '\0';
+	syslogger = syslog;
 
 	while ((opt = getopt(argc, argv, "ocfls:S:t:b:?hF")) != -1) {
 		switch (opt) {
@@ -242,6 +257,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if (!run_as_daemon)
+		syslogger = fake_syslog;
+
 	/* Initialize the logging interface */
 	openlog(DAEMON_NAME, LOG_PID, LOG_LOCAL5);
 
@@ -259,12 +277,12 @@ int main(int argc, char *argv[])
 	else
 		snprintf(ttypath, TTYPATH_LENGTH, "%s", tty);
 
-	syslog(LOG_INFO, "starting on TTY device %s", ttypath);
+	syslogger(LOG_INFO, "starting on TTY device %s", ttypath);
 
 	/* Daemonize */
 	if (run_as_daemon) {
 		if (daemon(0, 0)) {
-			syslog(LOG_ERR, "failed to daemonize");
+			syslogger(LOG_ERR, "failed to daemonize");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -280,7 +298,7 @@ int main(int argc, char *argv[])
 	/* Now we are a daemon -- do the work for which we were paid */
 	fd = open(ttypath, O_RDWR | O_NONBLOCK | O_NOCTTY);
 	if (fd < 0) {
-		syslog(LOG_NOTICE, "failed to open TTY device %s\n", ttypath);
+		syslogger(LOG_NOTICE, "failed to open TTY device %s\n", ttypath);
 		perror(ttypath);
 		exit(EXIT_FAILURE);
 	}
@@ -288,7 +306,7 @@ int main(int argc, char *argv[])
 	/* Configure baud rate */
 	memset(&tios, 0, sizeof(struct termios));
 	if (tcgetattr(fd, &tios) < 0) {
-		syslog(LOG_NOTICE, "failed to get attributes for TTY device %s: %s\n", ttypath, strerror(errno));
+		syslogger(LOG_NOTICE, "failed to get attributes for TTY device %s: %s\n", ttypath, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
@@ -313,7 +331,7 @@ int main(int argc, char *argv[])
 
 	/* apply changes */
 	if (tcsetattr(fd, TCSADRAIN, &tios) < 0)
-		syslog(LOG_NOTICE, "Cannot set attributes for device \"%s\": %s!\n", ttypath, strerror(errno));
+		syslogger(LOG_NOTICE, "Cannot set attributes for device \"%s\": %s!\n", ttypath, strerror(errno));
 
 	if (speed) {
 		sprintf(buf, "C\rS%s\r", speed);
@@ -350,7 +368,7 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	syslog(LOG_NOTICE, "attached TTY %s to netdevice %s\n", ttypath, buf);
+	syslogger(LOG_NOTICE, "attached TTY %s to netdevice %s\n", ttypath, buf);
 	
 	/* try to rename the created netdevice */
 	if (name) {
@@ -364,11 +382,11 @@ int main(int argc, char *argv[])
 			strncpy(ifr.ifr_newname, name, IFNAMSIZ);
 
 			if (ioctl(s, SIOCSIFNAME, &ifr) < 0) {
-				syslog(LOG_NOTICE, "netdevice %s rename to %s failed\n", buf, name);
+				syslogger(LOG_NOTICE, "netdevice %s rename to %s failed\n", buf, name);
 				perror("ioctl SIOCSIFNAME rename");
 				exit(EXIT_FAILURE);
 			} else
-				syslog(LOG_NOTICE, "netdevice %s renamed to %s\n", buf, name);
+				syslogger(LOG_NOTICE, "netdevice %s renamed to %s\n", buf, name);
 
 			close(s);
 		}	
@@ -379,7 +397,7 @@ int main(int argc, char *argv[])
 		sleep(1); /* wait 1 second */
 
 	/* Reset line discipline */
-	syslog(LOG_INFO, "stopping on TTY device %s", ttypath);
+	syslogger(LOG_INFO, "stopping on TTY device %s", ttypath);
 	ldisc = N_TTY;
 	if (ioctl(fd, TIOCSETD, &ldisc) < 0) {
 		perror("ioctl TIOCSETD");
@@ -397,10 +415,10 @@ int main(int argc, char *argv[])
 
 	/* apply changes */
 	if (tcsetattr(fd, TCSADRAIN, &tios) < 0)
-		syslog(LOG_NOTICE, "Cannot set attributes for device \"%s\": %s!\n", ttypath, strerror(errno));
+		syslogger(LOG_NOTICE, "Cannot set attributes for device \"%s\": %s!\n", ttypath, strerror(errno));
 
 	/* Finish up */
-	syslog(LOG_NOTICE, "terminated on %s", ttypath);
+	syslogger(LOG_NOTICE, "terminated on %s", ttypath);
 	closelog();
 	return exit_code;
 }
