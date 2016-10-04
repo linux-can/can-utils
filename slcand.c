@@ -55,18 +55,19 @@
 #define FLOW_HW 1
 #define FLOW_SW 2
 
-void fake_syslog(int priority, const char*format, ...)
+void fake_syslog(int priority, const char *format, ...)
 {
 	va_list ap;
+
 	printf("[%d] ", priority);
 	va_start(ap, format);
 	vprintf(format, ap);
 	va_end(ap);
 	printf("\n");
 }
-typedef void (*syslog_t)(int priority, const char*format, ...);
-syslog_t syslogger;
 
+typedef void (*syslog_t)(int priority, const char *format, ...);
+static syslog_t syslogger = syslog;
 
 void print_usage(char *prg)
 {
@@ -199,7 +200,6 @@ int main(int argc, char *argv[])
 	int fd;
 
 	ttypath[0] = '\0';
-	syslogger = syslog;
 
 	while ((opt = getopt(argc, argv, "ocfls:S:t:b:?hF")) != -1) {
 		switch (opt) {
