@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (verbose)
-		fprintf(stderr, "- bind(, %s, %li);\n", canaddr2str(&sockname), sizeof(sockname));
+		fprintf(stderr, "- bind(, %s, %zi);\n", canaddr2str(&sockname), sizeof(sockname));
 	ret = bind(sock, (void *)&sockname, sizeof(sockname));
 	if (ret < 0)
 		error(1, errno, "bind()");
@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
 		if (!valid_peername)
 			error(1, 0, "no peername supplied");
 		if (verbose)
-			fprintf(stderr, "- connect(, %s, %li);\n", canaddr2str(&peername), sizeof(peername));
+			fprintf(stderr, "- connect(, %s, %zi);\n", canaddr2str(&peername), sizeof(peername));
 		ret = connect(sock, (void *)&peername, sizeof(peername));
 		if (ret < 0)
 			error(1, errno, "connect()");
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
 		 */
 		if (valid_peername && !todo_connect) {
 			if (verbose)
-				fprintf(stderr, "- sendto(, <dat>, %i, 0, %s, %li);\n", todo_send, canaddr2str(&peername), sizeof(peername));
+				fprintf(stderr, "- sendto(, <dat>, %i, 0, %s, %zi);\n", todo_send, canaddr2str(&peername), sizeof(peername));
 			ret = sendto(sock, dat, todo_send, 0,
 					(void *)&peername, sizeof(peername));
 		} else {
@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
 		 * received packets
 		 */
 		if (verbose)
-			fprintf(stderr, "- recvfrom(, <dat>, %li, 0, &<peername>, %li);\n", sizeof(peername), sizeof(peername));
+			fprintf(stderr, "- recvfrom(, <dat>, %zi, 0, &<peername>, %zi);\n", sizeof(peername), sizeof(peername));
 		peernamelen = sizeof(peername);
 		ret = recvfrom(sock, dat, sizeof(dat), 0,
 				(void *)&peername, &peernamelen);
