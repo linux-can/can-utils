@@ -239,7 +239,7 @@ static int can_echo_dut(void)
 				}
 				gettimeofday(&tvn, NULL);
 				while ((tv_stop.tv_sec > tvn.tv_sec) ||
-				       ((tv_stop.tv_sec = tvn.tv_sec) &&
+				       ((tv_stop.tv_sec == tvn.tv_sec) &&
 					(tv_stop.tv_usec >= tvn.tv_usec)))
 					gettimeofday(&tvn, NULL);
 			}
