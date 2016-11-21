@@ -120,22 +120,21 @@ static void compare_frame(struct can_frame *exp, struct can_frame *rec)
 
 static void millisleep(int msecs)
 {
-	if (msecs <= 0) {
-		sched_yield();
-	} else {
-		struct timespec rqtp, rmtp;
+	struct timespec rqtp, rmtp;
+	int err;
 
-		/* sleep in ms */
-		rqtp.tv_sec = msecs / 1000;
-		rqtp.tv_nsec = (msecs % 1000) * 1000000;
-		while (nanosleep(&rqtp, &rmtp)) {
-			if (errno != EINTR) {
-				printf("t\n");
-				break;
-			}
-			rqtp = rmtp;
+	/* sleep in ms */
+	rqtp.tv_sec = msecs / 1000;
+	rqtp.tv_nsec = msecs % 1000 * 1000000;
+
+	do {
+		err = clock_nanosleep(CLOCK_MONOTONIC, 0, &rqtp, &rmtp);
+		if (err != 0 && err != EINTR) {
+			printf("t\n");
+			break;
 		}
-	}
+		rqtp = rmtp;
+	} while (err != 0);
 }
 
 static void echo_progress(unsigned char data)
@@ -194,7 +193,6 @@ static int send_frame(struct can_frame *frame)
 static int can_echo_dut(void)
 {
 	unsigned int frame_count = 0;
-	struct timeval tvn, tv_stop;
 	struct can_frame frame;
 	int i;
 
@@ -227,22 +225,7 @@ static int can_echo_dut(void)
 		 */
 		if (frame_count == CAN_MSG_WAIT) {
 			frame_count = 0;
-			if (gettimeofday(&tv_stop, NULL)) {
-				perror("gettimeofday failed\n");
-				return -1;
-			} else {
-				tv_stop.tv_usec += 3000;
-				if (tv_stop.tv_usec > 999999) {
-					tv_stop.tv_sec++;
-					tv_stop.tv_usec =
-						tv_stop.tv_usec % 1000000;
-				}
-				gettimeofday(&tvn, NULL);
-				while ((tv_stop.tv_sec > tvn.tv_sec) ||
-				       ((tv_stop.tv_sec == tvn.tv_sec) &&
-					(tv_stop.tv_usec >= tvn.tv_usec)))
-					gettimeofday(&tvn, NULL);
-			}
+			millisleep(3);
 		}
 	}
 
