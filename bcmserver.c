@@ -150,11 +150,17 @@ int main(int argc, char **argv)
 
 	char buf[MAXLEN];
 	char rxmsg[50];
+	char format[MAXLEN];
 
 	struct {
 		struct bcm_msg_head msg_head;
 		struct can_frame frame;
 	} msg;
+
+	if (snprintf(format, MAXLEN, "< %%%ds %%c %%lu %%lu %%x %%hhu "
+		       "%%hhx %%hhx %%hhx %%hhx %%hhx %%hhx "
+		       "%%hhx %%hhx >", IFNAMSIZ-1) >= MAXLEN)
+		exit(1);
 
 	sigemptyset(&sigset);
 	signalaction.sa_handler = &childdied;
@@ -282,9 +288,7 @@ int main(int argc, char **argv)
 			memset(&msg, 0, sizeof(msg));
 			msg.msg_head.nframes = 1;
 
-			items = sscanf(buf, "< %6s %c %lu %lu %x %hhu "
-				       "%hhx %hhx %hhx %hhx %hhx %hhx "
-				       "%hhx %hhx >",
+			items = sscanf(buf, format,
 				       ifr.ifr_name,
 				       &cmd, 
 				       &msg.msg_head.ival2.tv_sec,
