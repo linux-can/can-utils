@@ -73,6 +73,8 @@ AC_CHECK_FUNCS([ \
 	strtoul \
 ])
 
+# glibc versions before 2.17 needs to link with -lrt for clock_nanosleep
+AC_SEARCH_LIBS([clock_nanosleep], [rt])
 
 AC_CHECK_DECL(SO_RXQ_OVFL,,
     [AC_DEFINE([SO_RXQ_OVFL], [40], [SO_RXQ_OVFL])]
