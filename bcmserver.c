@@ -126,6 +126,7 @@
 #include <linux/can/bcm.h>
 
 #define MAXLEN 100
+#define FORMATSZ 80
 #define PORT 28600
 
 void childdied(int i)
@@ -149,12 +150,18 @@ int main(int argc, char **argv)
 	sigset_t sigset;
 
 	char buf[MAXLEN];
+	char format[FORMATSZ];
 	char rxmsg[50];
 
 	struct {
 		struct bcm_msg_head msg_head;
 		struct can_frame frame;
 	} msg;
+
+	if (snprintf(format, FORMATSZ, "< %%%ds %%c %%lu %%lu %%x %%hhu "
+		     "%%hhx %%hhx %%hhx %%hhx %%hhx %%hhx "
+		     "%%hhx %%hhx >", IFNAMSIZ-1) >= FORMATSZ-1)
+		exit(1);
 
 	sigemptyset(&sigset);
 	signalaction.sa_handler = &childdied;
@@ -282,9 +289,7 @@ int main(int argc, char **argv)
 			memset(&msg, 0, sizeof(msg));
 			msg.msg_head.nframes = 1;
 
-			items = sscanf(buf, "< %6s %c %lu %lu %x %hhu "
-				       "%hhx %hhx %hhx %hhx %hhx %hhx "
-				       "%hhx %hhx >",
+			items = sscanf(buf, format,
 				       ifr.ifr_name,
 				       &cmd, 
 				       &msg.msg_head.ival2.tv_sec,
