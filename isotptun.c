@@ -156,7 +156,7 @@ int main(int argc, char **argv)
 			else {
 				printf("incorrect extended addr values '%s'.\n", optarg);
 				print_usage(basename(argv[0]));
-				exit(0);
+				exit(EXIT_FAILURE);
 			}
 			break;
 		}
@@ -176,7 +176,7 @@ int main(int argc, char **argv)
 			else {
 				printf("incorrect padding values '%s'.\n", optarg);
 				print_usage(basename(argv[0]));
-				exit(0);
+				exit(EXIT_FAILURE);
 			}
 			break;
 		}
@@ -191,7 +191,7 @@ int main(int argc, char **argv)
 			else {
 				printf("unknown padding check option '%c'.\n", optarg[0]);
 				print_usage(basename(argv[0]));
-				exit(0);
+				exit(EXIT_FAILURE);
 			}
 			break;
 
@@ -222,7 +222,7 @@ int main(int argc, char **argv)
 				   &llopts.tx_flags) != 3) {
 				printf("unknown link layer options '%s'.\n", optarg);
 				print_usage(basename(argv[0]));
-				exit(0);
+				exit(EXIT_FAILURE);
 			}
 			break;
 
@@ -232,13 +232,13 @@ int main(int argc, char **argv)
 
 		case '?':
 			print_usage(basename(argv[0]));
-			exit(0);
+			exit(EXIT_SUCCESS);
 			break;
 
 		default:
 			fprintf(stderr, "Unknown option %c\n", opt);
 			print_usage(basename(argv[0]));
-			exit(1);
+			exit(EXIT_FAILURE);
 			break;
 		}
 	}
@@ -247,12 +247,12 @@ int main(int argc, char **argv)
 	    (addr.can_addr.tp.tx_id == NO_CAN_ID) ||
 	    (addr.can_addr.tp.rx_id == NO_CAN_ID)) {
 		print_usage(basename(argv[0]));
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
   
 	if ((s = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP)) < 0) {
 		perror("socket");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
@@ -261,7 +261,7 @@ int main(int argc, char **argv)
 	if (llopts.tx_dl) {
 		if (setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &llopts, sizeof(llopts)) < 0) {
 			perror("link layer sockopt");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -270,7 +270,7 @@ int main(int argc, char **argv)
 	if (!ifr.ifr_ifindex) {
 		perror("if_nametoindex");
 		close(s);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	addr.can_family = AF_CAN;
@@ -279,14 +279,14 @@ int main(int argc, char **argv)
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
 		close(s);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	if ((t = open("/dev/net/tun", O_RDWR)) < 0) {
 		perror("open tunfd");
 		close(s);
 		close(t);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	memset(&ifr, 0, sizeof(ifr));
@@ -298,7 +298,7 @@ int main(int argc, char **argv)
 		perror("ioctl tunfd");
 		close(s);
 		close(t);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	while (running) {
@@ -351,5 +351,5 @@ int main(int argc, char **argv)
 
 	close(s);
 	close(t);
-	return 0;
+	return EXIT_SUCCESS;
 }
