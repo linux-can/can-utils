@@ -154,7 +154,7 @@ int main(int argc, char **argv)
 			else if (elements == 2)
 				opts.flags |= (CAN_ISOTP_EXTEND_ADDR | CAN_ISOTP_RX_EXT_ADDR);
 			else {
-				printf("incorrect extended addr values '%s'.\n", optarg);
+				fprintf(stderr, "incorrect extended addr values '%s'.\n", optarg);
 				print_usage(basename(argv[0]));
 				exit(EXIT_FAILURE);
 			}
@@ -174,7 +174,7 @@ int main(int argc, char **argv)
 			else if (sscanf(optarg, ":%hhx", &opts.rxpad_content) == 1)
 				opts.flags |= CAN_ISOTP_RX_PADDING;
 			else {
-				printf("incorrect padding values '%s'.\n", optarg);
+				fprintf(stderr, "incorrect padding values '%s'.\n", optarg);
 				print_usage(basename(argv[0]));
 				exit(EXIT_FAILURE);
 			}
@@ -189,7 +189,7 @@ int main(int argc, char **argv)
 			else if (optarg[0] == 'a')
 				opts.flags |= (CAN_ISOTP_CHK_PAD_LEN | CAN_ISOTP_CHK_PAD_DATA);
 			else {
-				printf("unknown padding check option '%c'.\n", optarg[0]);
+				fprintf(stderr, "unknown padding check option '%c'.\n", optarg[0]);
 				print_usage(basename(argv[0]));
 				exit(EXIT_FAILURE);
 			}
@@ -220,7 +220,7 @@ int main(int argc, char **argv)
 				   &llopts.mtu,
 				   &llopts.tx_dl,
 				   &llopts.tx_flags) != 3) {
-				printf("unknown link layer options '%s'.\n", optarg);
+				fprintf(stderr, "unknown link layer options '%s'.\n", optarg);
 				print_usage(basename(argv[0]));
 				exit(EXIT_FAILURE);
 			}
