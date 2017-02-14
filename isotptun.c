@@ -55,6 +55,8 @@
 #include <libgen.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdarg.h>
+#include <syslog.h>
 
 #include <net/if.h>
 #include <sys/types.h>
@@ -65,6 +67,9 @@
 #include <linux/can/isotp.h>
 #include <linux/if_tun.h>
 
+/* Change this to whatever your daemon is called */
+#define DAEMON_NAME "isotptun"
+
 #define NO_CAN_ID 0xFFFFFFFFU
 #define DEFAULT_NAME "ctun%d"
 
@@ -73,6 +78,26 @@
 #define BUF_LEN (MAX_PDU_LENGTH + 1)
 
 static volatile int running = 1;
+
+static void fake_syslog(int priority, const char *format, ...)
+{
+	va_list ap;
+
+	fprintf(stderr, "[%d] ", priority);
+	va_start(ap, format);
+	vfprintf(stderr, format, ap);
+	va_end(ap);
+	fprintf(stderr, "\n");
+}
+
+typedef void (*syslog_t)(int priority, const char *format, ...);
+static syslog_t syslogger = syslog;
+
+void perror_syslog(const char *s)
+{
+	const char *colon = s ? ": " : "";
+	syslogger(LOG_ERR, "%s%s%s", s, colon, strerror(errno));
+}
 
 void print_usage(char *prg)
 {
@@ -90,6 +115,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -b <bs>      (blocksize. 0 = off)\n");
 	fprintf(stderr, "         -m <val>     (STmin in ms/ns. See spec.)\n");
 	fprintf(stderr, "         -w <num>     (max. wait frame transmissions.)\n");
+	fprintf(stderr, "         -D           (daemonize to background when tun device created)\n");
 	fprintf(stderr, "         -h           (half duplex mode.)\n");
 	fprintf(stderr, "         -v           (verbose mode. Print symbols for tunneled msgs.)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
@@ -118,14 +144,11 @@ int main(int argc, char **argv)
 	unsigned char buffer[BUF_LEN];
 	static char name[IFNAMSIZ] = DEFAULT_NAME;
 	int nbytes;
-
-	signal(SIGTERM, sigterm);
-	signal(SIGHUP, sigterm);
-	signal(SIGINT, sigterm);
+	int run_as_daemon = 0;
 
 	addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-	while ((opt = getopt(argc, argv, "s:d:n:x:p:P:t:b:m:whL:v?")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:n:x:p:P:t:b:m:whL:vD?")) != -1) {
 		switch (opt) {
 		case 's':
 			addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
@@ -230,6 +253,10 @@ int main(int argc, char **argv)
 			verbose = 1;
 			break;
 
+		case 'D':
+			run_as_daemon = 1;
+			break;
+
 		case '?':
 			print_usage(basename(argv[0]));
 			exit(EXIT_SUCCESS);
@@ -250,8 +277,14 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
   
+	if (!run_as_daemon)
+		syslogger = fake_syslog;
+
+	/* Initialize the logging interface */
+	openlog(DAEMON_NAME, LOG_PID, LOG_LOCAL5);
+
 	if ((s = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP)) < 0) {
-		perror("socket");
+		perror_syslog("socket");
 		exit(EXIT_FAILURE);
 	}
 
@@ -260,7 +293,7 @@ int main(int argc, char **argv)
 
 	if (llopts.tx_dl) {
 		if (setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &llopts, sizeof(llopts)) < 0) {
-			perror("link layer sockopt");
+			perror_syslog("link layer sockopt");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -268,7 +301,7 @@ int main(int argc, char **argv)
 	strncpy(ifr.ifr_name, argv[optind], IFNAMSIZ);
 	ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
 	if (!ifr.ifr_ifindex) {
-		perror("if_nametoindex");
+		perror_syslog("if_nametoindex");
 		close(s);
 		exit(EXIT_FAILURE);
 	}
@@ -277,13 +310,13 @@ int main(int argc, char **argv)
 	addr.can_ifindex = ifr.ifr_ifindex;
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-		perror("bind");
+		perror_syslog("bind");
 		close(s);
 		exit(EXIT_FAILURE);
 	}
 
 	if ((t = open("/dev/net/tun", O_RDWR)) < 0) {
-		perror("open tunfd");
+		perror_syslog("open tunfd");
 		close(s);
 		close(t);
 		exit(EXIT_FAILURE);
@@ -295,11 +328,24 @@ int main(int argc, char **argv)
 	ifr.ifr_name[IFNAMSIZ - 1] = '\0';
 
 	if (ioctl(t, TUNSETIFF, (void *) &ifr) < 0) {
-		perror("ioctl tunfd");
+		perror_syslog("ioctl tunfd");
 		close(s);
 		close(t);
 		exit(EXIT_FAILURE);
 	}
+
+	/* Now the tun device exists. We can daemonize to let the
+	 * parent continue and use the network interface. */
+	if (run_as_daemon) {
+		if (daemon(0, 0)) {
+			syslogger(LOG_ERR, "failed to daemonize");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	signal(SIGTERM, sigterm);
+	signal(SIGHUP, sigterm);
+	signal(SIGINT, sigterm);
 
 	while (running) {
 
@@ -308,14 +354,14 @@ int main(int argc, char **argv)
 		FD_SET(t, &rdfs);
 
 		if ((ret = select(t+1, &rdfs, NULL, NULL, NULL)) < 0) {
-			perror("select");
+			perror_syslog("select");
 			continue;
 		}
 
 		if (FD_ISSET(s, &rdfs)) {
 			nbytes = read(s, buffer, BUF_LEN);
 			if (nbytes < 0) {
-				perror("read isotp socket");
+				perror_syslog("read isotp socket");
 				return -1;
 			}
 			if (nbytes > MAX_PDU_LENGTH)
@@ -333,7 +379,7 @@ int main(int argc, char **argv)
 		if (FD_ISSET(t, &rdfs)) {
 			nbytes = read(t, buffer, BUF_LEN);
 			if (nbytes < 0) {
-				perror("read tunfd");
+				perror_syslog("read tunfd");
 				return -1;
 			}
 			if (nbytes > MAX_PDU_LENGTH)
