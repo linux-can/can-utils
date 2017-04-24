@@ -2,7 +2,7 @@
 
 ````can-utils```` is an extremely versatile collection of CAN utilities to sniff, transmit, record, generate, and replay CAN messages. ````can-utils```` is based on a set of open source CAN drivers and networking stack called SocketCAN, contributed by Volkswagen Research to the Linux Kernel.
 
-For a quick review of CAN, please follow [this Wikipedia link](https://en.wikipedia.org/wiki/CAN_bus) which provides great background information and will make life easier as you get started.
+For a quick review of CAN, please review [Elinux.org CAN Bus Page](http://elinux.org/CAN_Bus) which provides great background information and will make life easier as you get started.
 
 ## Prerequisites
 To use can-utils using simply a Virtual CAN or vcan, you just need:
