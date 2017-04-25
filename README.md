@@ -1,3 +1,5 @@
+![Socket CAN logo](https://raw.githubusercontent.com/alan707/can-logos/master/SocketCAN-logo.png)
+
 # CAN utilities based on SocketCAN
 
 ````can-utils```` is an extremely versatile collection of CAN utilities to sniff, transmit, record, generate, and replay CAN messages. ````can-utils```` is based on a set of open source CAN drivers and networking stack called SocketCAN, contributed by Volkswagen Research to the Linux Kernel.
