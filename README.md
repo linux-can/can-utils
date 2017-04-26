@@ -1,4 +1,6 @@
-![Socket CAN logo](https://raw.githubusercontent.com/alan707/can-logos/master/SocketCAN-logo.png)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/alan707/can-logos/master/SocketCAN-logo.png" alt="SocketCAN logo"/>
+</p>
 
 # CAN utilities based on SocketCAN
 
