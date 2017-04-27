@@ -1,17 +1,55 @@
-SocketCAN userspace utilities and tools
+<p align="center">
+<img src="https://github.com/linux-can/can-logos/raw/master/png/SocketCAN-logo-60dpi.png" alt="SocketCAN logo"/>
+</p>
 
-CAN is a message-based network protocol designed for vehicles
-originally initially created by Robert Bosch GmbH. SocketCAN is a set
-of open source CAN drivers and a networking stack contributed by
-Volkswagen Research to the Linux kernel.
+### SocketCAN userspace utilities and tools
 
-This package contains some userspace utilities for Linux SocketCAN
-subsystem: asc2log, bcmserver, canbusload, can-calc-bit-timing,
-candump, canfdtest, cangen, cangw, canlogserver, canplayer, cansend,
-cansniffer, isotpdump, isotprecv, isotpperf, isotpsend, isotpserver,
-isotpsniffer, isotptun, log2asc, log2long, slcan_attach, slcand and
-slcanpty.
+This repository contains some userspace utilities for Linux CAN
+subsystem (aka SocketCAN):
 
----
+#### Basic tools to display, record, generate and replay CAN traffic
 
-Description copied from https://packages.debian.org/sid/can-utils
+* candump :
+* canplayer :
+* cansend :
+* cangen :
+* cansniffer :
+
+#### CAN access via IP sockets
+* canlogserver :
+* bcmserver :
+* [socketcand](https://github.com/dschanoeh/socketcand) :
+
+#### CAN in-kernel gateway configuration
+* cangw :
+
+#### CAN bus measurement and testing
+* canbusload :
+* can-calc-bit-timing :
+* canfdtest :
+
+#### ISO-TP tools [ISO15765-2:2016 for Linux](https://github.com/hartkopp/can-isotp)
+* isotpsend :
+* isotprecv :
+* isotpsniffer :
+* isotpdump :
+* isotpserver :
+* isotpperf :
+* isotptun :
+
+#### Log file converters
+* asc2log :
+* log2asc :
+* log2long :
+
+#### Serial Line Discipline configuration (for slcan driver)
+* slcan_attach :
+* slcand :
+* slcanpty :
+
+### Additional Information:
+
+*   [SocketCAN Documentation (Linux Kernel)](https://www.kernel.org/doc/Documentation/networking/can.txt)
+*   [Elinux.org CAN Bus Page](http://elinux.org/CAN_Bus)
+*   [Debian Package Description](https://packages.debian.org/sid/can-utils)
+
