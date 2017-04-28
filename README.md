@@ -9,43 +9,43 @@ subsystem (aka SocketCAN):
 
 #### Basic tools to display, record, generate and replay CAN traffic
 
-* candump :
-* canplayer :
-* cansend :
-* cangen :
-* cansniffer :
+* candump : display, filter and log CAN data to files
+* canplayer : replay CAN logfiles
+* cansend : send a single frame
+* cangen : generate (random) CAN traffic
+* cansniffer : display CAN data content differences (just 11bit CAN IDs)
 
 #### CAN access via IP sockets
-* canlogserver :
-* bcmserver :
-* [socketcand](https://github.com/dschanoeh/socketcand) :
+* canlogserver : log CAN frames from a remote/local host
+* bcmserver : interactive BCM configuration (remote/local)
+* [socketcand](https://github.com/dschanoeh/socketcand) : use RAW/BCM/ISO-TP sockets via TCP/IP sockets
 
 #### CAN in-kernel gateway configuration
-* cangw :
+* cangw : CAN gateway userpace tool for netlink configuration
 
 #### CAN bus measurement and testing
-* canbusload :
-* can-calc-bit-timing :
-* canfdtest :
+* canbusload : calculate and display the CAN busload
+* can-calc-bit-timing : userspace version of in-kernel bitrate calculation
+* canfdtest : Full-duplex test program (DUT and host part)
 
 #### ISO-TP tools [ISO15765-2:2016 for Linux](https://github.com/hartkopp/can-isotp)
-* isotpsend :
-* isotprecv :
-* isotpsniffer :
-* isotpdump :
-* isotpserver :
-* isotpperf :
-* isotptun :
+* isotpsend : send a single ISO-TP PDU
+* isotprecv : receive ISO-TP PDU(s)
+* isotpsniffer : 'wiretap' ISO-TP PDU(s)
+* isotpdump : 'wiretap' and interpret CAN messages (CAN_RAW)
+* isotpserver : IP server for simple TCP/IP <-> ISO 15765-2 bridging (ASCII HEX)
+* isotpperf : ISO15765-2 protocol performance visualisation
+* isotptun : create a bi-directional IP tunnel on CAN via ISO-TP
 
 #### Log file converters
-* asc2log :
-* log2asc :
-* log2long :
+* asc2log : convert ASC logfile to compact CAN frame logfile
+* log2asc : convert compact CAN frame logfile to ASC logfile
+* log2long : convert compact CAN frame representation into user readable
 
 #### Serial Line Discipline configuration (for slcan driver)
-* slcan_attach :
-* slcand :
-* slcanpty :
+* slcan_attach : userspace tool for serial line CAN interface configuration
+* slcand : daemon for serial line CAN interface configuration
+* slcanpty : creates a pty for applications using the slcan ASCII protocol
 
 ### Additional Information:
 
