@@ -328,7 +328,7 @@ int main(int argc, char **argv)
 		}
 
 		if (ifr.ifr_mtu != CANFD_MTU) {
-			printf("CAN interface ist not CAN FD capable - sorry.\n");
+			printf("CAN interface is not CAN FD capable - sorry.\n");
 			return 1;
 		}
 
