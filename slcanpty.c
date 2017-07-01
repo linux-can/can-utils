@@ -246,7 +246,7 @@ rx_restart:
 	else
 		ptr = 9; /* dlc position Tiiiiiiiid */
 
-	*(unsigned long long *) (&frame.data) = 0ULL; /* clear data[] */
+	memset(&frame.data, 0, 8); /* clear data[] */
 
 	if ((cmd | 0x20) == 'r' && buf[ptr] != '0') {
 

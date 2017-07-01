@@ -64,8 +64,6 @@
 
 #include "terminal.h"
 
-#define U64_DATA(p) (*(unsigned long long*)(p)->data)
-
 #define SETFNAME "sniffset."
 #define ANYDEV   "any"
 
@@ -370,7 +368,9 @@ void rx_setup (int fd, int id){
 	txmsg.msg_head.ival2.tv_sec  = 0;
 	txmsg.msg_head.ival2.tv_usec = 0;
 	txmsg.msg_head.nframes = 1;
-	U64_DATA(&txmsg.frame) = (__u64) 0xFFFFFFFFFFFFFFFFULL;
+
+	/* set all bits to be relevant */
+	memset(&txmsg.frame.data, 0xFF, 8);
 
 	if (filter_id_only)
 		txmsg.msg_head.flags |= RX_FILTER_ID;
@@ -478,7 +478,7 @@ int handle_keyb(int fd){
 
 	case '*' :
 		for (i=0; i < 2048; i++)
-			U64_DATA(&sniftab[i].notch) = (__u64) 0;
+			memset(&sniftab[i].notch.data, 0, 8);
 		break;
 
 	default:
@@ -492,7 +492,7 @@ int handle_keyb(int fd){
 
 int handle_bcm(int fd, long currcms){
 
-	int nbytes, id;
+	int nbytes, id, i;
 
 	struct {
 		struct bcm_msg_head msg_head;
@@ -518,8 +518,9 @@ int handle_bcm(int fd, long currcms){
 	}
 
 	sniftab[id].current = bmsg.frame;
-	U64_DATA(&sniftab[id].marker) |= 
-		U64_DATA(&sniftab[id].current) ^ U64_DATA(&sniftab[id].last);
+	for (i=0; i < 8; i++)
+		sniftab[id].marker.data[i] |= sniftab[id].current.data[i] ^ sniftab[id].last.data[i];
+
 	sniftab[id].timeout = (timeout)?(currcms + timeout):0;
 
 	if (is_clr(id, DISPLAY))
@@ -533,7 +534,7 @@ int handle_bcm(int fd, long currcms){
 
 int handle_timeo(int fd, long currcms){
 
-	int i;
+	int i, j;
 	int force_redraw = 0;
 	static unsigned int frame_count;
 
@@ -547,8 +548,10 @@ int handle_timeo(int fd, long currcms){
 	}
 
 	if (notch) {
-		for (i=0; i < 2048; i++)
-			U64_DATA(&sniftab[i].notch) |= U64_DATA(&sniftab[i].marker);
+		for (i=0; i < 2048; i++) {
+			for (j=0; j < 8; j++)
+				sniftab[i].notch.data[j] |= sniftab[i].marker.data[j];
+		}
 		notch = 0;
 	}
 
@@ -569,7 +572,7 @@ int handle_timeo(int fd, long currcms){
 						}
 						else
 							if ((sniftab[i].hold) && (sniftab[i].hold < currcms)) {
-								U64_DATA(&sniftab[i].marker) = (__u64) 0;
+								memset(&sniftab[i].marker.data, 0, 8);
 								print_snifline(i);
 								sniftab[i].hold = 0; /* disable update by hold */
 							}
@@ -670,8 +673,7 @@ void print_snifline(int id){
 
 	putchar('\n');
 
-	U64_DATA(&sniftab[id].marker) = (__u64) 0;
-
+	memset(&sniftab[id].marker.data, 0, 8);
 };
 
 

@@ -150,6 +150,7 @@ int main(int argc, char **argv)
 	int mtu, maxdlen;
 	uint64_t incdata = 0;
 	int incdlc = 0;
+	unsigned long rnd;
 	unsigned char fixdata[CANFD_MAX_DLEN];
 
 	int opt;
@@ -400,9 +401,10 @@ int main(int argc, char **argv)
 
 		if (data_mode == MODE_RANDOM) {
 
-			/* that's what the 64 bit alignment of data[] is for ... :) */
-			*(unsigned long*)(&frame.data[0]) = random();
-			*(unsigned long*)(&frame.data[4]) = random();
+			rnd = random();
+			memcpy(&frame.data[0], &rnd, 4);
+			rnd = random();
+			memcpy(&frame.data[4], &rnd, 4);
 
 			/* omit extra random number generation for CAN FD */
 			if (canfd && frame.len > 8) {

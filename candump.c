@@ -689,9 +689,9 @@ int main(int argc, char **argv)
 				     cmsg && (cmsg->cmsg_level == SOL_SOCKET);
 				     cmsg = CMSG_NXTHDR(&msg,cmsg)) {
 					if (cmsg->cmsg_type == SO_TIMESTAMP)
-						tv = *(struct timeval *)CMSG_DATA(cmsg);
+						memcpy(&tv, CMSG_DATA(cmsg), sizeof(tv));
 					else if (cmsg->cmsg_type == SO_RXQ_OVFL)
-						dropcnt[i] = *(__u32 *)CMSG_DATA(cmsg);
+						memcpy(&dropcnt[i], CMSG_DATA(cmsg), sizeof(__u32));
 				}
 
 				/* check for (unlikely) dropped frames on this specific socket */
