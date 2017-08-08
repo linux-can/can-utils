@@ -69,7 +69,7 @@ static inline void _put_id(char *buf, int end_offset, canid_t id)
 {
 	/* build 3 (SFF) or 8 (EFF) digit CAN identifier */
 	while (end_offset >= 0) {
-		buf[end_offset--] = hex_asc_upper[id & 0xF];
+		buf[end_offset--] = hex_asc_upper_lo(id);
 		id >>= 4;
 	}
 }
