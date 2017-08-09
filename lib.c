@@ -463,7 +463,7 @@ static const char *protocol_violation_types[] = {
 static const char *protocol_violation_locations[] = {
 	"unspecified",
 	"unspecified",
-	"id.28-to-id.28",
+	"id.28-to-id.21",
 	"start-of-frame",
 	"bit-srtr",
 	"bit-ide",
