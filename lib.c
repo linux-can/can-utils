@@ -69,7 +69,7 @@ static inline void _put_id(char *buf, int end_offset, canid_t id)
 {
 	/* build 3 (SFF) or 8 (EFF) digit CAN identifier */
 	while (end_offset >= 0) {
-		buf[end_offset--] = hex_asc_upper[id & 0xF];
+		buf[end_offset--] = hex_asc_upper_lo(id);
 		id >>= 4;
 	}
 }
@@ -463,7 +463,7 @@ static const char *protocol_violation_types[] = {
 static const char *protocol_violation_locations[] = {
 	"unspecified",
 	"unspecified",
-	"id.28-to-id.28",
+	"id.28-to-id.21",
 	"start-of-frame",
 	"bit-srtr",
 	"bit-ide",
