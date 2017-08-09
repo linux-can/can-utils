@@ -270,7 +270,7 @@ void sprint_canframe(char *buf , struct canfd_frame *cf, int sep, int maxdlen) {
 		buf[offset++] = 'R';
 		/* print a given CAN 2.0B DLC if it's not zero */
 		if (cf->len && cf->len <= CAN_MAX_DLC)
-			buf[offset++] = hex_asc_upper[cf->len & 0xF];
+			buf[offset++] = hex_asc_upper_lo(cf->len);
 
 		buf[offset] = 0;
 		return;
@@ -279,7 +279,7 @@ void sprint_canframe(char *buf , struct canfd_frame *cf, int sep, int maxdlen) {
 	if (maxdlen == CANFD_MAX_DLEN) {
 		/* add CAN FD specific escape char and flags */
 		buf[offset++] = '#';
-		buf[offset++] = hex_asc_upper[cf->flags & 0xF];
+		buf[offset++] = hex_asc_upper_lo(cf->flags);
 		if (sep && len)
 			buf[offset++] = '.';
 	}
