@@ -265,7 +265,10 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 	
-	if (mask || value) {
+	if (quiet)
+		for (i = 0; i < 2048; i++)
+			do_clr(i, ENABLE);
+	else if (mask || value) {
 		for (i=0; i < 2048 ;i++) {
 			if ((i & mask) ==  (value & mask))
 				do_set(i, ENABLE);
@@ -273,10 +276,6 @@ int main(int argc, char **argv)
 				do_clr(i, ENABLE);
 		}
 	}
-
-	if (quiet)
-		for (i=0; i < 2048 ;i++)
-			do_clr(i, ENABLE);
 
 	if (strlen(argv[optind]) >= IFNAMSIZ) {
 		printf("name of CAN device '%s' is too long!\n", argv[optind]);
