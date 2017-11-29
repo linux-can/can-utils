@@ -48,7 +48,7 @@
 #define RUN_AS_USER "root"
 
 /* The length of ttypath buffer */
-#define TTYPATH_LENGTH	64
+#define TTYPATH_LENGTH	256
 
 /* UART flow control types */
 #define FLOW_NONE 0
