@@ -568,7 +568,7 @@ int main(int argc, char **argv)
 			int timestamping_flags = 1;
 			if (hwtimestamp) {
 				timestamping_flags = SOF_TIMESTAMPING_SOFTWARE | SOF_TIMESTAMPING_RX_SOFTWARE | \
-						SOF_TIMESTAMPING_RAW_HARDWARE | SOF_TIMESTAMPING_SYS_HARDWARE;
+						SOF_TIMESTAMPING_RAW_HARDWARE;
 				if (setsockopt(s[i], SOL_SOCKET, SO_TIMESTAMPING,
 						&timestamping_flags, sizeof(timestamping_flags)) < 0) {
 					perror("setsockopt SO_TIMESTAMPING");
