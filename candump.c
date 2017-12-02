@@ -58,6 +58,7 @@
 #include <sys/ioctl.h>
 #include <sys/uio.h>
 #include <net/if.h>
+#include <linux/net_tstamp.h>
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
@@ -108,6 +109,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>+\n", prg);
 	fprintf(stderr, "  (use CTRL-C to terminate %s)\n\n", prg);
 	fprintf(stderr, "Options: -t <type>   (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
+	fprintf(stderr, "         -H          (Read hardware timestamps)\n");
 	fprintf(stderr, "         -c          (increment color mode level)\n");
 	fprintf(stderr, "         -i          (binary output - may exceed 80 chars/line)\n");
 	fprintf(stderr, "         -a          (enable additional ASCII output)\n");
@@ -208,6 +210,7 @@ int main(int argc, char **argv)
 	int bridge = 0;
 	useconds_t bridge_delay = 0;
 	unsigned char timestamp = 0;
+	unsigned char hwtimestamp = 0;
 	unsigned char down_causes_exit = 1;
 	unsigned char dropmonitor = 0;
 	unsigned char extra_msg_info = 0;
@@ -224,7 +227,10 @@ int main(int argc, char **argv)
 	int join_filter;
 	char *ptr, *nptr;
 	struct sockaddr_can addr;
-	char ctrlmsg[CMSG_SPACE(sizeof(struct timeval)) + CMSG_SPACE(sizeof(__u32))];
+	struct {
+		struct cmsghdr cm;
+		char control[512];
+	} ctrlmsg;
 	struct iovec iov;
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
@@ -244,7 +250,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:ciaSs:b:B:u:lDdxLn:r:heT:?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:HciaSs:b:B:u:lDdxLn:r:heT:?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -254,6 +260,10 @@ int main(int argc, char **argv)
 				       basename(argv[0]), optarg[0]);
 				timestamp = 0;
 			}
+			break;
+
+		case 'H':
+			hwtimestamp = 1;
 			break;
 
 		case 'c':
@@ -555,12 +565,21 @@ int main(int argc, char **argv)
 
 		if (timestamp || log || logfrmt) {
 
-			const int timestamp_on = 1;
-
-			if (setsockopt(s[i], SOL_SOCKET, SO_TIMESTAMP,
-				       &timestamp_on, sizeof(timestamp_on)) < 0) {
-				perror("setsockopt SO_TIMESTAMP");
-				return 1;
+			int timestamping_flags = 1;
+			if (hwtimestamp) {
+				timestamping_flags = SOF_TIMESTAMPING_SOFTWARE | SOF_TIMESTAMPING_RX_SOFTWARE | \
+						SOF_TIMESTAMPING_RAW_HARDWARE | SOF_TIMESTAMPING_SYS_HARDWARE;
+				if (setsockopt(s[i], SOL_SOCKET, SO_TIMESTAMPING,
+						&timestamping_flags, sizeof(timestamping_flags)) < 0) {
+					perror("setsockopt SO_TIMESTAMPING");
+					return 1;
+				}
+			} else {
+				if (setsockopt(s[i], SOL_SOCKET, SO_TIMESTAMP,
+					       &timestamping_flags, sizeof(timestamping_flags)) < 0) {
+					perror("setsockopt SO_TIMESTAMP");
+					return 1;
+				}
 			}
 		}
 
@@ -688,8 +707,16 @@ int main(int argc, char **argv)
 				for (cmsg = CMSG_FIRSTHDR(&msg);
 				     cmsg && (cmsg->cmsg_level == SOL_SOCKET);
 				     cmsg = CMSG_NXTHDR(&msg,cmsg)) {
-					if (cmsg->cmsg_type == SO_TIMESTAMP)
+					if (cmsg->cmsg_type == SO_TIMESTAMP) {
 						memcpy(&tv, CMSG_DATA(cmsg), sizeof(tv));
+					} else if (cmsg->cmsg_type == SO_TIMESTAMPING) {
+
+						struct timespec *stamp = (struct timespec *)CMSG_DATA(cmsg);
+
+						stamp += 2;
+						tv.tv_sec = stamp->tv_sec;
+						tv.tv_usec = stamp->tv_nsec/1000;
+					}
 					else if (cmsg->cmsg_type == SO_RXQ_OVFL)
 						memcpy(&dropcnt[i], CMSG_DATA(cmsg), sizeof(__u32));
 				}
