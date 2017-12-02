@@ -713,11 +713,13 @@ int main(int argc, char **argv)
 
 						struct timespec *stamp = (struct timespec *)CMSG_DATA(cmsg);
 
-						stamp += 2;
-						tv.tv_sec = stamp->tv_sec;
-						tv.tv_usec = stamp->tv_nsec/1000;
-					}
-					else if (cmsg->cmsg_type == SO_RXQ_OVFL)
+						// stamp[0] is the software timestamp
+						// stamp[1] is deprecated
+						// stamp[2] is the raw hardware timestamp
+						// See 2.1.2 in doc/Documentation/networking/timestamping.txt
+						tv.tv_sec = stamp[2].tv_sec;
+						tv.tv_usec = stamp[2].tv_nsec/1000;
+					} else if (cmsg->cmsg_type == SO_RXQ_OVFL)
 						memcpy(&dropcnt[i], CMSG_DATA(cmsg), sizeof(__u32));
 				}
 
