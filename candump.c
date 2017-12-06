@@ -58,13 +58,22 @@
 #include <sys/ioctl.h>
 #include <sys/uio.h>
 #include <net/if.h>
-#include <linux/net_tstamp.h>
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
 #include "terminal.h"
 #include "lib.h"
+
+/* for hardware timestamps - since Linux 2.6.30 */
+#ifndef SO_TIMESTAMPING
+#define SO_TIMESTAMPING 37
+#endif
+
+/* from #include <linux/net_tstamp.h> - since Linux 2.6.30 */
+#define SOF_TIMESTAMPING_SOFTWARE (1<<4)
+#define SOF_TIMESTAMPING_RX_SOFTWARE (1<<3)
+#define SOF_TIMESTAMPING_RAW_HARDWARE (1<<6)
 
 #define MAXSOCK 16    /* max. number of CAN interfaces given on the cmdline */
 #define MAXIFNAMES 30 /* size of receive name index to omit ioctls */
@@ -109,7 +118,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>+\n", prg);
 	fprintf(stderr, "  (use CTRL-C to terminate %s)\n\n", prg);
 	fprintf(stderr, "Options: -t <type>   (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
-	fprintf(stderr, "         -H          (Read hardware timestamps)\n");
+	fprintf(stderr, "         -H          (read hardware timestamps instead of system timestamps)\n");
 	fprintf(stderr, "         -c          (increment color mode level)\n");
 	fprintf(stderr, "         -i          (binary output - may exceed 80 chars/line)\n");
 	fprintf(stderr, "         -a          (enable additional ASCII output)\n");
@@ -227,10 +236,7 @@ int main(int argc, char **argv)
 	int join_filter;
 	char *ptr, *nptr;
 	struct sockaddr_can addr;
-	struct {
-		struct cmsghdr cm;
-		char control[512];
-	} ctrlmsg;
+	char ctrlmsg[CMSG_SPACE(sizeof(struct timeval) + 3*sizeof(struct timespec) + sizeof(__u32))];
 	struct iovec iov;
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
@@ -565,18 +571,21 @@ int main(int argc, char **argv)
 
 		if (timestamp || log || logfrmt) {
 
-			int timestamping_flags = 1;
 			if (hwtimestamp) {
-				timestamping_flags = SOF_TIMESTAMPING_SOFTWARE | SOF_TIMESTAMPING_RX_SOFTWARE | \
-						SOF_TIMESTAMPING_RAW_HARDWARE;
+				const int timestamping_flags = (SOF_TIMESTAMPING_SOFTWARE | \
+								SOF_TIMESTAMPING_RX_SOFTWARE | \
+								SOF_TIMESTAMPING_RAW_HARDWARE);
+
 				if (setsockopt(s[i], SOL_SOCKET, SO_TIMESTAMPING,
 						&timestamping_flags, sizeof(timestamping_flags)) < 0) {
-					perror("setsockopt SO_TIMESTAMPING");
+					perror("setsockopt SO_TIMESTAMPING is not supported by your Linux kernel");
 					return 1;
 				}
 			} else {
+				const int timestamp_on = 1;
+
 				if (setsockopt(s[i], SOL_SOCKET, SO_TIMESTAMP,
-					       &timestamping_flags, sizeof(timestamping_flags)) < 0) {
+					       &timestamp_on, sizeof(timestamp_on)) < 0) {
 					perror("setsockopt SO_TIMESTAMP");
 					return 1;
 				}
@@ -713,10 +722,13 @@ int main(int argc, char **argv)
 
 						struct timespec *stamp = (struct timespec *)CMSG_DATA(cmsg);
 
-						// stamp[0] is the software timestamp
-						// stamp[1] is deprecated
-						// stamp[2] is the raw hardware timestamp
-						// See 2.1.2 in doc/Documentation/networking/timestamping.txt
+						/*
+						 * stamp[0] is the software timestamp
+						 * stamp[1] is deprecated
+						 * stamp[2] is the raw hardware timestamp
+						 * See chapter 2.1.2 Receive timestamps in
+						 * linux/Documentation/networking/timestamping.txt
+						 */
 						tv.tv_sec = stamp[2].tv_sec;
 						tv.tv_usec = stamp[2].tv_nsec/1000;
 					} else if (cmsg->cmsg_type == SO_RXQ_OVFL)
