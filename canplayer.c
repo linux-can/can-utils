@@ -477,6 +477,15 @@ int main(int argc, char **argv)
 					return 1;
 				}
 
+				/*
+				 * ensure the fractions of seconds are 6 decimal places long to catch
+				 * 3rd party or handcrafted logfiles that treat the timestamp as float
+				 */
+				if (strchr(buf, ')') - strchr(buf, '.') != 7) {
+					fprintf(stderr, "timestamp format in logfile requires 6 decimal places\n");
+					return 1;
+				}
+
 				if (use_timestamps) {
 					gettimeofday(&today_tv, NULL);
 
