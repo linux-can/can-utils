@@ -62,7 +62,8 @@ bin_PROGRAMS = \
 	log2long \
 	slcan_attach \
 	slcand \
-	slcanpty
+	slcanpty \
+	testj1939
 
 jspy_LDADD = libj1939.la
 jsr_LDADD = libj1939.la
