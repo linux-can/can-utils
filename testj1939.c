@@ -110,7 +110,8 @@ static void schedule_oneshot_itimer(double delay)
 /* main */
 int main(int argc, char *argv[])
 {
-	int ret, sock, opt, j, verbose;
+	int ret, sock, opt, j;
+	int verbose = 0;
 	socklen_t peernamelen;
 	struct sockaddr_can sockname = {
 		.can_family = AF_CAN,
