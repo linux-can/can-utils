@@ -39,6 +39,7 @@
 #include <termios.h>
 #include <linux/tty.h>
 #include <linux/sockios.h>
+#include <linux/serial.h>
 #include <stdarg.h>
 
 /* Change this to whatever your daemon is called */
@@ -309,6 +310,13 @@ int main(int argc, char *argv[])
 		syslogger(LOG_NOTICE, "failed to get attributes for TTY device %s: %s\n", ttypath, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
+
+	// Because of a recent change in linux - https://patchwork.kernel.org/patch/9589541/
+	// we need to set low latency flag to get proper receive latency
+	struct serial_struct snew;
+	ioctl (fd, TIOCGSERIAL, &snew);
+	snew.flags |= ASYNC_LOW_LATENCY;
+	ioctl (fd, TIOCSSERIAL, &snew);
 
 	/* Get old values for later restore */
 	old_ispeed = cfgetispeed(&tios);
