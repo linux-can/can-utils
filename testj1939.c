@@ -38,6 +38,7 @@ static const char help_msg[] =
 	"		This atually receives packets\n"
 	" -c		Issue connect()\n"
 	" -p=PRIO	Set priority to PRIO\n"
+	" -b		Do normal bind with SA+1 and rebind with actual SA\n"
 	" -n		Emit 64bit NAMEs in output\n"
 	" -w[TIME]	Return after TIME (default 1) seconds\n"
 	"\n"
@@ -46,7 +47,7 @@ static const char help_msg[] =
 	"\n"
 	;
 
-static const char optstring[] = "?vs::rep:cnw::";
+static const char optstring[] = "?vbs::rep:cnw::";
 
 static void parse_canaddr(char *spec, struct sockaddr_can *paddr)
 {
@@ -109,7 +110,7 @@ int main(int argc, char *argv[])
 	uint8_t dat[128];
 	int valid_peername = 0;
 	int todo_send = 0, todo_recv = 0, todo_echo = 0, todo_prio = -1;
-	int todo_connect = 0, todo_names = 0, todo_wait = 0;
+	int todo_connect = 0, todo_names = 0, todo_wait = 0, todo_rebind = 0;
 
 	/* argument parsing */
 	while ((opt = getopt(argc, argv, optstring)) != -1)
@@ -135,6 +136,9 @@ int main(int argc, char *argv[])
 	case 'n':
 		todo_names = 1;
 		break;
+	case 'b':
+		todo_rebind = 1;
+		break;
 	case 'w':
 		schedule_oneshot_itimer(strtod(optarg ?: "1", NULL));
 		signal(SIGALRM, onsigalrm);
@@ -151,6 +155,9 @@ int main(int argc, char *argv[])
 			parse_canaddr(argv[optind], &sockname);
 		++optind;
 	}
+
+	if (todo_rebind)
+		sockname.can_addr.j1939.addr++;
 
 	if (argv[optind]) {
 		if (strcmp("-", argv[optind])) {
@@ -181,6 +188,17 @@ int main(int argc, char *argv[])
 	ret = bind(sock, (void *)&sockname, sizeof(sockname));
 	if (ret < 0)
 		error(1, errno, "bind()");
+
+	if (todo_rebind) {
+		/* rebind with actual SA */
+		sockname.can_addr.j1939.addr--;
+
+		if (verbose)
+			fprintf(stderr, "- bind(, %s, %zi);\n", libj1939_addr2str(&sockname), sizeof(sockname));
+		ret = bind(sock, (void *)&sockname, sizeof(sockname));
+		if (ret < 0)
+			error(1, errno, "re-bind()");
+	}
 
 	if (todo_connect) {
 		if (!valid_peername)
