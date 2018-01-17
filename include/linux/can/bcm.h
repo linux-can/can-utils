@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: ((GPL-2.0 WITH Linux-syscall-note) OR BSD-3-Clause) */
 /*
  * linux/can/bcm.h
  *
@@ -41,8 +42,8 @@
  * DAMAGE.
  */
 
-#ifndef CAN_BCM_H
-#define CAN_BCM_H
+#ifndef _UAPI_CAN_BCM_H
+#define _UAPI_CAN_BCM_H
 
 #include <linux/types.h>
 #include <linux/can.h>
@@ -101,4 +102,4 @@ enum {
 #define RX_RTR_FRAME        0x0400
 #define CAN_FD_FRAME        0x0800
 
-#endif /* CAN_BCM_H */
+#endif /* !_UAPI_CAN_BCM_H */

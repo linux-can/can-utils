@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: ((GPL-2.0 WITH Linux-syscall-note) OR BSD-3-Clause) */
 /*
  * linux/can/raw.h
  *
@@ -42,8 +43,8 @@
  * DAMAGE.
  */
 
-#ifndef CAN_RAW_H
-#define CAN_RAW_H
+#ifndef _UAPI_CAN_RAW_H
+#define _UAPI_CAN_RAW_H
 
 #include <linux/can.h>
 
@@ -60,4 +61,4 @@ enum {
 	CAN_RAW_JOIN_FILTERS,	/* all filters must match to trigger */
 };
 
-#endif
+#endif /* !_UAPI_CAN_RAW_H */
