@@ -8,6 +8,13 @@ matrix:
           compiler: gcc
           script: make
 
+        - env: test="x64 precise (autotools)"
+          os: linux
+          dist: precise
+          sudo: required
+          compiler: gcc
+          script: ./autogen.sh && ./configure && make distcheck
+
         - env: test="x64 4.8.4 (autotools)"
           os: linux
           dist: trusty
