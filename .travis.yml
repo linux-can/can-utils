@@ -1,0 +1,34 @@
+language: c
+
+matrix:
+    include:
+        - env: test="x64 4.8.4 (make)"
+          os: linux
+          dist: trusty
+          sudo: required
+          compiler: gcc
+          script: make
+
+        - env: test="x64 4.8.4 (autotools)"
+          os: linux
+          dist: trusty
+          sudo: required
+          compiler: gcc
+          script: ./autogen.sh && ./configure && make distcheck
+
+        - env: test="x64 5.0 (autotools)"
+          os: linux
+          dist: trusty
+          sudo: required
+          compiler: clang
+          script: ./autogen.sh && ./configure && make distcheck
+
+addons:
+    apt:
+        packages:
+            - autoconf
+            - automake
+            - libtool
+            - m4
+        sources:
+            - ubuntu-toolchain-r-test
