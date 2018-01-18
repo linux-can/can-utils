@@ -58,7 +58,8 @@ bin_PROGRAMS = \
 	slcanpty
 
 EXTRA_DIST = \
-	autogen.sh
+	autogen.sh \
+	.travis.yml
 
 MAINTAINERCLEANFILES = \
 	configure \
