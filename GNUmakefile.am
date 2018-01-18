@@ -70,8 +70,10 @@ jspy_LDADD = libj1939.la
 jsr_LDADD = libj1939.la
 
 EXTRA_DIST = \
-	autogen.sh \
-	.travis.yml
+	.travis.yml \
+	Android.mk \
+	README.md \
+	autogen.sh
 
 MAINTAINERCLEANFILES = \
 	configure \
