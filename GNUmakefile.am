@@ -63,7 +63,8 @@ bin_PROGRAMS = \
 	log2long \
 	slcan_attach \
 	slcand \
-	slcanpty
+	slcanpty \
+	testj1939
 
 jacd_LDADD = libj1939.la
 jspy_LDADD = libj1939.la
@@ -73,7 +74,9 @@ EXTRA_DIST = \
 	.travis.yml \
 	Android.mk \
 	README.md \
-	autogen.sh
+	autogen.sh \
+	can-j1939-kickstart.md
+	can-j1939.md
 
 MAINTAINERCLEANFILES = \
 	configure \
