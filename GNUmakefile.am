@@ -71,7 +71,8 @@ jspy_LDADD = libj1939.la
 jsr_LDADD = libj1939.la
 
 EXTRA_DIST = \
-	autogen.sh
+	autogen.sh \
+	.travis.yml
 
 MAINTAINERCLEANFILES = \
 	configure \
