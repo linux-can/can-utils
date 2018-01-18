@@ -170,11 +170,11 @@ emits:
 	18EBFF80#03CDEF01234567
 
 The fragments for broadcasted *Transport Protocol* are seperated
-__50ms__ from each other.  
+__50ms__ from each other.
 Destination specific *Transport Protocol* applies flow control
 and may emit CAN packets much faster.
 
-First assign 0x90 to the local system.  
+First assign 0x90 to the local system.
 This becomes important because the kernel must interact in the
 transport protocol sessions before the complete packet is delivered.
 
@@ -204,8 +204,8 @@ This overhead scales very good for larger J1939 packets.
 	./testj1939 -s -p3 can0:0x80,0x0200
 
 emits
-	
-	1801FF80#0123456789ABCDEF	
+
+	1801FF80#0123456789ABCDEF
 	0C02FF80#0123456789ABCDEF
 
 ### using connect
@@ -213,4 +213,3 @@ emits
 ### advanced filtering
 
 ## dynamic addressing
-
