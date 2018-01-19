@@ -22,6 +22,7 @@
 #include <error.h>
 #include <sys/time.h>
 #include <sys/socket.h>
+#include <net/if.h>
 #include <linux/can.h>
 #include <linux/can/j1939.h>
 
@@ -196,6 +197,7 @@ static int open_socket(const char *device, uint64_t name)
 			.addr = J1939_IDLE_ADDR,
 			.pgn = 0x0ee00,
 		},
+		.can_ifindex = if_nametoindex(s.intf),
 	};
 
 	if (s.verbose)
@@ -260,6 +262,7 @@ static int claim_address(int sock, uint64_t name, int sa)
 			.addr = sa,
 			.pgn = 0x0ee00,
 		},
+		.can_ifindex = if_nametoindex(s.intf),
 	};
 
 	if (s.verbose)
