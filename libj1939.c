@@ -46,7 +46,7 @@ static inline void fetch_names(void)
 }
 
 /* retrieve name */
-const char *libj1939_ifnam(int ifindex)
+static const char *libj1939_ifnam(int ifindex)
 {
 	const struct if_nameindex *lp, *cached = saved;
 
@@ -69,7 +69,7 @@ const char *libj1939_ifnam(int ifindex)
 }
 
 /* retrieve index */
-int libj1939_ifindex(const char *str)
+static int libj1939_ifindex(const char *str)
 {
 	const struct if_nameindex *lp, *cached = saved;
 	char *endp;
