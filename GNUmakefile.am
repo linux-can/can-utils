@@ -69,6 +69,7 @@ bin_PROGRAMS = \
 jacd_LDADD = libj1939.la
 jspy_LDADD = libj1939.la
 jsr_LDADD = libj1939.la
+testj1939_LDADD = libj1939.la
 
 EXTRA_DIST = \
 	.travis.yml \

@@ -88,6 +88,7 @@ log2asc.o:	lib.h
 asc2log.o:	lib.h
 jspy.o:		libj1939.h
 jsr.o:		libj1939.h
+testj1939.o:	libj1939.h
 canframelen.o:  canframelen.h
 
 cansend:	cansend.o	lib.o
@@ -102,3 +103,4 @@ canbusload:	canbusload.o	canframelen.o
 
 jspy:		jspy.o		libj1939.o
 jsr:		jsr.o		libj1939.o
+testj1939:	testj1939.o	libj1939.o

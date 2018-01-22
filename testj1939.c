@@ -23,8 +23,8 @@
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <net/if.h>
-#include <linux/can.h>
-#include <linux/can/j1939.h>
+
+#include "libj1939.h"
 
 static const char help_msg[] =
 	"testj1939: demonstrate j1939 use\n"
@@ -67,28 +67,6 @@ static void parse_canaddr(char *spec, struct sockaddr_can *paddr)
 	str = strsep(&spec, ",");
 	if (str && strlen(str))
 		paddr->can_addr.j1939.name = strtoul(str, NULL, 0);
-}
-
-static const char *canaddr2str(const struct sockaddr_can *paddr)
-{
-	static char buf[128];
-	char *str = buf;
-	char ifname[IF_NAMESIZE];
-
-	if (paddr->can_ifindex)
-		str += sprintf(str, "%s", if_indextoname(paddr->can_ifindex, ifname));
-	*str++ = ':';
-
-	if (paddr->can_addr.j1939.addr != J1939_NO_ADDR)
-		str += sprintf(str, "%02x", paddr->can_addr.j1939.addr);
-	*str++ = ',';
-	if (paddr->can_addr.j1939.pgn != J1939_NO_PGN)
-		str += sprintf(str, "%05x", paddr->can_addr.j1939.pgn);
-	*str++ = ',';
-	if (paddr->can_addr.j1939.name != J1939_NO_NAME)
-		str += sprintf(str, "%016llx", paddr->can_addr.j1939.name);
-	*str++ = 0;
-	return buf;
 }
 
 static void onsigalrm(int sig)
@@ -199,7 +177,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (verbose)
-		fprintf(stderr, "- bind(, %s, %zi);\n", canaddr2str(&sockname), sizeof(sockname));
+		fprintf(stderr, "- bind(, %s, %zi);\n", libj1939_addr2str(&sockname), sizeof(sockname));
 	ret = bind(sock, (void *)&sockname, sizeof(sockname));
 	if (ret < 0)
 		error(1, errno, "bind()");
@@ -208,7 +186,7 @@ int main(int argc, char *argv[])
 		if (!valid_peername)
 			error(1, 0, "no peername supplied");
 		if (verbose)
-			fprintf(stderr, "- connect(, %s, %zi);\n", canaddr2str(&peername), sizeof(peername));
+			fprintf(stderr, "- connect(, %s, %zi);\n", libj1939_addr2str(&peername), sizeof(peername));
 		ret = connect(sock, (void *)&peername, sizeof(peername));
 		if (ret < 0)
 			error(1, errno, "connect()");
@@ -226,7 +204,7 @@ int main(int argc, char *argv[])
 		 */
 		if (valid_peername && !todo_connect) {
 			if (verbose)
-				fprintf(stderr, "- sendto(, <dat>, %i, 0, %s, %zi);\n", todo_send, canaddr2str(&peername), sizeof(peername));
+				fprintf(stderr, "- sendto(, <dat>, %i, 0, %s, %zi);\n", todo_send, libj1939_addr2str(&peername), sizeof(peername));
 			ret = sendto(sock, dat, todo_send, 0,
 					(void *)&peername, sizeof(peername));
 		} else {
@@ -267,7 +245,7 @@ int main(int argc, char *argv[])
 
 		if (todo_echo) {
 			if (verbose)
-				fprintf(stderr, "- sendto(, <dat>, %i, 0, %s, %i);\n", ret, canaddr2str(&peername), peernamelen);
+				fprintf(stderr, "- sendto(, <dat>, %i, 0, %s, %i);\n", ret, libj1939_addr2str(&peername), peernamelen);
 			ret = sendto(sock, dat, ret, 0,
 					(void *)&peername, peernamelen);
 			if (ret < 0)
