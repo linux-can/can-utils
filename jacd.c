@@ -25,6 +25,8 @@
 #include <linux/can.h>
 #include <linux/can/j1939.h>
 
+#include "libj1939.h"
+
 static const char help_msg[] =
 	"jacd: An SAE J1939 address claiming daemon" "\n"
 	"Usage: jacd [options] NAME [INTF]" "\n"
@@ -196,26 +198,36 @@ static int open_socket(const char *device, uint64_t name)
 		},
 	};
 
+	if (s.verbose)
+		fprintf(stderr, "- socket(PF_CAN, SOCK_DGRAM, CAN_J1939);\n");
 	sock = ret = socket(PF_CAN, SOCK_DGRAM, CAN_J1939);
 	if (ret < 0)
 		error(1, errno, "socket(j1939)");
 
+	if (s.verbose)
+		fprintf(stderr, "- setsockopt(, SOL_SOCKET, SO_BINDTODEVICE, %s, %zd);\n", device, strlen(device));
 	ret = setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE,
 			device, strlen(device));
 	if (ret < 0)
 		error(1, errno, "bindtodevice %s", device);
 
+	if (s.verbose)
+		fprintf(stderr, "- setsockopt(, SOL_CAN_J1939, SO_J1939_FILTER, <filter>, %zd);\n", sizeof(filt));
 	ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_FILTER,
 			&filt, sizeof(filt));
 	if (ret < 0)
 		error(1, errno, "setsockopt filter");
 
 	value = 1;
+	if (s.verbose)
+		fprintf(stderr, "- setsockopt(, SOL_CAN_J1939, SO_J1939_RECV_OWN, %d, %zd);\n", value, sizeof(value));
 	ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_RECV_OWN,
 			&value, sizeof(value));
 	if (ret < 0)
 		error(1, errno, "setsockopt receive own msgs");
 
+	if (s.verbose)
+		fprintf(stderr, "- bind(, %s, %zi);\n", libj1939_addr2str(&saddr), sizeof(saddr));
 	ret = bind(sock, (void *)&saddr, sizeof(saddr));
 	if (ret < 0)
 		error(1, errno, "bind()");
@@ -231,6 +243,8 @@ static int repeat_address(int sock, uint64_t name)
 	memcpy(dat, &name, 8);
 	if (!host_is_little_endian())
 		bswap(dat, 8);
+	if (s.verbose)
+		fprintf(stderr, "- send(, %" PRId64 ", 8, 0);\n", name);
 	ret = send(sock, dat, 8, 0);
 	if (must_warn(ret))
 		error(1, errno, "send address claim for 0x%02x", s.last_sa);
@@ -248,6 +262,8 @@ static int claim_address(int sock, uint64_t name, int sa)
 		},
 	};
 
+	if (s.verbose)
+		fprintf(stderr, "- bind(, %s, %zi);\n", libj1939_addr2str(&saddr), sizeof(saddr));
 	ret = bind(sock, (void *)&saddr, sizeof(saddr));
 	if (ret < 0)
 		error(1, errno, "rebind with sa 0x%02x", sa);
@@ -265,6 +281,8 @@ static int request_addresses(int sock)
 		.can_addr.j1939.addr = J1939_NO_ADDR,
 	};
 
+	if (s.verbose)
+		fprintf(stderr, "- sendto(, { 0, 0xee, 0, }, %zi, 0, %s, %zi);\n", sizeof(dat), libj1939_addr2str(&saddr), sizeof(saddr));
 	ret = sendto(sock, dat, sizeof(dat), 0, (void *)&saddr, sizeof(saddr));
 	if (must_warn(ret))
 		error(1, errno, "send request for address claims");
