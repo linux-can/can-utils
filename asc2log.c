@@ -61,9 +61,11 @@ extern int optind, opterr, optopt;
 
 void print_usage(char *prg)
 {
+	fprintf(stderr, "%s - convert ASC logfile to compact CAN frame logfile.\n", prg);
 	fprintf(stderr, "Usage: %s\n", prg);
-	fprintf(stderr, "Options: -I <infile>  (default stdin)\n");
-	fprintf(stderr, "         -O <outfile> (default stdout)\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "\t-I <infile>\t(default stdin)\n");
+	fprintf(stderr, "\t-O <outfile>\t(default stdout)\n");
 }
 
 void prframe(FILE *file, struct timeval *tv, int dev, struct can_frame *cf) {
