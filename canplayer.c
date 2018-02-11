@@ -77,8 +77,10 @@ extern int optind, opterr, optopt;
 
 void print_usage(char *prg)
 {
+	fprintf(stderr, "%s - replay a compact CAN frame logfile to CAN devices.\n", prg);
 	fprintf(stderr, "\nUsage: %s <options> [interface assignment]*\n\n", prg);
-	fprintf(stderr, "Options:              -I <infile>  (default stdin)\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "                      -I <infile>  (default stdin)\n");
 	fprintf(stderr, "                      -l <num>     "
 		"(process input file <num> times)\n"
 		"                                   "
@@ -93,13 +95,13 @@ void print_usage(char *prg)
 		"loopback of sent CAN frames)\n");
 	fprintf(stderr, "                      -v           (verbose: print "
 		"sent CAN frames)\n\n");
-	fprintf(stderr, "Interface assignment:  0..n assignments like "
-		"<write-if>=<log-if>\n");
-	fprintf(stderr, "e.g. vcan2=can0 ( send frames received from can0 on "
-		"vcan2 )\n");
-	fprintf(stderr, "extra hook: stdout=can0 ( print logfile line marked with can0 on "
-		"stdout )\n");
-	fprintf(stderr, "No assignments => send frames to the interface(s) they "
+	fprintf(stderr, "Interface assignment:\n");
+	fprintf(stderr, " 0..n assignments like <write-if>=<log-if>\n\n");
+	fprintf(stderr, " e.g. vcan2=can0  (send frames received from can0 on "
+		"vcan2)\n");
+	fprintf(stderr, " extra hook: stdout=can0  (print logfile line marked with can0 on "
+		"stdout)\n");
+	fprintf(stderr, " No assignments  => send frames to the interface(s) they "
 		"had been received from.\n\n");
 	fprintf(stderr, "Lines in the logfile not beginning with '(' (start of "
 		"timestamp) are ignored.\n\n");
