@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause) */
 /*
- * canbusload.c
+ * canbusload.c - monitor CAN bus load
  *
  * Copyright (c) 2002-2008 Volkswagen Group Electronic Research
  * All rights reserved.
@@ -91,14 +91,16 @@ static char *prg;
 
 void print_usage(char *prg)
 {
+	fprintf(stderr, "%s - monitor CAN bus load.\n", prg);
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>+\n", prg);
 	fprintf(stderr, "  (use CTRL-C to terminate %s)\n\n", prg);
-	fprintf(stderr, "Options: -t (show current time on the first line)\n");
-	fprintf(stderr, "         -c (colorize lines)\n");
-	fprintf(stderr, "         -b (show bargraph in %d%% resolution)\n", PERCENTRES);
-	fprintf(stderr, "         -r (redraw the terminal - similar to top)\n");
-	fprintf(stderr, "         -i (ignore bitstuffing in bandwidth calculation)\n");
-	fprintf(stderr, "         -e (exact calculation of stuffed bits)\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -t  (show current time on the first line)\n");
+	fprintf(stderr, "         -c  (colorize lines)\n");
+	fprintf(stderr, "         -b  (show bargraph in %d%% resolution)\n", PERCENTRES);
+	fprintf(stderr, "         -r  (redraw the terminal - similar to top)\n");
+	fprintf(stderr, "         -i  (ignore bitstuffing in bandwidth calculation)\n");
+	fprintf(stderr, "         -e  (exact calculation of stuffed bits)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with mandatory bitrate can be specified on the \n", MAXSOCK);
 	fprintf(stderr, "commandline in the form: <ifname>@<bitrate>\n\n");
@@ -107,7 +109,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "Due to the bitstuffing estimation the calculated busload may exceed 100%%.\n");
 	fprintf(stderr, "For each given interface the data is presented in one line which contains:\n\n");
 	fprintf(stderr, "(interface) (received CAN frames) (used bits total) (used bits for payload)\n");
-	fprintf(stderr, "\nExample:\n");
+	fprintf(stderr, "\nExamples:\n");
 	fprintf(stderr, "\nuser$> canbusload can0@100000 can1@500000 can2@500000 can3@500000 -r -t -b -c\n\n");
 	fprintf(stderr, "%s 2014-02-01 21:13:16 (worst case bitstuffing)\n", prg);
 	fprintf(stderr, " can0@100000   805   74491  36656  74%% |XXXXXXXXXXXXXX......|\n");
