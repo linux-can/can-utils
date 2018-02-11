@@ -65,11 +65,13 @@
 
 void print_usage(char *prg)
 {
+	fprintf(stderr, "%s - ISO15765-2 protocol performance visualisation.\n", prg);
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>\n", prg);
-	fprintf(stderr, "Options: -s <can_id> (source can_id. Use 8 digits for extended IDs)\n");
-	fprintf(stderr, "         -d <can_id> (destination can_id. Use 8 digits for extended IDs)\n");
-	fprintf(stderr, "         -x <addr>   (extended addressing mode)\n");
-	fprintf(stderr, "         -X <addr>   (extended addressing mode (rx addr))\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -s <can_id>  (source can_id. Use 8 digits for extended IDs)\n");
+	fprintf(stderr, "         -d <can_id>  (destination can_id. Use 8 digits for extended IDs)\n");
+	fprintf(stderr, "         -x <addr>    (extended addressing mode)\n");
+	fprintf(stderr, "         -X <addr>    (extended addressing mode (rx addr))\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "\n");
 }
