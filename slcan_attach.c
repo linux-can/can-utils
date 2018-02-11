@@ -57,22 +57,23 @@
 
 void print_usage(char *prg)
 {
+	fprintf(stderr, "%s - userspace tool for serial line CAN interface driver SLCAN.\n", prg);
 	fprintf(stderr, "\nUsage: %s [options] tty\n\n", prg);
-	fprintf(stderr, "Options: -o         (send open command 'O\\r')\n");
-	fprintf(stderr, "         -l         (send listen only command 'L\\r', overrides -o)\n");
-	fprintf(stderr, "         -c         (send close command 'C\\r')\n");
-	fprintf(stderr, "         -f         (read status flags with 'F\\r' to reset error states)\n");
-	fprintf(stderr, "         -s <speed> (set CAN speed 0..8)\n");
-	fprintf(stderr, "         -b <btr>   (set bit time register value)\n");
-	fprintf(stderr, "         -d         (only detach line discipline)\n");
-	fprintf(stderr, "         -w         (attach - wait for keypess - detach)\n");
-	fprintf(stderr, "         -n <name>  (assign created netdevice name)\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -o          (send open command 'O\\r')\n");
+	fprintf(stderr, "         -l          (send listen only command 'L\\r', overrides -o)\n");
+	fprintf(stderr, "         -c          (send close command 'C\\r')\n");
+	fprintf(stderr, "         -f          (read status flags with 'F\\r' to reset error states)\n");
+	fprintf(stderr, "         -s <speed>  (set CAN speed 0..8)\n");
+	fprintf(stderr, "         -b <btr>    (set bit time register value)\n");
+	fprintf(stderr, "         -d          (only detach line discipline)\n");
+	fprintf(stderr, "         -w          (attach - wait for keypess - detach)\n");
+	fprintf(stderr, "         -n <name>   (assign created netdevice name)\n");
 	fprintf(stderr, "\nExamples:\n");
-	fprintf(stderr, "slcan_attach -w -o -f -s6 -c /dev/ttyS1\n");
-	fprintf(stderr, "slcan_attach /dev/ttyS1\n");
-	fprintf(stderr, "slcan_attach -d /dev/ttyS1\n");
-	fprintf(stderr, "slcan_attach -w -n can15 /dev/ttyS1\n");
-	fprintf(stderr, "\n");
+	fprintf(stderr, "slcan_attach -w -o -f -s6 -c /dev/ttyS1\n\n");
+	fprintf(stderr, "slcan_attach /dev/ttyS1\n\n");
+	fprintf(stderr, "slcan_attach -d /dev/ttyS1\n\n");
+	fprintf(stderr, "slcan_attach -w -n can15 /dev/ttyS1\n\n");
 	exit(1);
 }
 
