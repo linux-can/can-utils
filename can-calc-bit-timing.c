@@ -131,17 +131,16 @@ static inline void *netdev_priv(const struct net_device *dev)
 
 static void print_usage(char *cmd)
 {
+	printf("%s - calculate CAN bit timing parameters.\n", cmd);
 	printf("Usage: %s [options] [<CAN-contoller-name>]\n"
-	       "\tOptions:\n"
-	       "\t-q           : don't print header line\n"
-	       "\t-l           : list all support CAN controller names\n"
-	       "\t-b <bitrate> : bit-rate in bits/sec\n"
-	       "\t-s <samp_pt> : sample-point in one-tenth of a percent\n"
+	       "Options:\n"
+	       "\t-q             don't print header line\n"
+	       "\t-l             list all support CAN controller names\n"
+	       "\t-b <bitrate>   bit-rate in bits/sec\n"
+	       "\t-s <samp_pt>   sample-point in one-tenth of a percent\n"
 	       "\t               or 0 for CIA recommended sample points\n"
-	       "\t-c <clock>   : real CAN system clock in Hz\n",
+	       "\t-c <clock>     real CAN system clock in Hz\n",
 	       cmd);
-
-	exit(EXIT_FAILURE);
 }
 
 static void printf_btr_sja1000(struct can_bittiming *bt, bool hdr)
@@ -638,7 +637,7 @@ int main(int argc, char *argv[])
 
 	const struct calc_bittiming_const *btc;
 
-	while ((opt = getopt(argc, argv, "b:c:lqs:")) != -1) {
+	while ((opt = getopt(argc, argv, "b:c:lqs:?")) != -1) {
 		switch (opt) {
 		case 'b':
 			bitrate_nominal = atoi(optarg);
@@ -660,14 +659,22 @@ int main(int argc, char *argv[])
 			spt_nominal = strtoul(optarg, NULL, 10);
 			break;
 
+		case '?':
+			print_usage(argv[0]);
+			exit(EXIT_SUCCESS);
+			break;
+
 		default:
 			print_usage(argv[0]);
+			exit(EXIT_FAILURE);
 			break;
 		}
 	}
 
-	if (argc > optind + 1)
+	if (argc > optind + 1) {
 		print_usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
 
 	if (argc == optind + 1)
 		name = argv[optind];
@@ -677,8 +684,10 @@ int main(int argc, char *argv[])
 		exit(EXIT_SUCCESS);
 	}
 
-	if (spt_nominal && (spt_nominal >= 1000 || spt_nominal < 100))
+	if (spt_nominal && (spt_nominal >= 1000 || spt_nominal < 100)) {
 		print_usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
 
 	for (i = 0; i < ARRAY_SIZE(can_calc_consts); i++) {
 		if (name && strcmp(can_calc_consts[i].bittiming_const.name, name))
