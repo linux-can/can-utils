@@ -78,9 +78,11 @@ static unsigned long long enobufs_count;
 
 void print_usage(char *prg)
 {
+	fprintf(stderr, "%s - CAN frames generator for testing purposes.\n", prg);
 	fprintf(stderr, "\n%s: generate CAN frames\n\n", prg);
 	fprintf(stderr, "Usage: %s [options] <CAN interface>\n", prg);
-	fprintf(stderr, "Options: -g <ms>       (gap in milli seconds "
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -g <ms>       (gap in milli seconds "
 		"- default: %d ms)\n", DEFAULT_GAP);
 	fprintf(stderr, "         -e            (generate extended frame mode "
 		"(EFF) CAN frames)\n");
@@ -106,25 +108,25 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -v            (increment verbose level for "
 		"printing sent CAN frames)\n\n");
 	fprintf(stderr, "Generation modes:\n");
-	fprintf(stderr, "'r'        => random values (default)\n");
-	fprintf(stderr, "'i'        => increment values\n");
-	fprintf(stderr, "<hexvalue> => fix value using <hexvalue>\n\n");
+	fprintf(stderr, " 'r'         => random values (default)\n");
+	fprintf(stderr, " 'i'         => increment values\n");
+	fprintf(stderr, " <hexvalue>  => fix value using <hexvalue>\n\n");
 	fprintf(stderr, "When incrementing the CAN data the data length code "
 		"minimum is set to 1.\n");
 	fprintf(stderr, "CAN IDs and data content are given and expected in hexadecimal values.\n\n");
 	fprintf(stderr, "Examples:\n");
-	fprintf(stderr, "%s vcan0 -g 4 -I 42A -L 1 -D i -v -v   ", prg);
-	fprintf(stderr, "(fixed CAN ID and length, inc. data)\n");
-	fprintf(stderr, "%s vcan0 -e -L i -v -v -v              ", prg);
-	fprintf(stderr, "(generate EFF frames, incr. length)\n");
-	fprintf(stderr, "%s vcan0 -D 11223344DEADBEEF -L 8      ", prg);
-	fprintf(stderr, "(fixed CAN data payload and length)\n");
-	fprintf(stderr, "%s vcan0 -g 0 -i -x                    ", prg);
-	fprintf(stderr, "(full load test ignoring -ENOBUFS)\n");
-	fprintf(stderr, "%s vcan0 -g 0 -p 10 -x                 ", prg);
-	fprintf(stderr, "(full load test with polling, 10ms timeout)\n");
-	fprintf(stderr, "%s vcan0                               ", prg);
-	fprintf(stderr, "(my favourite default :)\n\n");
+	fprintf(stderr, "%s vcan0 -g 4 -I 42A -L 1 -D i -v -v\n", prg);
+	fprintf(stderr, "\t(fixed CAN ID and length, inc. data)\n");
+	fprintf(stderr, "%s vcan0 -e -L i -v -v -v\n", prg);
+	fprintf(stderr, "\t(generate EFF frames, incr. length)\n");
+	fprintf(stderr, "%s vcan0 -D 11223344DEADBEEF -L 8\n", prg);
+	fprintf(stderr, "\t(fixed CAN data payload and length)\n");
+	fprintf(stderr, "%s vcan0 -g 0 -i -x\n", prg);
+	fprintf(stderr, "\t(full load test ignoring -ENOBUFS)\n");
+	fprintf(stderr, "%s vcan0 -g 0 -p 10 -x\n", prg);
+	fprintf(stderr, "\t(full load test with polling, 10ms timeout)\n");
+	fprintf(stderr, "%s vcan0\n", prg);
+	fprintf(stderr, "\t(my favourite default :)\n\n");
 }
 
 void sigterm(int signo)
