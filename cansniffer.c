@@ -134,26 +134,25 @@ void print_usage(char *prg)
 {
 	const char manual [] = {
 		"commands that can be entered at runtime:\n"
-		"\n"
-		"q<ENTER>       - quit\n"
-		"b<ENTER>       - toggle binary / HEX-ASCII output\n"
-		"B<ENTER>       - toggle binary with gap / HEX-ASCII output (exceeds 80 chars!)\n"
-		"c<ENTER>       - toggle color mode\n"
-		"#<ENTER>       - notch currently marked/changed bits (can be used repeatedly)\n"
-		"*<ENTER>       - clear notched marked\n"
-		"rMYNAME<ENTER> - read settings file (filter/notch)\n"
-		"wMYNAME<ENTER> - write settings file (filter/notch)\n"
-		"+FILTER<ENTER> - add CAN-IDs to sniff\n"
-		"-FILTER<ENTER> - remove CAN-IDs to sniff\n"
+		" q<ENTER>        - quit\n"
+		" b<ENTER>        - toggle binary / HEX-ASCII output\n"
+		" B<ENTER>        - toggle binary with gap / HEX-ASCII output (exceeds 80 chars!)\n"
+		" c<ENTER>        - toggle color mode\n"
+		" #<ENTER>        - notch currently marked/changed bits (can be used repeatedly)\n"
+		" *<ENTER>        - clear notched marked\n"
+		" rMYNAME<ENTER>  - read settings file (filter/notch)\n"
+		" wMYNAME<ENTER>  - write settings file (filter/notch)\n"
+		" +FILTER<ENTER>  - add CAN-IDs to sniff\n"
+		" -FILTER<ENTER>  - remove CAN-IDs to sniff\n"
 		"\n"
 		"FILTER can be a single CAN-ID or a CAN-ID/Bitmask:\n"
-		"+1F5<ENTER>    - add CAN-ID 0x1F5\n"
-		"-42E<ENTER>    - remove CAN-ID 0x42E\n"
-		"-42E7FF<ENTER> - remove CAN-ID 0x42E (using Bitmask)\n"
-		"-500700<ENTER> - remove CAN-IDs 0x500 - 0x5FF\n"
-		"+400600<ENTER> - add CAN-IDs 0x400 - 0x5FF\n"
-		"+000000<ENTER> - add all CAN-IDs\n"
-		"-000000<ENTER> - remove all CAN-IDs\n"
+		" +1F5<ENTER>     - add CAN-ID 0x1F5\n"
+		" -42E<ENTER>     - remove CAN-ID 0x42E\n"
+		" -42E7FF<ENTER>  - remove CAN-ID 0x42E (using Bitmask)\n"
+		" -500700<ENTER>  - remove CAN-IDs 0x500 - 0x5FF\n"
+		" +400600<ENTER>  - add CAN-IDs 0x400 - 0x5FF\n"
+		" +000000<ENTER>  - add all CAN-IDs\n"
+		" -000000<ENTER>  - remove all CAN-IDs\n"
 		"\n"
 		"if (id & filter) == (sniff-id & filter) the action (+/-) is performed,\n"
 		"which is quite easy when the filter is 000\n"
@@ -161,18 +160,19 @@ void print_usage(char *prg)
 	};
 
 	fprintf(stderr, "\nUsage: %s [can-interface]\n", prg);
-	fprintf(stderr, "Options: -m <mask>  (initial FILTER default 0x00000000)\n");
-	fprintf(stderr, "         -v <value> (initial FILTER default 0x00000000)\n");
-	fprintf(stderr, "         -q         (quiet - all IDs deactivated)\n");
-	fprintf(stderr, "         -r <name>  (read %sname from file)\n", SETFNAME);
-	fprintf(stderr, "         -b         (start with binary mode)\n");
-	fprintf(stderr, "         -B         (start with binary mode with gap - exceeds 80 chars!)\n");
-	fprintf(stderr, "         -c         (color changes)\n");
-	fprintf(stderr, "         -f         (filter on CAN-ID only)\n");
-	fprintf(stderr, "         -t <time>  (timeout for ID display [x10ms] default: %d, 0 = OFF)\n", TIMEOUT);
-	fprintf(stderr, "         -h <time>  (hold marker on changes [x10ms] default: %d)\n", HOLD);
-	fprintf(stderr, "         -l <time>  (loop time (display) [x10ms] default: %d)\n", LOOP);
-	fprintf(stderr, "Use interface name '%s' to receive from all can-interfaces\n", ANYDEV);
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -m <mask>   (initial FILTER default 0x00000000)\n");
+	fprintf(stderr, "         -v <value>  (initial FILTER default 0x00000000)\n");
+	fprintf(stderr, "         -q          (quiet - all IDs deactivated)\n");
+	fprintf(stderr, "         -r <name>   (read %sname from file)\n", SETFNAME);
+	fprintf(stderr, "         -b          (start with binary mode)\n");
+	fprintf(stderr, "         -B          (start with binary mode with gap - exceeds 80 chars!)\n");
+	fprintf(stderr, "         -c          (color changes)\n");
+	fprintf(stderr, "         -f          (filter on CAN-ID only)\n");
+	fprintf(stderr, "         -t <time>   (timeout for ID display [x10ms] default: %d, 0 = OFF)\n", TIMEOUT);
+	fprintf(stderr, "         -h <time>   (hold marker on changes [x10ms] default: %d)\n", HOLD);
+	fprintf(stderr, "         -l <time>   (loop time (display) [x10ms] default: %d)\n", LOOP);
+	fprintf(stderr, "Use interface name '%s' to receive from all can-interfaces.\n", ANYDEV);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "%s", manual);
 }
