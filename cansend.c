@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 	}
 
 	bzero(&addr,sizeof(struct sockaddr_can)); //zero out the struct
-	
+
 	addr.can_family = AF_CAN;
 	addr.can_ifindex = ifr.ifr_ifindex;
 
@@ -137,8 +137,6 @@ int main(int argc, char **argv)
 	/* this reason we can remove the receive list in the Kernel to save a */
 	/* little (really a very little!) CPU usage.                          */
 	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
-
-	// bzero(&addr,sizeof(struct sockaddr_can)); //zero out the struct
 	
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
