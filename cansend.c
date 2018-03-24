@@ -102,6 +102,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	bzero(&addr,sizeof(struct sockaddr_can));
 	addr.can_family = AF_CAN;
 	addr.can_ifindex = ifr.ifr_ifindex;
 
