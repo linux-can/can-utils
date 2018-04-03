@@ -305,7 +305,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Configure baud rate */
-	memset(&tios, 0, sizeof(struct termios));
+	memset(&tios, 0, sizeof(tios));
 	if (tcgetattr(fd, &tios) < 0) {
 		syslogger(LOG_NOTICE, "failed to get attributes for TTY device %s: %s\n", ttypath, strerror(errno));
 		exit(EXIT_FAILURE);
