@@ -386,7 +386,7 @@ int main(int argc, char **argv)
 
 			if (FD_ISSET(s[i], &rdfs)) {
 
-				nbytes = read(s[i], &frame, sizeof(struct can_frame));
+				nbytes = read(s[i], &frame, sizeof(frame));
 
 				if (nbytes < 0) {
 					perror("read");
