@@ -280,23 +280,9 @@ int main(int argc, char *argv[])
 
 	syslogger(LOG_INFO, "starting on TTY device %s", ttypath);
 
-	/* Daemonize */
-	if (run_as_daemon) {
-		if (daemon(0, 0)) {
-			syslogger(LOG_ERR, "failed to daemonize");
-			exit(EXIT_FAILURE);
-		}
-	}
-	else {
-		/* Trap signals that we expect to receive */
-		signal(SIGINT, child_handler);
-		signal(SIGTERM, child_handler);
-	}
-
 	/* */
 	slcand_running = 1;
 
-	/* Now we are a daemon -- do the work for which we were paid */
 	fd = open(ttypath, O_RDWR | O_NONBLOCK | O_NOCTTY);
 	if (fd < 0) {
 		syslogger(LOG_NOTICE, "failed to open TTY device %s\n", ttypath);
@@ -398,6 +384,19 @@ int main(int argc, char *argv[])
 
 			close(s);
 		}	
+	}
+
+	/* Daemonize */
+	if (run_as_daemon) {
+		if (daemon(0, 0)) {
+			syslogger(LOG_ERR, "failed to daemonize");
+			exit(EXIT_FAILURE);
+		}
+	}
+	else {
+		/* Trap signals that we expect to receive */
+		signal(SIGINT, child_handler);
+		signal(SIGTERM, child_handler);
 	}
 
 	/* The Big Loop */
