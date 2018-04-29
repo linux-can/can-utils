@@ -280,9 +280,6 @@ int main(int argc, char *argv[])
 
 	syslogger(LOG_INFO, "starting on TTY device %s", ttypath);
 
-	/* */
-	slcand_running = 1;
-
 	fd = open(ttypath, O_RDWR | O_NONBLOCK | O_NOCTTY);
 	if (fd < 0) {
 		syslogger(LOG_NOTICE, "failed to open TTY device %s\n", ttypath);
@@ -398,6 +395,8 @@ int main(int argc, char *argv[])
 		signal(SIGINT, child_handler);
 		signal(SIGTERM, child_handler);
 	}
+
+	slcand_running = 1;
 
 	/* The Big Loop */
 	while (slcand_running)
