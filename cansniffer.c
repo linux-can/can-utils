@@ -43,6 +43,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
@@ -60,12 +61,13 @@
 #include <net/if.h>
 
 #include <linux/can.h>
-#include <linux/can/bcm.h>
 
 #include "terminal.h"
 
 #define SETFNAME "sniffset."
 #define ANYDEV   "any"
+
+#define MAX_SLOTS 2048
 
 /* flags */
 
@@ -102,7 +104,7 @@ struct snif {
 	struct can_frame current;
 	struct can_frame marker;
 	struct can_frame notch;
-} sniftab[2048];
+} sniftab[MAX_SLOTS];
 
 
 extern int optind, opterr, optopt;
@@ -110,7 +112,6 @@ extern int optind, opterr, optopt;
 static int running = 1;
 static int clearscreen = 1;
 static int notch;
-static int filter_id_only;
 static long timeout = TIMEOUT;
 static long hold = HOLD;
 static long loop = LOOP;
@@ -119,54 +120,69 @@ static unsigned char binary_gap;
 static unsigned char color;
 static char *interface;
 
-void rx_setup (int fd, int id);
-void rx_delete (int fd, int id);
-void print_snifline(int id);
+void print_snifline(int slot);
 int handle_keyb(int fd);
-int handle_bcm(int fd, long currcms);
+int handle_frame(int fd, long currcms);
 int handle_timeo(int fd, long currcms);
+int sniftab_index(canid_t id);
 void writesettings(char* name);
 void readsettings(char* name, int sockfd);
+
+int idx = 0;
+
+
+int comp (const void * elem1, const void * elem2) 
+{
+    unsigned long f = ((struct snif*)elem1)->current.can_id;
+    unsigned long s = ((struct snif*)elem2)->current.can_id;
+    if (f > s) return  1;
+    if (f < s) return -1;
+    return 0;
+}
+
 
 void print_usage(char *prg)
 {
 	const char manual [] = {
 		"commands that can be entered at runtime:\n"
 		"\n"
-		"q<ENTER>       - quit\n"
-		"b<ENTER>       - toggle binary / HEX-ASCII output\n"
-		"B<ENTER>       - toggle binary with gap / HEX-ASCII output (exceeds 80 chars!)\n"
-		"c<ENTER>       - toggle color mode\n"
-		"#<ENTER>       - notch currently marked/changed bits (can be used repeatedly)\n"
-		"*<ENTER>       - clear notched marked\n"
-		"rMYNAME<ENTER> - read settings file (filter/notch)\n"
-		"wMYNAME<ENTER> - write settings file (filter/notch)\n"
-		"+FILTER<ENTER> - add CAN-IDs to sniff\n"
-		"-FILTER<ENTER> - remove CAN-IDs to sniff\n"
+		"q<ENTER>         - quit\n"
+		"b<ENTER>         - toggle binary / HEX-ASCII output\n"
+		"B<ENTER>         - toggle binary with gap / HEX-ASCII output (exceeds 80 chars!)\n"
+		"c<ENTER>         - toggle color mode\n"
+		"#<ENTER>         - notch currently marked/changed bits (can be used repeatedly)\n"
+		"*<ENTER>         - clear notched marked\n"
+		"rMYNAME<ENTER>   - read settings file (filter/notch)\n"
+		"wMYNAME<ENTER>   - write settings file (filter/notch)\n"
+		"+FILTER<ENTER>   - add CAN-IDs to sniff\n"
+		"-FILTER<ENTER>   - remove CAN-IDs to sniff\n"
 		"\n"
-		"FILTER can be a single CAN-ID or a CAN-ID/Bitmask:\n"
-		"+1F5<ENTER>    - add CAN-ID 0x1F5\n"
-		"-42E<ENTER>    - remove CAN-ID 0x42E\n"
-		"-42E7FF<ENTER> - remove CAN-ID 0x42E (using Bitmask)\n"
-		"-500700<ENTER> - remove CAN-IDs 0x500 - 0x5FF\n"
-		"+400600<ENTER> - add CAN-IDs 0x400 - 0x5FF\n"
-		"+000000<ENTER> - add all CAN-IDs\n"
-		"-000000<ENTER> - remove all CAN-IDs\n"
+		"FILTER must be a single CAN-ID:\n"/* "or a CAN-ID/Bitmask:\n"*/
+		"+1F5<ENTER>      - add CAN-ID 0x1F5\n"
+		"-42E<ENTER>      - remove CAN-ID 0x42E\n"
 		"\n"
-		"if (id & filter) == (sniff-id & filter) the action (+/-) is performed,\n"
-		"which is quite easy when the filter is 000\n"
+		"29 bit IDs:\n"
+		"+18FEDF55<ENTER> - add CAN-ID 0x18FEDF55\n"
+		"-00000090<ENTER> - remove CAN-ID 0x00000090\n"
+/*		"-42E7FF<ENTER> - remove CAN-ID 0x42E (using Bitmask)\N"*/
+/*		"-500700<ENTER> - remove CAN-IDs 0x500 - 0x5FF\n"*/
+/*		"+400600<ENTER> - add CAN-IDs 0x400 - 0x5FF\n"*/
+/*		"+000000<ENTER> - add all CAN-IDs\n"*/
+/*		"-000000<ENTER> - remove all CAN-IDs\n"*/
+/*		"\n"*/
+/*		"if (id & filter) == (sniff-id & filter) the action (+/-) IS PERFORMED,\N" */
+/*		"which is quite easy when the filter is 000\n"*/
 		"\n"
 	};
 
 	fprintf(stderr, "\nUsage: %s [can-interface]\n", prg);
-	fprintf(stderr, "Options: -m <mask>  (initial FILTER default 0x00000000)\n");
-	fprintf(stderr, "         -v <value> (initial FILTER default 0x00000000)\n");
-	fprintf(stderr, "         -q         (quiet - all IDs deactivated)\n");
+//	fprintf(stderr, "Options: -m <mask>  (initial FILTER default 0x00000000)\n");
+//	fprintf(stderr, "         -v <value> (initial FILTER default 0x00000000)\n");
+	fprintf(stderr, "Options: -q         (quiet - all slots are deactivated)\n");
 	fprintf(stderr, "         -r <name>  (read %sname from file)\n", SETFNAME);
 	fprintf(stderr, "         -b         (start with binary mode)\n");
 	fprintf(stderr, "         -B         (start with binary mode with gap - exceeds 80 chars!)\n");
 	fprintf(stderr, "         -c         (color changes)\n");
-	fprintf(stderr, "         -f         (filter on CAN-ID only)\n");
 	fprintf(stderr, "         -t <time>  (timeout for ID display [x10ms] default: %d, 0 = OFF)\n", TIMEOUT);
 	fprintf(stderr, "         -h <time>  (hold marker on changes [x10ms] default: %d)\n", HOLD);
 	fprintf(stderr, "         -l <time>  (loop time (display) [x10ms] default: %d)\n", LOOP);
@@ -184,8 +200,8 @@ int main(int argc, char **argv)
 {
 	fd_set rdfs;
 	int s;
-	canid_t mask = 0;
-	canid_t value = 0;
+//	canid_t mask = 0;
+//	canid_t value = 0;
 	long currcms = 0;
 	long lastcms = 0;
 	unsigned char quiet = 0;
@@ -200,21 +216,21 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	for (i=0; i < 2048 ;i++) /* default: check all CAN-IDs */
+	for (i=0; i < MAX_SLOTS ;i++) /* default: enable all slots */
 		do_set(i, ENABLE);
 
 	while ((opt = getopt(argc, argv, "m:v:r:t:h:l:qbBcf?")) != -1) {
 		switch (opt) {
-		case 'm':
-			sscanf(optarg, "%x", &mask);
-			break;
-
-		case 'v':
-			sscanf(optarg, "%x", &value);
-			break;
-
+//		case 'm':
+//			sscanf(optarg, "%x", &mask);
+//			break;
+//
+//		case 'v':
+//			sscanf(optarg, "%x", &value);
+//			break;
+//
 		case 'r':
-			readsettings(optarg, 0); /* no BCM-setting here */
+			readsettings(optarg, 0);
 			break;
 
 		case 't':
@@ -247,10 +263,6 @@ int main(int argc, char **argv)
 			color = 1;
 			break;
 
-		case 'f':
-			filter_id_only = 1;
-			break;
-
 		case '?':
 			break;
 
@@ -266,16 +278,18 @@ int main(int argc, char **argv)
 	}
 	
 	if (quiet)
-		for (i = 0; i < 2048; i++)
+		for (i = 0; i < MAX_SLOTS; i++)
 			do_clr(i, ENABLE);
-	else if (mask || value) {
-		for (i=0; i < 2048 ;i++) {
-			if ((i & mask) ==  (value & mask))
-				do_set(i, ENABLE);
-			else
-				do_clr(i, ENABLE);
-		}
-	}
+
+//  Change this to do socket filtering
+//	else if (mask || value) {
+//		for (i=0; i < MAX_SLOTS ;i++) {
+//			if ((i & mask) ==  (value & mask))
+//				do_set(i, ENABLE);
+//			else
+//				do_clr(i, ENABLE);
+//		}
+//	}
 
 	if (strlen(argv[optind]) >= IFNAMSIZ) {
 		printf("name of CAN device '%s' is too long!\n", argv[optind]);
@@ -284,7 +298,7 @@ int main(int argc, char **argv)
 
 	interface = argv[optind];
 
-	if ((s = socket(PF_CAN, SOCK_DGRAM, CAN_BCM)) < 0) {
+	if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
 		perror("socket");
 		return 1;
 	}
@@ -302,14 +316,10 @@ int main(int argc, char **argv)
 	else
 		addr.can_ifindex = 0; /* any can interface */
 
-	if (connect(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("connect");
 		return 1;
 	}
-
-	for (i=0; i < 2048 ;i++) /* initial BCM setup */
-		if (is_set(i, ENABLE))
-			rx_setup(s, i);
 
 	gettimeofday(&start_tv, NULL);
 	tv.tv_sec = tv.tv_usec = 0;
@@ -338,7 +348,7 @@ int main(int argc, char **argv)
 			running &= handle_keyb(s);
 
 		if (FD_ISSET(s, &rdfs))
-			running &= handle_bcm(s, currcms);
+			running &= handle_frame(s, currcms);
 
 		if (currcms - lastcms >= loop) {
 			running &= handle_timeo(s, currcms);
@@ -346,58 +356,19 @@ int main(int argc, char **argv)
 		}
 	}
 
-	printf("%s", CSR_SHOW); /* show cursor */
+	printf("%s%s%s", CSR_SHOW, CLR_SCREEN, CSR_HOME); /* show cursor & clear screen */
 
 	close(s);
 	return 0;
-}
-
-void rx_setup (int fd, int id){
-
-	struct {
-		struct bcm_msg_head msg_head;
-		struct can_frame frame;
-	} txmsg;
-
-	txmsg.msg_head.opcode  = RX_SETUP;
-	txmsg.msg_head.can_id  = id;
-	txmsg.msg_head.flags   = RX_CHECK_DLC;
-	txmsg.msg_head.ival1.tv_sec  = 0;
-	txmsg.msg_head.ival1.tv_usec = 0;
-	txmsg.msg_head.ival2.tv_sec  = 0;
-	txmsg.msg_head.ival2.tv_usec = 0;
-	txmsg.msg_head.nframes = 1;
-
-	/* set all bits to be relevant */
-	memset(&txmsg.frame.data, 0xFF, 8);
-
-	if (filter_id_only)
-		txmsg.msg_head.flags |= RX_FILTER_ID;
-
-	if (write(fd, &txmsg, sizeof(txmsg)) < 0)
-		perror("write");
-};
-
-void rx_delete (int fd, int id){
-
-	struct bcm_msg_head msg_head;
-
-	msg_head.opcode  = RX_DELETE;
-	msg_head.can_id  = id;
-	msg_head.nframes = 0;
-
-	if (write(fd, &msg_head, sizeof(msg_head)) < 0)
-		perror("write");
 }
 
 int handle_keyb(int fd){
 
 	char cmd [20] = {0};
 	int i;
-	unsigned int mask;
 	unsigned int value;
 
-	if (read(0, cmd, 19) > strlen("+123456\n"))
+	if (read(0, cmd, 19) > strlen("+12345678\n"))
 		return 1; /* ignore */
 
 	if (strlen(cmd) > 0)
@@ -408,28 +379,19 @@ int handle_keyb(int fd){
 	case '+':
 	case '-':
 		sscanf(&cmd[1], "%x", &value);
-		if (strlen(&cmd[1]) > 3) {
-			mask = value & 0xFFF;
-			value >>= 12;
-		}
-		else
-			mask = 0x7FF;
+		if (strlen(&cmd[1]) > 3)
+			value = value | 0x80000000;
+
+		i = sniftab_index(value);
+
+		if(i < 0)
+			break; /* No Match */
 
 		if (cmd[0] == '+') {
-			for (i=0; i < 2048 ;i++) {
-				if (((i & mask) == (value & mask)) && (is_clr(i, ENABLE))) {
-					do_set(i, ENABLE);
-					rx_setup(fd, i);
-				}
-			}
+			do_set(i, ENABLE);
 		}
 		else { /* '-' */
-			for (i=0; i < 2048 ;i++) {
-				if (((i & mask) == (value & mask)) && (is_set(i, ENABLE))) {
-					do_clr(i, ENABLE);
-					rx_delete(fd, i);
-				}
-			}
+			do_clr(i, ENABLE);
 		}
 		break;
 
@@ -476,7 +438,7 @@ int handle_keyb(int fd){
 		break;
 
 	case '*' :
-		for (i=0; i < 2048; i++)
+		for (i=0; i < idx; i++)
 			memset(&sniftab[i].notch.data, 0, 8);
 		break;
 
@@ -489,45 +451,68 @@ int handle_keyb(int fd){
 	return 1; /* ok */
 };
 
-int handle_bcm(int fd, long currcms){
+int handle_frame(int fd, long currcms){
 
-	int nbytes, id, i;
+	bool match = false;
+	bool rx_changed = false;
+	int nbytes, i, pos = 0;
 
-	struct {
-		struct bcm_msg_head msg_head;
-		struct can_frame frame;
-	} bmsg;
+	canid_t id;
+	struct can_frame frame;
 
-	if ((nbytes = read(fd, &bmsg, sizeof(bmsg))) < 0) {
-		perror("bcm read");
+	if ((nbytes = read(fd, &frame, sizeof(frame))) < 0) {
+		perror("frame read");
 		return 0; /* quit */
 	}
 
-	id = bmsg.msg_head.can_id;
-	ioctl(fd, SIOCGSTAMP, &sniftab[id].currstamp);
+	id = frame.can_id;
 
-	if (bmsg.msg_head.opcode != RX_CHANGED) {
-		printf("received strange BCM opcode %d!\n", bmsg.msg_head.opcode);
+	pos = sniftab_index(id);
+
+	if(pos >= 0)
+		match = true;
+
+	if(!match){
+		if(idx < MAX_SLOTS){
+			pos = idx++;
+			rx_changed = true;
+		}
+	}
+	else {
+		if(frame.can_dlc == sniftab[pos].current.can_dlc)
+			for(i=0; i<frame.can_dlc; i++){
+				if(frame.data[i] != sniftab[pos].current.data[i] ){
+					rx_changed = true;
+					break;
+				}
+			}
+		else
+			rx_changed = true;
+	}
+
+	if (nbytes != sizeof(frame)) {
+		printf("received strange data length %d!\n", nbytes);
 		return 0; /* quit */
 	}
 
-	if (nbytes != sizeof(bmsg)) {
-		printf("received strange BCM data length %d!\n", nbytes);
-		return 0; /* quit */
+	if(rx_changed == true){
+		ioctl(fd, SIOCGSTAMP, &sniftab[pos].currstamp);
+
+		sniftab[pos].current = frame;
+		for (i=0; i < 8; i++)
+			sniftab[pos].marker.data[i] |= sniftab[pos].current.data[i] ^ sniftab[pos].last.data[i];
+
+		sniftab[pos].timeout = (timeout)?(currcms + timeout):0;
+
+		if (is_clr(pos, DISPLAY))
+			clearscreen = 1; /* new entry -> new drawing */
+
+		do_set(pos, DISPLAY);
+		do_set(pos, UPDATE);
+
+		qsort (sniftab, idx, sizeof(sniftab[0]), comp);
 	}
 
-	sniftab[id].current = bmsg.frame;
-	for (i=0; i < 8; i++)
-		sniftab[id].marker.data[i] |= sniftab[id].current.data[i] ^ sniftab[id].last.data[i];
-
-	sniftab[id].timeout = (timeout)?(currcms + timeout):0;
-
-	if (is_clr(id, DISPLAY))
-		clearscreen = 1; /* new entry -> new drawing */
-
-	do_set(id, DISPLAY);
-	do_set(id, UPDATE);
-	
 	return 1; /* ok */
 };
 
@@ -540,14 +525,14 @@ int handle_timeo(int fd, long currcms){
 	if (clearscreen) {
 		char startline[80];
 		printf("%s%s", CLR_SCREEN, CSR_HOME);
-		snprintf(startline, 79, "< cansniffer %s # l=%ld h=%ld t=%ld >", interface, loop, hold, timeout);
+		snprintf(startline, 79, "< cansniffer %s # l=%ld h=%ld t=%ld s=%d>", interface, loop, hold, timeout, idx);
 		printf("%s%*s",STARTLINESTR, 79-(int)strlen(STARTLINESTR), startline);
 		force_redraw = 1;
 		clearscreen = 0;
 	}
 
 	if (notch) {
-		for (i=0; i < 2048; i++) {
+		for (i=0; i < MAX_SLOTS; i++) {
 			for (j=0; j < 8; j++)
 				sniftab[i].notch.data[j] |= sniftab[i].marker.data[j];
 		}
@@ -558,7 +543,7 @@ int handle_timeo(int fd, long currcms){
 	printf("%02d\n", frame_count++); /* rolling display update counter */
 	frame_count %= 100;
 
-	for (i=0; i < 2048; i++) {
+	for (i=0; i < MAX_SLOTS; i++) {
 
 		if is_set(i, ENABLE) {
 
@@ -593,11 +578,12 @@ int handle_timeo(int fd, long currcms){
 
 };
 
-void print_snifline(int id){
+void print_snifline(int slot){
 
-	long diffsec  = sniftab[id].currstamp.tv_sec  - sniftab[id].laststamp.tv_sec;
-	long diffusec = sniftab[id].currstamp.tv_usec - sniftab[id].laststamp.tv_usec;
-	int dlc_diff  = sniftab[id].last.can_dlc - sniftab[id].current.can_dlc;
+	long diffsec  = sniftab[slot].currstamp.tv_sec  - sniftab[slot].laststamp.tv_sec;
+	long diffusec = sniftab[slot].currstamp.tv_usec - sniftab[slot].laststamp.tv_usec;
+	int dlc_diff  = sniftab[slot].last.can_dlc - sniftab[slot].current.can_dlc;
+	unsigned long id = sniftab[slot].current.can_id;
 	int i,j;
 
 	if (diffusec < 0)
@@ -609,20 +595,23 @@ void print_snifline(int id){
 	if (diffsec > 10)
 		diffsec = 9, diffusec = 999999;
 
-	printf("%ld.%06ld  %3X  ", diffsec, diffusec, id);
+	if(id & CAN_EFF_FLAG)
+		printf("%ld.%06ld EXT 0x%08lX  ", diffsec, diffusec, (id & CAN_EFF_MASK));
+	else
+		printf("%ld.%06ld STD 0x%03lX       ", diffsec, diffusec, id);
 
 	if (binary) {
 
-		for (i=0; i<sniftab[id].current.can_dlc; i++) {
+		for (i=0; i<sniftab[slot].current.can_dlc; i++) {
 			for (j=7; j>=0; j--) {
-				if ((color) && (sniftab[id].marker.data[i] & 1<<j) &&
-				    (!(sniftab[id].notch.data[i] & 1<<j)))
-					if (sniftab[id].current.data[i] & 1<<j)
+				if ((color) && (sniftab[slot].marker.data[i] & 1<<j) &&
+				    (!(sniftab[slot].notch.data[i] & 1<<j)))
+					if (sniftab[slot].current.data[i] & 1<<j)
 						printf("%s1%s", ATTCOLOR, ATTRESET);
 					else
 						printf("%s0%s", ATTCOLOR, ATTRESET);
 				else
-					if (sniftab[id].current.data[i] & 1<<j)
+					if (sniftab[slot].current.data[i] & 1<<j)
 						putchar('1');
 					else
 						putchar('0');
@@ -643,22 +632,22 @@ void print_snifline(int id){
 	}
 	else {
 
-		for (i=0; i<sniftab[id].current.can_dlc; i++)
-			if ((color) && (sniftab[id].marker.data[i]) && (!(sniftab[id].notch.data[i])))
-				printf("%s%02X%s ", ATTCOLOR, sniftab[id].current.data[i], ATTRESET);
+		for (i=0; i<sniftab[slot].current.can_dlc; i++)
+			if ((color) && (sniftab[slot].marker.data[i]) && (!(sniftab[slot].notch.data[i])))
+				printf("%s%02X%s ", ATTCOLOR, sniftab[slot].current.data[i], ATTRESET);
 			else
-				printf("%02X ", sniftab[id].current.data[i]);
+				printf("%02X ", sniftab[slot].current.data[i]);
 
-		if (sniftab[id].current.can_dlc < 8)
-			printf("%*s", (8 - sniftab[id].current.can_dlc) * 3, "");
+		if (sniftab[slot].current.can_dlc < 8)
+			printf("%*s", (8 - sniftab[slot].current.can_dlc) * 3, "");
 
-		for (i=0; i<sniftab[id].current.can_dlc; i++)
-			if ((sniftab[id].current.data[i] > 0x1F) && 
-			    (sniftab[id].current.data[i] < 0x7F))
-				if ((color) && (sniftab[id].marker.data[i]) && (!(sniftab[id].notch.data[i])))
-					printf("%s%c%s", ATTCOLOR, sniftab[id].current.data[i], ATTRESET);
+		for (i=0; i<sniftab[slot].current.can_dlc; i++)
+			if ((sniftab[slot].current.data[i] > 0x1F) && 
+			    (sniftab[slot].current.data[i] < 0x7F))
+				if ((color) && (sniftab[slot].marker.data[i]) && (!(sniftab[slot].notch.data[i])))
+					printf("%s%c%s", ATTCOLOR, sniftab[slot].current.data[i], ATTRESET);
 				else
-					putchar(sniftab[id].current.data[i]);
+					putchar(sniftab[slot].current.data[i]);
 			else
 				putchar('.');
 
@@ -672,9 +661,8 @@ void print_snifline(int id){
 
 	putchar('\n');
 
-	memset(&sniftab[id].marker.data, 0, 8);
+	memset(&sniftab[slot].marker.data, 0, 8);
 };
-
 
 void writesettings(char* name){
 
@@ -684,19 +672,18 @@ void writesettings(char* name){
 	char buf[8]= {0};
 
 	strncat(fname, name, 29 - strlen(fname)); 
-	fd = open(fname,  O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+	fd = open(fname,  O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
     
 	if (fd > 0) {
-
-		for (i=0; i < 2048 ;i++) {
-			sprintf(buf, "<%03X>%c.", i, (is_set(i, ENABLE))?'1':'0');
-			write(fd, buf, 7);
+		for (i=0; i < idx; i++) {
+			sprintf(buf, "<%08X>%c.", sniftab[i].current.can_id, (is_set(i, ENABLE))?'1':'0');
+			write(fd, buf, 12);
 			for (j=0; j<8 ; j++){
 				sprintf(buf, "%02X", sniftab[i].notch.data[j]);
 				write(fd, buf, 2);
 			}
 			write(fd, "\n", 1);
-			/* 7 + 16 + 1 = 24 bytes per entry */ 
+			/* 12 + 16 + 1 = 29 bytes per entry */ 
 		}
 		close(fd);
 	}
@@ -709,7 +696,8 @@ void readsettings(char* name, int sockfd){
 	int fd;
 	char fname[30] = SETFNAME;
 	char buf[25] = {0};
-	int i,j;
+	int pos,j;
+	bool done = false;
 
 	strncat(fname, name, 29 - strlen(fname)); 
 	fd = open(fname, O_RDONLY);
@@ -717,32 +705,41 @@ void readsettings(char* name, int sockfd){
 	if (fd > 0) {
 		if (!sockfd)
 			printf("reading setting file '%s' ... ", fname);
+ 
+		while(!done){
+			if (read(fd, &buf, 29) == 29) {
+				unsigned long id = strtoul(&buf[1], (char **)NULL, 16);
+				pos = sniftab_index(id);
 
-		for (i=0; i < 2048 ;i++) {
-			if (read(fd, &buf, 24) == 24) {
-				if (buf[5] & 1) {
-					if (is_clr(i, ENABLE)) {
-						do_set(i, ENABLE);
-						if (sockfd)
-							rx_setup(sockfd, i);
+				if(pos < 0){
+					if(idx < MAX_SLOTS){
+						pos = idx++;
+						sniftab[pos].current.can_id = id;
+					}
+					else
+						break;
+				}
+				if (buf[10] & 1) {
+					if (is_clr(pos, ENABLE)) {
+						do_set(pos, ENABLE);
 					}
 				}
 				else
-					if (is_set(i, ENABLE)) {
-						do_clr(i, ENABLE);
-						if (sockfd)
-							rx_delete(sockfd, i);
+					if (is_set(pos, ENABLE)) {
+						do_clr(pos, ENABLE);
 					}
 				for (j=7; j>=0 ; j--){
-					sniftab[i].notch.data[j] =
-						(__u8) strtoul(&buf[2*j+7], (char **)NULL, 16) & 0xFF;
-					buf[2*j+7] = 0; /* cut off each time */
+					sniftab[pos].notch.data[j] =
+						(__u8) strtoul(&buf[2*j+12], (char **)NULL, 16) & 0xFF;
+					buf[2*j+12] = 0; /* cut off each time */
 				}
+			
 			}
 			else {
 				if (!sockfd)
-					printf("was only able to read until index %d from setting file '%s'!\n",
-					       i, fname);
+					printf("was only able to read unti from setting file '%s'!\n", fname);
+				
+				done = true;
 			}
 		}
     
@@ -754,3 +751,14 @@ void readsettings(char* name, int sockfd){
 	else
 		printf("unable to read setting file '%s'!\n", fname);
 };
+
+int sniftab_index(canid_t id){
+
+	int i;
+
+	for(i = 0; i <= idx; i++)
+		if(id == sniftab[i].current.can_id)
+			return i;
+
+	return -1; /* No match */
+}

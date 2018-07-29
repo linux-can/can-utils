@@ -13,7 +13,7 @@ subsystem (aka SocketCAN):
 * canplayer : replay CAN logfiles
 * cansend : send a single frame
 * cangen : generate (random) CAN traffic
-* cansniffer : display CAN data content differences (just 11bit CAN IDs)
+* cansniffer : display CAN data content differences ~~(just 11bit CAN IDs)~~
 
 #### CAN access via IP sockets
 * canlogserver : log CAN frames from a remote/local host
