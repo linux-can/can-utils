@@ -57,7 +57,7 @@
 
 struct get_req {
 	struct nlmsghdr n;
-	struct rtgenmsg g;
+	struct ifinfomsg i;
 };
 
 struct set_req {
@@ -229,13 +229,14 @@ static int send_mod_request(int fd, struct nlmsghdr *n)
  * @brief send_dump_request - send a dump linkinfo request
  *
  * @param fd decriptor to a priorly opened netlink socket
+ * @param name network interface name, null means all interfaces
  * @param family rt_gen message family
  * @param type netlink message header type
  *
  * @return 0 if success
  * @return negativ if failed
  */
-static int send_dump_request(int fd, int family, int type)
+static int send_dump_request(int fd, const char *name, int family, int type)
 {
 	struct get_req req;
 
@@ -243,11 +244,25 @@ static int send_dump_request(int fd, int family, int type)
 
 	req.n.nlmsg_len = sizeof(req);
 	req.n.nlmsg_type = type;
-	req.n.nlmsg_flags = NLM_F_REQUEST | NLM_F_ROOT | NLM_F_MATCH;
+	req.n.nlmsg_flags = NLM_F_REQUEST;
 	req.n.nlmsg_pid = 0;
 	req.n.nlmsg_seq = 0;
 
-	req.g.rtgen_family = family;
+	req.i.ifi_family = family;
+	/*
+	 * If name is null, set flag to dump link information from all
+	 * interfaces otherwise, just dump specified interface's link
+	 * information.
+	 */
+	if (name == NULL) {
+		req.n.nlmsg_flags |= NLM_F_DUMP;
+	} else {
+		req.i.ifi_index = if_nametoindex(name);
+		if (req.i.ifi_index == 0) {
+			fprintf(stderr, "Cannot find device \"%s\"\n", name);
+			return -1;
+		}
+	}
 
 	return send(fd, (void *)&req, sizeof(req), 0);
 }
@@ -353,7 +368,7 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 	struct rtattr *linkinfo[IFLA_INFO_MAX + 1];
 	struct rtattr *can_attr[IFLA_CAN_MAX + 1];
 
-	if (send_dump_request(fd, AF_PACKET, RTM_GETLINK) < 0) {
+	if (send_dump_request(fd, name, AF_PACKET, RTM_GETLINK) < 0) {
 		perror("Cannot send dump request");
 		return ret;
 	}
@@ -387,8 +402,10 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 				nl_msg->nlmsg_len - NLMSG_LENGTH(sizeof(struct ifaddrmsg));
 			parse_rtattr(tb, IFLA_MAX, IFLA_RTA(ifi), len);
 
-			if (strcmp
-			    ((char *)RTA_DATA(tb[IFLA_IFNAME]), name) != 0)
+			/* Finish process if the reply message is matched */
+			if (strcmp((char *)RTA_DATA(tb[IFLA_IFNAME]), name) == 0)
+				done++;
+			else
 				continue;
 
 			if (tb[IFLA_LINKINFO])
