@@ -30,6 +30,7 @@
 #include <fcntl.h>
 #include <net/if.h>
 
+#include <linux/if_link.h>
 #include <linux/rtnetlink.h>
 #include <linux/netlink.h>
 
@@ -54,6 +55,7 @@
 #define GET_BITTIMING_CONST 6
 #define GET_BERR_COUNTER 7
 #define GET_XSTATS 8
+#define GET_LINK_STATS 9
 
 struct get_req {
 	struct nlmsghdr n;
@@ -407,6 +409,16 @@ static int do_get_nl_link(int fd, __u8 acquire, const char *name, void *res)
 				done++;
 			else
 				continue;
+
+			if (acquire == GET_LINK_STATS) {
+				if (!tb[IFLA_STATS64]) {
+					fprintf(stderr, "no link statistics (64-bit) found\n");
+				} else {
+					memcpy(res, RTA_DATA(tb[IFLA_STATS64]), sizeof(struct rtnl_link_stats64));
+					ret = 0;
+				}
+				continue;
+			}
 
 			if (tb[IFLA_LINKINFO])
 				parse_rtattr_nested(linkinfo,
@@ -1156,4 +1168,30 @@ int can_get_berr_counter(const char *name, struct can_berr_counter *bc)
 int can_get_device_stats(const char *name, struct can_device_stats *cds)
 {
 	return get_link(name, GET_XSTATS, cds);
+}
+
+/**
+ * @ingroup extern
+ * can_get_link_statistics - get RX/TX statistics (64 bits version)
+ *
+ * @param name name of the can device. This is the netdev name, as ip link shows
+ * in your system. usually it contains prefix "can" and the number of the can
+ * line. e.g. "can0"
+ * @param rls pointer to the rtnl_link_stats64 struct which is from if_link.h.
+ *
+ * This one gets the current rtnl_link_stats64. Compares to the rtnl_link_stats,
+ * The rtnl_link_stats64 is introduced since linux kernel 2.6. After that the
+ * rtnl_link_stats is synchronous with struct rtnl_link_stats64 by truncating
+ * each member from 64 bits to 32 bits. actually, the struct rtnl_link_stats
+ * is kept for compatibility.
+ *
+ * Please see struct rtnl_link_stats64 (/usr/include/linux/if_link.h) for more
+ * information.
+ *
+ * @return 0 if success
+ * @return -1 if failed
+ */
+int can_get_link_stats(const char *name, struct rtnl_link_stats64 *rls)
+{
+	return get_link(name, GET_LINK_STATS, rls);
 }

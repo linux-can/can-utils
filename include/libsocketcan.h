@@ -28,6 +28,8 @@
 
 #include <can_netlink.h>
 
+struct rtnl_link_stats64; /* from <linux/if_link.h> */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -50,6 +52,7 @@ int can_get_clock(const char *name, struct can_clock *clock);
 int can_get_bittiming_const(const char *name, struct can_bittiming_const *btc);
 int can_get_berr_counter(const char *name, struct can_berr_counter *bc);
 int can_get_device_stats(const char *name, struct can_device_stats *cds);
+int can_get_link_stats(const char *name, struct rtnl_link_stats64 *rls);
 
 #ifdef __cplusplus
 }
