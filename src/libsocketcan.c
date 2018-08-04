@@ -36,6 +36,12 @@
 
 #include <libsocketcan.h>
 
+/* Define DISABLE_ERROR_LOG to disable printing of error messages to stderr. */
+#ifdef DISABLE_ERROR_LOG
+#define perror(x)
+#define fprintf(...)
+#endif
+
 #define parse_rtattr_nested(tb, max, rta) \
 	(parse_rtattr((tb), (max), RTA_DATA(rta), RTA_PAYLOAD(rta)))
 
