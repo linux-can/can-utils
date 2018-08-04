@@ -74,10 +74,18 @@ struct req_info {
 	struct can_bittiming *bittiming;
 };
 
+/**
+ * @brief this method parse attributions of link info
+ *
+ * @param tb: point array of struct rtattr point
+ * @param max: index of the last element in array tb
+ * @param rtattr: point of link info data
+ * @param len: length of link info data
+ */
 static void
 parse_rtattr(struct rtattr **tb, int max, struct rtattr *rta, int len)
 {
-	memset(tb, 0, sizeof(*tb) * max);
+	memset(tb, 0, sizeof(*tb) * (max + 1));
 	while (RTA_OK(rta, len)) {
 		if (rta->rta_type <= max) {
 			tb[rta->rta_type] = rta;
