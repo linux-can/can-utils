@@ -106,9 +106,9 @@ struct snif {
 	struct can_frame notch;
 } sniftab[MAX_SLOTS];
 
-
 extern int optind, opterr, optopt;
 
+static int idx;
 static int running = 1;
 static int clearscreen = 1;
 static int notch;
@@ -124,22 +124,22 @@ void print_snifline(int slot);
 int handle_keyb(int fd);
 int handle_frame(int fd, long currcms);
 int handle_timeo(int fd, long currcms);
-int sniftab_index(canid_t id);
 void writesettings(char* name);
 void readsettings(char* name, int sockfd);
-
-int idx = 0;
-
+static int sniftab_index(canid_t id);
 
 int comp (const void * elem1, const void * elem2) 
 {
     unsigned long f = ((struct snif*)elem1)->current.can_id;
     unsigned long s = ((struct snif*)elem2)->current.can_id;
-    if (f > s) return  1;
-    if (f < s) return -1;
+
+    if (f > s)
+	    return  1;
+    if (f < s)
+	    return -1;
+
     return 0;
 }
-
 
 void print_usage(char *prg)
 {
@@ -164,20 +164,10 @@ void print_usage(char *prg)
 		"29 bit IDs:\n"
 		"+18FEDF55<ENTER> - add CAN-ID 0x18FEDF55\n"
 		"-00000090<ENTER> - remove CAN-ID 0x00000090\n"
-/*		"-42E7FF<ENTER> - remove CAN-ID 0x42E (using Bitmask)\N"*/
-/*		"-500700<ENTER> - remove CAN-IDs 0x500 - 0x5FF\n"*/
-/*		"+400600<ENTER> - add CAN-IDs 0x400 - 0x5FF\n"*/
-/*		"+000000<ENTER> - add all CAN-IDs\n"*/
-/*		"-000000<ENTER> - remove all CAN-IDs\n"*/
-/*		"\n"*/
-/*		"if (id & filter) == (sniff-id & filter) the action (+/-) IS PERFORMED,\N" */
-/*		"which is quite easy when the filter is 000\n"*/
 		"\n"
 	};
 
 	fprintf(stderr, "\nUsage: %s [can-interface]\n", prg);
-//	fprintf(stderr, "Options: -m <mask>  (initial FILTER default 0x00000000)\n");
-//	fprintf(stderr, "         -v <value> (initial FILTER default 0x00000000)\n");
 	fprintf(stderr, "Options: -q         (quiet - all slots are deactivated)\n");
 	fprintf(stderr, "         -r <name>  (read %sname from file)\n", SETFNAME);
 	fprintf(stderr, "         -b         (start with binary mode)\n");
@@ -200,8 +190,6 @@ int main(int argc, char **argv)
 {
 	fd_set rdfs;
 	int s;
-//	canid_t mask = 0;
-//	canid_t value = 0;
 	long currcms = 0;
 	long lastcms = 0;
 	unsigned char quiet = 0;
@@ -210,7 +198,6 @@ int main(int argc, char **argv)
 	struct sockaddr_can addr;
 	struct ifreq ifr;
 	int i;
-
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -221,14 +208,6 @@ int main(int argc, char **argv)
 
 	while ((opt = getopt(argc, argv, "m:v:r:t:h:l:qbBcf?")) != -1) {
 		switch (opt) {
-//		case 'm':
-//			sscanf(optarg, "%x", &mask);
-//			break;
-//
-//		case 'v':
-//			sscanf(optarg, "%x", &value);
-//			break;
-//
 		case 'r':
 			readsettings(optarg, 0);
 			break;
@@ -280,16 +259,6 @@ int main(int argc, char **argv)
 	if (quiet)
 		for (i = 0; i < MAX_SLOTS; i++)
 			do_clr(i, ENABLE);
-
-//  Change this to do socket filtering
-//	else if (mask || value) {
-//		for (i=0; i < MAX_SLOTS ;i++) {
-//			if ((i & mask) ==  (value & mask))
-//				do_set(i, ENABLE);
-//			else
-//				do_clr(i, ENABLE);
-//		}
-//	}
 
 	if (strlen(argv[optind]) >= IFNAMSIZ) {
 		printf("name of CAN device '%s' is too long!\n", argv[optind]);
@@ -362,7 +331,7 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-int handle_keyb(int fd){
+int handle_keyb(int fd) {
 
 	char cmd [20] = {0};
 	int i;
@@ -384,7 +353,7 @@ int handle_keyb(int fd){
 
 		i = sniftab_index(value);
 
-		if(i < 0)
+		if (i < 0)
 			break; /* No Match */
 
 		if (cmd[0] == '+') {
@@ -451,7 +420,7 @@ int handle_keyb(int fd){
 	return 1; /* ok */
 };
 
-int handle_frame(int fd, long currcms){
+int handle_frame(int fd, long currcms) {
 
 	bool match = false;
 	bool rx_changed = false;
@@ -469,19 +438,19 @@ int handle_frame(int fd, long currcms){
 
 	pos = sniftab_index(id);
 
-	if(pos >= 0)
+	if (pos >= 0)
 		match = true;
 
-	if(!match){
-		if(idx < MAX_SLOTS){
+	if (!match) {
+		if (idx < MAX_SLOTS) {
 			pos = idx++;
 			rx_changed = true;
 		}
 	}
 	else {
-		if(frame.can_dlc == sniftab[pos].current.can_dlc)
-			for(i=0; i<frame.can_dlc; i++){
-				if(frame.data[i] != sniftab[pos].current.data[i] ){
+		if (frame.can_dlc == sniftab[pos].current.can_dlc)
+			for (i=0; i<frame.can_dlc; i++) {
+				if (frame.data[i] != sniftab[pos].current.data[i] ) {
 					rx_changed = true;
 					break;
 				}
@@ -495,7 +464,7 @@ int handle_frame(int fd, long currcms){
 		return 0; /* quit */
 	}
 
-	if(rx_changed == true){
+	if (rx_changed == true) {
 		ioctl(fd, SIOCGSTAMP, &sniftab[pos].currstamp);
 
 		sniftab[pos].current = frame;
@@ -516,7 +485,7 @@ int handle_frame(int fd, long currcms){
 	return 1; /* ok */
 };
 
-int handle_timeo(int fd, long currcms){
+int handle_timeo(int fd, long currcms) {
 
 	int i, j;
 	int force_redraw = 0;
@@ -549,7 +518,7 @@ int handle_timeo(int fd, long currcms){
 
 				if is_set(i, DISPLAY) {
 
-						if (is_set(i, UPDATE) || (force_redraw)){
+						if (is_set(i, UPDATE) || (force_redraw)) {
 							print_snifline(i);
 							sniftab[i].hold = currcms + hold;
 							do_clr(i, UPDATE);
@@ -578,7 +547,7 @@ int handle_timeo(int fd, long currcms){
 
 };
 
-void print_snifline(int slot){
+void print_snifline(int slot) {
 
 	long diffsec  = sniftab[slot].currstamp.tv_sec  - sniftab[slot].laststamp.tv_sec;
 	long diffusec = sniftab[slot].currstamp.tv_usec - sniftab[slot].laststamp.tv_usec;
@@ -595,7 +564,7 @@ void print_snifline(int slot){
 	if (diffsec > 10)
 		diffsec = 9, diffusec = 999999;
 
-	if(id & CAN_EFF_FLAG)
+	if (id & CAN_EFF_FLAG)
 		printf("%ld.%06ld EXT 0x%08lX  ", diffsec, diffusec, (id & CAN_EFF_MASK));
 	else
 		printf("%ld.%06ld STD 0x%03lX       ", diffsec, diffusec, id);
@@ -664,7 +633,7 @@ void print_snifline(int slot){
 	memset(&sniftab[slot].marker.data, 0, 8);
 };
 
-void writesettings(char* name){
+void writesettings(char* name) {
 
 	int fd;
 	char fname[30] = SETFNAME;
@@ -678,7 +647,7 @@ void writesettings(char* name){
 		for (i=0; i < idx; i++) {
 			sprintf(buf, "<%08X>%c.", sniftab[i].current.can_id, (is_set(i, ENABLE))?'1':'0');
 			write(fd, buf, 12);
-			for (j=0; j<8 ; j++){
+			for (j=0; j<8 ; j++) {
 				sprintf(buf, "%02X", sniftab[i].notch.data[j]);
 				write(fd, buf, 2);
 			}
@@ -691,7 +660,7 @@ void writesettings(char* name){
 		printf("unable to write setting file '%s'!\n", fname);
 };
 
-void readsettings(char* name, int sockfd){
+void readsettings(char* name, int sockfd) {
 
 	int fd;
 	char fname[30] = SETFNAME;
@@ -705,14 +674,14 @@ void readsettings(char* name, int sockfd){
 	if (fd > 0) {
 		if (!sockfd)
 			printf("reading setting file '%s' ... ", fname);
- 
-		while(!done){
+
+		while (!done) {
 			if (read(fd, &buf, 29) == 29) {
 				unsigned long id = strtoul(&buf[1], (char **)NULL, 16);
 				pos = sniftab_index(id);
 
-				if(pos < 0){
-					if(idx < MAX_SLOTS){
+				if (pos < 0) {
+					if (idx < MAX_SLOTS) {
 						pos = idx++;
 						sniftab[pos].current.can_id = id;
 					}
@@ -728,12 +697,11 @@ void readsettings(char* name, int sockfd){
 					if (is_set(pos, ENABLE)) {
 						do_clr(pos, ENABLE);
 					}
-				for (j=7; j>=0 ; j--){
+				for (j=7; j>=0 ; j--) {
 					sniftab[pos].notch.data[j] =
 						(__u8) strtoul(&buf[2*j+12], (char **)NULL, 16) & 0xFF;
 					buf[2*j+12] = 0; /* cut off each time */
 				}
-			
 			}
 			else {
 				if (!sockfd)
@@ -752,12 +720,12 @@ void readsettings(char* name, int sockfd){
 		printf("unable to read setting file '%s'!\n", fname);
 };
 
-int sniftab_index(canid_t id){
+static int sniftab_index(canid_t id) {
 
 	int i;
 
-	for(i = 0; i <= idx; i++)
-		if(id == sniftab[i].current.can_id)
+	for (i = 0; i <= idx; i++)
+		if (id == sniftab[i].current.can_id)
 			return i;
 
 	return -1; /* No match */
