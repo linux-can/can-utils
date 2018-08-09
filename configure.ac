@@ -99,6 +99,23 @@ else
 fi
 
 
+#
+# Error logging
+#
+AC_MSG_CHECKING([whether to enable error logging])
+AC_ARG_ENABLE(error-log,
+    AS_HELP_STRING([--enable-error-log], [enable error log @<:@default=yes@:>@]),
+	[case "$enableval" in
+	y | yes) CONFIG_ERROR_LOG=yes ;;
+        *) CONFIG_ERROR_LOG=no ;;
+    esac],
+    [CONFIG_ERROR_LOG=yes])
+AC_MSG_RESULT([${CONFIG_ERROR_LOG}])
+if test "${CONFIG_ERROR_LOG}" = "no"; then
+    AC_DEFINE(DISABLE_ERROR_LOG, 1, [disable error logging])
+fi
+
+
 AC_CONFIG_FILES([
 	GNUmakefile
 	config/libsocketcan.pc
