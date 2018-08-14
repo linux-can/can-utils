@@ -47,6 +47,16 @@ subsystem (aka SocketCAN):
 * slcand : daemon for serial line CAN interface configuration
 * slcanpty : creates a pty for applications using the slcan ASCII protocol
 
+#### CMake Project Generator
+* Place your build folder anywhere, passing CMake the path.  Relative or absolute.
+* Some examples using a build folder under the source tree root:
+* Android : cmake -DCMAKE_TOOLCHAIN_FILE=/home/joel/Android/Sdk/ndk-bundle/build/cmake/android.toolchain.cmake -DANDROID_PLATFORM=android-21 -DANDROID_ABI=armeabi-v7a .. && make
+* Raspberry Pi : cmake -DCMAKE_TOOLCHAIN_FILE=/home/joel/rpi/tools/build/cmake/rpi.toolchain.cmake .. && make
+* Linux : cmake -GNinja .. && ninja
+* Linux : CC=clang cmake .. && make
+* To override the base installation directory use: CMAKE_INSTALL_PREFIX
+* ie. CC=clang cmake -DCMAKE_INSTALL_PREFIX=./out .. && make install
+
 ### Additional Information:
 
 *   [SocketCAN Documentation (Linux Kernel)](https://www.kernel.org/doc/Documentation/networking/can.txt)
