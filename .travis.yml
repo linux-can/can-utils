@@ -47,19 +47,51 @@ matrix:
               - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug
           script:  ninja
 
-        - env: test="x64 5.0 (CMake Android-15 armeabi-v7a)"
+        - env: test="Android NDK (CMake)"
+          os: linux
           language: android
+          android:
+            components:
+              - build-tools-25.0.2
           install: 
               - echo y | sdkmanager "ndk-bundle"
               - echo y | sdkmanager "cmake;3.6.4111459"
           before_script:
               - export ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle
               - export ANDROID_CMAKE=$ANDROID_HOME/cmake/3.6.4111459/bin/cmake
-              - mkdir android15_armeabiv7a_rel && cd android15_armeabiv7a_rel
-              - cmake --version
-              - $ANDROID_CMAKE --version
-              - $ANDROID_CMAKE -DANDROID_PLATFORM=android-15 -DANDROID_ABI=armeabi-v7a -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk-bundle/build/cmake/android.toolchain.cmake ..
-          script:  make
+              - export ANDROID_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake
+          script:
+              - pushd . && mkdir android15_armeabiv7a_rel && cd android15_armeabiv7a_rel
+              - $ANDROID_CMAKE -DANDROID_PLATFORM=android-15 -DANDROID_ABI=armeabi-v7a -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$ANDROID_TOOLCHAIN_FILE ..
+              - make && popd
+
+              - pushd . && mkdir android15_x86_rel && cd android15_x86_rel
+              - $ANDROID_CMAKE -DANDROID_PLATFORM=android-15 -DANDROID_ABI=x86 -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$ANDROID_TOOLCHAIN_FILE ..
+              - make && popd
+
+              - pushd . && mkdir android21_arm64-v8a_rel && cd android21_arm64-v8a_rel
+              - $ANDROID_CMAKE -DANDROID_PLATFORM=android-21 -DANDROID_ABI=arm64-v8a -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$ANDROID_TOOLCHAIN_FILE ..
+              - make && popd
+
+              - pushd . && mkdir android21_x86_64_rel && cd android21_x86_64_rel
+              - $ANDROID_CMAKE -DANDROID_PLATFORM=android-21 -DANDROID_ABI=x86_64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$ANDROID_TOOLCHAIN_FILE ..
+              - make && popd
+
+              - pushd . && mkdir android15_armeabiv7a_dbg && cd android15_armeabiv7a_dbg
+              - $ANDROID_CMAKE -DANDROID_PLATFORM=android-15 -DANDROID_ABI=armeabi-v7a -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=$ANDROID_TOOLCHAIN_FILE ..
+              - make && popd
+
+              - pushd . && mkdir android15_x86_dbg && cd android15_x86_dbg
+              - $ANDROID_CMAKE -DANDROID_PLATFORM=android-15 -DANDROID_ABI=x86 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=$ANDROID_TOOLCHAIN_FILE ..
+              - make && popd
+
+              - pushd . && mkdir android21_arm64-v8a_dbg && cd android21_arm64-v8a_dbg
+              - $ANDROID_CMAKE -DANDROID_PLATFORM=android-21 -DANDROID_ABI=arm64-v8a -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=$ANDROID_TOOLCHAIN_FILE ..
+              - make && popd
+
+              - pushd . && mkdir android21_x86_64_dbg && cd android21_x86_64_dbg
+              - $ANDROID_CMAKE -DANDROID_PLATFORM=android-21 -DANDROID_ABI=x86_64 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=$ANDROID_TOOLCHAIN_FILE ..
+              - make && popd
 
 addons:
     apt:
