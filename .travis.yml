@@ -44,7 +44,7 @@ matrix:
           compiler: clang
           before_script:
               - mkdir clang_ninja_dbg && cd clang_ninja_dbg
-              - cmake .. -GNinja -DCMAKE_BUILT_TYPE=Debug
+              - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug
           script:  ninja
 
         - env: test="x64 5.0 (CMake Android-15 armeabi-v7a)"
