@@ -56,7 +56,7 @@ subsystem (aka SocketCAN):
 * Linux : cmake -GNinja .. && ninja
 * Linux Eclipse Photon (Debug) : CC=clang cmake -G"Eclipse CDT4 - Unix Makefiles" ../can-utils/ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_ECLIPSE_VERSION=4.8.0
 * To override the base installation directory use: CMAKE_INSTALL_PREFIX
-* ie. CC=clang cmake -DCMAKE_INSTALL_PREFIX=./out .. && make install
+  ie. CC=clang cmake -DCMAKE_INSTALL_PREFIX=./out .. && make install
 
 ### Additional Information:
 
