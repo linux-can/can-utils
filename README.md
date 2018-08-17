@@ -50,13 +50,13 @@ subsystem (aka SocketCAN):
 #### CMake Project Generator
 * Place your build folder anywhere, passing CMake the path.  Relative or absolute.
 * Some examples using a build folder under the source tree root:
-* Android : cmake -DCMAKE_TOOLCHAIN_FILE=/home/joel/Android/Sdk/ndk-bundle/build/cmake/android.toolchain.cmake -DANDROID_PLATFORM=android-21 -DANDROID_ABI=armeabi-v7a .. && make
-* Android Studio : Copy repo under your project's "app" folder, add "add_subdirectory(can-utils)" to your CMakeLists.txt file after "cmake_minimum_required()".  Generating project will build Debug/Release for all supported EABI types.  ie. arm64-v8a, armeabi-v7a, x86, x86_64.
-* Raspberry Pi : cmake -DCMAKE_TOOLCHAIN_FILE=/home/joel/rpi/tools/build/cmake/rpi.toolchain.cmake .. && make
-* Linux : cmake -GNinja .. && ninja
-* Linux Eclipse Photon (Debug) : CC=clang cmake -G"Eclipse CDT4 - Unix Makefiles" ../can-utils/ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_ECLIPSE_VERSION=4.8.0
-* To override the base installation directory use: CMAKE_INSTALL_PREFIX
-* ie. CC=clang cmake -DCMAKE_INSTALL_PREFIX=./out .. && make install
+* Android : ``cmake -DCMAKE_TOOLCHAIN_FILE=~/Android/Sdk/ndk-bundle/build/cmake/android.toolchain.cmake -DANDROID_PLATFORM=android-21 -DANDROID_ABI=armeabi-v7a .. && make``
+* Android Studio : Copy repo under your project's ``app`` folder, add ``add_subdirectory(can-utils)`` to your ``CMakeLists.txt`` file after ``cmake_minimum_required()``.  Generating project will build Debug/Release for all supported EABI types.  ie. arm64-v8a, armeabi-v7a, x86, x86_64.
+* Raspberry Pi : ``cmake -DCMAKE_TOOLCHAIN_FILE=~/rpi/tools/build/cmake/rpi.toolchain.cmake .. && make``
+* Linux : ``cmake -GNinja .. && ninja``
+* Linux Eclipse Photon (Debug) : ``CC=clang cmake -G"Eclipse CDT4 - Unix Makefiles" ../can-utils/ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_ECLIPSE_VERSION=4.8.0``
+* To override the base installation directory use: ``CMAKE_INSTALL_PREFIX``
+  ie. ``CC=clang cmake -DCMAKE_INSTALL_PREFIX=./out .. && make install``
 
 ### Additional Information:
 
