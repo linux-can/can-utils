@@ -11,7 +11,7 @@ subsystem (aka SocketCAN):
 
 * candump : display, filter and log CAN data to files
 * canplayer : replay CAN logfiles
-* cansend : send a single frame
+* cansend : send single frames
 * cangen : generate (random) CAN traffic
 * cansniffer : display CAN data content differences (just 11bit CAN IDs)
 
