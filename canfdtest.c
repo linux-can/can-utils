@@ -47,6 +47,7 @@ static int running = 1;
 static int verbose;
 static int sockfd;
 static int test_loops;
+static int exit_sig;
 
 static void print_usage(char *prg)
 {
@@ -149,6 +150,7 @@ static void signal_handler(int signo)
 {
 	close(sockfd);
 	running = 0;
+	exit_sig = signo;
 }
 
 static int recv_frame(struct can_frame *frame)
@@ -355,5 +357,11 @@ int main(int argc, char *argv[])
 		printf("Exiting...\n");
 
 	close(sockfd);
+
+	if (exit_sig) {
+		signal(exit_sig, SIG_DFL);
+		kill(getpid(), exit_sig);
+	}
+
 	return err;
 }
