@@ -72,47 +72,47 @@ static void print_usage(char *prg)
 	exit(1);
 }
 
-static void print_frame(struct can_frame *frame)
+static void print_frame(struct can_frame *frame, int inc)
 {
 	int i;
 
-	printf("%04x: ", frame->can_id);
+	printf("%04x: ", frame->can_id + inc);
 	if (frame->can_id & CAN_RTR_FLAG) {
 		printf("remote request");
 	} else {
 		printf("[%d]", frame->can_dlc);
 		for (i = 0; i < frame->can_dlc; i++)
-			printf(" %02x", frame->data[i]);
+			printf(" %02x", frame->data[i] + inc);
 	}
 	printf("\n");
 }
 
-static void print_compare(struct can_frame *exp, struct can_frame *rec)
+static void print_compare(struct can_frame *exp, struct can_frame *rec, int inc)
 {
 	printf("expected: ");
-	print_frame(exp);
+	print_frame(exp, inc);
 	printf("received: ");
-	print_frame(rec);
+	print_frame(rec, 0);
 }
 
-static void compare_frame(struct can_frame *exp, struct can_frame *rec)
+static void compare_frame(struct can_frame *exp, struct can_frame *rec, int inc)
 {
 	int i;
 
-	if (rec->can_id != exp->can_id) {
+	if (rec->can_id != exp->can_id + inc) {
 		printf("Message ID mismatch!\n");
-		print_compare(exp, rec);
+		print_compare(exp, rec, inc);
 		running = 0;
 	} else if (rec->can_dlc != exp->can_dlc) {
 		printf("Message length mismatch!\n");
-		print_compare(exp, rec);
+		print_compare(exp, rec, inc);
 		running = 0;
 	} else {
 		for (i = 0; i < rec->can_dlc; i++) {
-			if (rec->data[i] != exp->data[i]) {
+			if (rec->data[i] != ((exp->data[i] + inc) & 0xff)) {
 				printf("Databyte %x mismatch !\n", i);
 				print_compare(exp,
-					      rec);
+					      rec, inc);
 				running = 0;
 			}
 		}
@@ -237,9 +237,10 @@ static int can_echo_dut(void)
 static int can_echo_gen(void)
 {
 	struct can_frame tx_frames[CAN_MSG_COUNT];
+	int recv_tx[CAN_MSG_COUNT];
 	struct can_frame rx_frame;
 	unsigned char counter = 0;
-	int send_pos = 0, recv_pos = 0, unprocessed = 0, loops = 0;
+	int send_pos = 0, recv_rx_pos = 0, recv_tx_pos = 0, unprocessed = 0, loops = 0;
 	int i;
 
 	while (running) {
@@ -247,15 +248,12 @@ static int can_echo_gen(void)
 			/* still send messages */
 			tx_frames[send_pos].can_dlc = CAN_MSG_LEN;
 			tx_frames[send_pos].can_id = CAN_MSG_ID;
+			recv_tx[send_pos] = 0;
+
 			for (i = 0; i < CAN_MSG_LEN; i++)
 				tx_frames[send_pos].data[i] = counter + i;
 			if (send_frame(&tx_frames[send_pos]))
 				return -1;
-
-			/* increment to be equal to expected */
-			tx_frames[send_pos].can_id++;
-			for (i = 0; i < CAN_MSG_LEN; i++)
-				tx_frames[send_pos].data[i]++;
 
 			send_pos++;
 			if (send_pos == CAN_MSG_COUNT)
@@ -274,18 +272,32 @@ static int can_echo_gen(void)
 				return -1;
 
 			if (verbose > 1)
-				print_frame(&rx_frame);
+				print_frame(&rx_frame, 0);
 
-			/* compare with expected */
-			compare_frame(&tx_frames[recv_pos], &rx_frame);
+			/* own frame */
+			if (rx_frame.can_id == CAN_MSG_ID) {
+				compare_frame(&tx_frames[recv_tx_pos], &rx_frame, 0);
+				recv_tx[recv_tx_pos] = 1;
+				recv_tx_pos++;
+				if (recv_tx_pos == CAN_MSG_COUNT)
+					recv_tx_pos = 0;
+				continue;
+			} else {
+				if (!recv_tx[recv_rx_pos]) {
+					printf("RX before TX!\n");
+					running = 0;
+				}
+				/* compare with expected */
+				compare_frame(&tx_frames[recv_rx_pos], &rx_frame, 1);
+				recv_rx_pos++;
+				if (recv_rx_pos == CAN_MSG_COUNT)
+					recv_rx_pos = 0;
+			}
 
 			loops++;
 			if (test_loops && loops >= test_loops)
 				break;
 
-			recv_pos++;
-			if (recv_pos == CAN_MSG_COUNT)
-				recv_pos = 0;
 			unprocessed--;
 		}
 	}
@@ -302,6 +314,7 @@ int main(int argc, char *argv[])
 	int family = PF_CAN, type = SOCK_RAW, proto = CAN_RAW;
 	int echo_gen = 0;
 	int opt, err;
+	int recv_own_msgs = 1;
 
 	signal(SIGTERM, signal_handler);
 	signal(SIGHUP, signal_handler);
@@ -337,6 +350,14 @@ int main(int argc, char *argv[])
 	if ((sockfd = socket(family, type, proto)) < 0) {
 		perror("socket");
 		return 1;
+	}
+
+	if (echo_gen) {
+		if (setsockopt(sockfd, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS,
+			   &recv_own_msgs, sizeof(recv_own_msgs)) == -1) {
+			perror("setsockopt");
+			return 1;
+		}
 	}
 
 	addr.can_family = family;
