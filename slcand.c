@@ -326,25 +326,40 @@ int main(int argc, char *argv[])
 
 	if (speed) {
 		sprintf(buf, "C\rS%s\r", speed);
-		write(fd, buf, strlen(buf));
+		if (write(fd, buf, strlen(buf)) <= 0) {
+			perror("write");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (btr) {
 		sprintf(buf, "C\rs%s\r", btr);
-		write(fd, buf, strlen(buf));
+		if (write(fd, buf, strlen(buf)) <= 0) {
+			perror("write");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (send_read_status_flags) {
 		sprintf(buf, "F\r");
-		write(fd, buf, strlen(buf));
+		if (write(fd, buf, strlen(buf)) <= 0) {
+			perror("write");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	if (send_listen) {
 		sprintf(buf, "L\r");
-		write(fd, buf, strlen(buf));
+		if (write(fd, buf, strlen(buf)) <= 0) {
+			perror("write");
+			exit(EXIT_FAILURE);
+		}
 	} else if (send_open) {
 		sprintf(buf, "O\r");
-		write(fd, buf, strlen(buf));
+		if (write(fd, buf, strlen(buf)) <= 0) {
+			perror("write");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	/* set slcan like discipline on given tty */
@@ -412,7 +427,10 @@ int main(int argc, char *argv[])
 
 	if (send_close) {
 		sprintf(buf, "C\r");
-		write(fd, buf, strlen(buf));
+		if (write(fd, buf, strlen(buf)) <= 0) {
+			perror("write");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	/* Reset old rates */
