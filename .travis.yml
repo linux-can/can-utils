@@ -12,13 +12,13 @@ matrix:
           os: linux
           dist: trusty
           compiler: gcc
-          script: ./autogen.sh && ./configure && make distcheck
+          script: ./autogen.sh && ./configure CFLAGS="-Werror -Wno-unused-result" && make distcheck
 
         - env: test="x64 5.0 (autotools)"
           os: linux
           dist: trusty
           compiler: clang
-          script: ./autogen.sh && ./configure && make distcheck
+          script: ./autogen.sh && ./configure CFLAGS="-Werror -Wno-unused-result" && make distcheck
 
         - env: test="x64 4.8.4 (CMake gcc)"
           os: linux
