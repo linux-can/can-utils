@@ -73,6 +73,13 @@ AC_CHECK_FUNCS([ \
 	strtoul \
 ])
 
+PKG_CHECK_MODULES([libsocketcan],
+		  [libsocketcan],
+		  [],
+		  [AC_MSG_ERROR([*** libsocketcan is not found on your system])])
+AC_SUBST(libsocketcan_CFLAGS)
+AC_SUBST(libsocketcan_LIBS)
+
 # glibc versions before 2.17 needs to link with -lrt for clock_nanosleep
 AC_SEARCH_LIBS([clock_nanosleep], [rt])
 
