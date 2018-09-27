@@ -64,17 +64,28 @@ if(NOT ANDROID)
   list(APPEND PROGRAMS ${PROGRAMS_J1939})
 endif()
 
+add_library(can STATIC
+    lib.c
+    canframelen.c
+)
+
+add_library(j1939 STATIC
+    libj1939.c
+)
+
 foreach(name ${PROGRAMS})
-  set(SRC_DEPS)
-  if("${name}" STREQUAL "canbusload")
-    set(SRC_DEPS canframelen.c)
-  elseif("${name}" IN_LIST PROGRAMS_J1939)
-    set(SRC_DEPS libj1939.c)
+  add_executable(${name} ${name}.c)
+
+  if("${name}" IN_LIST PROGRAMS_J1939)
+    target_link_libraries(${name}
+        PRIVATE j1939
+    )
   elseif("${name}" IN_LIST PROGRAMS_CANLIB)
-    set(SRC_DEPS lib.c)
+    target_link_libraries(${name}
+        PRIVATE can
+    )
   endif()
 
-  add_executable(${name} ${name}.c ${SRC_DEPS})
   install(TARGETS ${name} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endforeach()
 
