@@ -484,7 +484,8 @@ int main(int argc, char *argv[])
 		break;
 	case 'p':
 #ifdef _GNU_SOURCE
-		asprintf(&program_invocation_name, "%s.%s", program_invocation_short_name, optarg);
+		if (asprintf(&program_invocation_name, "%s.%s", program_invocation_short_name, optarg) < 0)
+			error(1, errno, "asprintf(program invocation name)");
 #else
 		error(0, 0, "compile with -D_GNU_SOURCE to use -p");
 #endif

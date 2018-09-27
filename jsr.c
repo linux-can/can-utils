@@ -210,7 +210,8 @@ int main(int argc, char **argv)
 					exit(1);
 				}
 			} else {
-				write(STDOUT_FILENO, buf, ret);
+				if (write(STDOUT_FILENO, buf, ret) < 0)
+					error(1, errno, "write(stdout)");
 			}
 		}
 	}
