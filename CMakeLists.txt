@@ -15,6 +15,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSO_RXQ_OVFL=40")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DPF_CAN=29")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DAF_CAN=PF_CAN")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DN_SLCAN=17")
 
 include_directories (.)
 include_directories (./include)
