@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.3)
 
 project(can-utils LANGUAGES C)
 
+include (GNUInstallDirs)
+
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
@@ -15,42 +17,76 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSO_RXQ_OVFL=40")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DPF_CAN=29")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DAF_CAN=PF_CAN")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DN_SLCAN=17")
 
 include_directories (.)
 include_directories (./include)
 
-set(PROGRAMS_ISOTP isotpdump isotprecv isotpsend isotpsniffer
-  isotptun isotpserver isotpperf)
-set(PROGRAMS_CANGW cangw)
-set(PROGRAMS_SLCAN slcan_attach slcand)
-set(PROGRAMS_J1939 jacd jspy jsr testj1939)
-set(PROGRAMS_CANLIB cansend cangen candump canplayer canlogserver 
-  canbusload log2long log2asc asc2log)
+set(PROGRAMS_CANLIB
+    asc2log
+    canbusload
+    candump
+    cangen
+    canlogserver
+    canplayer
+    cansend
+    log2asc
+    log2long
+)
 
-set(PROGRAMS can-calc-bit-timing cansniffer bcmserver
-  ${PROGRAMS_CANLIB}
-  ${PROGRAMS_ISOTP}
-  ${PROGRAMS_CANGW}
-  ${PROGRAMS_SLCAN}
-  slcanpty canfdtest
+set(PROGRAMS_J1939
+    jacd
+    jspy
+    jsr
+    testj1939
+)
+
+set(PROGRAMS
+    ${PROGRAMS_CANLIB}
+    bcmserver
+    can-calc-bit-timing
+    canfdtest
+    cangw
+    cansniffer
+    isotpdump
+    isotpperf
+    isotprecv
+    isotpsend
+    isotpserver
+    isotpsniffer
+    isotptun
+    slcan_attach
+    slcand
+    slcanpty
 )
 
 if(NOT ANDROID)
   list(APPEND PROGRAMS ${PROGRAMS_J1939})
 endif()
 
+add_library(can STATIC
+    lib.c
+    canframelen.c
+)
+
+add_library(j1939 STATIC
+    libj1939.c
+)
+
 foreach(name ${PROGRAMS})
-  set(SRC_DEPS)
-  if("${name}" STREQUAL "canbusload")
-    set(SRC_DEPS canframelen.c)
-  elseif("${name}" IN_LIST PROGRAMS_J1939)
-    set(SRC_DEPS libj1939.c)
+  add_executable(${name} ${name}.c)
+
+  if("${name}" IN_LIST PROGRAMS_J1939)
+    target_link_libraries(${name}
+        PRIVATE j1939
+    )
   elseif("${name}" IN_LIST PROGRAMS_CANLIB)
-    set(SRC_DEPS lib.c)
+    target_link_libraries(${name}
+        PRIVATE can
+    )
   endif()
 
-  add_executable(${name} ${name}.c ${SRC_DEPS})
-  install(TARGETS ${name} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+  install(TARGETS ${name} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endforeach()
 
 
