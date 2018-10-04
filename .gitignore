@@ -15,11 +15,13 @@ GNUmakefile.in
 /config.log
 /config.status
 /config/autoconf/
+/config/libsocketcan.pc
 /config/m4/libtool.m4
 /config/m4/ltoptions.m4
 /config/m4/ltsugar.m4
 /config/m4/ltversion.m4
 /config/m4/lt~obsolete.m4
+/include/libsocketcan_config.h.in
 
 /asc2log
 /bcmserver

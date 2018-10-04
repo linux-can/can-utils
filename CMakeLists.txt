@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.3)
 
 project(can-utils LANGUAGES C)
+set(LIB_CURRENT 4)
+set(LIB_REVISION 1)
+set(LIB_AGE 2)
+math(EXPR LIB_SOVERSION "${LIB_CURRENT} - ${LIB_AGE}")
+set(LIB_VERSION ${LIB_SOVERSION}.${LIB_AGE}.${LIB_REVISION})
 
 include (GNUInstallDirs)
 
@@ -14,6 +19,7 @@ endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wno-parentheses")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_FILE_OFFSET_BITS=64")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSO_RXQ_OVFL=40")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DPF_CAN=29")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DAF_CAN=PF_CAN")
@@ -71,6 +77,35 @@ add_library(can STATIC
 
 add_library(j1939 STATIC
     libj1939.c
+)
+
+add_library(socketcan SHARED
+    libsocketcan.c
+)
+
+set(prefix ${CMAKE_INSTALL_PREFIX})
+set(exec_prefix \${prefix})
+set(libdir \${exec_prefix}/${CMAKE_INSTALL_LIBDIR})
+set(includedir \${prefix}/${CMAKE_INSTALL_INCLUDEDIR})
+configure_file(config/libsocketcan.pc.in config/libsocketcan.pc @ONLY)
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/config/libsocketcan.pc
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+)
+
+set_target_properties(socketcan
+    PROPERTIES PUBLIC_HEADER include/libsocketcan.h
+    SOVERSION ${LIB_SOVERSION}
+    VERSION ${LIB_VERSION}
+)
+
+install(TARGETS socketcan
+    LIBRARY
+	DESTINATION lib
+	COMPONENT Development
+    PUBLIC_HEADER
+        DESTINATION include
+        COMPONENT Development
 )
 
 foreach(name ${PROGRAMS})
