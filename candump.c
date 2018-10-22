@@ -147,6 +147,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "\nCAN IDs, masks and data content are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "When can_id and can_mask are both 8 digits, they are assumed to be 29 bit EFF.\n");
 	fprintf(stderr, "Without any given filter all data frames are received ('0:0' default filter).\n");
+	fprintf(stderr, "The filter value is directly passed to the SocketCAN interface, and must set CAN_EFF_FLAG (0x80000000) correctly.");
 	fprintf(stderr, "\nUse interface name '%s' to receive from all CAN interfaces.\n", ANYDEV);
 	fprintf(stderr, "\nExamples:\n");
 	fprintf(stderr, "%s -c -c -ta can0,123:7FF,400:700,#000000FF can2,400~7F0 can3 can8\n", prg);
