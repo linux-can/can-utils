@@ -145,7 +145,7 @@ void print_usage(char *prg)
 	fprintf(stderr, " #<error_mask>       (set error frame filter, see include/linux/can/error.h)\n");
 	fprintf(stderr, " [j|J]               (join the given CAN filters - logical AND semantic)\n");
 	fprintf(stderr, "\nCAN IDs, masks and data content are given and expected in hexadecimal values.\n");
-	fprintf(stderr, "When can_id and can_mask are both 8 digits, they are assumed to be 29 bit EFF.\n");
+	fprintf(stderr, "When the can_id is 8 digits long the CAN_EFF_FLAG is set for 29 bit EFF format.\n");
 	fprintf(stderr, "Without any given filter all data frames are received ('0:0' default filter).\n");
 	fprintf(stderr, "\nUse interface name '%s' to receive from all CAN interfaces.\n", ANYDEV);
 	fprintf(stderr, "\nExamples:\n");
@@ -502,12 +502,16 @@ int main(int argc, char **argv)
 					   &rfilter[numfilter].can_id, 
 					   &rfilter[numfilter].can_mask) == 2) {
  					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
+					if (*(ptr+8) == ':')
+						rfilter[numfilter].can_id |= CAN_EFF_FLAG;
 					numfilter++;
 				} else if (sscanf(ptr, "%x~%x",
 						  &rfilter[numfilter].can_id, 
 						  &rfilter[numfilter].can_mask) == 2) {
  					rfilter[numfilter].can_id |= CAN_INV_FILTER;
  					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
+					if (*(ptr+8) == '~')
+						rfilter[numfilter].can_id |= CAN_EFF_FLAG;
 					numfilter++;
 				} else if (*ptr == 'j' || *ptr == 'J') {
 					join_filter = 1;
