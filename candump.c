@@ -325,6 +325,9 @@ int main(int argc, char **argv)
 				/* disable default receive filter on this write-only RAW socket */
 				setsockopt(bridge, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
 
+				/* try to switch the bridge socket into CAN FD mode */
+				setsockopt(bridge, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));
+
 				if (opt == 'B') {
 					const int loopback = 0;
 
