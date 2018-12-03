@@ -57,6 +57,7 @@ bin_PROGRAMS = \
 	isotpsniffer \
 	isotptun \
 	jacd \
+	jcat \
 	jspy \
 	jsr \
 	log2asc \
@@ -67,6 +68,7 @@ bin_PROGRAMS = \
 	testj1939
 
 jacd_LDADD = libj1939.la
+jcat_LDADD = libj1939.la
 jspy_LDADD = libj1939.la
 jsr_LDADD = libj1939.la
 testj1939_LDADD = libj1939.la

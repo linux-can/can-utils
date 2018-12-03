@@ -36,6 +36,7 @@ set(PROGRAMS_CANLIB
 
 set(PROGRAMS_J1939
     jacd
+    jcat
     jspy
     jsr
     testj1939
