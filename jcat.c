@@ -89,7 +89,7 @@ static int jcat_sendfile(struct jcat_priv *priv, int out_fd, int in_fd,
 		goto do_nofree;
 	}
 
-	if (!offset) {
+	if (offset) {
 
 		/* Save current file offset and set offset to value in '*offset' */
 
@@ -148,7 +148,7 @@ static int jcat_sendfile(struct jcat_priv *priv, int out_fd, int in_fd,
 		tot_sent += num_sent;
 	}
 
-	if (!offset) {
+	if (offset) {
 		/* Return updated file offset in '*offset', and reset the file offset
 		   to the value it had when we were called. */
 
