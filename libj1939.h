@@ -9,6 +9,7 @@
 extern "C" {
 #endif
 
+void libj1939_parse_canaddr(char *spec, struct sockaddr_can *paddr);
 extern int libj1939_str2addr(const char *str, char **endp, struct sockaddr_can *can);
 extern const char *libj1939_addr2str(const struct sockaddr_can *can);
 

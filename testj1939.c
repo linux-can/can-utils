@@ -50,27 +50,6 @@ static const char help_msg[] =
 
 static const char optstring[] = "?vbos::rep:cnw::";
 
-static void parse_canaddr(char *spec, struct sockaddr_can *paddr)
-{
-	char *str;
-
-	str = strsep(&spec, ":");
-	if (strlen(str))
-		paddr->can_ifindex = if_nametoindex(str);
-
-	str = strsep(&spec, ",");
-	if (str && strlen(str))
-		paddr->can_addr.j1939.addr = strtoul(str, NULL, 0);
-
-	str = strsep(&spec, ",");
-	if (str && strlen(str))
-		paddr->can_addr.j1939.pgn = strtoul(str, NULL, 0);
-
-	str = strsep(&spec, ",");
-	if (str && strlen(str))
-		paddr->can_addr.j1939.name = strtoul(str, NULL, 0);
-}
-
 static void onsigalrm(int sig)
 {
 	error(0, 0, "exit as requested");
@@ -157,7 +136,7 @@ int main(int argc, char *argv[])
 
 	if (argv[optind]) {
 		if (strcmp("-", argv[optind]))
-			parse_canaddr(argv[optind], &sockname);
+			libj1939_parse_canaddr(argv[optind], &sockname);
 		++optind;
 	}
 
@@ -166,7 +145,7 @@ int main(int argc, char *argv[])
 
 	if (argv[optind]) {
 		if (strcmp("-", argv[optind])) {
-			parse_canaddr(argv[optind], &peername);
+			libj1939_parse_canaddr(argv[optind], &peername);
 			valid_peername = 1;
 		}
 		++optind;
