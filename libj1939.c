@@ -92,6 +92,27 @@ static int libj1939_ifindex(const char *str)
 		return 0;
 }
 
+void libj1939_parse_canaddr(char *spec, struct sockaddr_can *paddr)
+{
+	char *str;
+
+	str = strsep(&spec, ":");
+	if (strlen(str))
+		paddr->can_ifindex = if_nametoindex(str);
+
+	str = strsep(&spec, ",");
+	if (str && strlen(str))
+		paddr->can_addr.j1939.addr = strtoul(str, NULL, 0);
+
+	str = strsep(&spec, ",");
+	if (str && strlen(str))
+		paddr->can_addr.j1939.pgn = strtoul(str, NULL, 0);
+
+	str = strsep(&spec, ",");
+	if (str && strlen(str))
+		paddr->can_addr.j1939.name = strtoul(str, NULL, 0);
+}
+
 int libj1939_str2addr(const char *str, char **endp, struct sockaddr_can *can)
 {
 	char *p;
