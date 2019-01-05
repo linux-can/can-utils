@@ -194,7 +194,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "           -L (list all rules)\n");
 	fprintf(stderr, "Mandatory: -s <src_dev>  (source netdevice)\n");
 	fprintf(stderr, "           -d <dst_dev>  (destination netdevice)\n");
-	fprintf(stderr, "Options:   -t (preserve src_dev rx timestamp)\n");
+	fprintf(stderr, "Options:   -X (this is a CAN FD rule)\n");
+	fprintf(stderr, "           -t (preserve src_dev rx timestamp)\n");
 	fprintf(stderr, "           -e (echo sent frames - recommended on vcanx)\n");
 	fprintf(stderr, "           -i (allow to route to incoming interface)\n");
 	fprintf(stderr, "           -u <uid> (user defined modification identifier)\n");
@@ -459,6 +460,9 @@ int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
 		printf("-s %s ", if_indextoname(src_ifindex, ifname));
 		printf("-d %s ", if_indextoname(dst_ifindex, ifname));
 
+		if (rtc->flags & CGW_FLAGS_CAN_FD)
+			printf("-X ");
+
 		if (rtc->flags & CGW_FLAGS_CAN_ECHO)
 			printf("-e ");
 
@@ -580,7 +584,7 @@ int main(int argc, char **argv)
 	memset(&cs_xor, 0, sizeof(cs_xor));
 	memset(&cs_crc8, 0, sizeof(cs_crc8));
 
-	while ((opt = getopt(argc, argv, "ADFLs:d:teiu:l:f:c:p:x:m:?")) != -1) {
+	while ((opt = getopt(argc, argv, "ADFLs:d:Xteiu:l:f:c:p:x:m:?")) != -1) {
 		switch (opt) {
 
 		case 'A':
@@ -609,6 +613,10 @@ int main(int argc, char **argv)
 
 		case 'd':
 			dst_ifindex = if_nametoindex(optarg);
+			break;
+
+		case 'X':
+			flags |= CGW_FLAGS_CAN_FD;
 			break;
 
 		case 't':
