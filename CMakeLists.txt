@@ -63,15 +63,15 @@ set(PROGRAMS
 
 if(NOT ANDROID)
   list(APPEND PROGRAMS ${PROGRAMS_J1939})
+
+  add_library(j1939 STATIC
+      libj1939.c
+  )
 endif()
 
 add_library(can STATIC
     lib.c
     canframelen.c
-)
-
-add_library(j1939 STATIC
-    libj1939.c
 )
 
 foreach(name ${PROGRAMS})
