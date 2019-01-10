@@ -282,6 +282,7 @@ int parse_mod(char *optarg, struct modattr *modmsg)
 {
 	char *ptr, *nptr;
 	char hexdata[17] = {0};
+	canid_t can_id;
 
 	ptr = optarg;
 	nptr = strchr(ptr, ':');
@@ -330,9 +331,10 @@ int parse_mod(char *optarg, struct modattr *modmsg)
 		ptr++;
 	}
 
-	if (sscanf(++ptr, "%x.%hhx.%16s", &modmsg->cf.can_id,
+	if (sscanf(++ptr, "%x.%hhx.%16s", &can_id,
 		   (unsigned char *)&modmsg->cf.can_dlc, hexdata) != 3)
 		return 5;
+	modmsg->cf.can_id = can_id;
 
 	/* 4-bit masks can have values from 0 to 0xF */ 
 	if (modmsg->cf.can_dlc > 0xF)
