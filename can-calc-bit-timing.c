@@ -511,7 +511,11 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
 
 	/* real sample point */
 	bt->sample_point = can_update_spt(btc, spt_nominal, best_tseg,
-					  &tseg1, &tseg2, NULL);
+					  &tseg1, &tseg2, &spt_error);
+	if (spt_error == UINT_MAX) {
+		netdev_err(dev, "can_update_spt failed\n");
+		return -EDOM;
+	}
 
 	v64 = (u64)best_brp * 1000 * 1000 * 1000;
 	do_div(v64, priv->clock.freq);
