@@ -24,10 +24,21 @@ noinst_HEADERS = \
 	include/linux/can/raw.h \
 	include/linux/can/vxcan.h
 
+nobase_include_HEADERS = \
+	include/libsocketcan.h
+
+lib_LTLIBRARIES = \
+	libsocketcan.la
 
 noinst_LTLIBRARIES = \
 	libcan.la \
 	libj1939.la
+
+libsocketcan_la_SOURCES = \
+	libsocketcan.c
+
+libsocketcan_la_LDFLAGS = \
+	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 
 libcan_la_SOURCES = \
 	lib.c \
@@ -74,12 +85,20 @@ jsr_LDADD = libj1939.la
 testj1939_LDADD = libj1939.la
 
 EXTRA_DIST = \
+	.gitignore \
 	.travis.yml \
 	Android.mk \
+	CMakeLists.txt \
+	Documentation/main.dox \
+	Doxyfile \
+	Makefile \
 	README.md \
 	autogen.sh \
-	can-j1939-kickstart.md
-	can-j1939.md
+	can-j1939-kickstart.md \
+	can-j1939.md \
+	cmake/make_uninstall.cmake \
+	page.theme \
+	style.css
 
 MAINTAINERCLEANFILES = \
 	configure \
@@ -104,3 +123,9 @@ MAINTAINERCLEANFILES = \
 maintainer-clean-local:
 	-chmod -R a+rw $(distdir)
 	-rm -fr $(distdir)
+
+docs: htmldocs
+
+htmldocs:
+	@echo  'Running doxygen with local Doxyfile'
+	-doxygen Doxyfile
