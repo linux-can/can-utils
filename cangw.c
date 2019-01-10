@@ -68,6 +68,12 @@ struct modattr {
 	__u8 instruction;
 } __attribute__((packed));
 
+struct fdmodattr {
+	struct canfd_frame cf;
+	__u8 modtype;
+	__u8 instruction;
+} __attribute__((packed));
+
 
 #define RTCAN_RTA(r)  ((struct rtattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct rtcanmsg))))
 #define RTCAN_PAYLOAD(n) NLMSG_PAYLOAD(n,sizeof(struct rtcanmsg))
@@ -125,7 +131,36 @@ void printmod(const char *type, const void *data)
 
 	printf(":%03X.%X.", mod.cf.can_id, mod.cf.can_dlc);
 
-	for (i = 0; i < 8; i++)
+	for (i = 0; i < CAN_MAX_DLEN; i++)
+		printf("%02X", mod.cf.data[i]);
+
+	printf(" ");
+}
+
+void printfdmod(const char *type, const void *data)
+{
+	struct fdmodattr mod;
+	int i;
+
+	memcpy (&mod, data, CGW_FDMODATTR_LEN);
+
+	printf("-M %s:", type);
+
+	if (mod.modtype & CGW_MOD_ID)
+		printf("I");
+
+	if (mod.modtype & CGW_MOD_FLAGS)
+		printf("F");
+
+	if (mod.modtype & CGW_MOD_LEN)
+		printf("L");
+
+	if (mod.modtype & CGW_MOD_DATA)
+		printf("D");
+
+	printf(":%03X.%X.%X.", mod.cf.can_id, mod.cf.flags, mod.cf.len);
+
+	for (i = 0; i < CANFD_MAX_DLEN; i++)
 		printf("%02X", mod.cf.data[i]);
 
 	printf(" ");
@@ -201,7 +236,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "           -u <uid> (user defined modification identifier)\n");
 	fprintf(stderr, "           -l <hops> (limit the number of frame hops / routings)\n");
 	fprintf(stderr, "           -f <filter> (set CAN filter)\n");
-	fprintf(stderr, "           -m <mod> (set frame modifications)\n");
+	fprintf(stderr, "           -m <mod> (set Classic CAN frame modifications)\n");
+	fprintf(stderr, "           -M <MOD> (set CAN FD frame modifications)\n");
 	fprintf(stderr, "           -x <from_idx>:<to_idx>:<result_idx>:<init_xor_val> (XOR checksum)\n");
 	fprintf(stderr, "           -c <from>:<to>:<result>:<init_val>:<xor_val>:<crctab[256]> (CRC8 cs)\n");
 	fprintf(stderr, "           -p <profile>:[<profile_data>] (CRC8 checksum profile & parameters)\n");
@@ -218,6 +254,14 @@ void print_usage(char *prg)
 	fprintf(stderr, " - <can_id> is an u32 value containing the CAN Identifier\n");
 	fprintf(stderr, " - <can_dlc> is an u8 value containing the data length code (0 .. 8)\n");
 	fprintf(stderr, " - <can_data> is always eight(!) u8 values containing the CAN frames data\n");
+	fprintf(stderr, "<MOD> is a CAN FD frame modification instruction consisting of\n");
+	fprintf(stderr, "<instruction>:<canfd_frame-elements>:<can_id>.<flags>.<len>.<can_data>\n");
+	fprintf(stderr, " - <instruction> is one of 'AND' 'OR' 'XOR' 'SET'\n");
+	fprintf(stderr, " - <canfd_frame-elements> is _one_ or _more_ of 'I'd 'F'lags 'L'ength 'D'ata\n");
+	fprintf(stderr, " - <can_id> is an u32 value containing the CAN FD Identifier\n");
+	fprintf(stderr, " - <flags> is an u8 value containing CAN FD flags (CANFD_BRS, CANFD_ESI)\n");
+	fprintf(stderr, " - <len> is an u8 value containing the data length (0 .. 64)\n");
+	fprintf(stderr, " - <can_data> is always 64(!) u8 values containing the CAN FD frames data\n");
 	fprintf(stderr, "The max. four modifications are performed in the order AND -> OR -> XOR -> SET\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Example:\n");
@@ -283,7 +327,7 @@ int parse_crc8_profile(char *optarg, struct cgw_csum_crc8 *crc8)
 int parse_mod(char *optarg, struct modattr *modmsg)
 {
 	char *ptr, *nptr;
-	char hexdata[17] = {0};
+	char hexdata[(CAN_MAX_DLEN * 2) + 1] = {0};
 	canid_t can_id;
 
 	ptr = optarg;
@@ -336,12 +380,86 @@ int parse_mod(char *optarg, struct modattr *modmsg)
 	if (sscanf(++ptr, "%x.%hhx.%16s", &can_id,
 		   (unsigned char *)&modmsg->cf.can_dlc, hexdata) != 3)
 		return 5;
+
 	modmsg->cf.can_id = can_id;
 
-	if (strlen(hexdata) != 16)
+	if (strlen(hexdata) != (CAN_MAX_DLEN * 2))
 		return 6;
 
-	if (b64hex(hexdata, &modmsg->cf.data[0], 8))
+	if (b64hex(hexdata, &modmsg->cf.data[0], CAN_MAX_DLEN))
+		return 7;
+
+	return 0; /* ok */
+}
+
+int parse_fdmod(char *optarg, struct fdmodattr *modmsg)
+{
+	char *ptr, *nptr;
+	char hexdata[(CANFD_MAX_DLEN * 2) + 1] = {0};
+	canid_t can_id;
+
+	ptr = optarg;
+	nptr = strchr(ptr, ':');
+
+	if ((nptr - ptr > 3) || (nptr - ptr == 0))
+		return 1;
+
+	if (!strncmp(ptr, "AND", 3))
+		modmsg->instruction = CGW_FDMOD_AND;
+	else if (!strncmp(ptr, "OR", 2))
+		modmsg->instruction = CGW_FDMOD_OR;
+	else if (!strncmp(ptr, "XOR", 3))
+		modmsg->instruction = CGW_FDMOD_XOR;
+	else if (!strncmp(ptr, "SET", 3))
+		modmsg->instruction = CGW_FDMOD_SET;
+	else
+		return 2;
+
+	ptr = nptr+1;
+	nptr = strchr(ptr, ':');
+
+	if ((nptr - ptr > 4) || (nptr - ptr == 0))
+		return 3;
+
+	modmsg->modtype = 0;
+
+	while (*ptr != ':') {
+
+		switch (*ptr) {
+
+		case 'I':
+			modmsg->modtype |= CGW_MOD_ID;
+			break;
+
+		case 'F':
+			modmsg->modtype |= CGW_MOD_FLAGS;
+			break;
+
+		case 'L':
+			modmsg->modtype |= CGW_MOD_LEN;
+			break;
+
+		case 'D':
+			modmsg->modtype |= CGW_MOD_DATA;
+			break;
+
+		default:
+			return 4;
+		}
+		ptr++;
+	}
+
+	if (sscanf(++ptr, "%x.%hhx.%hhx.%128s", &can_id,
+		   (unsigned char *)&modmsg->cf.flags,
+		   (unsigned char *)&modmsg->cf.len, hexdata) != 4)
+		return 5;
+
+	modmsg->cf.can_id = can_id;
+
+	if (strlen(hexdata) != (CANFD_MAX_DLEN * 2))
+		return 6;
+
+	if (b64hex(hexdata, &modmsg->cf.data[0], CANFD_MAX_DLEN))
 		return 7;
 
 	return 0; /* ok */
@@ -415,6 +533,10 @@ int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
 			case CGW_MOD_OR:
 			case CGW_MOD_XOR:
 			case CGW_MOD_SET:
+			case CGW_FDMOD_AND:
+			case CGW_FDMOD_OR:
+			case CGW_FDMOD_XOR:
+			case CGW_FDMOD_SET:
 			case CGW_MOD_UID:
 			case CGW_LIM_HOPS:
 			case CGW_CS_XOR:
@@ -492,6 +614,22 @@ int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
 				printmod("SET", RTA_DATA(rta));
 				break;
 
+			case CGW_FDMOD_AND:
+				printfdmod("AND", RTA_DATA(rta));
+				break;
+
+			case CGW_FDMOD_OR:
+				printfdmod("OR", RTA_DATA(rta));
+				break;
+
+			case CGW_FDMOD_XOR:
+				printfdmod("XOR", RTA_DATA(rta));
+				break;
+
+			case CGW_FDMOD_SET:
+				printfdmod("SET", RTA_DATA(rta));
+				break;
+
 			case CGW_MOD_UID:
 				printf("-u %X ", *(__u32 *)RTA_DATA(rta));
 				break;
@@ -547,8 +685,7 @@ int main(int argc, char **argv)
 	struct {
 		struct nlmsghdr nh;
 		struct rtcanmsg rtcan;
-		char buf[600];
-
+		char buf[1500];
 	} req;
 
 	unsigned char rxbuf[8192]; /* netlink receive buffer */
@@ -569,14 +706,16 @@ int main(int argc, char **argv)
 	char crc8tab[513] = {0};
 
 	struct modattr modmsg[CGW_MOD_FUNCS];
+	struct fdmodattr fdmodmsg[CGW_MOD_FUNCS];
 	int modidx = 0;
+	int fdmodidx = 0;
 	int i;
 
 	memset(&req, 0, sizeof(req));
 	memset(&cs_xor, 0, sizeof(cs_xor));
 	memset(&cs_crc8, 0, sizeof(cs_crc8));
 
-	while ((opt = getopt(argc, argv, "ADFLs:d:Xteiu:l:f:c:p:x:m:?")) != -1) {
+	while ((opt = getopt(argc, argv, "ADFLs:d:Xteiu:l:f:c:p:x:m:M:?")) != -1) {
 		switch (opt) {
 
 		case 'A':
@@ -688,6 +827,14 @@ int main(int argc, char **argv)
 			}
 			break;
 
+		case 'M':
+			/* may be triggered by each of the CGW_FDMOD_FUNCS functions */
+			if ((fdmodidx < CGW_MOD_FUNCS) && (err = parse_fdmod(optarg, &fdmodmsg[fdmodidx++]))) {
+				printf("Problem %d with modification definition '%s'.\n", err, optarg);
+				exit(1);
+			}
+			break;
+
 		case '?':
 			print_usage(basename(argv[0]));
 			exit(0);
@@ -712,8 +859,20 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	if (!modidx && (have_cs_crc8 || have_cs_xor)) {
-		printf("-c or -x can only be used in conjunction with -m\n");
+	if (flags & CGW_FLAGS_CAN_FD) {
+		if (modidx) {
+			printf("No -m modifications allowed in CAN FD mode!\n");
+			exit(1);
+		}
+	} else {
+		if (fdmodidx) {
+			printf("No -M modifications allowed in Classic CAN mode!\n");
+			exit(1);
+		}
+	}
+
+	if ((!modidx && !fdmodidx) && (have_cs_crc8 || have_cs_xor)) {
+		printf("-c or -x can only be used in conjunction with -m/-M\n");
 		exit(1);
 	}
 
@@ -786,6 +945,10 @@ int main(int argc, char **argv)
 	/* add up to CGW_MOD_FUNCS modification definitions */
 	for (i = 0; i < modidx; i++)
 		addattr_l(&req.nh, sizeof(req), modmsg[i].instruction, &modmsg[i], CGW_MODATTR_LEN);
+
+	/* add up to CGW_FDMOD_FUNCS modification definitions */
+	for (i = 0; i < fdmodidx; i++)
+		addattr_l(&req.nh, sizeof(req), fdmodmsg[i].instruction, &fdmodmsg[i], CGW_FDMODATTR_LEN);
 
 	memset(&nladdr, 0, sizeof(nladdr));
 	nladdr.nl_family = AF_NETLINK;
