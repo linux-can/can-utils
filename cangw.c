@@ -338,19 +338,11 @@ int parse_mod(char *optarg, struct modattr *modmsg)
 		return 5;
 	modmsg->cf.can_id = can_id;
 
-	/* 4-bit masks can have values from 0 to 0xF */ 
-	if (modmsg->cf.can_dlc > 0xF)
+	if (strlen(hexdata) != 16)
 		return 6;
 
-	/* but when setting CAN_DLC the value has to be limited to 8 */
-	if (modmsg->instruction == CGW_MOD_SET && modmsg->cf.can_dlc > 8)
-		return 7;
-
-	if (strlen(hexdata) != 16)
-		return 8;
-
 	if (b64hex(hexdata, &modmsg->cf.data[0], 8))
-		return 9;
+		return 7;
 
 	return 0; /* ok */
 }
