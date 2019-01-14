@@ -101,6 +101,8 @@ int main(int argc, char *argv[])
 		break;
 	case 's':
 		todo_send = strtoul(optarg ?: "8", NULL, 0);
+		if (todo_send > sizeof(dat))
+			error(1, 0, "Unsupported size. max: %i", sizeof(dat));
 		break;
 	case 'r':
 		todo_recv = 1;
