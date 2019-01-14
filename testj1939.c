@@ -259,12 +259,19 @@ int main(int argc, char *argv[])
 				error(1, errno, "sendto");
 		}
 		if (todo_recv) {
+			int i = 0;
+
 			if (todo_names && peername.can_addr.j1939.name)
 				printf("%016llx ", peername.can_addr.j1939.name);
 			printf("%02x %05x:", peername.can_addr.j1939.addr,
 					peername.can_addr.j1939.pgn);
-			for (j = 0; j < ret; ++j)
+			for (j = 0; j < ret; ++j, i++) {
+				if (i == 8) {
+					printf("\n%05x    ", j);
+					i = 0;
+				}
 				printf(" %02x", dat[j]);
+			}
 			printf("\n");
 		}
 	}
