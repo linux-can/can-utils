@@ -86,8 +86,8 @@ int main(int argc, char **argv)
 		fprintf(stderr, "<flags> a single ASCII Hex value (0 .. F) which defines");
 		fprintf(stderr, " canfd_frame.flags\n\n");
 		fprintf(stderr, "e.g. 5A1#11.2233.44556677.88 / 123#DEADBEEF / 5AA# / ");
-		fprintf(stderr, "123##1 / 213##311\n     1F334455#1122334455667788 / 123#R ");
-		fprintf(stderr, "for remote transmission request.\n\n");
+		fprintf(stderr, "123##1 / 213##311223344\n     1F334455#1122334455667788 / ");
+		fprintf(stderr, "123#R / 00000123#R3\n\n");
 		return 1;
 	}
 
