@@ -78,7 +78,7 @@ EXTRA_DIST = \
 	Android.mk \
 	README.md \
 	autogen.sh \
-	can-j1939-kickstart.md
+	can-j1939-kickstart.md \
 	can-j1939.md
 
 MAINTAINERCLEANFILES = \
