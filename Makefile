@@ -41,29 +41,60 @@
 DESTDIR ?=
 PREFIX ?= /usr/local
 
-MAKEFLAGS = -k
+MAKEFLAGS := -k
 
-CFLAGS    = -O2 -Wall -Wno-parentheses
+CFLAGS := -O2 -Wall -Wno-parentheses
 
-CPPFLAGS += -Iinclude \
-	    -D_FILE_OFFSET_BITS=64 \
-	    -DSO_RXQ_OVFL=40 \
-	    -DPF_CAN=29 \
-	    -DAF_CAN=PF_CAN \
-	    -D_GNU_SOURCE
+CPPFLAGS += \
+	-Iinclude \
+	-DAF_CAN=PF_CAN \
+	-DPF_CAN=29 \
+	-DSO_RXQ_OVFL=40 \
+	-D_FILE_OFFSET_BITS=64 \
+	-D_GNU_SOURCE
 
-PROGRAMS_ISOTP = isotpdump isotprecv isotpsend isotpsniffer isotptun isotpserver isotpperf
-PROGRAMS_CANGW = cangw
-PROGRAMS_SLCAN = slcan_attach slcand
-PROGRAMS_J1939 = jacd jcat jspy jsr testj1939
-PROGRAMS = can-calc-bit-timing candump cansniffer cansend canplayer cangen canbusload\
-	   log2long log2asc asc2log\
-	   canlogserver bcmserver\
-	   $(PROGRAMS_ISOTP)\
-	   $(PROGRAMS_CANGW)\
-	   $(PROGRAMS_SLCAN)\
-	   $(PROGRAMS_J1939)\
-	   slcanpty canfdtest
+PROGRAMS_CANGW := \
+	cangw
+
+PROGRAMS_ISOTP := \
+	isotpdump \
+	isotpperf \
+	isotprecv \
+	isotpsend \
+	isotpserver \
+	isotpsniffer \
+	isotptun
+
+PROGRAMS_J1939 := \
+	jacd \
+	jcat \
+	jspy \
+	jsr \
+	testj1939
+
+PROGRAMS_SLCAN := \
+	slcan_attach \
+	slcand
+
+PROGRAMS := \
+	$(PROGRAMS_CANGW) \
+	$(PROGRAMS_ISOTP) \
+	$(PROGRAMS_J1939) \
+	$(PROGRAMS_SLCAN) \
+	asc2log \
+	bcmserver \
+	can-calc-bit-timing \
+	canbusload \
+	candump \
+	canfdtest \
+	cangen \
+	canlogserver \
+	canplayer \
+	cansend \
+	cansniffer \
+	log2asc \
+	log2long \
+	slcanpty
 
 all: $(PROGRAMS)
 
@@ -77,15 +108,15 @@ install:
 distclean:
 	rm -f $(PROGRAMS) $(LIBRARIES) *.o *~
 
-cansend.o:	lib.h
-cangen.o:	lib.h
-candump.o:	lib.h
-canplayer.o:	lib.h
-canlogserver.o:	lib.h
-canbusload.o:	lib.h
-log2long.o:	lib.h
-log2asc.o:	lib.h
 asc2log.o:	lib.h
+canbusload.o:	lib.h
+candump.o:	lib.h
+cangen.o:	lib.h
+canlogserver.o:	lib.h
+canplayer.o:	lib.h
+cansend.o:	lib.h
+log2asc.o:	lib.h
+log2long.o:	lib.h
 jacd.o:		libj1939.h
 jcat.o:		libj1939.h
 jspy.o:		libj1939.h
@@ -93,17 +124,17 @@ jsr.o:		libj1939.h
 testj1939.o:	libj1939.h
 canframelen.o:  canframelen.h
 
-cansend:	cansend.o	lib.o
-cangen:		cangen.o	lib.o
-candump:	candump.o	lib.o
-canplayer:	canplayer.o	lib.o
-canlogserver:	canlogserver.o	lib.o
-log2long:	log2long.o	lib.o
-log2asc:	log2asc.o	lib.o
 asc2log:	asc2log.o	lib.o
-canbusload:	canbusload.o	canframelen.o
+candump:	candump.o	lib.o
+cangen:		cangen.o	lib.o
+canlogserver:	canlogserver.o	lib.o
+canplayer:	canplayer.o	lib.o
+cansend:	cansend.o	lib.o
+log2asc:	log2asc.o	lib.o
+log2long:	log2long.o	lib.o
 jacd:		jacd.o		libj1939.o
 jcat:		jcat.o		libj1939.o
 jspy:		jspy.o		libj1939.o
 jsr:		jsr.o		libj1939.o
 testj1939:	testj1939.o	libj1939.o
+canbusload:	canbusload.o	canframelen.o
