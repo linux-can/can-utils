@@ -241,13 +241,21 @@ static int repeat_address(int sock, uint64_t name)
 {
 	int ret;
 	uint8_t dat[8];
+	static const struct sockaddr_can saddr = {
+		.can_family = AF_CAN,
+		.can_addr.j1939 = {
+			.pgn = J1939_PGN_ADDRESS_CLAIMED,
+			.addr = J1939_NO_ADDR,
+		},
+	};
 
 	memcpy(dat, &name, 8);
 	if (!host_is_little_endian())
 		bswap(dat, 8);
 	if (s.verbose)
 		fprintf(stderr, "- send(, %" PRId64 ", 8, 0);\n", name);
-	ret = send(sock, dat, 8, 0);
+	ret = sendto(sock, dat, sizeof(dat), 0, (const struct sockaddr *)&saddr,
+		     sizeof(saddr));
 	if (must_warn(ret))
 		error(1, errno, "send address claim for 0x%02x", s.last_sa);
 	return ret;
