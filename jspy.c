@@ -162,7 +162,7 @@ int main(int argc, char **argv)
 		filt.addr_mask = ~0;
 		++filter;
 	}
-	if (s.addr.can_addr.j1939.pgn <= 0x3ffff) {
+	if (s.addr.can_addr.j1939.pgn <= J1939_PGN_MAX) {
 		filt.pgn = s.addr.can_addr.j1939.pgn;
 		filt.pgn_mask = ~0;
 		++filter;
