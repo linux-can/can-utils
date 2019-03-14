@@ -175,14 +175,14 @@ static int parse_range(char *str)
 /* j1939 socket */
 static const struct j1939_filter filt[] = {
 	{
-		.pgn = 0x0ee00,
-		.pgn_mask = 0x3ff00,
+		.pgn = J1939_PGN_ADDRESS_CLAIMED,
+		.pgn_mask = J1939_PGN_PDU1_MAX,
 	}, {
-		.pgn = 0x0ea00,
-		.pgn_mask = 0x3ff00,
+		.pgn = J1939_PGN_REQUEST,
+		.pgn_mask = J1939_PGN_PDU1_MAX,
 	}, {
 		.pgn = 0x0fed8,
-		.pgn_mask = 0x3ffff,
+		.pgn_mask = J1939_PGN_MAX,
 	},
 };
 
@@ -244,7 +244,7 @@ static int repeat_address(int sock, uint64_t name)
 	static const struct sockaddr_can saddr = {
 		.can_family = AF_CAN,
 		.can_addr.j1939 = {
-			.pgn = 0x0ee00,
+			.pgn = J1939_PGN_ADDRESS_CLAIMED,
 			.addr = J1939_NO_ADDR,
 		},
 	};
@@ -288,7 +288,7 @@ static int request_addresses(int sock)
 	int ret;
 	static const struct sockaddr_can saddr = {
 		.can_family = AF_CAN,
-		.can_addr.j1939.pgn = 0x0ea00,
+		.can_addr.j1939.pgn = J1939_PGN_REQUEST,
 		.can_addr.j1939.addr = J1939_NO_ADDR,
 	};
 
@@ -577,11 +577,11 @@ int main(int argc, char *argv[])
 			error(1, errno, "recvfrom()");
 		}
 		switch (saddr.can_addr.j1939.pgn) {
-		case 0x0ea00:
+		case J1939_PGN_REQUEST:
 			if (ret < 3)
 				break;
 			pgn = dat[0] + (dat[1] << 8) + ((dat[2] & 0x03) << 16);
-			if (pgn != 0x0ee00)
+			if (pgn != J1939_PGN_ADDRESS_CLAIMED)
 				/* not interested */
 				break;
 			if (s.state == STATE_REQ_SENT) {
@@ -595,7 +595,7 @@ int main(int argc, char *argv[])
 					schedule_itimer(50);
 			}
 			break;
-		case 0x0ee00:
+		case J1939_PGN_ADDRESS_CLAIMED:
 			if (saddr.can_addr.j1939.addr >= J1939_IDLE_ADDR) {
 				sa = lookup_name(saddr.can_addr.j1939.name);
 				if (sa < J1939_IDLE_ADDR)

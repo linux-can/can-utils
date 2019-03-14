@@ -183,13 +183,13 @@ const char *libj1939_addr2str(const struct sockaddr_can *can)
 	}
 	if (can->can_addr.j1939.name) {
 		str += sprintf(str, "%016llx", (unsigned long long)can->can_addr.j1939.name);
-		if (can->can_addr.j1939.pgn == 0x0ee00)
+		if (can->can_addr.j1939.pgn == J1939_PGN_ADDRESS_CLAIMED)
 			str += sprintf(str, ".%02x", can->can_addr.j1939.addr);
 	} else if (can->can_addr.j1939.addr <= 0xfe)
 		str += sprintf(str, "%02x", can->can_addr.j1939.addr);
 	else
 		str += sprintf(str, "-");
-	if (can->can_addr.j1939.pgn <= 0x3ffff)
+	if (can->can_addr.j1939.pgn <= J1939_PGN_MAX)
 		str += sprintf(str, ",%05x", can->can_addr.j1939.pgn);
 
 	return buf;

@@ -16,9 +16,15 @@
 #include <linux/socket.h>
 #include <linux/can.h>
 
-#define J1939_IDLE_ADDR	0xfe
+#define J1939_IDLE_ADDR 0xfe
+#define J1939_MAX_UNICAST_ADDR 0xfd
 #define J1939_NO_ADDR 0xff
 #define J1939_NO_NAME 0
+
+#define J1939_PGN_REQUEST 0x0ea00
+#define J1939_PGN_ADDRESS_CLAIMED 0x0ee00
+#define J1939_PGN_PDU1_MAX 0x3ff00
+#define J1939_PGN_MAX 0x3ffff
 #define J1939_NO_PGN 0x40000
 
 /* J1939 Parameter Group Number
