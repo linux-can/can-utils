@@ -228,6 +228,14 @@ static int open_socket(const char *device, uint64_t name)
 	if (ret < 0)
 		error(1, errno, "setsockopt receive own msgs");
 
+	value = 1;
+	if (s.verbose)
+		fprintf(stderr, "- setsockopt(, SOL_SOCKET, SO_BROADCAST, %d, %zd);\n", value, sizeof(value));
+	ret = setsockopt(sock, SOL_SOCKET, SO_BROADCAST,
+			&value, sizeof(value));
+	if (ret < 0)
+		error(1, errno, "setsockopt set broadcast");
+
 	if (s.verbose)
 		fprintf(stderr, "- bind(, %s, %zi);\n", libj1939_addr2str(&saddr), sizeof(saddr));
 	ret = bind(sock, (void *)&saddr, sizeof(saddr));
