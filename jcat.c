@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <poll.h>
 
 #include "libj1939.h"
 #define J1939_MAX_ETP_PACKET_SIZE (7 * 0x00ffffff)
@@ -34,13 +35,15 @@ struct jcat_priv {
 	int sock;
 	int infile;
 	int outfile;
-	unsigned int todo_send;
+	size_t max_transfer;
 	int todo_prio;
 
 	bool valid_peername;
 	bool todo_recv;
 	bool todo_filesize;
 	bool todo_connect;
+
+	unsigned long polltimeout;
 
 	struct sockaddr_can sockname;
 	struct sockaddr_can peername;
@@ -52,8 +55,10 @@ static const char help_msg[] =
 	" FROM / TO	- or [IFACE][:[SA][,[PGN][,NAME]]]\n"
 	"Options:\n"
 	" -i <infile>	(default stdin)\n"
-	" -s[=LEN]	Initial send of LEN bytes dummy data\n"
+	" -s <size>	Set maximal transfer size. Default: 117440505 byte\n"
 	" -r		Receive data\n"
+	" -P <timeout>  poll timeout in milliseconds before sending data.\n"
+	"		With this option send() will be used with MSG_DONTWAIT flag.\n"
 	"\n"
 	"Example:\n"
 	"jcat -i some_file_to_send  can0:0x80 :0x90,0x12300\n"
@@ -61,7 +66,7 @@ static const char help_msg[] =
 	"\n"
 	;
 
-static const char optstring[] = "?i:vs::rp:cnw::";
+static const char optstring[] = "?i:vs:rp:P:cnw::";
 
 
 static void jcat_init_sockaddr_can(struct sockaddr_can *sac)
@@ -72,16 +77,108 @@ static void jcat_init_sockaddr_can(struct sockaddr_can *sac)
 	sac->can_addr.j1939.pgn = J1939_NO_PGN;
 }
 
+static ssize_t jcat_send_one(struct jcat_priv *priv, int out_fd,
+			     const void *buf, size_t buf_size)
+{
+	ssize_t num_sent;
+	int flags = 0;
+
+	if (priv->polltimeout)
+		flags |= MSG_DONTWAIT;
+
+	if (priv->valid_peername && !priv->todo_connect)
+		num_sent = sendto(out_fd, buf, buf_size, flags,
+				  (struct sockaddr *)&priv->peername,
+				  sizeof(priv->peername));
+	else
+		num_sent = send(out_fd, buf, buf_size, flags);
+
+	if (num_sent == -1) {
+		warn("%s: transfer error: %i", __func__, -errno);
+		return -errno;
+	}
+
+	if (num_sent == 0) /* Should never happen */ {
+		warn("%s: transferred 0 bytes", __func__);
+		return -EINVAL;
+	}
+
+	if (num_sent > buf_size) /* Should never happen */ {
+		warn("%s: send more then read", __func__);
+		return -EINVAL;
+	}
+
+	return num_sent;
+}
+
+static int jcat_poll(struct jcat_priv *priv)
+{
+	struct pollfd fds = {
+		.fd = priv->sock,
+		.events = POLLOUT,
+	};
+	int ret;
+
+	if (!priv->polltimeout)
+		return 0;
+
+	ret = poll(&fds, 1, priv->polltimeout);
+	if (ret < 0)
+		return -errno;
+	else if (!ret) {
+		warn("%s: timeout", __func__);
+		return -ETIME;
+	}
+
+	if (!(fds.revents & POLLOUT)) {
+		warn("%s: something else is wrong", __func__);
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
+			  size_t buf_size)
+{
+	ssize_t count, num_sent;
+	char *tmp_buf = buf;
+	int ret;
+
+	count = buf_size;
+
+	while (count) {
+		ret = jcat_poll(priv);
+		if (ret) {
+			if (ret == -EINTR)
+				continue;
+			else
+				return ret;
+		}
+		num_sent = jcat_send_one(priv, out_fd, tmp_buf, count);
+		if (num_sent < 0)
+			return num_sent;
+
+		count -= num_sent;
+		tmp_buf += num_sent;
+		if (buf + buf_size < tmp_buf + count) {
+			warn("%s: send buffer is bigger than the read buffer",
+			     __func__);
+			return -EINVAL;
+		}
+	}
+	return 0;
+}
+
 static int jcat_sendfile(struct jcat_priv *priv, int out_fd, int in_fd,
 			 off_t *offset, size_t count)
 {
 	int ret = EXIT_SUCCESS;
 	off_t orig = 0;
 	char *buf;
-	size_t to_read, num_read, num_sent, tot_sent, buf_size;
-	int round = 0;
+	size_t to_read, num_read, buf_size;
 
-	buf_size = min((size_t)J1939_MAX_ETP_PACKET_SIZE, count);
+	buf_size = min(priv->max_transfer, count);
 	buf = malloc(buf_size);
 	if (!buf) {
 		warn("can't allocate buf");
@@ -104,8 +201,6 @@ static int jcat_sendfile(struct jcat_priv *priv, int out_fd, int in_fd,
 		}
 	}
 
-	tot_sent = 0;
-
 	while (count > 0) {
 		to_read = min(buf_size, count);
 
@@ -117,35 +212,11 @@ static int jcat_sendfile(struct jcat_priv *priv, int out_fd, int in_fd,
 		if (num_read == 0)
 			break; /* EOF */
 
-		if (priv->valid_peername && !priv->todo_connect)
-			num_sent = sendto(out_fd, buf, num_read, 0,
-					(void *)&priv->peername,
-					sizeof(priv->peername));
-		else
-			num_sent = send(out_fd, buf, num_read, 0);
-
-		if (num_sent == -1) {
-			warn("sendfile: write() transferr error");
-			ret = EXIT_FAILURE;
+		ret = jcat_send_loop(priv, out_fd, buf, num_read);
+		if (ret)
 			goto do_free;
-		}
 
-		if (num_sent == 0) /* Should never happen */ {
-			warn("sendfile: write() transferred 0 bytes");
-			ret = EXIT_FAILURE;
-			goto do_free;
-		}
-
-		if (num_sent != num_read) {
-			warn("sendfile: write() not full transfer: %zi %zi",
-			     num_sent, num_read);
-			ret = EXIT_FAILURE;
-			goto do_free;
-		}
-
-		round++;
-		count -= num_sent;
-		tot_sent += num_sent;
+		count -= num_read;
 	}
 
 	if (offset) {
@@ -186,15 +257,16 @@ static size_t jcat_get_file_size(int fd)
 
 static int jcat_send(struct jcat_priv *priv)
 {
+	unsigned int size = 0;
 
 	if (priv->todo_filesize)
-		priv->todo_send = jcat_get_file_size(priv->infile);
+		size = jcat_get_file_size(priv->infile);
 
-	if (!priv->todo_send)
+	if (!size)
 		return EXIT_FAILURE;
 
 	return jcat_sendfile(priv, priv->sock, priv->infile, NULL,
-			     priv->todo_send);
+			     size);
 }
 
 static int jcat_recv_one(struct jcat_priv *priv, uint8_t *buf, size_t buf_size)
@@ -222,7 +294,7 @@ static int jcat_recv(struct jcat_priv *priv)
 	size_t buf_size;
 	uint8_t *buf;
 
-	buf_size = J1939_MAX_ETP_PACKET_SIZE;
+	buf_size = priv->max_transfer;
 	buf = malloc(buf_size);
 	if (!buf) {
 		warn("can't allocate rx buf");
@@ -296,13 +368,19 @@ static int jcat_parse_args(struct jcat_priv *priv, int argc, char *argv[])
 		priv->todo_filesize = 1;
 		break;
 	case 's':
-		priv->todo_send = strtoul(optarg ?: "8", NULL, 0);
+		priv->max_transfer = strtoul(optarg, NULL, 0);
+		if (priv->max_transfer > J1939_MAX_ETP_PACKET_SIZE)
+			err(EXIT_FAILURE, "used value (%zu) is bigger then allowed maximal size: %u.\n",
+			    priv->max_transfer, J1939_MAX_ETP_PACKET_SIZE);
 		break;
 	case 'r':
 		priv->todo_recv = 1;
 		break;
 	case 'p':
 		priv->todo_prio = strtoul(optarg, NULL, 0);
+		break;
+	case 'P':
+		priv->polltimeout = strtoul(optarg, NULL, 0);
 		break;
 	case 'c':
 		priv->todo_connect = 1;
@@ -343,6 +421,7 @@ int main(int argc, char *argv[])
 	priv->todo_prio = -1;
 	priv->infile = STDIN_FILENO;
 	priv->outfile = STDOUT_FILENO;
+	priv->max_transfer = J1939_MAX_ETP_PACKET_SIZE;
 
 	jcat_init_sockaddr_can(&priv->sockname);
 	jcat_init_sockaddr_can(&priv->peername);
