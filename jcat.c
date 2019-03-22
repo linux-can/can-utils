@@ -72,14 +72,71 @@ static void jcat_init_sockaddr_can(struct sockaddr_can *sac)
 	sac->can_addr.j1939.pgn = J1939_NO_PGN;
 }
 
+static ssize_t jcat_send_one(struct jcat_priv *priv, int out_fd, const void *buf,
+			 size_t buf_size)
+{
+	ssize_t num_sent;
+
+	if (priv->valid_peername && !priv->todo_connect)
+		num_sent = sendto(out_fd, buf, buf_size, 0,
+				(void *)&priv->peername,
+				sizeof(priv->peername));
+	else
+		num_sent = send(out_fd, buf, buf_size, 0);
+
+	if (num_sent == -1) {
+		warn("sendfile: write() transferr error");
+		return -errno;
+	}
+
+	if (num_sent == 0) /* Should never happen */ {
+		warn("sendfile: write() transferred 0 bytes");
+		return -EINVAL;
+	}
+
+	if (num_sent > buf_size) /* Should never happen */ {
+		warn("sendfile: write() send more then read");
+		return -EINVAL;
+	}
+
+	return num_sent;
+}
+
+static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
+			 size_t buf_size)
+{
+	ssize_t count, num_sent;
+	char *tmp_buf = buf;
+
+	count = buf_size;
+
+	while (count) {
+		num_sent = jcat_send_one(priv, out_fd, tmp_buf, count);
+		if (num_sent < 0)
+			return num_sent;
+
+		count -= num_sent;
+		if (!count)
+			break;
+
+		warn("sendfile: write() not full transfer: %zi %zi",
+		     num_sent, buf_size);
+		tmp_buf += num_sent;
+		if (buf + buf_size < tmp_buf + count) {
+			warn("sendfile: write() kapuuut!!! %p %p %i %i", buf, tmp_buf, buf_size, count);
+			return EXIT_FAILURE;
+		}
+	}
+	return EXIT_SUCCESS;
+}
+
 static int jcat_sendfile(struct jcat_priv *priv, int out_fd, int in_fd,
 			 off_t *offset, size_t count)
 {
 	int ret = EXIT_SUCCESS;
 	off_t orig = 0;
 	char *buf;
-	size_t to_read, num_read, num_sent, tot_sent, buf_size;
-	int round = 0;
+	size_t to_read, num_read, buf_size;
 
 	buf_size = min((size_t)J1939_MAX_ETP_PACKET_SIZE, count);
 	buf = malloc(buf_size);
@@ -104,8 +161,6 @@ static int jcat_sendfile(struct jcat_priv *priv, int out_fd, int in_fd,
 		}
 	}
 
-	tot_sent = 0;
-
 	while (count > 0) {
 		to_read = min(buf_size, count);
 
@@ -117,35 +172,11 @@ static int jcat_sendfile(struct jcat_priv *priv, int out_fd, int in_fd,
 		if (num_read == 0)
 			break; /* EOF */
 
-		if (priv->valid_peername && !priv->todo_connect)
-			num_sent = sendto(out_fd, buf, num_read, 0,
-					(void *)&priv->peername,
-					sizeof(priv->peername));
-		else
-			num_sent = send(out_fd, buf, num_read, 0);
-
-		if (num_sent == -1) {
-			warn("sendfile: write() transferr error");
-			ret = EXIT_FAILURE;
+		ret = jcat_send_loop(priv, out_fd, buf, num_read);
+		if (ret)
 			goto do_free;
-		}
 
-		if (num_sent == 0) /* Should never happen */ {
-			warn("sendfile: write() transferred 0 bytes");
-			ret = EXIT_FAILURE;
-			goto do_free;
-		}
-
-		if (num_sent != num_read) {
-			warn("sendfile: write() not full transfer: %zi %zi",
-			     num_sent, num_read);
-			ret = EXIT_FAILURE;
-			goto do_free;
-		}
-
-		round++;
-		count -= num_sent;
-		tot_sent += num_sent;
+		count -= num_read;
 	}
 
 	if (offset) {
