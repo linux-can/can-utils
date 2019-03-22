@@ -230,14 +230,11 @@ static int jcat_send(struct jcat_priv *priv)
 
 static int jcat_recv_one(struct jcat_priv *priv, uint8_t *buf, size_t buf_size)
 {
-	socklen_t peernamelen;
 	int ret;
 
-	peernamelen = sizeof(priv->peername);
-	ret = recvfrom(priv->sock, buf, buf_size, 0,
-			(void *)&priv->peername, &peernamelen);
+	ret = recv(priv->sock, buf, buf_size, 0);
 	if (ret < 0) {
-		warn("recvfrom()");
+		warn("recvf()");
 		return EXIT_FAILURE;
 	}
 
