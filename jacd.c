@@ -175,14 +175,14 @@ static int parse_range(char *str)
 /* j1939 socket */
 static const struct j1939_filter filt[] = {
 	{
-		.pgn = 0x0ee00,
-		.pgn_mask = 0x3ff00,
+		.pgn = J1939_PGN_ADDRESS_CLAIMED,
+		.pgn_mask = J1939_PGN_PDU1_MAX,
 	}, {
-		.pgn = 0x0ea00,
-		.pgn_mask = 0x3ff00,
+		.pgn = J1939_PGN_REQUEST,
+		.pgn_mask = J1939_PGN_PDU1_MAX,
 	}, {
 		.pgn = 0x0fed8,
-		.pgn_mask = 0x3ffff,
+		.pgn_mask = J1939_PGN_MAX,
 	},
 };
 
@@ -195,7 +195,7 @@ static int open_socket(const char *device, uint64_t name)
 		.can_addr.j1939 = {
 			.name = name,
 			.addr = J1939_IDLE_ADDR,
-			.pgn = 0x0ee00,
+			.pgn = J1939_NO_PGN,
 		},
 		.can_ifindex = if_nametoindex(s.intf),
 	};
@@ -228,6 +228,14 @@ static int open_socket(const char *device, uint64_t name)
 	if (ret < 0)
 		error(1, errno, "setsockopt receive own msgs");
 
+	value = 1;
+	if (s.verbose)
+		fprintf(stderr, "- setsockopt(, SOL_SOCKET, SO_BROADCAST, %d, %zd);\n", value, sizeof(value));
+	ret = setsockopt(sock, SOL_SOCKET, SO_BROADCAST,
+			&value, sizeof(value));
+	if (ret < 0)
+		error(1, errno, "setsockopt set broadcast");
+
 	if (s.verbose)
 		fprintf(stderr, "- bind(, %s, %zi);\n", libj1939_addr2str(&saddr), sizeof(saddr));
 	ret = bind(sock, (void *)&saddr, sizeof(saddr));
@@ -241,13 +249,21 @@ static int repeat_address(int sock, uint64_t name)
 {
 	int ret;
 	uint8_t dat[8];
+	static const struct sockaddr_can saddr = {
+		.can_family = AF_CAN,
+		.can_addr.j1939 = {
+			.pgn = J1939_PGN_ADDRESS_CLAIMED,
+			.addr = J1939_NO_ADDR,
+		},
+	};
 
 	memcpy(dat, &name, 8);
 	if (!host_is_little_endian())
 		bswap(dat, 8);
 	if (s.verbose)
 		fprintf(stderr, "- send(, %" PRId64 ", 8, 0);\n", name);
-	ret = send(sock, dat, 8, 0);
+	ret = sendto(sock, dat, sizeof(dat), 0, (const struct sockaddr *)&saddr,
+		     sizeof(saddr));
 	if (must_warn(ret))
 		error(1, errno, "send address claim for 0x%02x", s.last_sa);
 	return ret;
@@ -260,7 +276,7 @@ static int claim_address(int sock, uint64_t name, int sa)
 		.can_addr.j1939 = {
 			.name = name,
 			.addr = sa,
-			.pgn = 0x0ee00,
+			.pgn = J1939_NO_PGN,
 		},
 		.can_ifindex = if_nametoindex(s.intf),
 	};
@@ -280,7 +296,7 @@ static int request_addresses(int sock)
 	int ret;
 	static const struct sockaddr_can saddr = {
 		.can_family = AF_CAN,
-		.can_addr.j1939.pgn = 0x0ea00,
+		.can_addr.j1939.pgn = J1939_PGN_REQUEST,
 		.can_addr.j1939.addr = J1939_NO_ADDR,
 	};
 
@@ -569,11 +585,11 @@ int main(int argc, char *argv[])
 			error(1, errno, "recvfrom()");
 		}
 		switch (saddr.can_addr.j1939.pgn) {
-		case 0x0ea00:
+		case J1939_PGN_REQUEST:
 			if (ret < 3)
 				break;
 			pgn = dat[0] + (dat[1] << 8) + ((dat[2] & 0x03) << 16);
-			if (pgn != 0x0ee00)
+			if (pgn != J1939_PGN_ADDRESS_CLAIMED)
 				/* not interested */
 				break;
 			if (s.state == STATE_REQ_SENT) {
@@ -587,7 +603,7 @@ int main(int argc, char *argv[])
 					schedule_itimer(50);
 			}
 			break;
-		case 0x0ee00:
+		case J1939_PGN_ADDRESS_CLAIMED:
 			if (saddr.can_addr.j1939.addr >= J1939_IDLE_ADDR) {
 				sa = lookup_name(saddr.can_addr.j1939.name);
 				if (sa < J1939_IDLE_ADDR)
