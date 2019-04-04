@@ -77,7 +77,7 @@ typedef __u32 canid_t;
 /*
  * Controller Area Network Error Message Frame Mask structure
  *
- * bit 0-28	: error class mask (see include/linux/can/error.h)
+ * bit 0-28	: error class mask (see include/uapi/linux/can/error.h)
  * bit 29-31	: set to zero
  */
 typedef __u32 can_err_mask_t;
@@ -181,10 +181,7 @@ struct sockaddr_can {
 	int         can_ifindex;
 	union {
 		/* transport protocol class address information (e.g. ISOTP) */
-		struct {
-			canid_t rx_id;
-			canid_t tx_id;
-		} tp;
+		struct { canid_t rx_id, tx_id; } tp;
 
 		/* J1939 address information */
 		struct {
