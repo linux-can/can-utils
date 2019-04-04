@@ -364,6 +364,8 @@ int main(int argc, char *argv[])
 		ret = jcat_send(priv);
 
 	close(priv->infile);
+	close(priv->outfile);
+	close(priv->sock);
 	return ret;
 }
 
