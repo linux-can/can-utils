@@ -48,6 +48,7 @@ struct jcat_priv {
 	int infile;
 	int outfile;
 	size_t max_transfer;
+	int repeat;
 	int todo_prio;
 
 	bool valid_peername;
@@ -75,6 +76,7 @@ static const char help_msg[] =
 	" -r		Receive data\n"
 	" -P <timeout>  poll timeout in milliseconds before sending data.\n"
 	"		With this option send() will be used with MSG_DONTWAIT flag.\n"
+	" -R <count>	Set send repeat count. Default: 1\n"
 	"\n"
 	"Example:\n"
 	"jcat -i some_file_to_send  can0:0x80 :0x90,0x12300\n"
@@ -82,7 +84,7 @@ static const char help_msg[] =
 	"\n"
 	;
 
-static const char optstring[] = "?i:vs:rp:P:cnw::";
+static const char optstring[] = "?i:vs:rp:P:R:";
 
 
 static void jcat_init_sockaddr_can(struct sockaddr_can *sac)
@@ -294,7 +296,7 @@ static int jcat_recv_err(struct jcat_priv *priv)
 static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
 			  size_t buf_size)
 {
-	ssize_t count, num_sent;
+	ssize_t count, num_sent = 0;
 	char *tmp_buf = buf;
 	unsigned int events = POLLOUT | POLLERR;
 	bool tx_done = false;
@@ -445,6 +447,7 @@ static size_t jcat_get_file_size(int fd)
 static int jcat_send(struct jcat_priv *priv)
 {
 	unsigned int size = 0;
+	int ret, i;
 
 	if (priv->todo_filesize)
 		size = jcat_get_file_size(priv->infile);
@@ -452,8 +455,16 @@ static int jcat_send(struct jcat_priv *priv)
 	if (!size)
 		return EXIT_FAILURE;
 
-	return jcat_sendfile(priv, priv->sock, priv->infile, NULL,
-			     size);
+	for (i = 0; i < priv->repeat; i++) {
+		ret = jcat_sendfile(priv, priv->sock, priv->infile, NULL, size);
+		if (ret)
+			break;
+
+		if (lseek(priv->infile, 0, SEEK_SET) == -1)
+			error(1, errno, "%s lseek() start\n", __func__);
+	}
+
+	return ret;
 }
 
 static int jcat_recv_one(struct jcat_priv *priv, uint8_t *buf, size_t buf_size)
@@ -593,6 +604,11 @@ static int jcat_parse_args(struct jcat_priv *priv, int argc, char *argv[])
 	case 'c':
 		priv->todo_connect = 1;
 		break;
+	case 'R':
+		priv->repeat = atoi(optarg);
+		if (priv->repeat < 1)
+			err(EXIT_FAILURE, "send/repeat count can't be less then 1\n");
+		break;
 	default:
 		fputs(help_msg, stderr);
 		return EXIT_FAILURE;
@@ -631,6 +647,7 @@ int main(int argc, char *argv[])
 	priv->outfile = STDOUT_FILENO;
 	priv->max_transfer = J1939_MAX_ETP_PACKET_SIZE;
 	priv->polltimeout = 100000;
+	priv->repeat = 1;
 
 	jcat_init_sockaddr_can(&priv->sockname);
 	jcat_init_sockaddr_can(&priv->peername);
