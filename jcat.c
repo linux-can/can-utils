@@ -111,53 +111,46 @@ static ssize_t jcat_send_one(struct jcat_priv *priv, int out_fd,
 	return num_sent;
 }
 
-static int jcat_poll(struct jcat_priv *priv)
-{
-	struct pollfd fds = {
-		.fd = priv->sock,
-		.events = POLLOUT,
-	};
-	int ret;
-
-	if (!priv->polltimeout)
-		return 0;
-
-	ret = poll(&fds, 1, priv->polltimeout);
-	if (ret < 0)
-		return -errno;
-	else if (!ret) {
-		warn("%s: timeout", __func__);
-		return -ETIME;
-	}
-
-	if (!(fds.revents & POLLOUT)) {
-		warn("%s: something else is wrong", __func__);
-		return -EIO;
-	}
-
-	return 0;
-}
-
 static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
 			  size_t buf_size)
 {
-	ssize_t count, num_sent;
+	ssize_t count, num_sent = 0;
 	char *tmp_buf = buf;
-	int ret;
+	unsigned int events = POLLOUT;
 
 	count = buf_size;
 
 	while (count) {
-		ret = jcat_poll(priv);
-		if (ret) {
+		if (priv->polltimeout) {
+			struct pollfd fds = {
+				.fd = priv->sock,
+				.events = events,
+			};
+			int ret;
+
+			ret = poll(&fds, 1, priv->polltimeout);
 			if (ret == -EINTR)
 				continue;
-			else
-				return ret;
+			else if (ret < 0)
+				return -errno;
+			else if (!ret)
+				return -ETIME;
+
+			if (!(fds.revents & events)) {
+				warn("%s: something else is wrong", __func__);
+				return -EIO;
+			}
+
+			if (fds.revents & POLLOUT) {
+				num_sent = jcat_send_one(priv, out_fd, tmp_buf, count);
+				if (num_sent < 0)
+					return num_sent;
+			}
+		} else {
+			num_sent = jcat_send_one(priv, out_fd, tmp_buf, count);
+			if (num_sent < 0)
+				return num_sent;
 		}
-		num_sent = jcat_send_one(priv, out_fd, tmp_buf, count);
-		if (num_sent < 0)
-			return num_sent;
 
 		count -= num_sent;
 		tmp_buf += num_sent;
