@@ -422,6 +422,7 @@ int main(int argc, char *argv[])
 	priv->infile = STDIN_FILENO;
 	priv->outfile = STDOUT_FILENO;
 	priv->max_transfer = J1939_MAX_ETP_PACKET_SIZE;
+	priv->polltimeout = 100000;
 
 	jcat_init_sockaddr_can(&priv->sockname);
 	jcat_init_sockaddr_can(&priv->peername);
