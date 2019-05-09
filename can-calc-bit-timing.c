@@ -120,10 +120,12 @@ struct calc_ref_clk {
 
 struct calc_bittiming_const {
 	const struct can_bittiming_const bittiming_const;
+	const struct can_bittiming_const data_bittiming_const;
 
 	const struct calc_ref_clk ref_clk[16];
 
 	const void (*printf_btr)(struct can_bittiming *bt, bool hdr);
+	const void (*printf_data_btr)(struct can_bittiming *bt, bool hdr);
 };
 
 struct calc_data {
@@ -554,6 +556,17 @@ static const unsigned int common_bitrates[] = {
 	0
 };
 
+static const unsigned int common_data_bitrates[] = {
+	12000000,
+	10000000,
+	8000000,
+	5000000,
+	4000000,
+	2000000,
+	1000000,
+	0
+};
+
 #define CAN_CALC_MAX_ERROR 50 /* in one-tenth of a percent */
 #define CAN_CALC_SYNC_SEG 1
 
@@ -787,8 +800,8 @@ static void print_bittiming_one(const struct can_bittiming_const *bittiming_cons
 
 	if (!quiet) {
 		printf("Bit timing parameters for %s%s%s%s with %.6f MHz ref clock\n"
-		       "nominal                                 real Bitrt   nom  real SampP\n"
-		       "Bitrate TQ[ns] PrS PhS1 PhS2 SJW BRP Bitrate Error SampP SampP Error ",
+		       " nominal                                  real  Bitrt    nom   real  SampP\n"
+		       " Bitrate TQ[ns] PrS PhS1 PhS2 SJW BRP  Bitrate  Error  SampP  SampP  Error   ",
 		       bittiming_const->name,
 		       ref_clk->name ? " (" : "",
 		       ref_clk->name ? ref_clk->name : "",
@@ -803,12 +816,12 @@ static void print_bittiming_one(const struct can_bittiming_const *bittiming_cons
 		bt = *ref_bt;
 
 		if (can_fixup_bittiming(&dev, &bt, bittiming_const)) {
-			printf("%7d ***parameters exceed controller's range***\n", bitrate_nominal);
+			printf("%8d ***parameters exceed controller's range***\n", bitrate_nominal);
 			return;
 		}
 	} else {
 		if (can_calc_bittiming(&dev, &bt, bittiming_const)) {
-			printf("%7d ***bitrate not possible***\n", bitrate_nominal);
+			printf("%8d ***bitrate not possible***\n", bitrate_nominal);
 			return;
 		}
 	}
@@ -816,29 +829,29 @@ static void print_bittiming_one(const struct can_bittiming_const *bittiming_cons
 	bitrate_error = abs(bitrate_nominal - bt.bitrate);
 	sample_point_error = abs(sample_point_nominal - bt.sample_point);
 
-	printf("%7d "				/* Bitrate */
+	printf("%8d "				/* Bitrate */
 	       "%6d %3d %4d %4d "		/* TQ[ns], PrS, PhS1, PhS2 */
 	       "%3d %3d "			/* SJW, BRP */
-	       "%7d ",				/* real Bitrate */
+	       "%8d  ",				/* real Bitrate */
 	       bitrate_nominal,
 	       bt.tq, bt.prop_seg, bt.phase_seg1, bt.phase_seg2,
 	       bt.sjw, bt.brp,
 	       bt.bitrate);
 
 	if (100.0 * bitrate_error / bitrate_nominal > 99.9)
-		printf("≥100%% ");
+		printf("≥100%%  ");
 	else
-		printf("%4.1f%% ",
+		printf("%4.1f%%  ",		/* Bitrate Error */
 		       100.0 * bitrate_error / bitrate_nominal);
 
-	printf("%4.1f%% %4.1f%% ",		/* nom Sample Point, real Sample Point */
+	printf("%4.1f%%  %4.1f%%  ",		/* nom Sample Point, real Sample Point */
 	       sample_point_nominal / 10.0,
 	       bt.sample_point / 10.0);
 
 	if (100.0 * sample_point_error / sample_point_nominal > 99.9)
-		printf("≥100%% ");
+		printf("≥100%%   ");
 	else
-		printf("%4.1f%% ",		/* Sample Point Error */
+		printf("%4.1f%%   ",		/* Sample Point Error */
 		       100.0 * sample_point_error / sample_point_nominal);
 
 	printf_btr(&bt, false);
@@ -906,7 +919,9 @@ static void do_calc(struct calc_data *data)
 
 		btc = &can_calc_consts[i];
 
-		if (data->name && strcmp(data->name, btc->bittiming_const.name))
+		if (data->name &&
+		    strcmp(data->name, btc->bittiming_const.name) &&
+		    strcmp(data->name, btc->data_bittiming_const.name))
 			continue;
 
 		found = true;
@@ -924,6 +939,27 @@ static void do_calc(struct calc_data *data)
 				data->bitrates = data->opt_bitrates;
 			else
 				data->bitrates = common_bitrates;
+
+			print_bittiming(data);
+		}
+
+		if (btc->data_bittiming_const.name[0]) {
+			data->bittiming_const = &btc->data_bittiming_const;
+
+			if (btc->printf_data_btr)
+				data->printf_btr = btc->printf_data_btr;
+			else
+				data->printf_btr = btc->printf_btr;
+
+			if (data->opt_ref_clk)
+				data->ref_clks = data->opt_ref_clk;
+			else
+				data->ref_clks = btc->ref_clk;
+
+			if (data->opt_bitrates)
+				data->bitrates = data->opt_bitrates;
+			else
+				data->bitrates = common_data_bitrates;
 
 			print_bittiming(data);
 		}
