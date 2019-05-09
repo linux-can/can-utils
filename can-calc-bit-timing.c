@@ -585,6 +585,17 @@ static const unsigned int common_data_bitrates[] = {
  * registers of the CAN controller. You can find more information
  * in the header file linux/can/netlink.h.
  */
+
+/*
+ * imported from v4.8-rc1~140^2~304^2~11
+ *
+ * 7da29f97d6c8 can: dev: can-calc-bit-timing(): better sample point calculation
+ */
+#undef can_update_spt
+#undef can_calc_bittiming
+#define can_update_spt can_update_spt_v4_8
+#define can_calc_bittiming can_calc_bittiming_v4_8
+
 static int can_update_spt(const struct can_bittiming_const *btc,
 			  unsigned int spt_nominal, unsigned int tseg,
 			  unsigned int *tseg1_ptr, unsigned int *tseg2_ptr,
@@ -729,6 +740,9 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
 	return 0;
 }
 
+#undef can_calc_bittiming
+#undef can_update_spt
+
 static int can_fixup_bittiming(struct net_device *dev, struct can_bittiming *bt,
 			       const struct can_bittiming_const *btc)
 {
@@ -822,7 +836,7 @@ static void print_bittiming_one(const struct can_bittiming_const *bittiming_cons
 			return;
 		}
 	} else {
-		if (can_calc_bittiming(&dev, &bt, bittiming_const)) {
+		if (can_calc_bittiming_v4_8(&dev, &bt, bittiming_const)) {
 			printf("%8d ***bitrate not possible***\n", bitrate_nominal);
 			return;
 		}
