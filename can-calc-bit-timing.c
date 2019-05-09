@@ -183,6 +183,10 @@ static void print_usage(char *cmd)
 	       cmd);
 }
 
+static void printf_btr_nop(struct can_bittiming *bt, bool hdr)
+{
+}
+
 static void printf_btr_sja1000(struct can_bittiming *bt, bool hdr)
 {
 	uint8_t btr0, btr1;
@@ -791,8 +795,7 @@ static void print_bittiming_one(const struct can_bittiming_const *bittiming_cons
 		       ref_clk->name ? ")" : "",
 		       ref_clk->clk / 1000000.0);
 
-		if (printf_btr)
-			printf_btr(&bt, true);
+		printf_btr(&bt, true);
 		printf("\n");
 	}
 
@@ -838,8 +841,7 @@ static void print_bittiming_one(const struct can_bittiming_const *bittiming_cons
 		printf("%4.1f%% ",		/* Sample Point Error */
 		       100.0 * sample_point_error / sample_point_nominal);
 
-	if (printf_btr)
-		printf_btr(&bt, false);
+	printf_btr(&bt, false);
 	printf("\n");
 }
 
@@ -848,8 +850,14 @@ static void print_bittiming(const struct calc_data *data)
 	const struct calc_ref_clk *ref_clks = data->ref_clks;
 
 	while (ref_clks->clk) {
+		void (*printf_btr)(struct can_bittiming *bt, bool hdr);
 		unsigned int const *bitrates = data->bitrates;
 		bool quiet = data->quiet;
+
+		if (data->printf_btr)
+			printf_btr = data->printf_btr;
+		else
+			printf_btr = printf_btr_nop;
 
 		while (*bitrates) {
 			unsigned int sample_point;
@@ -865,7 +873,7 @@ static void print_bittiming(const struct calc_data *data)
 					    ref_clks,
 					    *bitrates,
 					    sample_point,
-					    data->printf_btr,
+					    printf_btr,
 					    quiet);
 			bitrates++;
 			quiet = true;
