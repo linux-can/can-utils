@@ -14,16 +14,18 @@ noinst_HEADERS = \
 	lib.h \
 	libj1939.h \
 	terminal.h \
+	include/linux/can.h \
 	include/linux/can/bcm.h \
 	include/linux/can/error.h \
 	include/linux/can/gw.h \
-	include/linux/can.h \
 	include/linux/can/isotp.h \
 	include/linux/can/j1939.h \
 	include/linux/can/netlink.h \
 	include/linux/can/raw.h \
-	include/linux/can/vxcan.h
-
+	include/linux/can/vxcan.h \
+	include/linux/errqueue.h \
+	include/linux/net_tstamp.h \
+	include/linux/netlink.h
 
 noinst_LTLIBRARIES = \
 	libcan.la \
