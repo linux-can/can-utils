@@ -110,7 +110,7 @@ void libj1939_parse_canaddr(char *spec, struct sockaddr_can *paddr)
 
 	str = strsep(&spec, ",");
 	if (str && strlen(str))
-		paddr->can_addr.j1939.name = strtoul(str, NULL, 0);
+		paddr->can_addr.j1939.name = strtoull(str, NULL, 0);
 }
 
 int libj1939_str2addr(const char *str, char **endp, struct sockaddr_can *can)
