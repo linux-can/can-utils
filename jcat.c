@@ -16,6 +16,11 @@
 #include <unistd.h>
 #include <poll.h>
 
+#include <linux/errqueue.h>
+#include <linux/netlink.h>
+#include <linux/net_tstamp.h>
+#include <linux/socket.h>
+
 #include "libj1939.h"
 #define J1939_MAX_ETP_PACKET_SIZE (7 * 0x00ffffff)
 #define JCAT_BUF_SIZE (1000 * 1024)
@@ -30,6 +35,13 @@
 	typeof(y) _min2 = (y);			\
 	(void) (&_min1 == &_min2);		\
 	_min1 < _min2 ? _min1 : _min2; })
+
+
+struct jcat_stats {
+	int err;
+	uint32_t tskey;
+	uint32_t send;
+};
 
 struct jcat_priv {
 	int sock;
@@ -47,6 +59,10 @@ struct jcat_priv {
 
 	struct sockaddr_can sockname;
 	struct sockaddr_can peername;
+
+	struct sock_extended_err *serr;
+	struct scm_timestamping *tss;
+	struct jcat_stats stats;
 };
 
 static const char help_msg[] =
@@ -111,16 +127,181 @@ static ssize_t jcat_send_one(struct jcat_priv *priv, int out_fd,
 	return num_sent;
 }
 
+static void jcat_print_timestamp(struct jcat_priv *priv, const char *name,
+			      struct timespec *cur)
+{
+	struct jcat_stats *stats = &priv->stats;
+
+	if (!(cur->tv_sec | cur->tv_nsec))
+		return;
+
+	fprintf(stderr, "  %s: %lu s %lu us (seq=%u, send=%u)",
+			name, cur->tv_sec, cur->tv_nsec / 1000,
+			stats->tskey, stats->send);
+
+	fprintf(stderr, "\n");
+}
+
+static const char *jcat_tstype_to_str(int tstype)
+{
+	switch (tstype) {
+	case SCM_TSTAMP_SCHED:
+		return "  ENQ";
+	case SCM_TSTAMP_SND:
+		return "  SND";
+	case SCM_TSTAMP_ACK:
+		return "  ACK";
+	default:
+		return "  unk";
+	}
+}
+
+/* Check the stats of SCM_TIMESTAMPING_OPT_STATS */
+static void jcat_scm_opt_stats(struct jcat_priv *priv, void *buf, int len)
+{
+	struct jcat_stats *stats = &priv->stats;
+	int offset = 0;
+
+	while (offset < len) {
+		struct nlattr *nla = (struct nlattr *) (buf + offset);
+
+		switch (nla->nla_type) {
+		case J1939_NLA_BYTES_ACKED:
+			stats->send = *(uint32_t *)((void *)nla + NLA_HDRLEN);
+			break;
+		default:
+			warnx("not supported J1939_NLA field\n");
+		}
+
+		offset += NLA_ALIGN(nla->nla_len);
+	}
+}
+
+static int jcat_extract_serr(struct jcat_priv *priv)
+{
+	struct jcat_stats *stats = &priv->stats;
+	struct sock_extended_err *serr = priv->serr;
+	struct scm_timestamping *tss = priv->tss;
+
+	switch (serr->ee_origin) {
+	case SO_EE_ORIGIN_TIMESTAMPING:
+		/*
+		 * We expect here following patterns:
+		 *   serr->ee_info == SCM_TSTAMP_ACK
+		 *     Activated with SOF_TIMESTAMPING_TX_ACK
+		 * or
+		 *   serr->ee_info == SCM_TSTAMP_SCHED
+		 *     Activated with SOF_TIMESTAMPING_SCHED
+		 * and
+		 *   serr->ee_data == tskey
+		 *     session message counter which is activate
+		 *     with SOF_TIMESTAMPING_OPT_ID
+		 * the serr->ee_errno should be ENOMSG
+		 */
+		if (serr->ee_errno != ENOMSG)
+			warnx("serr: expected ENOMSG, got: %i",
+			      serr->ee_errno);
+		stats->tskey = serr->ee_data;
+
+		jcat_print_timestamp(priv, jcat_tstype_to_str(serr->ee_info),
+				     &tss->ts[0]);
+
+		if (serr->ee_info == SCM_TSTAMP_SCHED)
+			return -EINTR;
+		else
+			return 0;
+	case SO_EE_ORIGIN_LOCAL:
+		/*
+		 * The serr->ee_origin == SO_EE_ORIGIN_LOCAL is
+		 * currently used to notify about locally
+		 * detected protocol/stack errors.
+		 * Following patterns are expected:
+		 *   serr->ee_info == J1939_EE_INFO_TX_ABORT
+		 *     is used to notify about session TX
+		 *     abort.
+		 *   serr->ee_data == tskey
+		 *     session message counter which is activate
+		 *     with SOF_TIMESTAMPING_OPT_ID
+		 *   serr->ee_errno == actual error reason
+		 *     error reason is converted from J1939
+		 *     abort to linux error name space.
+		 */
+		if (serr->ee_info != J1939_EE_INFO_TX_ABORT)
+			warnx("serr: unknown ee_info: %i",
+			      serr->ee_info);
+
+		jcat_print_timestamp(priv, "  ABT", &tss->ts[0]);
+		warnx("serr: tx error: %i, %s", serr->ee_errno, strerror(serr->ee_errno));
+
+		return serr->ee_errno;
+	default:
+		warnx("serr: wrong origin: %u", serr->ee_origin);
+	}
+
+	return 0;
+}
+
+static int jcat_parse_cm(struct jcat_priv *priv, struct cmsghdr *cm)
+{
+	const size_t hdr_len = CMSG_ALIGN(sizeof(struct cmsghdr));
+
+	if (cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_TIMESTAMPING) {
+		priv->tss = (void *)CMSG_DATA(cm);
+	} else if (cm->cmsg_level == SOL_SOCKET && cm->cmsg_type == SCM_TIMESTAMPING_OPT_STATS) {
+		void *jstats = (void *)CMSG_DATA(cm);
+
+		/* Activated with SOF_TIMESTAMPING_OPT_STATS */
+		jcat_scm_opt_stats(priv, jstats, cm->cmsg_len - hdr_len);
+	} else if (cm->cmsg_level == SOL_CAN_J1939 &&
+		   cm->cmsg_type == SCM_J1939_ERRQUEUE) {
+		priv->serr = (void *)CMSG_DATA(cm);
+	} else
+		warnx("serr: not supported type: %d.%d",
+		      cm->cmsg_level, cm->cmsg_type);
+
+	return 0;
+}
+
+static int jcat_recv_err(struct jcat_priv *priv)
+{
+	char control[100];
+	struct cmsghdr *cm;
+	int ret;
+	struct msghdr msg = {
+		.msg_control = control,
+		.msg_controllen = sizeof(control),
+	};
+
+	ret = recvmsg(priv->sock, &msg, MSG_ERRQUEUE);
+	if (ret == -1)
+		err(EXIT_FAILURE, "recvmsg error notification: %i", errno);
+	if (msg.msg_flags & MSG_CTRUNC)
+		err(EXIT_FAILURE, "recvmsg error notification: truncated");
+
+	priv->serr = NULL;
+	priv->tss = NULL;
+
+	for (cm = CMSG_FIRSTHDR(&msg); cm && cm->cmsg_len;
+	     cm = CMSG_NXTHDR(&msg, cm)) {
+		jcat_parse_cm(priv, cm);
+		if (priv->serr && priv->tss)
+			return jcat_extract_serr(priv);
+	}
+
+	return 0;
+}
+
 static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
 			  size_t buf_size)
 {
-	ssize_t count, num_sent = 0;
+	ssize_t count, num_sent;
 	char *tmp_buf = buf;
-	unsigned int events = POLLOUT;
+	unsigned int events = POLLOUT | POLLERR;
+	bool tx_done = false;
 
 	count = buf_size;
 
-	while (count) {
+	while (!tx_done) {
 		if (priv->polltimeout) {
 			struct pollfd fds = {
 				.fd = priv->sock,
@@ -141,6 +322,17 @@ static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
 				return -EIO;
 			}
 
+			if (fds.revents & POLLERR) {
+				ret = jcat_recv_err(priv);
+				if (ret == -EINTR)
+					continue;
+				else if (ret)
+					return ret;
+				else
+					tx_done = true;
+
+			}
+
 			if (fds.revents & POLLOUT) {
 				num_sent = jcat_send_one(priv, out_fd, tmp_buf, count);
 				if (num_sent < 0)
@@ -159,6 +351,8 @@ static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
 			     __func__);
 			return -EINVAL;
 		}
+		if (!count)
+			events = POLLERR;
 	}
 	return 0;
 }
@@ -306,6 +500,8 @@ static int jcat_recv(struct jcat_priv *priv)
 
 static int jcat_sock_prepare(struct jcat_priv *priv)
 {
+	unsigned int sock_opt;
+	int value;
 	int ret;
 
 	/* open socket */
@@ -323,6 +519,25 @@ static int jcat_sock_prepare(struct jcat_priv *priv)
 			return EXIT_FAILURE;
 		}
 	}
+
+	value = 1;
+	ret = setsockopt(priv->sock, SOL_CAN_J1939, SO_J1939_ERRQUEUE, &value,
+			 sizeof(value));
+	if (ret < 0) {
+		warn("set recverr");
+		return EXIT_FAILURE;
+	}
+
+	sock_opt = SOF_TIMESTAMPING_SOFTWARE |
+		   SOF_TIMESTAMPING_OPT_CMSG |
+		   SOF_TIMESTAMPING_TX_ACK |
+		   SOF_TIMESTAMPING_TX_SCHED |
+		   SOF_TIMESTAMPING_OPT_STATS | SOF_TIMESTAMPING_OPT_TSONLY |
+		   SOF_TIMESTAMPING_OPT_ID;
+
+	if (setsockopt(priv->sock, SOL_SOCKET, SO_TIMESTAMPING,
+		       (char *) &sock_opt, sizeof(sock_opt)))
+		error(1, 0, "setsockopt timestamping");
 
 	ret = bind(priv->sock, (void *)&priv->sockname, sizeof(priv->sockname));
 	if (ret < 0) {
