@@ -47,6 +47,7 @@
 #include <string.h>
 #include <libgen.h>
 #include <time.h>
+#include <strings.h>
 
 #include <net/if.h>
 #include <sys/types.h>
@@ -72,8 +73,118 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -c          (color mode)\n");
 	fprintf(stderr, "         -a          (print data also in ASCII-chars)\n");
 	fprintf(stderr, "         -t <type>   (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
+	fprintf(stderr, "         -u          (print uds messages)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
+	fprintf(stderr, "\nUDS output contains a flag which provides information about the type of the message.\n");
+	fprintf(stderr, "Flags: [SRQ] = Service Request\n");
+	fprintf(stderr, "       [PSR] = Positive Service Response\n");
+	fprintf(stderr, "       [NRC] = Negative Response Code\n");
+	fprintf(stderr, "       [???] = Unknown (not specified)\n");	
 	fprintf(stderr, "\n");
+}
+
+void print_uds_message(int service, int nrc)
+{
+	char *service_name;
+	char *flag = "[???]";
+
+	if ((service >= 0x50 && service <= 0x7E) || (service >= 0xC3 && service <= 0xC8)) {
+		flag = "[PSR]";
+		service = service - 0x40;
+	} else if (service >= 0x10 && service <= 0x3E
+		   || service >= 0x83 && service <= 0x88
+		   || service >= 0xBA && service <= 0xBE)
+		flag = "[SRQ]";
+	
+	switch(service) {
+	case 0x10: service_name = "DiagnosticSessionControl"; break;
+	case 0x11: service_name = "ECUReset"; break;
+	case 0x14: service_name = "ClearDiagnosticInformation"; break;
+	case 0x19: service_name = "ReadDTCInformation"; break;
+	case 0x22: service_name = "ReadDataByIdentifier"; break;
+	case 0x23: service_name = "ReadDataByMemory"; break;
+	case 0x24: service_name = "ReadScalingDataByIdentifier"; break;
+	case 0x27: service_name = "SecurityAccess"; break;
+	case 0x28: service_name = "CommunicationControl"; break;
+	case 0x2A: service_name = "ReadDataByPeriodicIdentifier"; break;
+	case 0x2C: service_name = "DynamicallyDefineDataIdentifier"; break;
+	case 0x2E: service_name = "WriteDataByIdentifier"; break;
+	case 0x2F: service_name = "InputOutputControlByIdentifier"; break;
+	case 0x31: service_name = "RoutineControl"; break;
+	case 0x34: service_name = "RequestDownload"; break;
+	case 0x35: service_name = "RequestUpload"; break;
+	case 0x36: service_name = "TransferData"; break;
+	case 0x37: service_name = "RequestTransferExit"; break;
+	case 0x38: service_name = "RequestFileTransfer"; break;
+	case 0x3D: service_name = "WriteMemoryByAddress"; break;
+	case 0x3E: service_name = "TesterPresent"; break;
+	case 0x83: service_name = "AccessTimingParameter"; break;
+	case 0x84: service_name = "SecuredDataTransmision"; break;
+	case 0x85: service_name = "ControlDTCSetting"; break;
+	case 0x86: service_name = "ResponseOnEvent"; break;
+	case 0x87: service_name = "LinkControl"; break;
+	case 0x7F: flag = "[NRC]";
+		switch (nrc) {
+		case 0x00: service_name = "positiveResponse"; break;
+		case 0x10: service_name = "generalReject"; break;
+		case 0x11: service_name = "serviceNotSupported"; break;
+		case 0x12: service_name = "sub-functionNotSupported"; break;
+		case 0x13: service_name = "incorrectMessageLengthOrInvalidFormat"; break;
+		case 0x14: service_name = "responseTooLong"; break;
+		case 0x21: service_name = "busyRepeatRequest"; break;
+		case 0x22: service_name = "conditionsNotCorrect"; break;
+		case 0x24: service_name = "requestSequenceError"; break;
+		case 0x25: service_name = "noResponseFromSubnetComponent"; break;
+		case 0x26: service_name = "FailurePreventsExecutionOfRequestedAction"; break;
+		case 0x31: service_name = "requestOutOfRange"; break;
+		case 0x33: service_name = "securityAccessDenied"; break;
+		case 0x35: service_name = "invalidKey"; break;
+		case 0x36: service_name = "exceedNumberOfAttempts"; break;
+		case 0x37: service_name = "requiredTimeDelayNotExpired"; break;
+		case 0x70: service_name = "uploadDownloadNotAccepted"; break;
+		case 0x71: service_name = "transferDataSuspended"; break;
+		case 0x72: service_name = "generalProgrammingFailure"; break;
+		case 0x73: service_name = "wrongBlockSequenceCounter"; break;
+		case 0x78: service_name = "requestCorrectlyReceived-ResponsePending"; break;
+		case 0x7E: service_name = "sub-functionNotSupportedInActiveSession"; break;
+		case 0x7F: service_name = "serviceNotSupportedInActiveSession"; break;
+		case 0x81: service_name = "rpmTooHigh"; break;
+		case 0x82: service_name = "rpmTooLow"; break;
+		case 0x83: service_name = "engineIsRunning"; break;
+		case 0x84: service_name = "engineIsNotRunning"; break;
+		case 0x85: service_name = "engineRunTimeTooLow"; break;
+		case 0x86: service_name = "temperatureTooHigh"; break;
+		case 0x87: service_name = "temperatureTooLow"; break;
+		case 0x88: service_name = "vehicleSpeedTooHigh"; break;
+		case 0x89: service_name = "vehicleSpeedTooLow"; break;
+		case 0x8A: service_name = "throttle/PedalTooHigh"; break;
+		case 0x8B: service_name = "throttle/PedalTooLow"; break;
+		case 0x8C: service_name = "transmissionRangeNotInNeutral"; break;
+		case 0x8D: service_name = "transmissionRangeNotInGear"; break;
+		case 0x8F: service_name = "brakeSwitch(es)NotClosed (Brake Pedal not pressed or not applied)"; break;
+		case 0x90: service_name = "shifterLeverNotInPark"; break;
+		case 0x91: service_name = "torqueConverterClutchLocked"; break;
+		case 0x92: service_name = "voltageTooHigh"; break;
+		case 0x93: service_name = "voltageTooLow"; break;
+
+		default:
+			if (nrc > 0x37 && nrc < 0x50) {
+				service_name = "reservedByExtendedDataLinkSecurityDocument"; break;
+			}
+			else if (nrc > 0x93 && nrc < 0xF0) {
+				service_name = "reservedForSpecificConditionsNotCorrect"; break;
+			}
+			else if (nrc > 0xEF && nrc < 0xFE) {
+				service_name = "vehicleManufacturerSpecificConditionsNotCorrect"; break;
+			}
+			else {
+				service_name = "ISOSAEReserved"; break;
+			}
+		}
+		break;
+	default: service_name = "Unknown";
+	}
+	printf("%s %s", flag, service_name);
 }
 
 int main(int argc, char **argv)
@@ -93,6 +204,8 @@ int main(int argc, char **argv)
 	int rx_extany = 0;
 	int asc = 0;
 	int color = 0;
+	int uds_output = 0;
+	int is_ff = 0;
 	int timestamp = 0;
 	int datidx = 0;
 	unsigned long fflen = 0;
@@ -103,7 +216,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "s:d:ax:X:ct:?")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:ax:X:ct:u?")) != -1) {
 		switch (opt) {
 		case 's':
 			src = strtoul(optarg, (char **)NULL, 16);
@@ -149,6 +262,10 @@ int main(int argc, char **argv)
 				       basename(argv[0]), optarg[0]);
 				timestamp = 0;
 			}
+			break;
+
+		case 'u':
+		        uds_output = 1;
 			break;
 
 		case '?':
@@ -291,6 +408,7 @@ int main(int argc, char **argv)
 	    
 			switch (n_pci & 0xF0) {
 			case 0x00:
+			        is_ff = 1;
 				if (n_pci & 0xF) {
 					printf("[SF] ln: %-4d data:", n_pci & 0xF);
 					datidx = ext+1;
@@ -301,6 +419,7 @@ int main(int argc, char **argv)
 				break;
 
 			case 0x10:
+			        is_ff = 1;
 				fflen = ((n_pci & 0x0F)<<8) + frame.data[ext+1];
 				if (fflen)
 					datidx = ext+2;
@@ -361,6 +480,15 @@ int main(int argc, char **argv)
 						       frame.data[i] : '.');
 					}
 					printf("'");
+				}
+				if (uds_output && is_ff) {
+					int offset = 3;
+					if (asc)
+						offset = 1;
+					printf("%*s", ((7-ext) - (frame.len-datidx))*offset + 3,
+					       " - ");
+					print_uds_message(frame.data[datidx], frame.data[datidx+2]);
+					is_ff = 0;
 				}
 			}
 
