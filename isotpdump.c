@@ -91,9 +91,9 @@ void print_uds_message(int service, int nrc)
 	if ((service >= 0x50 && service <= 0x7E) || (service >= 0xC3 && service <= 0xC8)) {
 		flag = "[PSR]";
 		service = service - 0x40;
-	} else if (service >= 0x10 && service <= 0x3E
-		   || service >= 0x83 && service <= 0x88
-		   || service >= 0xBA && service <= 0xBE)
+	} else if ((service >= 0x10 && service <= 0x3E) ||
+		   (service >= 0x83 && service <= 0x88) ||
+		   (service >= 0xBA && service <= 0xBE))
 		flag = "[SRQ]";
 	
 	switch(service) {
