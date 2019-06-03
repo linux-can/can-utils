@@ -118,6 +118,17 @@ struct calc_ref_clk {
 	const char *name;
 };
 
+/*
+ * minimal structs, just enough to be source level compatible
+ */
+struct can_priv {
+	struct can_clock clock;
+};
+
+struct net_device {
+	struct can_priv	priv;
+};
+
 struct calc_bittiming_const {
 	const struct can_bittiming_const bittiming_const;
 	const struct can_bittiming_const data_bittiming_const;
@@ -144,17 +155,6 @@ struct calc_data {
 	const struct can_bittiming *opt_bt;
 
 	bool quiet;
-};
-
-/*
- * minimal structs, just enough to be source level compatible
- */
-struct can_priv {
-	struct can_clock clock;
-};
-
-struct net_device {
-	struct can_priv	priv;
 };
 
 static inline void *netdev_priv(const struct net_device *dev)
