@@ -115,14 +115,14 @@ typedef __u32 u32;
 
 struct calc_ref_clk {
 	__u32 clk;	/* CAN system clock frequency in Hz */
-	char *name;
+	const char *name;
 };
 
 struct calc_bittiming_const {
-	struct can_bittiming_const bittiming_const;
+	const struct can_bittiming_const bittiming_const;
 
 	const struct calc_ref_clk ref_clk[16];
-	void (*printf_btr)(struct can_bittiming *bt, bool hdr);
+	const void (*printf_btr)(struct can_bittiming *bt, bool hdr);
 };
 
 /*
@@ -324,7 +324,7 @@ static void printf_btr_mcan(struct can_bittiming *bt, bool hdr)
 	}
 }
 
-static struct calc_bittiming_const can_calc_consts[] = {
+static const struct calc_bittiming_const can_calc_consts[] = {
 	{
 		.bittiming_const = {
 			.name = "sja1000",
@@ -519,7 +519,7 @@ static struct calc_bittiming_const can_calc_consts[] = {
 	},
 };
 
-static long common_bitrates[] = {
+static const unsigned int common_bitrates[] = {
 	1000000,
 	800000,
 	500000,
