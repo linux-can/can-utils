@@ -2,7 +2,7 @@
 /* can-calc-bit-timing.c: Calculate CAN bit timing parameters
  *
  * Copyright (C) 2008 Wolfgang Grandegger <wg@grandegger.com>
- * Copyright (C) 2016, 2021 Marc Kleine-Budde <mkl@pengutronix.de>
+ * Copyright (C) 2016, 2021, 2022 Marc Kleine-Budde <mkl@pengutronix.de>
  *
  * Derived from:
  *   can_baud.c - CAN baudrate calculation
@@ -122,7 +122,25 @@ struct calc_bittiming_const {
 	const struct can_bittiming_const bittiming_const;
 
 	const struct calc_ref_clk ref_clk[16];
+
 	const void (*printf_btr)(struct can_bittiming *bt, bool hdr);
+};
+
+struct calc_data {
+	const struct can_bittiming_const *bittiming_const;
+	const void (*printf_btr)(struct can_bittiming *bt, bool hdr);
+	const char *name;
+
+	const struct calc_ref_clk *ref_clks;
+	const unsigned int *bitrates;
+
+	unsigned int sample_point;
+
+	const struct calc_ref_clk *opt_ref_clk;
+	const unsigned int *opt_bitrates;
+	const struct can_bittiming *opt_bt;
+
+	bool quiet;
 };
 
 /*
@@ -529,6 +547,7 @@ static const unsigned int common_bitrates[] = {
 	50000,
 	20000,
 	10000,
+	0
 };
 
 #define CAN_CALC_MAX_ERROR 50 /* in one-tenth of a percent */
@@ -745,12 +764,13 @@ static __u32 get_cia_sample_point(__u32 bitrate)
 	return sampl_pt;
 }
 
-static void print_bit_timing(const struct calc_bittiming_const *btc,
-			     const struct can_bittiming *ref_bt,
-			     const struct calc_ref_clk *ref_clk,
-			     unsigned int bitrate_nominal,
-			     unsigned int sample_point_nominal,
-			     bool quiet)
+static void print_bittiming_one(const struct can_bittiming_const *bittiming_const,
+				const struct can_bittiming *ref_bt,
+				const struct calc_ref_clk *ref_clk,
+				unsigned int bitrate_nominal,
+				unsigned int sample_point_nominal,
+				void (*printf_btr)(struct can_bittiming *bt, bool hdr),
+				bool quiet)
 {
 	struct net_device dev = {
 		.priv.clock.freq = ref_clk->clk,
@@ -765,34 +785,30 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 		printf("Bit timing parameters for %s%s%s%s with %.6f MHz ref clock\n"
 		       "nominal                                 real Bitrt   nom  real SampP\n"
 		       "Bitrate TQ[ns] PrS PhS1 PhS2 SJW BRP Bitrate Error SampP SampP Error ",
-		       btc->bittiming_const.name,
+		       bittiming_const->name,
 		       ref_clk->name ? " (" : "",
 		       ref_clk->name ? ref_clk->name : "",
 		       ref_clk->name ? ")" : "",
 		       ref_clk->clk / 1000000.0);
 
-		if (btc->printf_btr)
-			btc->printf_btr(&bt, true);
+		if (printf_btr)
+			printf_btr(&bt, true);
 		printf("\n");
 	}
 
 	if (ref_bt) {
 		bt = *ref_bt;
 
-		if (can_fixup_bittiming(&dev, &bt, &btc->bittiming_const)) {
+		if (can_fixup_bittiming(&dev, &bt, bittiming_const)) {
 			printf("%7d ***parameters exceed controller's range***\n", bitrate_nominal);
 			return;
 		}
 	} else {
-		if (can_calc_bittiming(&dev, &bt, &btc->bittiming_const)) {
+		if (can_calc_bittiming(&dev, &bt, bittiming_const)) {
 			printf("%7d ***bitrate not possible***\n", bitrate_nominal);
 			return;
 		}
 	}
-
-	/* get nominal sample point */
-	if (!sample_point_nominal)
-		sample_point_nominal = get_cia_sample_point(bitrate_nominal);
 
 	bitrate_error = abs(bitrate_nominal - bt.bitrate);
 	sample_point_error = abs(sample_point_nominal - bt.sample_point);
@@ -822,9 +838,42 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 		printf("%4.1f%% ",		/* Sample Point Error */
 		       100.0 * sample_point_error / sample_point_nominal);
 
-	if (btc->printf_btr)
-		btc->printf_btr(&bt, false);
+	if (printf_btr)
+		printf_btr(&bt, false);
 	printf("\n");
+}
+
+static void print_bittiming(const struct calc_data *data)
+{
+	const struct calc_ref_clk *ref_clks = data->ref_clks;
+
+	while (ref_clks->clk) {
+		unsigned int const *bitrates = data->bitrates;
+		bool quiet = data->quiet;
+
+		while (*bitrates) {
+			unsigned int sample_point;
+
+			/* get nominal sample point */
+			if (data->sample_point)
+				sample_point = data->sample_point;
+			else
+				sample_point = get_cia_sample_point(*bitrates);
+
+			print_bittiming_one(data->bittiming_const,
+					    data->opt_bt,
+					    ref_clks,
+					    *bitrates,
+					    sample_point,
+					    data->printf_btr,
+					    quiet);
+			bitrates++;
+			quiet = true;
+		}
+
+		printf("\n");
+		ref_clks++;
+	}
 }
 
 static void do_list(void)
@@ -835,51 +884,41 @@ static void do_list(void)
 		printf("%s\n", can_calc_consts[i].bittiming_const.name);
 }
 
-static void do_calc(const char *name,
-		    const struct can_bittiming *opt_ref_bt,
-		    __u32 bitrate_nominal, unsigned int spt_nominal,
-		    struct calc_ref_clk *opt_ref_clk, bool quiet)
+static void do_calc(struct calc_data *data)
 {
-	const struct calc_bittiming_const *btc;
-	const struct calc_ref_clk *ref_clk;
-	unsigned int i, j, k;
+	unsigned int i;
 	bool found = false;
 
 	for (i = 0; i < ARRAY_SIZE(can_calc_consts); i++) {
-		if (name &&
-		    strcmp(can_calc_consts[i].bittiming_const.name, name) != 0)
+		const struct calc_bittiming_const *btc;
+
+		btc = &can_calc_consts[i];
+
+		if (data->name && strcmp(data->name, btc->bittiming_const.name))
 			continue;
 
 		found = true;
-		btc = &can_calc_consts[i];
 
-		for (j = 0; j < ARRAY_SIZE(btc->ref_clk); j++) {
-			if (opt_ref_clk)
-				ref_clk = opt_ref_clk;
+		if (btc->bittiming_const.name[0]) {
+			data->bittiming_const = &btc->bittiming_const;
+			data->printf_btr = btc->printf_btr;
+
+			if (data->opt_ref_clk)
+				data->ref_clks = data->opt_ref_clk;
 			else
-				ref_clk = &btc->ref_clk[j];
+				data->ref_clks = btc->ref_clk;
 
-			if (!ref_clk->clk)
-				break;
+			if (data->opt_bitrates)
+				data->bitrates = data->opt_bitrates;
+			else
+				data->bitrates = common_bitrates;
 
-			if (bitrate_nominal) {
-				print_bit_timing(btc, opt_ref_bt, ref_clk, bitrate_nominal,
-						 spt_nominal, quiet);
-			} else {
-				for (k = 0; k < ARRAY_SIZE(common_bitrates); k++)
-					print_bit_timing(btc, opt_ref_bt, ref_clk,
-							 common_bitrates[k],
-							 spt_nominal, k);
-			}
-			printf("\n");
-
-			if (opt_ref_clk)
-				break;
+			print_bittiming(data);
 		}
 	}
 
 	if (!found) {
-		printf("error: unknown CAN controller '%s', try one of these:\n\n", name);
+		printf("error: unknown CAN controller '%s', try one of these:\n\n", data->name);
 		do_list();
 		exit(EXIT_FAILURE);
 	}
@@ -887,18 +926,21 @@ static void do_calc(const char *name,
 
 int main(int argc, char *argv[])
 {
-	__u32 bitrate_nominal = 0;
-	unsigned int spt_nominal = 0;
-	struct calc_ref_clk opt_ref_clk = {
-		.name = "cmd-line",
+	struct calc_ref_clk opt_ref_clk[] = {
+		{ .name = "cmd-line" },
+		{ /* sentinel */ }
 	};
-	struct can_bittiming bt = { 0 };
-	bool quiet = false, list = false;
-	const char *name = NULL;
+	struct can_bittiming opt_bt[1] = { };
+	unsigned int opt_bitrate[] = {
+		0,
+		0 /* sentinel */
+	};
+	struct calc_data data[1] = { };
+	bool list = false;
 	int opt;
 
 	const struct option long_options[] = {
-		{ "tq",         required_argument,	0, OPT_TQ, },
+		{ "tq",		required_argument,	0, OPT_TQ, },
 		{ "prop-seg",	required_argument,	0, OPT_PROP_SEG, },
 		{ "phase-seg1",	required_argument,	0, OPT_PHASE_SEG1, },
 		{ "phase-seg2",	required_argument,	0, OPT_PHASE_SEG2, },
@@ -912,11 +954,11 @@ int main(int argc, char *argv[])
 	while ((opt = getopt_long(argc, argv, "b:c:lqs:?", long_options, NULL)) != -1) {
 		switch (opt) {
 		case 'b':
-			bitrate_nominal = atoi(optarg);
+			opt_bitrate[0] = strtoul(optarg, NULL, 10);
 			break;
 
 		case 'c':
-			opt_ref_clk.clk = strtoul(optarg, NULL, 10);
+			opt_ref_clk->clk = strtoul(optarg, NULL, 10);
 			break;
 
 		case 'l':
@@ -924,11 +966,11 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'q':
-			quiet = true;
+			data->quiet = true;
 			break;
 
 		case 's':
-			spt_nominal = strtoul(optarg, NULL, 10);
+			data->sample_point = strtoul(optarg, NULL, 10);
 			break;
 
 		case '?':
@@ -937,40 +979,40 @@ int main(int argc, char *argv[])
 			break;
 
 		case OPT_TQ:
-			bt.tq = strtoul(optarg, NULL, 10);
+			opt_bt->tq = strtoul(optarg, NULL, 10);
 			break;
 
 		case OPT_PROP_SEG:
-			bt.prop_seg = strtoul(optarg, NULL, 10);
+			opt_bt->prop_seg = strtoul(optarg, NULL, 10);
 			break;
 
 		case OPT_PHASE_SEG1:
-			bt.phase_seg1 = strtoul(optarg, NULL, 10);
+			opt_bt->phase_seg1 = strtoul(optarg, NULL, 10);
 			break;
 
 		case OPT_PHASE_SEG2:
-			bt.phase_seg2 = strtoul(optarg, NULL, 10);
+			opt_bt->phase_seg2 = strtoul(optarg, NULL, 10);
 			break;
 
 		case OPT_SJW:
-			bt.sjw = strtoul(optarg, NULL, 10);
+			opt_bt->sjw = strtoul(optarg, NULL, 10);
 			break;
 
 		case OPT_BRP:
-			bt.brp = strtoul(optarg, NULL, 10);
+			opt_bt->brp = strtoul(optarg, NULL, 10);
 			break;
 
 		case OPT_TSEG1: {
 			__u32 tseg1;
 
 			tseg1 = strtoul(optarg, NULL, 10);
-			bt.prop_seg = tseg1 / 2;
-			bt.phase_seg1 = tseg1 - bt.prop_seg;
+			opt_bt->prop_seg = tseg1 / 2;
+			opt_bt->phase_seg1 = tseg1 - opt_bt->prop_seg;
 			break;
 		}
 
 		case OPT_TSEG2:
-			bt.phase_seg2 = strtoul(optarg, NULL, 10);
+			opt_bt->phase_seg2 = strtoul(optarg, NULL, 10);
 			break;
 
 		default:
@@ -986,23 +1028,24 @@ int main(int argc, char *argv[])
 	}
 
 	if (argc == optind + 1)
-		name = argv[optind];
+		data->name = argv[optind];
 
 	if (list) {
 		do_list();
 		exit(EXIT_SUCCESS);
 	}
 
-	if (spt_nominal && (spt_nominal >= 1000 || spt_nominal < 100)) {
+	if (data->sample_point && (data->sample_point >= 1000 || data->sample_point < 100))
 		print_usage(argv[0]);
-		exit(EXIT_FAILURE);
-	}
 
-	do_calc(name,
-		bt.prop_seg ? &bt: NULL,
-		bitrate_nominal, spt_nominal,
-		opt_ref_clk.clk ? &opt_ref_clk : NULL,
-		quiet);
+	if (opt_ref_clk->clk)
+		data->opt_ref_clk = opt_ref_clk;
+	if (opt_bitrate[0])
+		data->opt_bitrates = opt_bitrate;
+	if (opt_bt->prop_seg)
+		data->opt_bt = opt_bt;
+
+	do_calc(data);
 
 	exit(EXIT_SUCCESS);
 }
