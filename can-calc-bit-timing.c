@@ -57,7 +57,7 @@ enum {
 		__abs_choose_expr(x, char,				\
 		__builtin_choose_expr(					\
 			__builtin_types_compatible_p(typeof(x), char),	\
-			(char)({ signed char __x = (x); __x<0?-__x:__x; }), \
+			(char)({ signed char __x = (x); __x < 0 ? -__x:__x; }), \
 			((void)0)))))))
 
 #define __abs_choose_expr(x, type, other) __builtin_choose_expr(	\
@@ -93,13 +93,13 @@ enum {
  */
 #define clamp(val, lo, hi) min((typeof(val))max(val, lo), hi)
 
-# define do_div(n,base) ({					\
+#define do_div(n, base) ({					\
 	uint32_t __base = (base);				\
 	uint32_t __rem;						\
 	__rem = ((uint64_t)(n)) % __base;			\
 	(n) = ((uint64_t)(n)) / __base;				\
 	__rem;							\
- })
+})
 
 /* */
 
