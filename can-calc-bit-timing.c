@@ -38,6 +38,7 @@ enum {
 	OPT_BRP,
 	OPT_TSEG1,
 	OPT_TSEG2,
+	OPT_ALG,
 };
 
 /* imported from kernel */
@@ -139,8 +140,15 @@ struct calc_bittiming_const {
 	const void (*printf_data_btr)(struct can_bittiming *bt, bool hdr);
 };
 
+struct can_calc_bittiming {
+	int (*alg)(struct net_device *dev, struct can_bittiming *bt,
+		   const struct can_bittiming_const *btc);
+	const char *name;
+};
+
 struct calc_data {
 	const struct can_bittiming_const *bittiming_const;
+	const struct can_calc_bittiming *calc_bittiming;
 	const void (*printf_btr)(struct can_bittiming *bt, bool hdr);
 	const char *name;
 
@@ -174,6 +182,7 @@ static void print_usage(char *cmd)
 	       "\t-s <samp_pt>   sample-point in one-tenth of a percent\n"
 	       "\t               or 0 for CIA recommended sample points\n"
 	       "\t-c <clock>     real CAN system clock in Hz\n"
+	       "\t--alg <alg>    choose specified algorithm for bit-timing calculation\n"
 	       "\n"
 	       "Or supply low level bit timing parameters to decode them:\n"
 	       "\n"
@@ -743,6 +752,14 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
 #undef can_calc_bittiming
 #undef can_update_spt
 
+static const struct can_calc_bittiming calc_bittiming_list[] = {
+	/* 1st will be default */
+	{
+		.alg = can_calc_bittiming_v4_8,
+		.name = "v4.8",
+	},
+};
+
 static int can_fixup_bittiming(struct net_device *dev, struct can_bittiming *bt,
 			       const struct can_bittiming_const *btc)
 {
@@ -797,7 +814,8 @@ static __u32 get_cia_sample_point(__u32 bitrate)
 	return sampl_pt;
 }
 
-static void print_bittiming_one(const struct can_bittiming_const *bittiming_const,
+static void print_bittiming_one(const struct can_calc_bittiming *calc_bittiming,
+				const struct can_bittiming_const *bittiming_const,
 				const struct can_bittiming *ref_bt,
 				const struct calc_ref_clk *ref_clk,
 				unsigned int bitrate_nominal,
@@ -815,14 +833,15 @@ static void print_bittiming_one(const struct can_bittiming_const *bittiming_cons
 	unsigned int bitrate_error, sample_point_error;
 
 	if (!quiet) {
-		printf("Bit timing parameters for %s%s%s%s with %.6f MHz ref clock\n"
+		printf("Bit timing parameters for %s with %.6f MHz ref clock %s%s%susing algo '%s'\n"
 		       " nominal                                  real  Bitrt    nom   real  SampP\n"
 		       " Bitrate TQ[ns] PrS PhS1 PhS2 SJW BRP  Bitrate  Error  SampP  SampP  Error   ",
 		       bittiming_const->name,
-		       ref_clk->name ? " (" : "",
+		       ref_clk->clk / 1000000.0,
+		       ref_clk->name ? "(" : "",
 		       ref_clk->name ? ref_clk->name : "",
-		       ref_clk->name ? ")" : "",
-		       ref_clk->clk / 1000000.0);
+		       ref_clk->name ? ") " : "",
+		       calc_bittiming->name);
 
 		printf_btr(&bt, true);
 		printf("\n");
@@ -836,7 +855,7 @@ static void print_bittiming_one(const struct can_bittiming_const *bittiming_cons
 			return;
 		}
 	} else {
-		if (can_calc_bittiming_v4_8(&dev, &bt, bittiming_const)) {
+		if (calc_bittiming->alg(&dev, &bt, bittiming_const)) {
 			printf("%8d ***bitrate not possible***\n", bitrate_nominal);
 			return;
 		}
@@ -901,7 +920,8 @@ static void print_bittiming(const struct calc_data *data)
 			else
 				sample_point = get_cia_sample_point(*bitrates);
 
-			print_bittiming_one(data->bittiming_const,
+			print_bittiming_one(data->calc_bittiming,
+					    data->bittiming_const,
 					    data->opt_bt,
 					    ref_clks,
 					    *bitrates,
@@ -915,6 +935,14 @@ static void print_bittiming(const struct calc_data *data)
 		printf("\n");
 		ref_clks++;
 	}
+}
+
+static void do_list_calc_bittiming_list(void)
+{
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(calc_bittiming_list); i++)
+		printf("    %s\n", calc_bittiming_list[i].name);
 }
 
 static void do_list(void)
@@ -1005,7 +1033,12 @@ int main(int argc, char *argv[])
 		0,
 		0 /* sentinel */
 	};
-	struct calc_data data[1] = { };
+	struct calc_data data[] = {
+		{
+			.calc_bittiming = calc_bittiming_list,
+		}
+	};
+	const char *opt_alg_name = NULL;
 	bool list = false;
 	int opt;
 
@@ -1018,6 +1051,7 @@ int main(int argc, char *argv[])
 		{ "brp",	required_argument,	0, OPT_BRP, },
 		{ "tseg1",	required_argument,	0, OPT_TSEG1, },
 		{ "tseg2",	required_argument,	0, OPT_TSEG2, },
+		{ "alg",	optional_argument,	0, OPT_ALG, },
 		{ 0,		0,			0, 0 },
 	};
 
@@ -1089,6 +1123,16 @@ int main(int argc, char *argv[])
 			opt_bt->phase_seg2 = strtoul(optarg, NULL, 10);
 			break;
 
+		case OPT_ALG:
+			if (!optarg) {
+				printf("Supported CAN calc bit timing algorithms:\n\n");
+				do_list_calc_bittiming_list();
+				printf("\n");
+				exit(EXIT_SUCCESS);
+			}
+			opt_alg_name = optarg;
+			break;
+
 		default:
 			print_usage(basename(argv[0]));
 			exit(EXIT_FAILURE);
@@ -1111,6 +1155,24 @@ int main(int argc, char *argv[])
 
 	if (data->sample_point && (data->sample_point >= 1000 || data->sample_point < 100))
 		print_usage(argv[0]);
+
+	if (opt_alg_name) {
+		bool alg_found = false;
+		unsigned int i;
+
+		for (i = 0; i < ARRAY_SIZE(calc_bittiming_list); i++) {
+			if (!strcmp(opt_alg_name, calc_bittiming_list[i].name)) {
+				data->calc_bittiming = &calc_bittiming_list[i];
+				alg_found = true;
+			}
+		}
+
+		if (!alg_found) {
+			printf("error: unknown CAN calc bit timing algorithm '%s', try one of these:\n\n", opt_alg_name);
+			do_list_calc_bittiming_list();
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	if (opt_ref_clk->clk)
 		data->opt_ref_clk = opt_ref_clk;
