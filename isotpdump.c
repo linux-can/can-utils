@@ -104,7 +104,7 @@ void print_uds_message(int service, int nrc)
 	case 0x14: service_name = "ClearDiagnosticInformation"; break;
 	case 0x19: service_name = "ReadDTCInformation"; break;
 	case 0x22: service_name = "ReadDataByIdentifier"; break;
-	case 0x23: service_name = "ReadDataByMemory"; break;
+	case 0x23: service_name = "ReadMemoryByAddress"; break;
 	case 0x24: service_name = "ReadScalingDataByIdentifier"; break;
 	case 0x27: service_name = "SecurityAccess"; break;
 	case 0x28: service_name = "CommunicationControl"; break;
