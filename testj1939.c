@@ -206,6 +206,18 @@ int main(int argc, char *argv[])
 			if (ret < 0)
 				error(1, errno, "re-bind()");
 		}
+
+
+		/*
+                 * Activate own and promisc
+                 */
+
+                int promisc = 1; /* 0 = disabled (default), 1 = enabled */
+                setsockopt(sock, SOL_CAN_J1939, SO_J1939_PROMISC, &promisc, sizeof(promisc));
+                int recv_own_msgs = 1; /* 0 = disabled (default), 1 = enabled */
+                setsockopt(sock, SOL_CAN_J1939, SO_J1939_RECV_OWN, &recv_own_msgs, sizeof(recv_own_msgs));
+
+
 	}
 
 	if (todo_connect) {
