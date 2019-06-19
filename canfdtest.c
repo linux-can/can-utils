@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * canfdtest.c - Full-duplex test program (DUT and host part)
  *

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /* can-calc-bit-timing.c: Calculate CAN bit timing parameters
  *
  * Copyright (C) 2008 Wolfgang Grandegger <wg@grandegger.com>

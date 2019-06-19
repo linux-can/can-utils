@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause) */
 /*
  * cansend.c - simple command line tool to send CAN-frames via CAN_RAW sockets
  *

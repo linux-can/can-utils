@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause) */
 /*
  * isotpsniffer.c - dump ISO15765-2 datagrams using PF_CAN isotp protocol 
  *

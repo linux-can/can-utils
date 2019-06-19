@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause) */
 /*
  * canplayer.c - replay a compact CAN frame logfile to CAN devices
  *
