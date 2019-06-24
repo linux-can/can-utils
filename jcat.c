@@ -48,7 +48,7 @@ struct jcat_priv {
 	int infile;
 	int outfile;
 	size_t max_transfer;
-	int repeat;
+	unsigned long repeat;
 	int todo_prio;
 
 	bool valid_peername;
@@ -605,7 +605,7 @@ static int jcat_parse_args(struct jcat_priv *priv, int argc, char *argv[])
 		priv->todo_connect = 1;
 		break;
 	case 'R':
-		priv->repeat = atoi(optarg);
+		priv->repeat = strtoul(optarg, NULL, 0);
 		if (priv->repeat < 1)
 			err(EXIT_FAILURE, "send/repeat count can't be less then 1\n");
 		break;
