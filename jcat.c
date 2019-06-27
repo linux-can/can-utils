@@ -48,7 +48,8 @@ struct jcat_priv {
 	int infile;
 	int outfile;
 	size_t max_transfer;
-	int repeat;
+	unsigned long repeat;
+	unsigned long round;
 	int todo_prio;
 
 	bool valid_peername;
@@ -296,7 +297,8 @@ static int jcat_recv_err(struct jcat_priv *priv)
 static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
 			  size_t buf_size)
 {
-	ssize_t count, num_sent = 0;
+	struct jcat_stats *stats = &priv->stats;
+	ssize_t count;
 	char *tmp_buf = buf;
 	unsigned int events = POLLOUT | POLLERR;
 	bool tx_done = false;
@@ -304,6 +306,8 @@ static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
 	count = buf_size;
 
 	while (!tx_done) {
+		ssize_t num_sent = 0;
+
 		if (priv->polltimeout) {
 			struct pollfd fds = {
 				.fd = priv->sock,
@@ -330,7 +334,7 @@ static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
 					continue;
 				else if (ret)
 					return ret;
-				else
+				else if ((priv->repeat - 1) == stats->tskey)
 					tx_done = true;
 
 			}
@@ -353,8 +357,12 @@ static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
 			     __func__);
 			return -EINVAL;
 		}
-		if (!count)
-			events = POLLERR;
+		if (!count) {
+			if (priv->repeat == priv->round)
+				events = POLLERR;
+			else
+				tx_done = true;
+		}
 	}
 	return 0;
 }
@@ -456,6 +464,7 @@ static int jcat_send(struct jcat_priv *priv)
 		return EXIT_FAILURE;
 
 	for (i = 0; i < priv->repeat; i++) {
+		priv->round++;
 		ret = jcat_sendfile(priv, priv->sock, priv->infile, NULL, size);
 		if (ret)
 			break;
@@ -605,7 +614,7 @@ static int jcat_parse_args(struct jcat_priv *priv, int argc, char *argv[])
 		priv->todo_connect = 1;
 		break;
 	case 'R':
-		priv->repeat = atoi(optarg);
+		priv->repeat = strtoul(optarg, NULL, 0);
 		if (priv->repeat < 1)
 			err(EXIT_FAILURE, "send/repeat count can't be less then 1\n");
 		break;
