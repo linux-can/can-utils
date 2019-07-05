@@ -69,6 +69,17 @@ bin_PROGRAMS = \
 	slcanpty \
 	testj1939
 
+libexec_SCRIPTS = \
+	$(srcdir)/tests/j1939/j1939_ac_100k_dual_can.sh \
+	$(srcdir)/tests/j1939/j1939_ac_100k_local0.sh \
+	$(srcdir)/tests/j1939/j1939_ac_1k_local0.sh \
+	$(srcdir)/tests/j1939/j1939_ac_1m_local0.sh \
+	$(srcdir)/tests/j1939/j1939_ac_8b_local0.sh \
+	$(srcdir)/tests/j1939/j1939_multisock_dualack_100k.sh \
+	$(srcdir)/tests/j1939/j1939_multisock_dualack_1k.sh \
+	$(srcdir)/tests/j1939/j1939_multisock_timeout_100k.sh \
+	$(srcdir)/tests/j1939/run_all.sh
+
 jacd_LDADD = libj1939.la
 jcat_LDADD = libj1939.la
 jspy_LDADD = libj1939.la
@@ -81,7 +92,17 @@ EXTRA_DIST = \
 	README.md \
 	autogen.sh \
 	can-j1939-kickstart.md \
-	can-j1939.md
+	can-j1939.md \
+	tests/j1939/README.md \
+	tests/j1939/j1939_ac_100k_dual_can.sh \
+	tests/j1939/j1939_ac_100k_local0.sh \
+	tests/j1939/j1939_ac_1k_local0.sh \
+	tests/j1939/j1939_ac_1m_local0.sh \
+	tests/j1939/j1939_ac_8b_local0.sh \
+	tests/j1939/j1939_multisock_dualack_100k.sh \
+	tests/j1939/j1939_multisock_dualack_1k.sh \
+	tests/j1939/j1939_multisock_timeout_100k.sh \
+	tests/j1939/run_all.sh
 
 MAINTAINERCLEANFILES = \
 	configure \

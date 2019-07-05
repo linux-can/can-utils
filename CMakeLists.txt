@@ -68,6 +68,20 @@ if(NOT ANDROID)
   add_library(j1939 STATIC
       libj1939.c
   )
+
+  install(PROGRAMS
+    tests/j1939/j1939_ac_100k_dual_can.sh
+    tests/j1939/j1939_ac_100k_local0.sh
+    tests/j1939/j1939_ac_1k_local0.sh
+    tests/j1939/j1939_ac_1m_local0.sh
+    tests/j1939/j1939_ac_8b_local0.sh
+    tests/j1939/j1939_multisock_dualack_100k.sh
+    tests/j1939/j1939_multisock_dualack_1k.sh
+    tests/j1939/j1939_multisock_timeout_100k.sh
+    tests/j1939/run_all.sh
+    DESTINATION ${CMAKE_INSTALL_LIBEXECDIR}
+  )
+
 endif()
 
 add_library(can STATIC
@@ -90,6 +104,5 @@ foreach(name ${PROGRAMS})
 
   install(TARGETS ${name} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endforeach()
-
 
 ADD_CUSTOM_TARGET(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_SOURCE_DIR}/cmake/make_uninstall.cmake")
