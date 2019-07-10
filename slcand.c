@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * slcand.c - userspace daemon for serial line CAN interface driver SLCAN
  *

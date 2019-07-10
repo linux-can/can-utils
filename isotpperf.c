@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause) */
 /*
  * isotpperf.c - ISO15765-2 protocol performance visualisation
  *

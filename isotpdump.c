@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause) */
 /*
  * isotpdump.c - dump and explain ISO15765-2 protocol CAN frames
  *

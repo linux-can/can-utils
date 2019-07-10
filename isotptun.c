@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause) */
 /*
  * isotptun.c - IP over CAN ISO-TP (ISO15765-2) tunnel / proof-of-concept
  *

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause) */
 /*
  * slcan_attach.c - userspace tool for serial line CAN interface driver SLCAN
  *

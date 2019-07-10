@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause) */
 /*
  * asc2log.c - convert ASC logfile to compact CAN frame logfile
  *
