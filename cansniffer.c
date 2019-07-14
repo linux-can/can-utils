@@ -62,6 +62,7 @@
 
 #include <linux/can.h>
 #include <linux/can/bcm.h>
+#include <linux/sockios.h>
 
 #include "terminal.h"
 

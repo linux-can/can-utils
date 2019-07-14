@@ -62,6 +62,7 @@
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include <linux/sockios.h>
 #include <signal.h>
 #include <errno.h>
 
