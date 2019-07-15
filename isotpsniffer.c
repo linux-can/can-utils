@@ -56,6 +56,7 @@
 
 #include <linux/can.h>
 #include <linux/can/isotp.h>
+#include <linux/sockios.h>
 #include "terminal.h"
 
 #define NO_CAN_ID 0xFFFFFFFFU

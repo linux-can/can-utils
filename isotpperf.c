@@ -57,6 +57,7 @@
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include <linux/sockios.h>
 
 #define NO_CAN_ID 0xFFFFFFFFU
 #define PERCENTRES 2 /* resolution in percent for bargraph */
