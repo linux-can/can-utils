@@ -223,14 +223,6 @@ static int open_socket(const char *device, uint64_t name)
 
 	value = 1;
 	if (s.verbose)
-		fprintf(stderr, "- setsockopt(, SOL_CAN_J1939, SO_J1939_RECV_OWN, %d, %zd);\n", value, sizeof(value));
-	ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_RECV_OWN,
-			&value, sizeof(value));
-	if (ret < 0)
-		error(1, errno, "setsockopt receive own msgs");
-
-	value = 1;
-	if (s.verbose)
 		fprintf(stderr, "- setsockopt(, SOL_SOCKET, SO_BROADCAST, %d, %zd);\n", value, sizeof(value));
 	ret = setsockopt(sock, SOL_SOCKET, SO_BROADCAST,
 			&value, sizeof(value));
@@ -475,7 +467,7 @@ static void restore_cache(void)
 /* main */
 int main(int argc, char *argv[])
 {
-	int ret, sock, pgn, sa, opt;
+	int ret, sock, sock_rx, pgn, sa, opt;
 	socklen_t slen;
 	uint8_t dat[9];
 	struct sockaddr_can saddr;
@@ -536,6 +528,7 @@ int main(int argc, char *argv[])
 	if (!s.intf || !s.name)
 		error(1, 0, "bad arguments");
 	ret = sock = open_socket(s.intf, s.name);
+	sock_rx = open_socket(s.intf, s.name);
 
 	install_signal(SIGTERM);
 	install_signal(SIGINT);
@@ -579,7 +572,7 @@ int main(int argc, char *argv[])
 		}
 
 		slen = sizeof(saddr);
-		ret = recvfrom(sock, dat, sizeof(dat), 0, (void *)&saddr, &slen);
+		ret = recvfrom(sock_rx, dat, sizeof(dat), 0, (void *)&saddr, &slen);
 		if (ret < 0) {
 			if (EINTR == errno)
 				continue;
