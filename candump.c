@@ -773,7 +773,7 @@ int main(int argc, char **argv)
 						max_devname_len, devname[idx], buf);
 				}
 
-				if (logfrmt) {
+				if ((logfrmt) && (silent == SILENT_OFF)){
 					char buf[CL_CFSZ]; /* max length */
 
 					/* print CAN frame in log file style to stdout */
