@@ -620,7 +620,7 @@ int main(int argc, char **argv)
 	if (log) {
 		time_t currtime;
 		struct tm now;
-		char fname[sizeof("candump-2006-11-20_202026.log")+1];
+		char fname[83]; /* suggested by -Wformat-overflow= */
 
 		if (time(&currtime) == (time_t)-1) {
 			perror("time");
