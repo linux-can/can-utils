@@ -638,9 +638,9 @@ int main(int argc, char **argv)
 			now.tm_sec);
 
 		if (silent != SILENT_ON)
-			printf("\nWarning: console output active while logging!");
+			fprintf(stderr, "Warning: Console output active while logging!\n");
 
-		fprintf(stderr, "\nEnabling Logfile '%s'\n\n", fname);
+		fprintf(stderr, "Enabling Logfile '%s'\n", fname);
 
 		logfile = fopen(fname, "w");
 		if (!logfile) {
