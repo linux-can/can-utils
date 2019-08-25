@@ -180,7 +180,8 @@ int main(int argc, char *argv[])
 	char *tty = NULL;
 	char const *devprefix = "/dev/";
 	char *name = NULL;
-	char buf[IFNAMSIZ+1];
+	char buf[20];
+	static struct ifreq ifr;
 	struct termios tios;
 	speed_t old_ispeed;
 	speed_t old_ospeed;
@@ -270,6 +271,8 @@ int main(int argc, char *argv[])
 		print_usage(argv[0]);
 
 	name = argv[optind + 1];
+	if (name && (strlen(name) > sizeof(ifr.ifr_newname) - 1))
+		print_usage(argv[0]);
 
 	/* Prepare the tty device name string */
 	pch = strstr(tty, devprefix);
@@ -369,23 +372,23 @@ int main(int argc, char *argv[])
 	}
 	
 	/* retrieve the name of the created CAN netdevice */
-	if (ioctl(fd, SIOCGIFNAME, buf) < 0) {
+	if (ioctl(fd, SIOCGIFNAME, ifr.ifr_name) < 0) {
 		perror("ioctl SIOCGIFNAME");
 		exit(EXIT_FAILURE);
 	}
 
-	syslogger(LOG_NOTICE, "attached TTY %s to netdevice %s\n", ttypath, buf);
+	syslogger(LOG_NOTICE, "attached TTY %s to netdevice %s\n", ttypath, ifr.ifr_name);
 	
 	/* try to rename the created netdevice */
 	if (name) {
-		struct ifreq ifr;
 		int s = socket(PF_INET, SOCK_DGRAM, 0);
 
 		if (s < 0)
 			perror("socket for interface rename");
 		else {
-			strncpy(ifr.ifr_name, buf, IFNAMSIZ);
-			strncpy(ifr.ifr_newname, name, IFNAMSIZ);
+			/* current slcan%d name is still in ifr.ifr_name */
+			memset (ifr.ifr_newname, 0, sizeof(ifr.ifr_newname));
+			strncpy (ifr.ifr_newname, name, sizeof(ifr.ifr_newname) - 1);
 
 			if (ioctl(s, SIOCSIFNAME, &ifr) < 0) {
 				syslogger(LOG_NOTICE, "netdevice %s rename to %s failed\n", buf, name);
