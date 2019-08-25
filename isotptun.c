@@ -143,7 +143,7 @@ int main(int argc, char **argv)
 	extern int optind, opterr, optopt;
 	static int verbose;
 	unsigned char buffer[BUF_LEN];
-	static char name[IFNAMSIZ] = DEFAULT_NAME;
+	static char name[sizeof(ifr.ifr_name)] = DEFAULT_NAME;
 	int nbytes;
 	int run_as_daemon = 0;
 
@@ -164,7 +164,13 @@ int main(int argc, char **argv)
 			break;
 
 		case 'n':
-			strncpy(name, optarg, IFNAMSIZ-1);
+			if (strlen(optarg) > sizeof(name) - 1) {
+				print_usage(basename(argv[0]));
+				exit(EXIT_FAILURE);
+			}
+			/* ensure string termination */
+			memset(name, 0, sizeof(name));
+			strncpy(name, optarg, sizeof(name) - 1);
 			break;
 
 		case 'x':
@@ -299,16 +305,13 @@ int main(int argc, char **argv)
 		}
 	}
 
-	strncpy(ifr.ifr_name, argv[optind], IFNAMSIZ);
-	ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
-	if (!ifr.ifr_ifindex) {
+	addr.can_family = AF_CAN;
+	addr.can_ifindex = if_nametoindex(argv[optind]);
+	if (!addr.can_ifindex) {
 		perror_syslog("if_nametoindex");
 		close(s);
 		exit(EXIT_FAILURE);
 	}
-
-	addr.can_family = AF_CAN;
-	addr.can_ifindex = ifr.ifr_ifindex;
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror_syslog("bind");
@@ -325,8 +328,8 @@ int main(int argc, char **argv)
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
-	strncpy(ifr.ifr_name, name, IFNAMSIZ - 1);
-	ifr.ifr_name[IFNAMSIZ - 1] = '\0';
+	/* string termination is ensured at commandline option handling */
+	strncpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 
 	if (ioctl(t, TUNSETIFF, (void *) &ifr) < 0) {
 		perror_syslog("ioctl tunfd");
