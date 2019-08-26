@@ -64,9 +64,8 @@ typedef __u64 name_t;
 enum {
 	SO_J1939_FILTER = 1,	/* set filters */
 	SO_J1939_PROMISC = 2,	/* set/clr promiscuous mode */
-	SO_J1939_RECV_OWN = 3,
-	SO_J1939_SEND_PRIO = 4,
-	SO_J1939_ERRQUEUE = 5,
+	SO_J1939_SEND_PRIO = 3,
+	SO_J1939_ERRQUEUE = 4,
 };
 
 enum {
