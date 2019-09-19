@@ -18,7 +18,8 @@ subsystem (aka SocketCAN):
 #### CAN access via IP sockets
 * canlogserver : log CAN frames from a remote/local host
 * bcmserver : interactive BCM configuration (remote/local)
-* [socketcand](https://github.com/dschanoeh/socketcand) : use RAW/BCM/ISO-TP sockets via TCP/IP sockets
+* [socketcand](https://github.com/linux-can/socketcand) : use RAW/BCM/ISO-TP sockets via TCP/IP sockets
+* [cannelloni](https://github.com/mguentner/cannelloni) : UDP/SCTP based SocketCAN tunnel
 
 #### CAN in-kernel gateway configuration
 * cangw : CAN gateway userpace tool for netlink configuration
