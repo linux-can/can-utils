@@ -95,10 +95,17 @@ static void do_receive()
 	uint32_t sequence_delta = 0;
 	uint32_t sequence = 0;
 	unsigned int overflow_old = 0;
+	can_err_mask_t err_mask = CAN_ERR_MASK;
 
 	if (setsockopt(s, SOL_SOCKET, SO_RXQ_OVFL,
 		       &dropmonitor_on, sizeof(dropmonitor_on)) < 0) {
 		perror("setsockopt() SO_RXQ_OVFL not supported by your Linux Kernel");
+	}
+
+	/* enable recv. of error messages */
+	if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &err_mask, sizeof(err_mask))) {
+		perror("setsockopt()");
+		exit(EXIT_FAILURE);
 	}
 
 	/* enable recv. now */
@@ -118,6 +125,15 @@ static void do_receive()
 		if (nbytes < 0) {
 			perror("read()");
 			exit(EXIT_FAILURE);
+		}
+
+		if (frame.can_id & CAN_ERR_FLAG) {
+			fprintf(stderr,
+				"sequence CNT: %6u, ERRORFRAME %7x   %02u %02u %02u %02u %02u %02u %02u %02u\n",
+				sequence, frame.can_id,
+				frame.data[0], frame.data[1], frame.data[2], frame.data[3],
+				frame.data[4], frame.data[5], frame.data[6], frame.data[7]);
+			continue;
 		}
 
 		sequence_rx = frame.data[0];
