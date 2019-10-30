@@ -20,7 +20,7 @@
 
 #include <unistd.h>
 #include <getopt.h>
-#include <error.h>
+#include <err.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <net/if.h>
@@ -53,7 +53,7 @@ static const char optstring[] = "?vbos::rep:cnw::";
 
 static void onsigalrm(int sig)
 {
-	error(0, 0, "exit as requested");
+	err(0, "exit as requested");
 	exit(0);
 }
 
@@ -64,7 +64,7 @@ static void schedule_oneshot_itimer(double delay)
 	it.it_value.tv_sec = delay;
 	it.it_value.tv_usec = (long)(delay * 1e6) % 1000000;
 	if (setitimer(ITIMER_REAL, &it, NULL) < 0)
-		error(1, errno, "schedule itimer %.3lfs", delay);
+		err(1, "schedule itimer %.3lfs", delay);
 }
 
 /* main */
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 	case 's':
 		todo_send = strtoul(optarg ?: "8", NULL, 0);
 		if (todo_send > sizeof(dat))
-			error(1, 0, "Unsupported size. max: %zu", sizeof(dat));
+			err(1, "Unsupported size. max: %zu", sizeof(dat));
 		break;
 	case 'r':
 		todo_recv = 1;
@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "- socket(PF_CAN, SOCK_DGRAM, CAN_J1939);\n");
 	sock = ret = socket(PF_CAN, SOCK_DGRAM, CAN_J1939);
 	if (ret < 0)
-		error(1, errno, "socket(j1939)");
+		err(1, "socket(j1939)");
 
 	if (todo_prio >= 0) {
 		if (verbose)
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
 		ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_SEND_PRIO,
 				&todo_prio, sizeof(todo_prio));
 		if (ret < 0)
-			error(1, errno, "set priority %i", todo_prio);
+			err(1, "set priority %i", todo_prio);
 	}
 
 	if (!no_bind) {
@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "- bind(, %s, %zi);\n", libj1939_addr2str(&sockname), sizeof(sockname));
 		ret = bind(sock, (void *)&sockname, sizeof(sockname));
 		if (ret < 0)
-			error(1, errno, "bind()");
+			err(1, "bind()");
 
 		if (todo_rebind) {
 			/* rebind with actual SA */
@@ -186,18 +186,18 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "- bind(, %s, %zi);\n", libj1939_addr2str(&sockname), sizeof(sockname));
 			ret = bind(sock, (void *)&sockname, sizeof(sockname));
 			if (ret < 0)
-				error(1, errno, "re-bind()");
+				err(1, "re-bind()");
 		}
 	}
 
 	if (todo_connect) {
 		if (!valid_peername)
-			error(1, 0, "no peername supplied");
+			err(1, "no peername supplied");
 		if (verbose)
 			fprintf(stderr, "- connect(, %s, %zi);\n", libj1939_addr2str(&peername), sizeof(peername));
 		ret = connect(sock, (void *)&peername, sizeof(peername));
 		if (ret < 0)
-			error(1, errno, "connect()");
+			err(1, "connect()");
 	}
 
 	if (todo_send) {
@@ -226,7 +226,7 @@ int main(int argc, char *argv[])
 		}
 
 		if (ret < 0)
-			error(1, errno, "sendto");
+			err(1, "sendto");
 	}
 
 	/* main loop */
@@ -248,7 +248,7 @@ int main(int argc, char *argv[])
 					fprintf(stderr, "-\t<interrupted>\n");
 				continue;
 			}
-			error(1, errno, "recvfrom()");
+			err(1, "recvfrom()");
 		}
 
 		if (todo_echo) {
@@ -257,7 +257,7 @@ int main(int argc, char *argv[])
 			ret = sendto(sock, dat, ret, 0,
 					(void *)&peername, peernamelen);
 			if (ret < 0)
-				error(1, errno, "sendto");
+				err(1, "sendto");
 		}
 		if (todo_recv) {
 			int i = 0;

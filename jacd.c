@@ -20,7 +20,7 @@
 
 #include <unistd.h>
 #include <getopt.h>
-#include <error.h>
+#include <err.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <net/if.h>
@@ -155,12 +155,12 @@ static int parse_range(char *str)
 	for (tok = strtok(str, ",;"); tok; tok = strtok(NULL, ",;")) {
 		a0 = ae = strtoul(tok, &endp, 0);
 		if (endp <= tok)
-			error(1, 0, "parsing range '%s'", tok);
+			err(1, "parsing range '%s'", tok);
 		if (*endp == '-') {
 			tok = endp+1;
 			ae = strtoul(tok, &endp, 0);
 			if (endp <= tok)
-				error(1, 0, "parsing addr '%s'", tok);
+				err(1, "parsing addr '%s'", tok);
 			if (ae < a0)
 				ae = a0;
 		}
@@ -205,21 +205,21 @@ static int open_socket(const char *device, uint64_t name)
 		fprintf(stderr, "- socket(PF_CAN, SOCK_DGRAM, CAN_J1939);\n");
 	sock = ret = socket(PF_CAN, SOCK_DGRAM, CAN_J1939);
 	if (ret < 0)
-		error(1, errno, "socket(j1939)");
+		err(1, "socket(j1939)");
 
 	if (s.verbose)
 		fprintf(stderr, "- setsockopt(, SOL_SOCKET, SO_BINDTODEVICE, %s, %zd);\n", device, strlen(device));
 	ret = setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE,
 			device, strlen(device));
 	if (ret < 0)
-		error(1, errno, "bindtodevice %s", device);
+		err(1, "bindtodevice %s", device);
 
 	if (s.verbose)
 		fprintf(stderr, "- setsockopt(, SOL_CAN_J1939, SO_J1939_FILTER, <filter>, %zd);\n", sizeof(filt));
 	ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_FILTER,
 			&filt, sizeof(filt));
 	if (ret < 0)
-		error(1, errno, "setsockopt filter");
+		err(1, "setsockopt filter");
 
 	value = 1;
 	if (s.verbose)
@@ -227,13 +227,13 @@ static int open_socket(const char *device, uint64_t name)
 	ret = setsockopt(sock, SOL_SOCKET, SO_BROADCAST,
 			&value, sizeof(value));
 	if (ret < 0)
-		error(1, errno, "setsockopt set broadcast");
+		err(1, "setsockopt set broadcast");
 
 	if (s.verbose)
 		fprintf(stderr, "- bind(, %s, %zi);\n", libj1939_addr2str(&saddr), sizeof(saddr));
 	ret = bind(sock, (void *)&saddr, sizeof(saddr));
 	if (ret < 0)
-		error(1, errno, "bind()");
+		err(1, "bind()");
 	return sock;
 }
 
@@ -258,7 +258,7 @@ static int repeat_address(int sock, uint64_t name)
 	ret = sendto(sock, dat, sizeof(dat), 0, (const struct sockaddr *)&saddr,
 		     sizeof(saddr));
 	if (must_warn(ret))
-		error(1, errno, "send address claim for 0x%02x", s.last_sa);
+		err(1, "send address claim for 0x%02x", s.last_sa);
 	return ret;
 }
 static int claim_address(int sock, uint64_t name, int sa)
@@ -278,7 +278,7 @@ static int claim_address(int sock, uint64_t name, int sa)
 		fprintf(stderr, "- bind(, %s, %zi);\n", libj1939_addr2str(&saddr), sizeof(saddr));
 	ret = bind(sock, (void *)&saddr, sizeof(saddr));
 	if (ret < 0)
-		error(1, errno, "rebind with sa 0x%02x", sa);
+		err(1, "rebind with sa 0x%02x", sa);
 	s.last_sa = sa;
 	return repeat_address(sock, name);
 }
@@ -297,7 +297,7 @@ static int request_addresses(int sock)
 		fprintf(stderr, "- sendto(, { 0, 0xee, 0, }, %zi, 0, %s, %zi);\n", sizeof(dat), libj1939_addr2str(&saddr), sizeof(saddr));
 	ret = sendto(sock, dat, sizeof(dat), 0, (void *)&saddr, sizeof(saddr));
 	if (must_warn(ret))
-		error(1, errno, "send request for address claims");
+		err(1, "send request for address claims");
 	return ret;
 }
 
@@ -365,7 +365,7 @@ static void install_signal(int sig)
 	sigfillset(&sigact.sa_mask);
 	ret = sigaction(sig, &sigact, NULL);
 	if (ret < 0)
-		error(1, errno, "sigaction for signal %i", sig);
+		err(1, "sigaction for signal %i", sig);
 }
 
 static void schedule_itimer(int msec)
@@ -381,7 +381,7 @@ static void schedule_itimer(int msec)
 		ret = setitimer(ITIMER_REAL, &val, NULL);
 	} while ((ret < 0) && (errno == EINTR));
 	if (ret < 0)
-		error(1, errno, "setitimer %i msec", msec);
+		err(1, "setitimer %i msec", msec);
 }
 
 /* dump status */
@@ -422,7 +422,7 @@ static void save_cache(void)
 		return;
 	fp = fopen(s.cachefile, "w");
 	if (!fp)
-		error(1, errno, "fopen %s, w", s.cachefile);
+		err(1, "fopen %s, w", s.cachefile);
 
 	time(&t);
 	fprintf(fp, "# saved on %s\n", ctime(&t));
@@ -445,7 +445,7 @@ static void restore_cache(void)
 	if (!fp) {
 		if (ENOENT == errno)
 			return;
-		error(1, errno, "fopen %s, r", s.cachefile);
+		err(1, "fopen %s, r", s.cachefile);
 	}
 	while (!feof(fp)) {
 		ret = getline(&line, &sz, fp);
@@ -494,9 +494,9 @@ int main(int argc, char *argv[])
 	case 'p':
 #ifdef _GNU_SOURCE
 		if (asprintf(&program_invocation_name, "%s.%s", program_invocation_short_name, optarg) < 0)
-			error(1, errno, "asprintf(program invocation name)");
+			err(1, "asprintf(program invocation name)");
 #else
-		error(0, 0, "compile with -D_GNU_SOURCE to use -p");
+		err(0, "compile with -D_GNU_SOURCE to use -p");
 #endif
 		break;
 	default:
@@ -515,18 +515,18 @@ int main(int argc, char *argv[])
 
 	ret = parse_range(s.ranges);
 	if (!ret)
-		error(1, 0, "no addresses in range");
+		err(1, "no addresses in range");
 
 	if ((s.current_sa < J1939_IDLE_ADDR) && !(addr[s.current_sa].flags & F_USE)) {
 		if (s.verbose)
-			error(0, 0, "forget saved address 0x%02x", s.current_sa);
+			err(0, "forget saved address 0x%02x", s.current_sa);
 		s.current_sa = J1939_IDLE_ADDR;
 	}
 
 	if (s.verbose)
-		error(0, 0, "ready for %s:%016llx", s.intf, (long long)s.name);
+		err(0, "ready for %s:%016llx", s.intf, (long long)s.name);
 	if (!s.intf || !s.name)
-		error(1, 0, "bad arguments");
+		err(1, "bad arguments");
 	ret = sock = open_socket(s.intf, s.name);
 	sock_rx = open_socket(s.intf, s.name);
 
@@ -545,7 +545,7 @@ int main(int argc, char *argv[])
 		case STATE_INITIAL:
 			ret = request_addresses(sock);
 			if (ret < 0)
-				error(1, errno, "could not sent initial request");
+				err(1, "could not sent initial request");
 			s.state = STATE_REQ_SENT;
 			break;
 		case STATE_REQ_PENDING:
@@ -555,7 +555,7 @@ int main(int argc, char *argv[])
 			/* claim addr */
 			sa = choose_new_sa(s.name, s.current_sa);
 			if (sa == J1939_IDLE_ADDR)
-				error(1, 0, "no free address to use");
+				err(1, "no free address to use");
 			ret = claim_address(sock, s.name, sa);
 			if (ret < 0)
 				schedule_itimer(50);
@@ -576,7 +576,7 @@ int main(int argc, char *argv[])
 		if (ret < 0) {
 			if (EINTR == errno)
 				continue;
-			error(1, errno, "recvfrom()");
+			err(1, "recvfrom()");
 		}
 		switch (saddr.can_addr.j1939.pgn) {
 		case J1939_PGN_REQUEST:
@@ -588,7 +588,7 @@ int main(int argc, char *argv[])
 				break;
 			if (s.state == STATE_REQ_SENT) {
 				if (s.verbose)
-					error(0, 0, "request sent, pending for 1250 ms");
+					err(0, "request sent, pending for 1250 ms");
 				schedule_itimer(1250);
 				s.state = STATE_REQ_PENDING;
 			} else if (s.state == STATE_OPERATIONAL) {
@@ -618,14 +618,14 @@ int main(int argc, char *argv[])
 				/* ourselve, disable itimer */
 				s.current_sa = sa;
 				if (s.verbose)
-					error(0, 0, "claimed 0x%02x", sa);
+					err(0, "claimed 0x%02x", sa);
 			} else if (sa == s.current_sa) {
 				if (s.verbose)
-					error(0, 0, "address collision for 0x%02x", sa);
+					err(0, "address collision for 0x%02x", sa);
 				if (s.name > saddr.can_addr.j1939.name) {
 					sa = choose_new_sa(s.name, sa);
 					if (sa == J1939_IDLE_ADDR) {
-						error(0, 0, "no address left");
+						err(0, "no address left");
 						/* put J1939_IDLE_ADDR in cache file */
 						s.current_sa = sa;
 						goto done;
@@ -650,7 +650,7 @@ int main(int argc, char *argv[])
 	}
 done:
 	if (s.verbose)
-		error(0, 0, "shutdown");
+		err(0, "shutdown");
 	claim_address(sock, s.name, J1939_IDLE_ADDR);
 	save_cache();
 	return 0;
