@@ -18,7 +18,7 @@
 
 #include <unistd.h>
 #include <getopt.h>
-#include <error.h>
+#include <err.h>
 #include <poll.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 	case 's':
 		s.pkt_len = strtoul(optarg, 0, 0);
 		if (!s.pkt_len)
-			error(1, EINVAL, "packet size of %s", optarg);
+			err(1, "packet size of %s", optarg);
 		break;
 	case 'p':
 		s.priority = strtoul(optarg, 0, 0);
@@ -125,14 +125,14 @@ int main(int argc, char **argv)
 		optarg = argv[optind++];
 		ret = libj1939_str2addr(optarg, 0, &s.src);
 		if (ret < 0)
-			error(1, 0, "bad address spec [%s]", optarg);
+			err(1, "bad address spec [%s]", optarg);
 		s.defined |= DEF_SRC;
 	}
 	if (argv[optind]) {
 		optarg = argv[optind++];
 		ret = libj1939_str2addr(optarg, 0, &s.dst);
 		if (ret < 0)
-			error(1, 0, "bad address spec [%s]", optarg);
+			err(1, "bad address spec [%s]", optarg);
 		s.defined |= DEF_DST;
 	}
 
@@ -140,36 +140,36 @@ int main(int argc, char **argv)
 		struct stat st;
 
 		if (fstat(STDIN_FILENO, &st) < 0)
-			error(1, errno, "stat stdin, could not determine buffer size");
+			err(1, "stat stdin, could not determine buffer size");
 		s.pkt_len = st.st_size ?: 1024;
 	}
 
 	/* prepare */
 	buf = malloc(s.pkt_len);
 	if (!buf)
-		error(1, errno, "malloc %u", s.pkt_len);
+		err(1, "malloc %u", s.pkt_len);
 
 	sock = socket(PF_CAN, SOCK_DGRAM, CAN_J1939);
 	if (sock < 0)
-		error(1, errno, "socket(can, dgram, j1939)");
+		err(1, "socket(can, dgram, j1939)");
 
 	if (s.defined & DEF_PRIO) {
 		ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_SEND_PRIO, &s.priority, sizeof(s.priority));
 		if (ret < 0)
-			error(1, errno, "setsockopt priority");
+			err(1, "setsockopt priority");
 	}
 	if (s.defined & DEF_SRC) {
 		s.src.can_family = AF_CAN;
 		ret = bind(sock, (void *)&s.src, sizeof(s.src));
 		if (ret < 0)
-			error(1, errno, "bind(%s), %i", libj1939_addr2str(&s.src), -errno);
+			err(1, "bind(%s), %i", libj1939_addr2str(&s.src), -errno);
 	}
 
 	if (s.defined & DEF_DST) {
 		s.dst.can_family = AF_CAN;
 		ret = connect(sock, (void *)&s.dst, sizeof(s.dst));
 		if (ret < 0)
-			error(1, errno, "connect(%s), %i", libj1939_addr2str(&s.dst), -errno);
+			err(1, "connect(%s), %i", libj1939_addr2str(&s.dst), -errno);
 	}
 
 	pfd[0].fd = STDIN_FILENO;
@@ -183,27 +183,26 @@ int main(int argc, char **argv)
 		if (ret < 0) {
 			if (errno == EINTR)
 				continue;
-			error(1, errno, "poll()");
+			err(1, "poll()");
 		}
 		if (pfd[0].revents) {
 			ret = read(pfd[0].fd, buf, s.pkt_len);
 			if (ret < 0)
-				error(1, errno, "read(stdin)");
+				err(1, "read(stdin)");
 			if (!ret)
 				break;
 			len = ret;
 			do {
 				ret = send(pfd[1].fd, buf, len, s.sendflags);
-				if (ret < 0)
-					error(errno != ENOBUFS, errno, "write(%s)",
-							libj1939_addr2str(&s.src));
+				if (ret < 0 && errno != ENOBUFS)
+					err(1, "write(%s)", libj1939_addr2str(&s.src));
 			} while (ret < 0);
 		}
 		if (pfd[1].revents) {
 			ret = read(pfd[1].fd, buf, s.pkt_len);
 			if (ret < 0) {
 				ret = errno;
-				error(0, errno, "read(%s)", libj1939_addr2str(&s.dst));
+				err(0, "read(%s)", libj1939_addr2str(&s.dst));
 				switch (ret) {
 				case EHOSTDOWN:
 					break;
@@ -212,7 +211,7 @@ int main(int argc, char **argv)
 				}
 			} else {
 				if (write(STDOUT_FILENO, buf, ret) < 0)
-					error(1, errno, "write(stdout)");
+					err(1, "write(stdout)");
 			}
 		}
 	}

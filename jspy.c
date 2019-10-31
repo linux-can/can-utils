@@ -19,7 +19,7 @@
 
 #include <unistd.h>
 #include <getopt.h>
-#include <error.h>
+#include <err.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
@@ -105,9 +105,6 @@ int main(int argc, char **argv)
 	uint64_t dst_name;
 	long recvflags;
 
-#ifdef _GNU_SOURCE
-	program_invocation_name = program_invocation_short_name;
-#endif
 	/* argument parsing */
 	while ((opt = getopt_long(argc, argv, optstring, long_opts, NULL)) != -1)
 	switch (opt) {
@@ -123,7 +120,7 @@ int main(int argc, char **argv)
 	case 't':
 		if (optarg) {
 			if (!strchr("adzA", optarg[0]))
-				error(1, 0, "unknown time option '%c'", optarg[0]);
+				err(1, "unknown time option '%c'", optarg[0]);
 			s.time = optarg[0];
 		} else {
 			s.time = 'z';
@@ -138,19 +135,19 @@ int main(int argc, char **argv)
 		optarg = argv[optind];
 		ret = libj1939_str2addr(optarg, 0, &s.addr);
 		if (ret < 0) {
-			error(0, 0, "bad URI %s", optarg);
+			err(0, "bad URI %s", optarg);
 			return 1;
 		}
 	}
 
 	buf = malloc(s.pkt_len);
 	if (!buf)
-		error(1, errno, "malloc %u", s.pkt_len);
+		err(1, "malloc %u", s.pkt_len);
 
 	/* setup socket */
 	sock = socket(PF_CAN, SOCK_DGRAM, CAN_J1939);
 	if (sock < 0)
-		error(1, errno, "socket(can, dgram, j1939)");
+		err(1, "socket(can, dgram, j1939)");
 
 	memset(&filt, 0, sizeof(filt));
 	if (s.addr.can_addr.j1939.name) {
@@ -171,23 +168,23 @@ int main(int argc, char **argv)
 	if (filter) {
 		ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_FILTER, &filt, sizeof(filt));
 		if (ret < 0)
-			error(1, errno, "setsockopt filter");
+			err(1, "setsockopt filter");
 	}
 
 	if (s.promisc) {
 		ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_PROMISC, &ival_1, sizeof(ival_1));
 		if (ret < 0)
-			error(1, errno, "setsockopt promisc");
+			err(1, "setsockopt promisc");
 	}
 
 	if (s.time) {
 		ret = setsockopt(sock, SOL_SOCKET, SO_TIMESTAMP, &ival_1, sizeof(ival_1));
 		if (ret < 0)
-			error(1, errno, "setsockopt timestamp");
+			err(1, "setsockopt timestamp");
 	}
 	ret = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &s.pkt_len, sizeof(s.pkt_len));
 		if (ret < 0)
-			error(1, errno, "setsockopt rcvbuf %u", s.pkt_len);
+			err(1, "setsockopt rcvbuf %u", s.pkt_len);
 
 	/* bind(): to default, only ifindex is used. */
 	memset(&src, 0, sizeof(src));
@@ -198,7 +195,7 @@ int main(int argc, char **argv)
 	src.can_addr.j1939.pgn = J1939_NO_PGN;
 	ret = bind(sock, (void *)&src, sizeof(src));
 	if (ret < 0)
-		error(1, errno, "bind(%s)", argv[1]);
+		err(1, "bind(%s)", argv[1]);
 
 	/* these settings are static and can be held out of the hot path */
 	iov.iov_base = &buf[0];
@@ -209,7 +206,7 @@ int main(int argc, char **argv)
 
 	memset(&tref, 0, sizeof(tref));
 	if (s.verbose)
-		error(0, 0, "listening");
+		err(0, "listening");
 	while (1) {
 		/* these settings may be modified by recvmsg() */
 		iov.iov_len = s.pkt_len;
@@ -222,12 +219,12 @@ int main(int argc, char **argv)
 		if (ret < 0) {
 			switch (errno) {
 			case ENETDOWN:
-				error(0, errno, "ifindex %i", s.addr.can_ifindex);
+				err(0, "ifindex %i", s.addr.can_ifindex);
 				continue;
 			case EINTR:
 				continue;
 			default:
-				error(1, errno, "recvmsg(ifindex %i)", s.addr.can_ifindex);
+				err(1, "recvmsg(ifindex %i)", s.addr.can_ifindex);
 				break;
 			}
 		}

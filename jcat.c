@@ -5,7 +5,6 @@
 
 #include <err.h>
 #include <errno.h>
-#include <error.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <net/if.h>
@@ -444,10 +443,10 @@ static size_t jcat_get_file_size(int fd)
 
 	offset = lseek(fd, 0, SEEK_END);
 	if (offset == -1)
-		error(1, errno, "%s lseek()\n", __func__);
+		err(1, "%s lseek()\n", __func__);
 
 	if (lseek(fd, 0, SEEK_SET) == -1)
-		error(1, errno, "%s lseek() start\n", __func__);
+		err(1, "%s lseek() start\n", __func__);
 
 	return offset;
 }
@@ -470,7 +469,7 @@ static int jcat_send(struct jcat_priv *priv)
 			break;
 
 		if (lseek(priv->infile, 0, SEEK_SET) == -1)
-			error(1, errno, "%s lseek() start\n", __func__);
+			err(1, "%s lseek() start\n", __func__);
 	}
 
 	return ret;
@@ -557,7 +556,7 @@ static int jcat_sock_prepare(struct jcat_priv *priv)
 
 	if (setsockopt(priv->sock, SOL_SOCKET, SO_TIMESTAMPING,
 		       (char *) &sock_opt, sizeof(sock_opt)))
-		error(1, 0, "setsockopt timestamping");
+		err(1, "setsockopt timestamping");
 
 	ret = bind(priv->sock, (void *)&priv->sockname, sizeof(priv->sockname));
 	if (ret < 0) {
@@ -592,7 +591,7 @@ static int jcat_parse_args(struct jcat_priv *priv, int argc, char *argv[])
 	case 'i':
 		priv->infile = open(optarg, O_RDONLY);
 		if (priv->infile == -1)
-			error(EXIT_FAILURE, errno, "can't open input file");
+			err(EXIT_FAILURE, "can't open input file");
 		priv->todo_filesize = 1;
 		break;
 	case 's':
@@ -647,7 +646,7 @@ int main(int argc, char *argv[])
 
 	priv = malloc(sizeof(*priv));
 	if (!priv)
-		error(EXIT_FAILURE, errno, "can't allocate priv");
+		err(EXIT_FAILURE, "can't allocate priv");
 
 	bzero(priv, sizeof(*priv));
 

@@ -16,7 +16,6 @@
 #include <errno.h>
 #include <inttypes.h>
 
-#include <error.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <net/if.h>
@@ -42,7 +41,7 @@ static inline void fetch_names(void)
 	if (!saved) {
 		saved = if_nameindex();
 		if (!saved)
-			error(1, errno, "if_nameindex()");
+			err(1, errno, "if_nameindex()");
 	}
 }
 
