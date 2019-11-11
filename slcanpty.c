@@ -75,7 +75,7 @@ int pty2can(int pty, int socket, struct can_filter *fi,
 
 	nbytes = read(pty, &buf[rxoffset], sizeof(buf)-rxoffset-1);
 	if (nbytes <= 0) {
-		/* nbytes == 0 : no error but pty decriptor has been closed */
+		/* nbytes == 0 : no error but pty descriptor has been closed */
 		if (nbytes < 0)
 			perror("read pty");
 

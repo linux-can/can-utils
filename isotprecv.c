@@ -71,7 +71,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -m <val>     (STmin in ms/ns. See spec.)\n");
 	fprintf(stderr, "         -f <time ns> (force rx stmin value in nanosecs)\n");
 	fprintf(stderr, "         -w <num>     (max. wait frame transmissions.)\n");
-	fprintf(stderr, "         -l           (loop: do not exit after pdu receiption.)\n");
+	fprintf(stderr, "         -l           (loop: do not exit after pdu reception.)\n");
 	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags> (link layer options for CAN FD)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "The pdu data is written on STDOUT in space separated ASCII hex values.\n");

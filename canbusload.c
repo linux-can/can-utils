@@ -103,7 +103,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "Up to %d CAN interfaces with mandatory bitrate can be specified on the \n", MAXSOCK);
 	fprintf(stderr, "commandline in the form: <ifname>@<bitrate>\n\n");
 	fprintf(stderr, "The bitrate is mandatory as it is needed to know the CAN bus bitrate to\n");
-	fprintf(stderr, "calcultate the bus load percentage based on the received CAN frames.\n");
+	fprintf(stderr, "calculate the bus load percentage based on the received CAN frames.\n");
 	fprintf(stderr, "Due to the bitstuffing estimation the calculated busload may exceed 100%%.\n");
 	fprintf(stderr, "For each given interface the data is presented in one line which contains:\n\n");
 	fprintf(stderr, "(interface) (received CAN frames) (used bits total) (used bits for payload)\n");

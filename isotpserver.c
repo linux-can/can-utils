@@ -102,10 +102,10 @@ void print_usage(char *prg)
 	fprintf(stderr, "\nUsage: %s -l <port> -s <can_id> -d <can_id> [options] <CAN interface>\n", prg);
 	fprintf(stderr, "Options: (* = mandatory)\n");
 	fprintf(stderr, "\n");
-	fprintf(stderr, "ip adressing:\n");
+	fprintf(stderr, "ip addressing:\n");
 	fprintf(stderr, " *       -l <port>    (local port for the server)\n");
 	fprintf(stderr, "\n");
-	fprintf(stderr, "isotp adressing:\n");
+	fprintf(stderr, "isotp addressing:\n");
 	fprintf(stderr, " *       -s <can_id>  (source can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, " *       -d <can_id>  (destination can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -x <addr>[:<rxaddr>] (extended addressing / opt. separate rxaddr)\n");

@@ -349,7 +349,7 @@ int main(int argc, char **argv)
 	}
 
 	if (assignments) {
-		/* add & check user assginments from commandline */
+		/* add & check user assignments from commandline */
 		for (i=0; i<assignments; i++) {
 			if (strlen(argv[optind+i]) >= BUFSZ) {
 				fprintf(stderr, "Assignment too long!\n");

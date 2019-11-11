@@ -75,7 +75,7 @@ static struct {
 };
 
 /*
- * usefull buffers
+ * useful buffers
  */
 static const int ival_1 = 1;
 

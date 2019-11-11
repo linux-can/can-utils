@@ -115,7 +115,7 @@ The destination field may be set during sendto().
 emits **19234080#0123456789ABCDEF** .
 
 The destination CAN iface __must__ always match the source CAN iface.
-Specifing one during bind is therefore sufficient.
+Specifying one during bind is therefore sufficient.
 
 	./testj1939 -s can0:,0x12300 :0x40
 
@@ -133,7 +133,7 @@ For broadcasted transmissions
 
 emits **1B21FF80#0123456789ABCDEF** rather than 1923FF80#012345678ABCDEF
 
-Desitination specific transmissions
+Destination specific transmissions
 
 	./testj1939 -s can0:0x80,0x12300 :0x40,0x32100
 
@@ -169,7 +169,7 @@ emits:
 	18EBFF80#02EF0123456789AB
 	18EBFF80#03CDEF01234567FF
 
-The fragments for broadcasted *Transport Protocol* are seperated
+The fragments for broadcasted *Transport Protocol* are separated
 __50ms__ from each other.
 Destination specific *Transport Protocol* applies flow control
 and may emit CAN packets much faster.
