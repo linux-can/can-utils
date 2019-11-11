@@ -137,7 +137,7 @@ void printbuf(unsigned char *buffer, int nbytes, int color, int timestamp,
 		}
 	}
 
-	/* the source socket gets pdu data from the detination id */
+	/* the source socket gets pdu data from the destination id */
 	printf(" %s  %03X  [%d]  ", candevice, src & CAN_EFF_MASK, nbytes);
 	if (format & FORMAT_HEX) {
 		for (i=0; i<nbytes; i++) {

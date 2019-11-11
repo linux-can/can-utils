@@ -467,7 +467,7 @@ int parse_fdmod(char *optarg, struct fdmodattr *modmsg)
 
 int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
 {
-	char ifname[IF_NAMESIZE]; /* internface name for if_indextoname() */
+	char ifname[IF_NAMESIZE]; /* interface name for if_indextoname() */
 	struct rtcanmsg *rtc;
 	struct rtattr *rta;
 	struct nlmsghdr *nlh;

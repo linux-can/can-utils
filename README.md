@@ -22,7 +22,7 @@ subsystem (aka SocketCAN):
 * [cannelloni](https://github.com/mguentner/cannelloni) : UDP/SCTP based SocketCAN tunnel
 
 #### CAN in-kernel gateway configuration
-* cangw : CAN gateway userpace tool for netlink configuration
+* cangw : CAN gateway userspace tool for netlink configuration
 
 #### CAN bus measurement and testing
 * canbusload : calculate and display the CAN busload
