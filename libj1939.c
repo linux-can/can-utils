@@ -13,7 +13,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
+#include <err.h>
 #include <inttypes.h>
 
 #include <unistd.h>
@@ -41,7 +41,7 @@ static inline void fetch_names(void)
 	if (!saved) {
 		saved = if_nameindex();
 		if (!saved)
-			err(1, errno, "if_nameindex()");
+			err(1, "if_nameindex()");
 	}
 }
 
