@@ -615,7 +615,7 @@ int main(int argc, char *argv[])
 			addr[sa].flags |= F_SEEN;
 
 			if (s.name == saddr.can_addr.j1939.name) {
-				/* ourselve, disable itimer */
+				/* ourselves, disable itimer */
 				s.current_sa = sa;
 				if (s.verbose)
 					err(0, "claimed 0x%02x", sa);
