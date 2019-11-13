@@ -44,6 +44,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <libgen.h>
@@ -153,7 +154,7 @@ void printbuf(unsigned char *buffer, int nbytes, int color, int timestamp,
 	if (format & FORMAT_ASCII) {
 		printf("'");
 		for (i=0; i<nbytes; i++) {
-			if ((buffer[i] > 0x1F) && (buffer[i] < 0x7F))
+			if (isprint(buffer[i]))
 				printf("%c", buffer[i]);
 			else
 				printf(".");
