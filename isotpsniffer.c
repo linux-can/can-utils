@@ -76,6 +76,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -c          (color mode)\n");
 	fprintf(stderr, "         -t <type>   (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
 	fprintf(stderr, "         -f <format> (1 = HEX, 2 = ASCII, 3 = HEX & ASCII - default: %d)\n", FORMAT_DEFAULT);
+	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags> (link layer options for CAN FD)\n");
 	fprintf(stderr, "         -h <len>    (head: print only first <len> bytes)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "\n");
@@ -180,6 +181,7 @@ int main(int argc, char **argv)
 	struct sockaddr_can addr;
 	char if_name[IFNAMSIZ];
 	static struct can_isotp_options opts;
+	static struct can_isotp_ll_options llopts;
 	int r = 0;
 	int opt, quit = 0;
 	int color = 0;
@@ -194,7 +196,7 @@ int main(int argc, char **argv)
 	unsigned char buffer[4096];
 	int nbytes;
 
-	while ((opt = getopt(argc, argv, "s:d:x:X:h:ct:f:?")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:x:X:h:ct:f:L:?")) != -1) {
 		switch (opt) {
 		case 's':
 			src = strtoul(optarg, (char **)NULL, 16);
@@ -220,6 +222,17 @@ int main(int argc, char **argv)
 
 		case 'f':
 			format = (atoi(optarg) & (FORMAT_ASCII | FORMAT_HEX));
+			break;
+
+		case 'L':
+			if (sscanf(optarg, "%hhu:%hhu:%hhu",
+						&llopts.mtu,
+						&llopts.tx_dl,
+						&llopts.tx_flags) != 3) {
+				printf("unknown link layer options '%s'.\n", optarg);
+				print_usage(basename(argv[0]));
+				exit(1);
+			}
 			break;
 
 		case 'h':
@@ -304,6 +317,17 @@ int main(int argc, char **argv)
 	}
 
 	if ((setsockopt(t, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts))) < 0) {
+		perror("setsockopt");
+		r = 1;
+		goto out;
+	}
+
+	if ((setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &llopts, sizeof(llopts))) < 0) {
+		perror("setsockopt");
+		r = 1;
+		goto out;
+	}
+	if ((setsockopt(t, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &llopts, sizeof(llopts))) < 0) {
 		perror("setsockopt");
 		r = 1;
 		goto out;
