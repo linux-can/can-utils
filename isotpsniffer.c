@@ -44,6 +44,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <libgen.h>
@@ -75,6 +76,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -c          (color mode)\n");
 	fprintf(stderr, "         -t <type>   (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
 	fprintf(stderr, "         -f <format> (1 = HEX, 2 = ASCII, 3 = HEX & ASCII - default: %d)\n", FORMAT_DEFAULT);
+	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags> (link layer options for CAN FD)\n");
 	fprintf(stderr, "         -h <len>    (head: print only first <len> bytes)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "\n");
@@ -153,7 +155,7 @@ void printbuf(unsigned char *buffer, int nbytes, int color, int timestamp,
 	if (format & FORMAT_ASCII) {
 		printf("'");
 		for (i=0; i<nbytes; i++) {
-			if ((buffer[i] > 0x1F) && (buffer[i] < 0x7F))
+			if (isprint(buffer[i]))
 				printf("%c", buffer[i]);
 			else
 				printf(".");
@@ -175,10 +177,12 @@ void printbuf(unsigned char *buffer, int nbytes, int color, int timestamp,
 int main(int argc, char **argv)
 {
 	fd_set rdfs;
-	int s, t;
+	int s = 0, t = 0;
 	struct sockaddr_can addr;
 	char if_name[IFNAMSIZ];
 	static struct can_isotp_options opts;
+	static struct can_isotp_ll_options llopts;
+	int r = 0;
 	int opt, quit = 0;
 	int color = 0;
 	int head = 0;
@@ -192,7 +196,7 @@ int main(int argc, char **argv)
 	unsigned char buffer[4096];
 	int nbytes;
 
-	while ((opt = getopt(argc, argv, "s:d:x:X:h:ct:f:?")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:x:X:h:ct:f:L:?")) != -1) {
 		switch (opt) {
 		case 's':
 			src = strtoul(optarg, (char **)NULL, 16);
@@ -220,6 +224,17 @@ int main(int argc, char **argv)
 			format = (atoi(optarg) & (FORMAT_ASCII | FORMAT_HEX));
 			break;
 
+		case 'L':
+			if (sscanf(optarg, "%hhu:%hhu:%hhu",
+						&llopts.mtu,
+						&llopts.tx_dl,
+						&llopts.tx_flags) != 3) {
+				printf("unknown link layer options '%s'.\n", optarg);
+				print_usage(basename(argv[0]));
+				exit(1);
+			}
+			break;
+
 		case 'h':
 			head = atoi(optarg);
 			break;
@@ -240,35 +255,37 @@ int main(int argc, char **argv)
 
 		case '?':
 			print_usage(basename(argv[0]));
-			exit(0);
-			break;
+			goto out;
 
 		default:
 			fprintf(stderr, "Unknown option %c\n", opt);
 			print_usage(basename(argv[0]));
-			exit(1);
-			break;
+			goto out;
 		}
 	}
 
 	if ((argc - optind) != 1 || src == NO_CAN_ID || dst == NO_CAN_ID) {
 		print_usage(basename(argv[0]));
-		exit(1);
+		r = 1;
+		goto out;
 	}
   
 	if ((opts.flags & CAN_ISOTP_RX_EXT_ADDR) && (!(opts.flags & CAN_ISOTP_EXTEND_ADDR))) {
 		print_usage(basename(argv[0]));
-		exit(1);
+		r = 1;
+		goto out;
 	}
 
 	if ((s = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP)) < 0) {
 		perror("socket");
-		exit(1);
+		r = 1;
+		goto out;
 	}
 
 	if ((t = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP)) < 0) {
 		perror("socket");
-		exit(1);
+		r = 1;
+		goto out;
 	}
 
 	opts.flags |= CAN_ISOTP_LISTEN_MODE;
@@ -286,8 +303,8 @@ int main(int argc, char **argv)
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
-		close(s);
-		exit(1);
+		r = 1;
+		goto out;
 	}
 
 	if (opts.flags & CAN_ISOTP_RX_EXT_ADDR) {
@@ -299,15 +316,30 @@ int main(int argc, char **argv)
 		opts.rx_ext_address = tmpext;
 	}
 
-	setsockopt(t, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
+	if ((setsockopt(t, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts))) < 0) {
+		perror("setsockopt");
+		r = 1;
+		goto out;
+	}
+
+	if ((setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &llopts, sizeof(llopts))) < 0) {
+		perror("setsockopt");
+		r = 1;
+		goto out;
+	}
+	if ((setsockopt(t, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &llopts, sizeof(llopts))) < 0) {
+		perror("setsockopt");
+		r = 1;
+		goto out;
+	}
 
 	addr.can_addr.tp.tx_id = dst;
 	addr.can_addr.tp.rx_id = src;
 
 	if (bind(t, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
-		close(s);
-		exit(1);
+		r = 1;
+		goto out;
 	}
 
 	while (!quit) {
@@ -332,10 +364,13 @@ int main(int argc, char **argv)
 			nbytes = read(s, buffer, 4096);
 			if (nbytes < 0) {
 				perror("read socket s");
-				return -1;
+				r = 1;
+				goto out;
 			}
-			if (nbytes > 4095)
-				return -1;
+			if (nbytes > 4095) {
+				r = 1;
+				goto out;
+			}
 			printbuf(buffer, nbytes, color?2:0, timestamp, format,
 				 &tv, &last_tv, dst, s, if_name, head);
 		}
@@ -344,16 +379,23 @@ int main(int argc, char **argv)
 			nbytes = read(t, buffer, 4096);
 			if (nbytes < 0) {
 				perror("read socket t");
-				return -1;
+				r = 1;
+				goto out;
 			}
-			if (nbytes > 4095)
-				return -1;
+			if (nbytes > 4095) {
+				r = 1;
+				goto out;
+			}
 			printbuf(buffer, nbytes, color?1:0, timestamp, format,
 				 &tv, &last_tv, src, t, if_name, head);
 		}
 	}
 
-	close(s);
+out:
+	if (s)
+		close(s);
+	if (t)
+		close(t);
 
-	return 0;
+	return r;
 }
