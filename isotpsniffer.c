@@ -176,10 +176,11 @@ void printbuf(unsigned char *buffer, int nbytes, int color, int timestamp,
 int main(int argc, char **argv)
 {
 	fd_set rdfs;
-	int s, t;
+	int s = 0, t = 0;
 	struct sockaddr_can addr;
 	char if_name[IFNAMSIZ];
 	static struct can_isotp_options opts;
+	int r = 0;
 	int opt, quit = 0;
 	int color = 0;
 	int head = 0;
@@ -241,35 +242,37 @@ int main(int argc, char **argv)
 
 		case '?':
 			print_usage(basename(argv[0]));
-			exit(0);
-			break;
+			goto out;
 
 		default:
 			fprintf(stderr, "Unknown option %c\n", opt);
 			print_usage(basename(argv[0]));
-			exit(1);
-			break;
+			goto out;
 		}
 	}
 
 	if ((argc - optind) != 1 || src == NO_CAN_ID || dst == NO_CAN_ID) {
 		print_usage(basename(argv[0]));
-		exit(1);
+		r = 1;
+		goto out;
 	}
   
 	if ((opts.flags & CAN_ISOTP_RX_EXT_ADDR) && (!(opts.flags & CAN_ISOTP_EXTEND_ADDR))) {
 		print_usage(basename(argv[0]));
-		exit(1);
+		r = 1;
+		goto out;
 	}
 
 	if ((s = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP)) < 0) {
 		perror("socket");
-		exit(1);
+		r = 1;
+		goto out;
 	}
 
 	if ((t = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP)) < 0) {
 		perror("socket");
-		exit(1);
+		r = 1;
+		goto out;
 	}
 
 	opts.flags |= CAN_ISOTP_LISTEN_MODE;
@@ -287,8 +290,8 @@ int main(int argc, char **argv)
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
-		close(s);
-		exit(1);
+		r = 1;
+		goto out;
 	}
 
 	if (opts.flags & CAN_ISOTP_RX_EXT_ADDR) {
@@ -300,15 +303,19 @@ int main(int argc, char **argv)
 		opts.rx_ext_address = tmpext;
 	}
 
-	setsockopt(t, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
+	if ((setsockopt(t, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts))) < 0) {
+		perror("setsockopt");
+		r = 1;
+		goto out;
+	}
 
 	addr.can_addr.tp.tx_id = dst;
 	addr.can_addr.tp.rx_id = src;
 
 	if (bind(t, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
-		close(s);
-		exit(1);
+		r = 1;
+		goto out;
 	}
 
 	while (!quit) {
@@ -333,10 +340,13 @@ int main(int argc, char **argv)
 			nbytes = read(s, buffer, 4096);
 			if (nbytes < 0) {
 				perror("read socket s");
-				return -1;
+				r = 1;
+				goto out;
 			}
-			if (nbytes > 4095)
-				return -1;
+			if (nbytes > 4095) {
+				r = 1;
+				goto out;
+			}
 			printbuf(buffer, nbytes, color?2:0, timestamp, format,
 				 &tv, &last_tv, dst, s, if_name, head);
 		}
@@ -345,16 +355,23 @@ int main(int argc, char **argv)
 			nbytes = read(t, buffer, 4096);
 			if (nbytes < 0) {
 				perror("read socket t");
-				return -1;
+				r = 1;
+				goto out;
 			}
-			if (nbytes > 4095)
-				return -1;
+			if (nbytes > 4095) {
+				r = 1;
+				goto out;
+			}
 			printbuf(buffer, nbytes, color?1:0, timestamp, format,
 				 &tv, &last_tv, src, t, if_name, head);
 		}
 	}
 
-	close(s);
+out:
+	if (s)
+		close(s);
+	if (t)
+		close(t);
 
-	return 0;
+	return r;
 }
