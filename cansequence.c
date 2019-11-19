@@ -334,6 +334,7 @@ int main(int argc, char **argv)
 		filter->can_id  &= CAN_SFF_MASK;
 	}
 	frame.can_id = filter->can_id;
+	filter->can_mask |= CAN_EFF_FLAG;
 
 	printf("interface = %s, family = %d, type = %d, proto = %d\n",
 	       interface, family, type, proto);
