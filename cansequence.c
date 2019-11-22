@@ -129,7 +129,7 @@ static void do_receive()
 
 		if (frame.can_id & CAN_ERR_FLAG) {
 			fprintf(stderr,
-				"sequence CNT: %6u, ERRORFRAME %7x   %02u %02u %02u %02u %02u %02u %02u %02u\n",
+				"sequence CNT: %6u, ERRORFRAME %7x   %02x %02x %02x %02x %02x %02x %02x %02x\n",
 				sequence, frame.can_id,
 				frame.data[0], frame.data[1], frame.data[2], frame.data[3],
 				frame.data[4], frame.data[5], frame.data[6], frame.data[7]);
