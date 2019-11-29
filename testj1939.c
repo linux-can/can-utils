@@ -39,7 +39,9 @@ static const char help_msg[] =
 	"		This atually receives packets\n"
 	" -c		Issue connect()\n"
 	" -p=PRIO	Set priority to PRIO\n"
+	" -P		Promiscuous mode. Allow to receive all packets\n"
 	" -b		Do normal bind with SA+1 and rebind with actual SA\n"
+	" -B		Allow to send and receive broadcast packets.\n"
 	" -o		Omit bind\n"
 	" -n		Emit 64bit NAMEs in output\n"
 	" -w[TIME]	Return after TIME (default 1) seconds\n"
@@ -49,7 +51,7 @@ static const char help_msg[] =
 	"\n"
 	;
 
-static const char optstring[] = "?vbos::rep:cnw::";
+static const char optstring[] = "?vbBPos::rep:cnw::";
 
 static void onsigalrm(int sig)
 {
@@ -92,6 +94,7 @@ int main(int argc, char *argv[])
 	int valid_peername = 0;
 	int todo_send = 0, todo_recv = 0, todo_echo = 0, todo_prio = -1;
 	int todo_connect = 0, todo_names = 0, todo_wait = 0, todo_rebind = 0;
+	int todo_broadcast = 0, todo_promisc = 0;
 	int no_bind = 0;
 
 	/* argument parsing */
@@ -114,6 +117,9 @@ int main(int argc, char *argv[])
 	case 'p':
 		todo_prio = strtoul(optarg, NULL, 0);
 		break;
+	case 'P':
+		todo_promisc = 1;
+		break;
 	case 'c':
 		todo_connect = 1;
 		break;
@@ -122,6 +128,9 @@ int main(int argc, char *argv[])
 		break;
 	case 'b':
 		todo_rebind = 1;
+		break;
+	case 'B':
+		todo_broadcast = 1;
 		break;
 	case 'o':
 		no_bind = 1;
@@ -160,6 +169,26 @@ int main(int argc, char *argv[])
 	sock = ret = socket(PF_CAN, SOCK_DGRAM, CAN_J1939);
 	if (ret < 0)
 		err(1, "socket(j1939)");
+
+	if (todo_promisc) {
+		if (verbose)
+			fprintf(stderr, "- setsockopt(, SOL_SOCKET, SO_J1939_PROMISC, %d, %zd);\n",
+				todo_promisc, sizeof(todo_promisc));
+		ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_PROMISC,
+				 &todo_promisc, sizeof(todo_promisc));
+		if (ret < 0)
+			err(1, "setsockopt: filed to set promiscuous mode");
+	}
+
+	if (todo_broadcast) {
+		if (verbose)
+			fprintf(stderr, "- setsockopt(, SOL_SOCKET, SO_BROADCAST, %d, %zd);\n",
+				todo_broadcast, sizeof(todo_broadcast));
+		ret = setsockopt(sock, SOL_SOCKET, SO_BROADCAST,
+				 &todo_broadcast, sizeof(todo_broadcast));
+		if (ret < 0)
+			err(1, "setsockopt: filed to set broadcast");
+	}
 
 	if (todo_prio >= 0) {
 		if (verbose)
