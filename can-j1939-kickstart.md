@@ -33,7 +33,7 @@ testj1939 can be told to print the used API calls by adding **-v** program argum
 
 Do in terminal 1
 
-	./testj1939 -r can0:
+	testj1939 -B -r can0
 
 Send raw CAN in terminal 2
 
@@ -59,7 +59,7 @@ is not meant for us and *testj1939* does not receive it.
 Binding a can-j1939 socket to a source address will register
 allow you to send packets.
 
-	./testj1939 can0:0x80
+	testj1939 can0:0x80
 
 Your system had, for a small moment, source address 0x80 assigned.
 
@@ -67,7 +67,7 @@ Your system had, for a small moment, source address 0x80 assigned.
 
 Terminal 1:
 
-	./testj1939 -r can0:0x80
+	testj1939 -r can0:0x80
 
 Terminal 2:
 
@@ -87,37 +87,42 @@ Open in terminal 1:
 
 And to these test in another terminal
 
-	./testj1939 -s can0:0x80,0x3ffff
+	testj1939 -B -s can0:0x80 can0:,0x3ffff
 
 This produces **1BFFFF80#0123456789ABCDEF** on CAN.
 
+Note: To be able to send a broadcast we need to use, we need to use "-B" flag.
+
 ### Multiple source addresses on 1 CAN device
 
-	./testj1939 -s can0:0x90,0x3ffff
+	testj1939 -B -s can0:0x90 can0:,0x3ffff
 
 produces **1BFFFF90#0123456789ABCDEF** ,
 
 ### Use PDU1 PGN
 
-	./testj1939 -s can0:0x80,0x12345
+	testj1939 -B -s can0:0x80 can0:,0x12300
 
 emits **1923FF80#0123456789ABCDEF** .
 
-Note that the real PGN is **0x12300**, and destination address is **0xff**.
+Note that the PGN is **0x12300**, and destination address is **0xff**.
 
 ### Use destination address info
+
+Since in this example we use unicast source and destination addresses, we do
+not need to use "-B" (broadcast) flag.
 
 The destination field may be set during sendto().
 *testj1939* implements that like this
 
-	./testj1939 -s can0:0x80,0x12345 can0:0x40
+	testj1939 -s can0:0x80 can0:0x40,0x12300
 
 emits **19234080#0123456789ABCDEF** .
 
 The destination CAN iface __must__ always match the source CAN iface.
 Specifying one during bind is therefore sufficient.
 
-	./testj1939 -s can0:,0x12300 :0x40
+	testj1939 -s can0:0x80 :0x40,0x12300
 
 emits the very same.
 
@@ -129,13 +134,13 @@ __sendto( *peername* )__ , and only one is used.
 
 For broadcasted transmissions
 
-	./testj1939 -s can0:0x80,0x12300 :,0x32100
+	testj1939 -B -s can0:0x80 :,0x32100
 
-emits **1B21FF80#0123456789ABCDEF** rather than 1923FF80#012345678ABCDEF
+emits **1B21FF80#0123456789ABCDEF**
 
 Destination specific transmissions
 
-	./testj1939 -s can0:0x80,0x12300 :0x40,0x32100
+	testj1939 -s can0:0x80,0x12300 :0x40,0x32100
 
 emits **1B214080#0123456789ABCDEF** .
 
@@ -146,21 +151,7 @@ It makes sometimes sense to omit the PGN in __bind( *sockname* )__ .
 J1939 transparently switches to *Transport Protocol* when packets
 do not fit into single CAN packets.
 
-	./testj1939 -s20 can0:0x80 :,0x12300
-
-emits:
-
-	18ECFF80#20140003FF002301
-
-This is the first fragment for broadcasted *Transport Protocol*.
-_testj1939_ returns before the subsequent packets can leave, and
-as the last socket on the system closes, can-j1939 effectively
-cleans up all resources. Real-world applications will run like forever,
-and will not encounter this side-effect.
-
-Try again, and instruct _testj1939_ to keep the socket open for 1 second.
-
-	./testj1939 -w1.0 -s20 can0:0x80 :,0x12300
+	testj1939 -B -s20 can0:0x80 :,0x12300
 
 emits:
 
@@ -178,11 +169,11 @@ First assign 0x90 to the local system.
 This becomes important because the kernel must interact in the
 transport protocol sessions before the complete packet is delivered.
 
-	./testj1939 can0:0x90 -r &
+	testj1939 can0:0x90 -r &
 
 Now test:
 
-	./testj1939 -s20 can0:0x80 :0x90,0x12300
+	testj1939 -s20 can0:0x80 :0x90,0x12300
 
 emits:
 
@@ -200,8 +191,8 @@ This overhead scales very good for larger J1939 packets.
 
 ### Change priority of J1939 packets
 
-	./testj1939 -s can0:0x80,0x0100
-	./testj1939 -s -p3 can0:0x80,0x0200
+	testj1939 -B -s can0:0x80 :,0x0100
+	testj1939 -B -s -p3 can0:0x80 :,0x0200
 
 emits
 
