@@ -65,6 +65,13 @@ set(PROGRAMS
     slcanpty
 )
 
+add_executable(mcp251xfd-dump
+    mcp251xfd/mcp251xfd-dev-coredump.c
+    mcp251xfd/mcp251xfd-dump.c
+    mcp251xfd/mcp251xfd-main.c
+    mcp251xfd/mcp251xfd-regmap.c
+)
+
 if(NOT ANDROID)
   list(APPEND PROGRAMS ${PROGRAMS_J1939})
 
