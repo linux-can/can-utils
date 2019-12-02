@@ -54,15 +54,6 @@ In J1939, this means that ECU 0x40 sends directly to ECU 0x41
 Since we did not bind to address 0x41, this traffic
 is not meant for us and *testj1939* does not receive it.
 
-### Use source address
-
-Binding a can-j1939 socket to a source address will register
-allow you to send packets.
-
-	testj1939 can0:0x80
-
-Your system had, for a small moment, source address 0x80 assigned.
-
 ### receive with source address
 
 Terminal 1:
