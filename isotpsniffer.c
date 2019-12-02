@@ -177,7 +177,7 @@ void printbuf(unsigned char *buffer, int nbytes, int color, int timestamp,
 int main(int argc, char **argv)
 {
 	fd_set rdfs;
-	int s = 0, t = 0;
+	int s = -1, t = -1;
 	struct sockaddr_can addr;
 	char if_name[IFNAMSIZ];
 	static struct can_isotp_options opts;
@@ -392,9 +392,9 @@ int main(int argc, char **argv)
 	}
 
 out:
-	if (s)
+	if (s != -1)
 		close(s);
-	if (t)
+	if (t != -1)
 		close(t);
 
 	return r;
