@@ -208,13 +208,6 @@ static int open_socket(const char *device, uint64_t name)
 		err(1, "socket(j1939)");
 
 	if (s.verbose)
-		fprintf(stderr, "- setsockopt(, SOL_SOCKET, SO_BINDTODEVICE, %s, %zd);\n", device, strlen(device));
-	ret = setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE,
-			device, strlen(device));
-	if (ret < 0)
-		err(1, "bindtodevice %s", device);
-
-	if (s.verbose)
 		fprintf(stderr, "- setsockopt(, SOL_CAN_J1939, SO_J1939_FILTER, <filter>, %zd);\n", sizeof(filt));
 	ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_FILTER,
 			&filt, sizeof(filt));
