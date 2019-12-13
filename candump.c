@@ -213,6 +213,33 @@ int idx2dindex(int ifidx, int socket) {
 	return i;
 }
 
+int openlogfile(FILE **logfile) {
+	time_t currtime;
+	struct tm now;
+	char fname[83]; /* suggested by -Wformat-overflow= */
+
+	if (time(&currtime) == (time_t)-1) {
+		perror("time");
+		return 1;
+	}
+
+	localtime_r(&currtime, &now);
+
+	sprintf(fname, "candump-%04d-%02d-%02d_%02d%02d%02d.log", now.tm_year + 1900,
+			now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
+
+	fprintf(stderr, "Enabling Logfile '%s'\n", fname);
+
+	FILE *tmpfile = fopen(fname, "w");
+	if (!tmpfile) {
+		perror("logfile");
+		return 1;
+	}
+	*logfile = tmpfile;
+
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
 	fd_set rdfs;
@@ -618,35 +645,11 @@ int main(int argc, char **argv)
 	}
 
 	if (log) {
-		time_t currtime;
-		struct tm now;
-		char fname[83]; /* suggested by -Wformat-overflow= */
-
-		if (time(&currtime) == (time_t)-1) {
-			perror("time");
+		if (openlogfile(&logfile) != 0)
 			return 1;
-		}
-
-		localtime_r(&currtime, &now);
-
-		sprintf(fname, "candump-%04d-%02d-%02d_%02d%02d%02d.log",
-			now.tm_year + 1900,
-			now.tm_mon + 1,
-			now.tm_mday,
-			now.tm_hour,
-			now.tm_min,
-			now.tm_sec);
 
 		if (silent != SILENT_ON)
 			fprintf(stderr, "Warning: Console output active while logging!\n");
-
-		fprintf(stderr, "Enabling Logfile '%s'\n", fname);
-
-		logfile = fopen(fname, "w");
-		if (!logfile) {
-			perror("logfile");
-			return 1;
-		}
 	}
 
 	/* these settings are static and can be held out of the hot path */
@@ -765,12 +768,19 @@ int main(int argc, char **argv)
 
 				if (log) {
 					char buf[CL_CFSZ]; /* max length */
+					char line[CL_CFSZ + max_devname_len + 22];
 
 					/* log CAN frame with absolute timestamp & device */
 					sprint_canframe(buf, &frame, 0, maxdlen);
-					fprintf(logfile, "(%010ld.%06ld) %*s %s\n",
+					int n = sprintf(line, "(%010ld.%06ld) %*s %s\n",
 						tv.tv_sec, tv.tv_usec,
 						max_devname_len, devname[idx], buf);
+					if (ftell(logfile) + n > 1024) {
+						fclose(logfile);
+						if (openlogfile(&logfile) != 0)
+							return 1;
+					}
+					fprintf(logfile, "%s", line);
 				}
 
 				if ((logfrmt) && (silent == SILENT_OFF)){
