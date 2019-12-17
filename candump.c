@@ -129,6 +129,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -B <can>    (bridge mode - like '-b' with disabled loopback)\n");
 	fprintf(stderr, "         -u <usecs>  (delay bridge forwarding by <usecs> microseconds)\n");
 	fprintf(stderr, "         -l          (log CAN-frames into file. Sets '-s %d' by default)\n", SILENT_ON);
+	fprintf(stderr, "         -m <size>   (log file max size)\n");
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "         -n <count>  (terminate after reception of <count> CAN frames)\n");
 	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
@@ -256,6 +257,7 @@ int main(int argc, char **argv)
 	unsigned char color = 0;
 	unsigned char view = 0;
 	unsigned char log = 0;
+	unsigned long logmax = 0;
 	unsigned char logfrmt = 0;
 	int count = 0;
 	int rcvbuf_size = 0;
@@ -284,7 +286,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:HciaSs:b:B:u:lDdxLn:r:heT:?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:HciaSs:b:B:u:lm:DdxLn:r:heT:?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -376,6 +378,10 @@ int main(int argc, char **argv)
 
 		case 'l':
 			log = 1;
+			break;
+
+		case 'm':
+			logmax = strtoul(optarg, (char **)NULL, 10);  // TODO: Parse strings with sizes: 10mb, 1gb etc
 			break;
 
 		case 'D':
@@ -775,7 +781,7 @@ int main(int argc, char **argv)
 					int n = sprintf(line, "(%010ld.%06ld) %*s %s\n",
 						tv.tv_sec, tv.tv_usec,
 						max_devname_len, devname[idx], buf);
-					if (ftell(logfile) + n > 1024) {
+					if (logmax && ftell(logfile) + n > logmax) {
 						fclose(logfile);
 						if (openlogfile(&logfile) != 0)
 							return 1;
