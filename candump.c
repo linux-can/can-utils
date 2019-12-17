@@ -241,6 +241,28 @@ int openlogfile(FILE **logfile) {
 	return 0;
 }
 
+unsigned long convertsize(const char *str) {
+	char *tmp;
+	unsigned long ret = strtoul(str, &tmp, 10);
+
+	if (strlen(tmp) == 0)
+		return ret;
+
+	if (strlen(tmp) == 1)
+	{
+		if (tmp[0] == 'k')
+			return ret * 1024;
+
+		if (tmp[0] == 'm')
+			return ret * 1024 * 1024;
+
+		if (tmp[0] == 'g')
+			return ret * 1024 * 1024 * 1024;
+	}
+	
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
 	fd_set rdfs;
@@ -381,7 +403,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 'm':
-			logmax = strtoul(optarg, (char **)NULL, 10);  // TODO: Parse strings with sizes: 10mb, 1gb etc
+			logmax = convertsize(optarg);
 			break;
 
 		case 'D':
