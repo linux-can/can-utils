@@ -114,6 +114,9 @@ extern int optind, opterr, optopt;
 
 static volatile int running = 1;
 
+static int part = 0;
+static unsigned long logmax = 0;
+
 void print_usage(char *prg)
 {
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>+\n", prg);
@@ -226,8 +229,14 @@ int openlogfile(FILE **logfile) {
 
 	localtime_r(&currtime, &now);
 
-	sprintf(fname, "candump-%04d-%02d-%02d_%02d%02d%02d.log", now.tm_year + 1900,
+	if (!logmax) {
+		sprintf(fname, "candump-%04d-%02d-%02d_%02d%02d%02d.log", now.tm_year + 1900,
 			now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
+	} else {
+		sprintf(fname, "candump-%04d-%02d-%02d_%02d%02d%02d.pt%d.log", now.tm_year + 1900,
+			now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec, part);
+		part++;
+	}
 
 	fprintf(stderr, "Enabling Logfile '%s'\n", fname);
 
@@ -279,7 +288,6 @@ int main(int argc, char **argv)
 	unsigned char color = 0;
 	unsigned char view = 0;
 	unsigned char log = 0;
-	unsigned long logmax = 0;
 	unsigned char logfrmt = 0;
 	int count = 0;
 	int rcvbuf_size = 0;
