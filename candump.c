@@ -106,6 +106,8 @@ static int  dindex[MAXIFNAMES];
 static int  max_devname_len; /* to prevent frazzled device name output */ 
 const int canfd_on = 1;
 
+static char fname[83] = { 0 }; /* suggested by -Wformat-overflow= */
+
 #define MAXANI 4
 const char anichar[MAXANI] = {'|', '/', '-', '\\'};
 const char extra_m_info[4][4] = {"- -", "B -", "- E", "B E"};
@@ -113,9 +115,6 @@ const char extra_m_info[4][4] = {"- -", "B -", "- E", "B E"};
 extern int optind, opterr, optopt;
 
 static volatile int running = 1;
-
-static int part = 0;
-static unsigned long logmax = 0;
 
 void print_usage(char *prg)
 {
@@ -132,7 +131,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -B <can>    (bridge mode - like '-b' with disabled loopback)\n");
 	fprintf(stderr, "         -u <usecs>  (delay bridge forwarding by <usecs> microseconds)\n");
 	fprintf(stderr, "         -l          (log CAN-frames into file. Sets '-s %d' by default)\n", SILENT_ON);
-	fprintf(stderr, "         -m <size>   (log file max size)\n");
+	fprintf(stderr, "         -m <size>   (log file max size - size examples: 1024, 1k, 100m, 1g)\n");
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "         -n <count>  (terminate after reception of <count> CAN frames)\n");
 	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
@@ -220,7 +219,6 @@ int idx2dindex(int ifidx, int socket) {
 int openlogfile(FILE **logfile) {
 	time_t currtime;
 	struct tm now;
-	char fname[83]; /* suggested by -Wformat-overflow= */
 
 	if (time(&currtime) == (time_t)-1) {
 		perror("time");
@@ -229,16 +227,12 @@ int openlogfile(FILE **logfile) {
 
 	localtime_r(&currtime, &now);
 
-	if (!logmax) {
+	if (fname[0] == 0) {
 		sprintf(fname, "candump-%04d-%02d-%02d_%02d%02d%02d.log", now.tm_year + 1900,
 			now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
-	} else {
-		sprintf(fname, "candump-%04d-%02d-%02d_%02d%02d%02d.pt%d.log", now.tm_year + 1900,
-			now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec, part);
-		part++;
-	}
 
-	fprintf(stderr, "Enabling Logfile '%s'\n", fname);
+		fprintf(stderr, "Enabling Logfile '%s'\n", fname);
+	}
 
 	FILE *tmpfile = fopen(fname, "w");
 	if (!tmpfile) {
@@ -289,6 +283,8 @@ int main(int argc, char **argv)
 	unsigned char view = 0;
 	unsigned char log = 0;
 	unsigned char logfrmt = 0;
+	unsigned long logmax = 0;
+	unsigned char part = 0;
 	int count = 0;
 	int rcvbuf_size = 0;
 	int opt, ret;
@@ -813,6 +809,13 @@ int main(int argc, char **argv)
 						max_devname_len, devname[idx], buf);
 					if (logmax && ftell(logfile) + n > logmax) {
 						fclose(logfile);
+						char postfix[7] = { 0 };
+						char fullfname[sizeof(fname) + sizeof(postfix)];
+						sprintf(postfix, ".pt%u", part);
+						strcpy(fullfname, fname);
+						strcat(fullfname, postfix);
+						rename(fname, fullfname);
+						++part;
 						if (openlogfile(&logfile) != 0)
 							return 1;
 					}
