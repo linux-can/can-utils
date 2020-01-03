@@ -53,6 +53,7 @@
 #include <libgen.h>
 #include <time.h>
 #include <errno.h>
+#include <getopt.h>
 
 #include <sys/time.h>
 #include <sys/types.h>
