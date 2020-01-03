@@ -128,7 +128,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "(my favourite default :)\n\n");
 }
 
-void sigterm(int signo)
+static void sigterm(int signo)
 {
 	running = 0;
 }
