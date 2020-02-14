@@ -28,6 +28,7 @@ set(PROGRAMS_CANLIB
     canbusload
     candump
     cangen
+    cansequence
     canlogserver
     canplayer
     cansend

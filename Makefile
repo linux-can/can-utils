@@ -89,6 +89,7 @@ PROGRAMS := \
 	candump \
 	canfdtest \
 	cangen \
+	cansequence \
 	canlogserver \
 	canplayer \
 	cansend \
@@ -113,6 +114,7 @@ asc2log.o:	lib.h
 canbusload.o:	lib.h
 candump.o:	lib.h
 cangen.o:	lib.h
+cansequence.o:	lib.h
 canlogserver.o:	lib.h
 canplayer.o:	lib.h
 cansend.o:	lib.h
@@ -128,6 +130,7 @@ canframelen.o:  canframelen.h
 asc2log:	asc2log.o	lib.o
 candump:	candump.o	lib.o
 cangen:		cangen.o	lib.o
+cansequence:	cansequence.o	lib.o
 canlogserver:	canlogserver.o	lib.o
 canplayer:	canplayer.o	lib.o
 cansend:	cansend.o	lib.o

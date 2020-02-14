@@ -46,6 +46,7 @@ bin_PROGRAMS = \
 	candump \
 	canfdtest \
 	cangen \
+	cansequence \
 	cangw \
 	canlogserver \
 	canplayer \
