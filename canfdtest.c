@@ -28,6 +28,7 @@
 #include <sched.h>
 #include <limits.h>
 #include <errno.h>
+#include <stdint.h>
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -86,7 +87,7 @@ static void print_frame(const struct can_frame *frame, int inc)
 	} else {
 		printf("[%d]", frame->can_dlc);
 		for (i = 0; i < frame->can_dlc; i++)
-			printf(" %02x", frame->data[i] + inc);
+			printf(" %02x", (uint8_t)(frame->data[i] + inc));
 	}
 	printf("\n");
 }
@@ -113,7 +114,7 @@ static void compare_frame(struct can_frame *exp, struct can_frame *rec, int inc)
 		running = 0;
 	} else {
 		for (i = 0; i < rec->can_dlc; i++) {
-			if (rec->data[i] != ((exp->data[i] + inc) & 0xff)) {
+			if (rec->data[i] != (uint8_t)(exp->data[i] + inc)) {
 				printf("Databyte %x mismatch!\n", i);
 				print_compare(exp,
 					      rec, inc);
