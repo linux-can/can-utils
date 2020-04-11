@@ -660,12 +660,12 @@ int main(int argc, char *argv[])
 			break;
 
 		case '?':
-			print_usage(argv[0]);
+			print_usage(basename(argv[0]));
 			exit(EXIT_SUCCESS);
 			break;
 
 		default:
-			print_usage(argv[0]);
+			print_usage(basename(argv[0]));
 			exit(EXIT_FAILURE);
 			break;
 		}
