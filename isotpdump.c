@@ -68,20 +68,22 @@ const int canfd_on = 1;
 void print_usage(char *prg)
 {
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>\n", prg);
-	fprintf(stderr, "Options: -s <can_id> (source can_id. Use 8 digits for extended IDs)\n");
-	fprintf(stderr, "         -d <can_id> (destination can_id. Use 8 digits for extended IDs)\n");
-	fprintf(stderr, "         -x <addr>   (extended addressing mode. Use 'any' for all addresses)\n");
-	fprintf(stderr, "         -X <addr>   (extended addressing mode (rx addr). Use 'any' for all)\n");
-	fprintf(stderr, "         -c          (color mode)\n");
-	fprintf(stderr, "         -a          (print data also in ASCII-chars)\n");
-	fprintf(stderr, "         -t <type>   (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
-	fprintf(stderr, "         -u          (print uds messages)\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -s <can_id>  (source can_id. Use 8 digits for extended IDs)\n");
+	fprintf(stderr, "         -d <can_id>  (destination can_id. Use 8 digits for extended IDs)\n");
+	fprintf(stderr, "         -x <addr>    (extended addressing mode. Use 'any' for all addresses)\n");
+	fprintf(stderr, "         -X <addr>    (extended addressing mode (rx addr). Use 'any' for all)\n");
+	fprintf(stderr, "         -c           (color mode)\n");
+	fprintf(stderr, "         -a           (print data also in ASCII-chars)\n");
+	fprintf(stderr, "         -t <type>    (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
+	fprintf(stderr, "         -u           (print uds messages)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
-	fprintf(stderr, "\nUDS output contains a flag which provides information about the type of the message.\n");
-	fprintf(stderr, "Flags: [SRQ] = Service Request\n");
-	fprintf(stderr, "       [PSR] = Positive Service Response\n");
-	fprintf(stderr, "       [NRC] = Negative Response Code\n");
-	fprintf(stderr, "       [???] = Unknown (not specified)\n");	
+	fprintf(stderr, "\nUDS output contains a flag which provides information about the type of the message.\n\n");
+	fprintf(stderr, "Flags:\n");
+	fprintf(stderr, "       [SRQ]  = Service Request\n");
+	fprintf(stderr, "       [PSR]  = Positive Service Response\n");
+	fprintf(stderr, "       [NRC]  = Negative Response Code\n");
+	fprintf(stderr, "       [???]  = Unknown (not specified)\n");
 	fprintf(stderr, "\n");
 }
 
