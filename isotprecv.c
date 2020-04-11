@@ -62,17 +62,18 @@
 void print_usage(char *prg)
 {
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>\n", prg);
-	fprintf(stderr, "Options: -s <can_id>  (source can_id. Use 8 digits for extended IDs)\n");
-	fprintf(stderr, "         -d <can_id>  (destination can_id. Use 8 digits for extended IDs)\n");
-	fprintf(stderr, "         -x <addr>[:<rxaddr>] (extended addressing / opt. separate rxaddr)\n");
-	fprintf(stderr, "         -p [tx]:[rx] (set and enable tx/rx padding bytes)\n");
-	fprintf(stderr, "         -P <mode>    (check rx padding for (l)ength (c)ontent (a)ll)\n");
-	fprintf(stderr, "         -b <bs>      (blocksize. 0 = off)\n");
-	fprintf(stderr, "         -m <val>     (STmin in ms/ns. See spec.)\n");
-	fprintf(stderr, "         -f <time ns> (force rx stmin value in nanosecs)\n");
-	fprintf(stderr, "         -w <num>     (max. wait frame transmissions.)\n");
-	fprintf(stderr, "         -l           (loop: do not exit after pdu reception.)\n");
-	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags> (link layer options for CAN FD)\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -s <can_id>   (source can_id. Use 8 digits for extended IDs)\n");
+	fprintf(stderr, "         -d <can_id>   (destination can_id. Use 8 digits for extended IDs)\n");
+	fprintf(stderr, "         -x <addr>[:<rxaddr>]  (extended addressing / opt. separate rxaddr)\n");
+	fprintf(stderr, "         -p [tx]:[rx]  (set and enable tx/rx padding bytes)\n");
+	fprintf(stderr, "         -P <mode>     (check rx padding for (l)ength (c)ontent (a)ll)\n");
+	fprintf(stderr, "         -b <bs>       (blocksize. 0 = off)\n");
+	fprintf(stderr, "         -m <val>      (STmin in ms/ns. See spec.)\n");
+	fprintf(stderr, "         -f <time ns>  (force rx stmin value in nanosecs)\n");
+	fprintf(stderr, "         -w <num>      (max. wait frame transmissions.)\n");
+	fprintf(stderr, "         -l            (loop: do not exit after pdu reception.)\n");
+	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags>  (link layer options for CAN FD)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "The pdu data is written on STDOUT in space separated ASCII hex values.\n");
 	fprintf(stderr, "\n");
