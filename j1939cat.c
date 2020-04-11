@@ -67,8 +67,8 @@ struct j1939cat_priv {
 };
 
 static const char help_msg[] =
-	"j1939cat: netcat tool for j1939\n"
-	"Usage: j1939cat FROM TO\n"
+	"j1939cat: netcat-like tool for j1939\n"
+	"Usage: j1939cat [options] FROM TO\n"
 	" FROM / TO	- or [IFACE][:[SA][,[PGN][,NAME]]]\n"
 	"Options:\n"
 	" -i <infile>	(default stdin)\n"
