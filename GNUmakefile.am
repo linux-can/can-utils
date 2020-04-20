@@ -58,10 +58,10 @@ bin_PROGRAMS = \
 	isotpserver \
 	isotpsniffer \
 	isotptun \
-	jacd \
-	jcat \
-	jspy \
-	jsr \
+	j1939acd \
+	j1939cat \
+	j1939spy \
+	j1939sr \
 	log2asc \
 	log2long \
 	slcan_attach \
@@ -69,10 +69,10 @@ bin_PROGRAMS = \
 	slcanpty \
 	testj1939
 
-jacd_LDADD = libj1939.la
-jcat_LDADD = libj1939.la
-jspy_LDADD = libj1939.la
-jsr_LDADD = libj1939.la
+j1939acd_LDADD = libj1939.la
+j1939cat_LDADD = libj1939.la
+j1939spy_LDADD = libj1939.la
+j1939sr_LDADD = libj1939.la
 testj1939_LDADD = libj1939.la
 
 EXTRA_DIST = \

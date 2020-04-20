@@ -30,8 +30,8 @@
  * getopt
  */
 static const char help_msg[] =
-	"jspy: An SAE J1939 spy utility" "\n"
-	"Usage: jspy [OPTION...] [[IFACE:][NAME|SA][,PGN]]" "\n"
+	"j1939spy: An SAE J1939 spy utility" "\n"
+	"Usage: j1939spy [OPTION...] [[IFACE:][NAME|SA][,PGN]]" "\n"
 	"\n"
 	"  -v, --verbose		Increase verbosity" "\n"
 	"  -P, --promisc		Run in promiscuous mode" "\n"
