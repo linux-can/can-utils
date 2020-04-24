@@ -67,10 +67,10 @@ PROGRAMS_ISOTP := \
 	isotptun
 
 PROGRAMS_J1939 := \
-	jacd \
-	jcat \
-	jspy \
-	jsr \
+	j1939acd \
+	j1939cat \
+	j1939spy \
+	j1939sr \
 	testj1939
 
 PROGRAMS_SLCAN := \
@@ -118,10 +118,10 @@ canplayer.o:	lib.h
 cansend.o:	lib.h
 log2asc.o:	lib.h
 log2long.o:	lib.h
-jacd.o:		libj1939.h
-jcat.o:		libj1939.h
-jspy.o:		libj1939.h
-jsr.o:		libj1939.h
+j1939acd.o:		libj1939.h
+j1939cat.o:		libj1939.h
+j1939spy.o:		libj1939.h
+j1939sr.o:		libj1939.h
 testj1939.o:	libj1939.h
 canframelen.o:  canframelen.h
 
@@ -133,9 +133,9 @@ canplayer:	canplayer.o	lib.o
 cansend:	cansend.o	lib.o
 log2asc:	log2asc.o	lib.o
 log2long:	log2long.o	lib.o
-jacd:		jacd.o		libj1939.o
-jcat:		jcat.o		libj1939.o
-jspy:		jspy.o		libj1939.o
-jsr:		jsr.o		libj1939.o
+j1939acd:		j1939acd.o		libj1939.o
+j1939cat:		j1939cat.o		libj1939.o
+j1939spy:		j1939spy.o		libj1939.o
+j1939sr:		j1939sr.o		libj1939.o
 testj1939:	testj1939.o	libj1939.o
 canbusload:	canbusload.o	canframelen.o

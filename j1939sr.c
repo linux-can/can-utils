@@ -31,8 +31,8 @@
  * getopt
  */
 static const char help_msg[] =
-	"jsr: An SAE J1939 send/recv utility" "\n"
-	"Usage: jsr [OPTION...] SOURCE [DEST]" "\n"
+	"j1939sr: An SAE J1939 send/recv utility" "\n"
+	"Usage: j1939sr [OPTION...] SOURCE [DEST]" "\n"
 	"\n"
 	"  -v, --verbose		Increase verbosity" "\n"
 	"  -p, --priority=VAL	J1939 priority (0..7, default 6)" "\n"
