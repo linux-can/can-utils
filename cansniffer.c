@@ -506,6 +506,7 @@ int handle_bcm(int fd, long currcms){
 	}
 
 	id = bmsg.msg_head.can_id;
+	sniftab[id].laststamp = sniftab[id].currstamp;
 	ioctl(fd, SIOCGSTAMP, &sniftab[id].currstamp);
 
 	if (bmsg.msg_head.opcode != RX_CHANGED) {
@@ -587,7 +588,6 @@ int handle_timeo(int fd, long currcms){
 						}
 					}
 				sniftab[i].last      = sniftab[i].current;
-				sniftab[i].laststamp = sniftab[i].currstamp;
 			}
 	}
 
