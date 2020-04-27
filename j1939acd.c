@@ -30,9 +30,9 @@
 #include "libj1939.h"
 
 static const char help_msg[] =
-	"j1939acd: An SAE J1939 address claiming daemon" "\n"
+	"jacd: An SAE J1939 address claiming daemon" "\n"
 	"Usage: j1939acd [options] NAME [INTF]" "\n"
-	"\n"
+	"Options:\n"
 	"  -v, --verbose		Increase verbosity" "\n"
 	"  -r, --range=RANGE	Ranges of source addresses" "\n"
 	"			e.g. 80,50-100,200-210 (defaults to 0-253)" "\n"
@@ -43,6 +43,8 @@ static const char help_msg[] =
 	"NAME is the 64bit nodename" "\n"
 	"\n"
 	"Example:" "\n"
+	"j1939acd -r 100,80-120 -c /tmp/1122334455667788.jacd 1122334455667788" "\n"
+	"Examples:" "\n"
 	"j1939acd -r 100,80-120 -c /tmp/1122334455667788.jacd 1122334455667788" "\n"
 	;
 

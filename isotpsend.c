@@ -62,15 +62,16 @@
 void print_usage(char *prg)
 {
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>\n", prg);
-	fprintf(stderr, "Options: -s <can_id>  (source can_id. Use 8 digits for extended IDs)\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -s <can_id>  (source can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -d <can_id>  (destination can_id. Use 8 digits for extended IDs)\n");
-	fprintf(stderr, "         -x <addr>[:<rxaddr>] (extended addressing / opt. separate rxaddr)\n");
-	fprintf(stderr, "         -p [tx]:[rx] (set and enable tx/rx padding bytes)\n");
-	fprintf(stderr, "         -P <mode>    (check rx padding for (l)ength (c)ontent (a)ll)\n");
-	fprintf(stderr, "         -t <time ns> (frame transmit time (N_As) in nanosecs)\n");
-	fprintf(stderr, "         -f <time ns> (ignore FC and force local tx stmin value in nanosecs)\n");
-	fprintf(stderr, "         -D <len>     (send a fixed PDU with len bytes - no STDIN data)\n");
-	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags> (link layer options for CAN FD)\n");
+	fprintf(stderr, "         -x <addr>[:<rxaddr>]  (extended addressing / opt. separate rxaddr)\n");
+	fprintf(stderr, "         -p [tx]:[rx]  (set and enable tx/rx padding bytes)\n");
+	fprintf(stderr, "         -P <mode>     (check rx padding for (l)ength (c)ontent (a)ll)\n");
+	fprintf(stderr, "         -t <time ns>  (frame transmit time (N_As) in nanosecs)\n");
+	fprintf(stderr, "         -f <time ns>  (ignore FC and force local tx stmin value in nanosecs)\n");
+	fprintf(stderr, "         -D <len>      (send a fixed PDU with len bytes - no STDIN data)\n");
+	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags>  (link layer options for CAN FD)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "The pdu data is expected on STDIN in space separated ASCII hex values.\n");
 	fprintf(stderr, "\n");

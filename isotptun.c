@@ -102,23 +102,25 @@ void perror_syslog(const char *s)
 
 void print_usage(char *prg)
 {
+	fprintf(stderr, "%s - IP over CAN ISO-TP (ISO15765-2) tunnel / proof-of-concept.\n", prg);
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>\n\n", prg);
 	fprintf(stderr, "This program creates a Linux tunnel netdevice 'ctunX' and transfers the\n");
 	fprintf(stderr, "ethernet frames inside ISO15765-2 (unreliable) datagrams on CAN.\n\n");
-	fprintf(stderr, "Options: -s <can_id>  (source can_id. Use 8 digits for extended IDs)\n");
-	fprintf(stderr, "         -d <can_id>  (destination can_id. Use 8 digits for extended IDs)\n");
-	fprintf(stderr, "         -n <name>    (name of created IP netdevice. Default: '%s')\n", DEFAULT_NAME);
-	fprintf(stderr, "         -x <addr>[:<rxaddr>] (extended addressing / opt. separate rxaddr)\n");
-	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags> (link layer options for CAN FD)\n");
-	fprintf(stderr, "         -p [tx]:[rx] (set and enable tx/rx padding bytes)\n");
-	fprintf(stderr, "         -P <mode>    (check rx padding for (l)ength (c)ontent (a)ll)\n");
-	fprintf(stderr, "         -t <time ns> (transmit time in nanosecs)\n");
-	fprintf(stderr, "         -b <bs>      (blocksize. 0 = off)\n");
-	fprintf(stderr, "         -m <val>     (STmin in ms/ns. See spec.)\n");
-	fprintf(stderr, "         -w <num>     (max. wait frame transmissions.)\n");
-	fprintf(stderr, "         -D           (daemonize to background when tun device created)\n");
-	fprintf(stderr, "         -h           (half duplex mode.)\n");
-	fprintf(stderr, "         -v           (verbose mode. Print symbols for tunneled msgs.)\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -s <can_id>   (source can_id. Use 8 digits for extended IDs)\n");
+	fprintf(stderr, "         -d <can_id>   (destination can_id. Use 8 digits for extended IDs)\n");
+	fprintf(stderr, "         -n <name>     (name of created IP netdevice. Default: '%s')\n", DEFAULT_NAME);
+	fprintf(stderr, "         -x <addr>[:<rxaddr>]  (extended addressing / opt. separate rxaddr)\n");
+	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags>  (link layer options for CAN FD)\n");
+	fprintf(stderr, "         -p [tx]:[rx]  (set and enable tx/rx padding bytes)\n");
+	fprintf(stderr, "         -P <mode>     (check rx padding for (l)ength (c)ontent (a)ll)\n");
+	fprintf(stderr, "         -t <time ns>  (transmit time in nanosecs)\n");
+	fprintf(stderr, "         -b <bs>       (blocksize. 0 = off)\n");
+	fprintf(stderr, "         -m <val>      (STmin in ms/ns. See spec.)\n");
+	fprintf(stderr, "         -w <num>      (max. wait frame transmissions.)\n");
+	fprintf(stderr, "         -D            (daemonize to background when tun device created)\n");
+	fprintf(stderr, "         -h            (half duplex mode.)\n");
+	fprintf(stderr, "         -v            (verbose mode. Print symbols for tunneled msgs.)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "Use e.g. 'ifconfig ctun0 123.123.123.1 pointopoint 123.123.123.2 up'\n");
 	fprintf(stderr, "to create a point-to-point IP connection on CAN.\n");

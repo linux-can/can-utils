@@ -67,8 +67,8 @@ struct j1939cat_priv {
 };
 
 static const char help_msg[] =
-	"j1939cat: netcat tool for j1939\n"
-	"Usage: j1939cat FROM TO\n"
+	"j1939cat: netcat-like tool for j1939\n"
+	"Usage: j1939cat [options] FROM TO\n"
 	" FROM / TO	- or [IFACE][:[SA][,[PGN][,NAME]]]\n"
 	"Options:\n"
 	" -i <infile>	(default stdin)\n"
@@ -84,7 +84,7 @@ static const char help_msg[] =
 	"\n"
 	;
 
-static const char optstring[] = "?i:vs:rp:P:R:";
+static const char optstring[] = "?hi:vs:rp:P:R:";
 
 
 static void j1939cat_init_sockaddr_can(struct sockaddr_can *sac)
@@ -617,6 +617,7 @@ static int j1939cat_parse_args(struct j1939cat_priv *priv, int argc, char *argv[
 		if (priv->repeat < 1)
 			err(EXIT_FAILURE, "send/repeat count can't be less then 1\n");
 		break;
+	case 'h': /*fallthrough*/
 	default:
 		fputs(help_msg, stderr);
 		return EXIT_FAILURE;

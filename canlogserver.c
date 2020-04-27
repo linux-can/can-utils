@@ -89,7 +89,8 @@ void print_usage(char *prg)
 {
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>+\n", prg);
 	fprintf(stderr, "  (use CTRL-C to terminate %s)\n\n", prg);
-	fprintf(stderr, "Options: -m <mask>   (ID filter mask.  Default 0x00000000) *\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -m <mask>   (ID filter mask.  Default 0x00000000) *\n");
 	fprintf(stderr, "         -v <value>  (ID filter value. Default 0x00000000) *\n");
 	fprintf(stderr, "         -i <0|1>    (invert the specified ID filter) *\n");
 	fprintf(stderr, "         -e <emask>  (mask for error frames)\n");

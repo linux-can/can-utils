@@ -29,7 +29,7 @@
 
 static const char help_msg[] =
 	"testj1939: demonstrate j1939 use\n"
-	"Usage: testj1939 FROM TO\n"
+	"Usage: testj1939 [OPTIONS] FROM TO\n"
 	" FROM / TO	- or [IFACE][:[SA][,[PGN][,NAME]]]\n"
 	"Options:\n"
 	" -v		Print relevant API calls\n"
@@ -46,7 +46,7 @@ static const char help_msg[] =
 	" -n		Emit 64bit NAMEs in output\n"
 	" -w[TIME]	Return after TIME (default 1) seconds\n"
 	"\n"
-	"Example:\n"
+	"Examples:\n"
 	"testj1939 can1 20\n"
 	"\n"
 	;

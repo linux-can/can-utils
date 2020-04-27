@@ -52,9 +52,11 @@ static int exit_sig;
 static void print_usage(char *prg)
 {
 	fprintf(stderr,
+		"%s - Full-duplex test program (DUT and host part).\n"
 		"Usage: %s [options] <can-interface>\n"
 		"\n"
-		"Options: -v       (low verbosity)\n"
+		"Options:\n"
+		"         -v       (low verbosity)\n"
 		"         -vv      (high verbosity)\n"
 		"         -g       (generate messages)\n"
 		"         -l COUNT (test loop count)\n"
@@ -64,10 +66,12 @@ static void print_usage(char *prg)
                 "<can-interface> are sent back incrementing the CAN id and\n"
 		"all data bytes. The program can be aborted with ^C.\n"
 		"\n"
-		"Example:\n"
-		"\ton DUT : %s -v can0\n"
-		"\ton Host: %s -g -v can2\n",
-		prg, prg, prg);
+		"Examples:\n"
+		"\ton DUT:\n"
+		"%s -v can0\n"
+		"\ton Host:\n"
+		"%s -g -v can2\n",
+		prg, prg, prg, prg);
 
 	exit(1);
 }
@@ -320,7 +324,7 @@ int main(int argc, char *argv[])
 	signal(SIGHUP, signal_handler);
 	signal(SIGINT, signal_handler);
 
-	while ((opt = getopt(argc, argv, "gl:v")) != -1) {
+	while ((opt = getopt(argc, argv, "gl:v?")) != -1) {
 		switch (opt) {
 		case 'v':
 			verbose++;
@@ -334,6 +338,7 @@ int main(int argc, char *argv[])
 			echo_gen = 1;
 			break;
 
+		case '?':
 		default:
 			print_usage(basename(argv[0]));
 			break;

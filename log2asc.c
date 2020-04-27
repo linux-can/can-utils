@@ -60,11 +60,13 @@ extern int optind, opterr, optopt;
 
 void print_usage(char *prg)
 {
-	fprintf(stderr, "Usage: %s [can-interfaces]\n", prg);
-	fprintf(stderr, "Options: -I <infile>  (default stdin)\n");
-	fprintf(stderr, "         -O <outfile> (default stdout)\n");
-	fprintf(stderr, "         -4 (reduce decimal place to 4 digits)\n");
-	fprintf(stderr, "         -n (set newline to cr/lf - default lf)\n");
+	fprintf(stderr, "%s - convert compact CAN frame logfile to ASC logfile.\n", prg);
+	fprintf(stderr, "Usage: %s <options> [can-interfaces]\n", prg);
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -I <infile>   (default stdin)\n");
+	fprintf(stderr, "         -O <outfile>  (default stdout)\n");
+	fprintf(stderr, "         -4  (reduce decimal place to 4 digits)\n");
+	fprintf(stderr, "         -n  (set newline to cr/lf - default lf)\n");
 }
 
 int main(int argc, char **argv)

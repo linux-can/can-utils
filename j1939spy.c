@@ -32,7 +32,7 @@
 static const char help_msg[] =
 	"j1939spy: An SAE J1939 spy utility" "\n"
 	"Usage: j1939spy [OPTION...] [[IFACE:][NAME|SA][,PGN]]" "\n"
-	"\n"
+	"Options:\n"
 	"  -v, --verbose		Increase verbosity" "\n"
 	"  -P, --promisc		Run in promiscuous mode" "\n"
 	"			(= receive traffic not for this ECU)" "\n"
