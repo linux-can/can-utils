@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * slcanpty.c -  creates a pty for applications using the slcan ASCII protocol
+ * slcanpty: adapter for applications using the slcan ASCII protocol
+ *
+ * slcanpty.c - creates a pty for applications using the slcan ASCII protocol
  * and converts the ASCII data to a CAN network interface (and vice versa)
  *
  * Copyright (c)2009 Oliver Hartkopp
@@ -428,13 +430,14 @@ int main(int argc, char **argv)
 
 	/* check command line options */
 	if (argc != 3) {
-		fprintf(stderr, "\n");
-		fprintf(stderr, "%s creates a pty for applications using"
+		fprintf(stderr, "%s: adapter for applications using"
+			" the slcan ASCII protocol.\n", basename(argv[0]));
+		fprintf(stderr, "\n%s creates a pty for applications using"
 			" the slcan ASCII protocol and\n", basename(argv[0]));
 		fprintf(stderr, "converts the ASCII data to a CAN network"
 			" interface (and vice versa)\n\n");
 		fprintf(stderr, "Usage: %s <pty> <can interface>\n", basename(argv[0]));
-		fprintf(stderr, "Examples:\n");
+		fprintf(stderr, "\nExamples:\n");
 		fprintf(stderr, "%s /dev/ptyc0 can0  - creates /dev/ttyc0 for the slcan application\n\n",
 			basename(argv[0]));
 		fprintf(stderr, "e.g. for pseudo-terminal '%s %s can0' creates"
