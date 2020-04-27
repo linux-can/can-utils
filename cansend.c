@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause) */
 /*
- * cansend.c - simple command line tool to send CAN-frames via CAN_RAW sockets
+ * cansend.c - send CAN-frames via CAN_RAW sockets
  *
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research
  * All rights reserved.
@@ -58,9 +58,9 @@
 
 void print_usage(char *prg)
 {
-	fprintf(stderr, "Usage: %s - simple command line tool to send CAN-frames via CAN_RAW sockets.\n", prg);
-	fprintf(stderr, "Usage: %s <device> <can_frame>.\n", prg);
-	fprintf(stderr, "<can_frame>:\n");
+	fprintf(stderr, "%s - send CAN-frames via CAN_RAW sockets.\n", prg);
+	fprintf(stderr, "\nUsage: %s <device> <can_frame>.\n", prg);
+	fprintf(stderr, "\n<can_frame>:\n");
 	fprintf(stderr, " <can_id>#{data}          for 'classic' CAN 2.0 data frames\n");
 	fprintf(stderr, " <can_id>#R{len}          for 'classic' CAN 2.0 data frames\n");
 	fprintf(stderr, " <can_id>##<flags>{data}  for CAN FD frames\n\n");
