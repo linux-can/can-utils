@@ -78,7 +78,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -t <type>    (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
 	fprintf(stderr, "         -u           (print uds messages)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
-	fprintf(stderr, "\nUDS output contains a flag which provides information about the type of the message.\n\n");
+	fprintf(stderr, "\nUDS output contains a flag which provides information about the type of the \n");
+	fprintf(stderr, "message.\n\n");
 	fprintf(stderr, "Flags:\n");
 	fprintf(stderr, "       [SRQ]  = Service Request\n");
 	fprintf(stderr, "       [PSR]  = Positive Service Response\n");
