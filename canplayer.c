@@ -79,30 +79,30 @@ void print_usage(char *prg)
 {
 	fprintf(stderr, "%s - replay a compact CAN frame logfile to CAN devices.\n", prg);
 	fprintf(stderr, "\nUsage: %s <options> [interface assignment]*\n\n", prg);
-	fprintf(stderr, "Options:\n");
-	fprintf(stderr, "                      -I <infile>  (default stdin)\n");
-	fprintf(stderr, "                      -l <num>     "
-		"(process input file <num> times)\n"
-		"                                   "
-		"(Use 'i' for infinite loop - default: %d)\n", DEFAULT_LOOPS);
-	fprintf(stderr, "                      -t           (ignore timestamps: "
-		"send frames immediately)\n");
-	fprintf(stderr, "                      -g <ms>      (gap in milli "
-		"seconds - default: %d ms)\n", DEFAULT_GAP);
-	fprintf(stderr, "                      -s <s>       (skip gaps in "
-		"timestamps > 's' seconds)\n");
-	fprintf(stderr, "                      -x           (disable local "
-		"loopback of sent CAN frames)\n");
-	fprintf(stderr, "                      -v           (verbose: print "
-		"sent CAN frames)\n\n");
-	fprintf(stderr, "Interface assignment:\n");
+        fprintf(stderr, "Options:\n");
+        fprintf(stderr, "         -I <infile>  (default stdin)\n");
+        fprintf(stderr, "         -l <num>     "
+                "(process input file <num> times)\n"
+                "                      "
+                "(Use 'i' for infinite loop - default: %d)\n", DEFAULT_LOOPS);
+        fprintf(stderr, "         -t           (ignore timestamps: "
+                "send frames immediately)\n");
+        fprintf(stderr, "         -g <ms>      (gap in milli "
+                "seconds - default: %d ms)\n", DEFAULT_GAP);
+        fprintf(stderr, "         -s <s>       (skip gaps in "
+                "timestamps > 's' seconds)\n");
+        fprintf(stderr, "         -x           (disable local "
+                "loopback of sent CAN frames)\n");
+        fprintf(stderr, "         -v           (verbose: print "
+                "sent CAN frames)\n\n");
+        fprintf(stderr, "Interface assignment:\n");
 	fprintf(stderr, " 0..n assignments like <write-if>=<log-if>\n\n");
 	fprintf(stderr, " e.g. vcan2=can0  (send frames received from can0 on "
 		"vcan2)\n");
 	fprintf(stderr, " extra hook: stdout=can0  (print logfile line marked with can0 on "
 		"stdout)\n");
 	fprintf(stderr, " No assignments  => send frames to the interface(s) they "
-		"had been received from.\n\n");
+		"had been received from\n\n");
 	fprintf(stderr, "Lines in the logfile not beginning with '(' (start of "
 		"timestamp) are ignored.\n\n");
 }
