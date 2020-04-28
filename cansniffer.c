@@ -171,6 +171,10 @@ void print_usage(char *prg)
 		" *<ENTER>        - clear notched marked\n"
 		" rMYNAME<ENTER>  - read settings file (filter/notch)\n"
 		" wMYNAME<ENTER>  - write settings file (filter/notch)\n"
+		" a<ENTER>        - enable 'a'll SFF CAN-IDs to sniff\n"
+		" n<ENTER>        - enable 'n'one SFF CAN-IDs to sniff\n"
+		" A<ENTER>        - enable 'A'll EFF CAN-IDs to sniff\n"
+		" N<ENTER>        - enable 'N'one EFF CAN-IDs to sniff\n"
 		" +FILTER<ENTER>  - add CAN-IDs to sniff\n"
 		" -FILTER<ENTER>  - remove CAN-IDs to sniff\n"
 		"\n"
@@ -446,6 +450,30 @@ int handle_keyb(int fd){
 		else
 			do_clr(i, ENABLE);
 
+		break;
+
+	case 'a' : /* all SFF CAN IDs */
+		value = 0;
+		mask = 0xFFFF800; /* cleared flags! */
+		do_modify_sniftab(value, mask, '+');
+		break;
+
+	case 'n' : /* none SFF CAN IDs */
+		value = 0;
+		mask = 0xFFFF800; /* cleared flags! */
+		do_modify_sniftab(value, mask, '-');
+		break;
+
+	case 'A' : /* all EFF CAN IDs */
+		value = CAN_EFF_FLAG;
+		mask = CAN_EFF_FLAG;
+		do_modify_sniftab(value, mask, '+');
+		break;
+
+	case 'N' : /* none EFF CAN IDs */
+		value = CAN_EFF_FLAG;
+		mask = CAN_EFF_FLAG;
+		do_modify_sniftab(value, mask, '-');
 		break;
 
 	case 'w' :
