@@ -166,6 +166,7 @@ void print_usage(char *prg)
 		" 8<ENTER>        - toggle binary / HEX-ASCII output (small for EFF on 80 chars)\n"
 		" B<ENTER>        - toggle binary with gap / HEX-ASCII output (exceeds 80 chars!)\n"
 		" c<ENTER>        - toggle color mode\n"
+		" <SPACE><ENTER>  - force a clear screen\n"
 		" #<ENTER>        - notch currently marked/changed bits (can be used repeatedly)\n"
 		" *<ENTER>        - clear notched marked\n"
 		" rMYNAME<ENTER>  - read settings file (filter/notch)\n"
@@ -490,6 +491,10 @@ int handle_keyb(int fd){
 		else
 			color = 1;
 
+		break;
+
+	case ' ' :
+		clearscreen = 1;
 		break;
 
 	case '#' :
