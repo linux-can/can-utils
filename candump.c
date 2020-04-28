@@ -140,22 +140,22 @@ void print_usage(char *prg)
 	fprintf(stderr, "Up to %d CAN interfaces with optional filter sets can be specified\n", MAXSOCK);
 	fprintf(stderr, "on the commandline in the form: <ifname>[,filter]*\n");
 	fprintf(stderr, "\nFilters:\n");
-	fprintf(stderr, " Comma separated filters can be specified for each given CAN interface:\n");
-	fprintf(stderr, "<can_id>:<can_mask>\n\t(matches when <received_can_id> & mask == can_id & mask)\n");
-	fprintf(stderr, "<can_id>~<can_mask>\n\t(matches when <received_can_id> & mask != can_id & mask)\n");
-	fprintf(stderr, "#<error_mask>\n\t(set error frame filter, see include/linux/can/error.h)\n");
-	fprintf(stderr, "[j|J]\n\t(join the given CAN filters - logical AND semantic)\n");
+	fprintf(stderr, "  Comma separated filters can be specified for each given CAN interface:\n");
+	fprintf(stderr, "    <can_id>:<can_mask>\n         (matches when <received_can_id> & mask == can_id & mask)\n");
+	fprintf(stderr, "    <can_id>~<can_mask>\n         (matches when <received_can_id> & mask != can_id & mask)\n");
+	fprintf(stderr, "    #<error_mask>\n         (set error frame filter, see include/linux/can/error.h)\n");
+	fprintf(stderr, "    [j|J]\n         (join the given CAN filters - logical AND semantic)\n");
 	fprintf(stderr, "\nCAN IDs, masks and data content are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "When the can_id is 8 digits long the CAN_EFF_FLAG is set for 29 bit EFF format.\n");
 	fprintf(stderr, "Without any given filter all data frames are received ('0:0' default filter).\n");
 	fprintf(stderr, "\nUse interface name '%s' to receive from all CAN interfaces.\n", ANYDEV);
 	fprintf(stderr, "\nExamples:\n");
 	fprintf(stderr, "%s -c -c -ta can0,123:7FF,400:700,#000000FF can2,400~7F0 can3 can8\n\n", prg);
-	fprintf(stderr, "%s -l any,0~0,#FFFFFFFF\n\t(log only error frames but no(!) data frames)\n", prg);
-	fprintf(stderr, "%s -l any,0:0,#FFFFFFFF\n\t(log error frames and also all data frames)\n", prg);
-	fprintf(stderr, "%s vcan2,12345678:DFFFFFFF\n\t(match only for extended CAN ID 12345678)\n", prg);
-	fprintf(stderr, "%s vcan2,123:7FF\n\t(matches CAN ID 123 - including EFF and RTR frames)\n", prg);
-	fprintf(stderr, "%s vcan2,123:C00007FF\n\t(matches CAN ID 123 - only SFF and non-RTR frames)\n", prg);
+	fprintf(stderr, "%s -l any,0~0,#FFFFFFFF\n         (log only error frames but no(!) data frames)\n", prg);
+	fprintf(stderr, "%s -l any,0:0,#FFFFFFFF\n         (log error frames and also all data frames)\n", prg);
+	fprintf(stderr, "%s vcan2,12345678:DFFFFFFF\n         (match only for extended CAN ID 12345678)\n", prg);
+	fprintf(stderr, "%s vcan2,123:7FF\n         (matches CAN ID 123 - including EFF and RTR frames)\n", prg);
+	fprintf(stderr, "%s vcan2,123:C00007FF\n         (matches CAN ID 123 - only SFF and non-RTR frames)\n", prg);
 	fprintf(stderr, "\n");
 }
 
