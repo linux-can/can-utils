@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause) */
 /*
- * cangen.c - CAN frames generator for testing purposes
+ * cangen.c - CAN frames generator
  *
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research
  * All rights reserved.
@@ -78,8 +78,7 @@ static unsigned long long enobufs_count;
 
 void print_usage(char *prg)
 {
-	fprintf(stderr, "%s - CAN frames generator for testing purposes.\n", prg);
-	fprintf(stderr, "\n%s: generate CAN frames\n\n", prg);
+	fprintf(stderr, "%s - CAN frames generator.\n\n", prg);
 	fprintf(stderr, "Usage: %s [options] <CAN interface>\n", prg);
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "         -g <ms>       (gap in milli seconds "
