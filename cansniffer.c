@@ -112,7 +112,6 @@ extern int optind, opterr, optopt;
 static int running = 1;
 static int clearscreen = 1;
 static int notch;
-static int filter_id_only;
 static long timeout = TIMEOUT;
 static long hold = HOLD;
 static long loop = LOOP;
@@ -125,7 +124,7 @@ void rx_setup (int fd, int id);
 void rx_delete (int fd, int id);
 void print_snifline(int id);
 int handle_keyb(int fd);
-int handle_bcm(int fd, long currcms);
+int handle_frame(int fd, long currcms);
 int handle_timeo(int fd, long currcms);
 void writesettings(char* name);
 void readsettings(char* name, int sockfd);
@@ -161,14 +160,11 @@ void print_usage(char *prg)
 
 	fprintf(stderr, "\nUsage: %s [can-interface]\n", prg);
 	fprintf(stderr, "Options:\n");
-	fprintf(stderr, "         -m <mask>   (initial FILTER default 0x00000000)\n");
-	fprintf(stderr, "         -v <value>  (initial FILTER default 0x00000000)\n");
 	fprintf(stderr, "         -q          (quiet - all IDs deactivated)\n");
 	fprintf(stderr, "         -r <name>   (read %sname from file)\n", SETFNAME);
 	fprintf(stderr, "         -b          (start with binary mode)\n");
 	fprintf(stderr, "         -B          (start with binary mode with gap - exceeds 80 chars!)\n");
 	fprintf(stderr, "         -c          (color changes)\n");
-	fprintf(stderr, "         -f          (filter on CAN-ID only)\n");
 	fprintf(stderr, "         -t <time>   (timeout for ID display [x10ms] default: %d, 0 = OFF)\n", TIMEOUT);
 	fprintf(stderr, "         -h <time>   (hold marker on changes [x10ms] default: %d)\n", HOLD);
 	fprintf(stderr, "         -l <time>   (loop time (display) [x10ms] default: %d)\n", LOOP);
@@ -186,8 +182,6 @@ int main(int argc, char **argv)
 {
 	fd_set rdfs;
 	int s;
-	canid_t mask = 0;
-	canid_t value = 0;
 	long currcms = 0;
 	long lastcms = 0;
 	unsigned char quiet = 0;
@@ -205,16 +199,8 @@ int main(int argc, char **argv)
 	for (i=0; i < 2048 ;i++) /* default: check all CAN-IDs */
 		do_set(i, ENABLE);
 
-	while ((opt = getopt(argc, argv, "m:v:r:t:h:l:qbBcf?")) != -1) {
+	while ((opt = getopt(argc, argv, "r:t:h:l:qbBc?")) != -1) {
 		switch (opt) {
-		case 'm':
-			sscanf(optarg, "%x", &mask);
-			break;
-
-		case 'v':
-			sscanf(optarg, "%x", &value);
-			break;
-
 		case 'r':
 			readsettings(optarg, 0); /* no BCM-setting here */
 			break;
@@ -249,10 +235,6 @@ int main(int argc, char **argv)
 			color = 1;
 			break;
 
-		case 'f':
-			filter_id_only = 1;
-			break;
-
 		case '?':
 			break;
 
@@ -270,14 +252,6 @@ int main(int argc, char **argv)
 	if (quiet)
 		for (i = 0; i < 2048; i++)
 			do_clr(i, ENABLE);
-	else if (mask || value) {
-		for (i=0; i < 2048 ;i++) {
-			if ((i & mask) ==  (value & mask))
-				do_set(i, ENABLE);
-			else
-				do_clr(i, ENABLE);
-		}
-	}
 
 	if (strlen(argv[optind]) >= IFNAMSIZ) {
 		printf("name of CAN device '%s' is too long!\n", argv[optind]);
@@ -340,7 +314,7 @@ int main(int argc, char **argv)
 			running &= handle_keyb(s);
 
 		if (FD_ISSET(s, &rdfs))
-			running &= handle_bcm(s, currcms);
+			running &= handle_frame(s, currcms);
 
 		if (currcms - lastcms >= loop) {
 			running &= handle_timeo(s, currcms);
@@ -372,9 +346,6 @@ void rx_setup (int fd, int id){
 
 	/* set all bits to be relevant */
 	memset(&txmsg.frame.data, 0xFF, 8);
-
-	if (filter_id_only)
-		txmsg.msg_head.flags |= RX_FILTER_ID;
 
 	if (write(fd, &txmsg, sizeof(txmsg)) < 0)
 		perror("write");
@@ -491,7 +462,7 @@ int handle_keyb(int fd){
 	return 1; /* ok */
 };
 
-int handle_bcm(int fd, long currcms){
+int handle_frame(int fd, long currcms){
 
 	int nbytes, id, i;
 
