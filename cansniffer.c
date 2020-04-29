@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause) */
 /*
- * cansniffer.c
+ * cansniffer.c - volatile CAN content visualizer
  *
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research
  * All rights reserved.
@@ -205,6 +205,7 @@ void print_usage(char *prg)
 		"\n"
 	};
 
+	fprintf(stderr, "%s - volatile CAN content visualizer.\n", prg);
 	fprintf(stderr, "\nUsage: %s [can-interface]\n", prg);
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "         -q          (quiet - all IDs deactivated)\n");
