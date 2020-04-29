@@ -127,7 +127,7 @@ int handle_keyb(int fd);
 int handle_frame(int fd, long currcms);
 int handle_timeo(int fd, long currcms);
 void writesettings(char* name);
-void readsettings(char* name, int sockfd);
+int readsettings(char* name, int sockfd);
 
 void print_usage(char *prg)
 {
@@ -201,7 +201,10 @@ int main(int argc, char **argv)
 	while ((opt = getopt(argc, argv, "r:t:h:l:qbBc?")) != -1) {
 		switch (opt) {
 		case 'r':
-			readsettings(optarg, 0); /* no BCM-setting here */
+			if (readsettings(optarg, 0) < 0) {
+				fprintf(stderr, "Unable to read setting file '%s%s'!\n", SETFNAME, optarg);
+				exit(1);
+			}
 			break;
 
 		case 't':
@@ -405,7 +408,7 @@ int handle_keyb(int fd){
 		break;
 
 	case 'r' :
-		readsettings(&cmd[1], fd);
+		readsettings(&cmd[1], fd); /* don't care about success */
 		break;
 
 	case 'q' :
@@ -674,20 +677,17 @@ void writesettings(char* name){
 		printf("unable to write setting file '%s'!\n", fname);
 };
 
-void readsettings(char* name, int sockfd){
+int readsettings(char* name, int sockfd){
 
 	int fd;
 	char fname[30] = SETFNAME;
 	char buf[25] = {0};
-	int i,j;
+	int j, i = 0;
 
 	strncat(fname, name, 29 - strlen(fname)); 
 	fd = open(fname, O_RDONLY);
     
 	if (fd > 0) {
-		if (!sockfd)
-			printf("reading setting file '%s' ... ", fname);
-
 		for (i=0; i < 2048 ;i++) {
 			if (read(fd, &buf, 24) == 24) {
 				if (buf[5] & 1) {
@@ -710,17 +710,14 @@ void readsettings(char* name, int sockfd){
 				}
 			}
 			else {
-				if (!sockfd)
-					printf("was only able to read until index %d from setting file '%s'!\n",
-					       i, fname);
+				/* error: were not able to read the entire fix settings block */
+				i = -1;
 			}
 		}
-    
-		if (!sockfd)
-			printf("done\n");
-
 		close(fd);
 	}
 	else
-		printf("unable to read setting file '%s'!\n", fname);
+		return -1;
+
+	return i;
 };
