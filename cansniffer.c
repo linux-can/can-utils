@@ -188,7 +188,6 @@ int main(int argc, char **argv)
 	int opt, ret;
 	struct timeval timeo, start_tv, tv;
 	struct sockaddr_can addr;
-	struct ifreq ifr;
 	int i;
 
 
@@ -260,21 +259,16 @@ int main(int argc, char **argv)
 
 	interface = argv[optind];
 
-	if ((s = socket(PF_CAN, SOCK_DGRAM, CAN_BCM)) < 0) {
+	s = socket(PF_CAN, SOCK_DGRAM, CAN_BCM);
+	if (s < 0) {
 		perror("socket");
 		return 1;
 	}
 
 	addr.can_family = AF_CAN;
 
-	if (strcmp(ANYDEV, argv[optind])) {
-		strcpy(ifr.ifr_name, argv[optind]);
-		if (ioctl(s, SIOCGIFINDEX, &ifr) < 0) {
-			perror("SIOCGIFINDEX");
-			exit(1);
-		}
-		addr.can_ifindex = ifr.ifr_ifindex;
-	}
+	if (strcmp(ANYDEV, argv[optind]))
+		addr.can_ifindex = if_nametoindex(argv[optind]);
 	else
 		addr.can_ifindex = 0; /* any can interface */
 
