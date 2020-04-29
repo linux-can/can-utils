@@ -298,6 +298,8 @@ int main(int argc, char **argv)
 			break;
 
 		case '?':
+			print_usage(basename(argv[0]));
+			exit(0);
 			break;
 
 		default:
