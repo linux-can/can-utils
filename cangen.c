@@ -66,6 +66,7 @@
 #include "lib.h"
 
 #define DEFAULT_GAP 200 /* ms */
+#define DEFAULT_BURST_COUNT 1
 
 #define MODE_RANDOM	0
 #define MODE_INCREMENT	1
@@ -104,6 +105,8 @@ void print_usage(char *prg)
 		" write() syscalls)\n");
 	fprintf(stderr, "         -x            (disable local loopback of "
 		"generated CAN frames)\n");
+	fprintf(stderr, "         -c            (number of messages to send in burst, "
+		"default 1)\n");
 	fprintf(stderr, "         -v            (increment verbose level for "
 		"printing sent CAN frames)\n\n");
 	fprintf(stderr, "Generation modes:\n");
@@ -136,6 +139,7 @@ void sigterm(int signo)
 int main(int argc, char **argv)
 {
 	double gap = DEFAULT_GAP;
+	unsigned long burst_count = DEFAULT_BURST_COUNT;
 	unsigned long polltimeout = 0;
 	unsigned char ignore_enobufs = 0;
 	unsigned char extended = 0;
@@ -149,6 +153,7 @@ int main(int argc, char **argv)
 	unsigned char verbose = 0;
 	unsigned char rtr_frame = 0;
 	int count = 0;
+	unsigned long burst_sent_count = 0;
 	int mtu, maxdlen;
 	uint64_t incdata = 0;
 	int incdlc = 0;
@@ -176,7 +181,7 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	while ((opt = getopt(argc, argv, "ig:ebfmI:L:D:xp:n:vRh?")) != -1) {
+	while ((opt = getopt(argc, argv, "ig:ebfmI:L:D:xp:n:c:vRh?")) != -1) {
 		switch (opt) {
 
 		case 'i':
@@ -239,6 +244,10 @@ int main(int argc, char **argv)
 					return 1;
 				}
 			}
+			break;
+
+		case 'c':
+			burst_count = strtoul(optarg, NULL, 10);
 			break;
 
 		case 'v':
@@ -432,7 +441,6 @@ int main(int argc, char **argv)
 			else
 				fprint_canframe(stdout, &frame, "\n", 1, maxdlen);
 		}
-
 resend:
 		nbytes = write(s, &frame, mtu);
 		if (nbytes < 0) {
@@ -458,10 +466,11 @@ resend:
 			fprintf(stderr, "write: incomplete CAN frame\n");
 			return 1;
 		}
+		burst_sent_count++;
+		if (gap && burst_sent_count >= burst_count) /* gap == 0 => performance test :-] */
+			if (nanosleep(&ts, NULL)) return 1;
 
-		if (gap) /* gap == 0 => performance test :-] */
-			if (nanosleep(&ts, NULL))
-				return 1;
+		if(burst_sent_count >= burst_count) burst_sent_count = 0;
 
 		if (id_mode == MODE_INCREMENT)
 			frame.can_id++;
