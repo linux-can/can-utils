@@ -441,6 +441,7 @@ int main(int argc, char **argv)
 			else
 				fprint_canframe(stdout, &frame, "\n", 1, maxdlen);
 		}
+
 resend:
 		nbytes = write(s, &frame, mtu);
 		if (nbytes < 0) {
@@ -466,11 +467,14 @@ resend:
 			fprintf(stderr, "write: incomplete CAN frame\n");
 			return 1;
 		}
+
 		burst_sent_count++;
 		if (gap && burst_sent_count >= burst_count) /* gap == 0 => performance test :-] */
-			if (nanosleep(&ts, NULL)) return 1;
+			if (nanosleep(&ts, NULL))
+				return 1;
 
-		if(burst_sent_count >= burst_count) burst_sent_count = 0;
+		if (burst_sent_count >= burst_count)
+			burst_sent_count = 0;
 
 		if (id_mode == MODE_INCREMENT)
 			frame.can_id++;
