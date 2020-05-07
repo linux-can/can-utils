@@ -800,7 +800,7 @@ int readsettings(char* name)
 {
 	int fd;
 	char fname[30] = SETFNAME;
-	char buf[25] = {0};
+	char buf[30] = {0};
 	int j;
 	bool done = false;
 
