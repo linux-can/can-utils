@@ -57,6 +57,8 @@
 
 #include "lib.h"
 
+#define BUFLEN 400 /* CAN FD mode lines can be pretty long */
+
 extern int optind, opterr, optopt;
 
 void print_usage(char *prg)
@@ -124,6 +126,85 @@ void calc_tv(struct timeval *tv, struct timeval *read_tv,
 	}
 }
 
+void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, int dplace, FILE *outfile) {
+
+	int interface;
+	static struct timeval tv; /* current frame timestamp */
+	static struct timeval read_tv; /* frame timestamp from ASC file */
+	struct can_frame cf;
+	char rtr;
+	int dlc = 0;
+	int data[8];
+	char tmp1[BUFLEN];
+	int i, found;
+
+	/* 0.002367 1 390x Rx d 8 17 00 14 00 C0 00 08 00 */
+
+	found = 0; /* found valid CAN frame ? */
+
+	if (base == 'h') { /* check for CAN frames with hexadecimal values */
+
+		if (sscanf(buf, "%ld.%ld %d %s %*s %c %d %x %x %x %x %x %x %x %x",
+			   &read_tv.tv_sec, &read_tv.tv_usec, &interface,
+			   tmp1, &rtr, &dlc,
+			   &data[0], &data[1], &data[2], &data[3],
+			   &data[4], &data[5], &data[6], &data[7]
+			    ) == dlc + 6 ) {
+
+			found = 1;
+			get_can_id(&cf, tmp1, 16);
+		}
+
+	} else { /* check for CAN frames with decimal values */
+
+		if (sscanf(buf, "%ld.%ld %d %s %*s %c %d %d %d %d %d %d %d %d %d",
+			   &read_tv.tv_sec, &read_tv.tv_usec, &interface,
+			   tmp1, &rtr, &dlc,
+			   &data[0], &data[1], &data[2], &data[3],
+			   &data[4], &data[5], &data[6], &data[7]
+			    ) == dlc + 6 ) {
+
+			found = 1;
+			get_can_id(&cf, tmp1, 10);
+		}
+	}
+
+	if (found) {
+		if (rtr == 'r')
+			cf.can_id |= CAN_RTR_FLAG;
+
+		cf.can_dlc = dlc & 0x0FU;
+		for (i=0; i<dlc; i++)
+			cf.data[i] = data[i] & 0xFFU;
+
+		calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
+		prframe(outfile, &tv, interface, &cf);
+		fflush(outfile);
+		return;
+	}
+
+	/* check for ErrorFrames */
+	if (sscanf(buf, "%ld.%ld %d %s",
+		   &read_tv.tv_sec, &read_tv.tv_usec,
+		   &interface, tmp1) == 4) {
+
+		if (!strncmp(tmp1, "ErrorFrame", strlen("ErrorFrame"))) {
+
+			memset(&cf, 0, sizeof(cf));
+			/* do not know more than 'Error' */
+			cf.can_id  = (CAN_ERR_FLAG | CAN_ERR_BUSERROR);
+			cf.can_dlc =  CAN_ERR_DLC;
+
+			calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
+			prframe(outfile, &tv, interface, &cf);
+			fflush(outfile);
+		}
+	}
+}
+
+void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, char base, int dplace, FILE *outfile) {
+}
+
 int get_date(struct timeval *tv, char *date) {
 
 	char ctmp[10];
@@ -171,24 +252,17 @@ int get_date(struct timeval *tv, char *date) {
 
 int main(int argc, char **argv)
 {
-	char buf[100], tmp1[100], tmp2[100];
+	char buf[BUFLEN], tmp1[BUFLEN], tmp2[BUFLEN];
 
 	FILE *infile = stdin;
 	FILE *outfile = stdout;
 	static int verbose;
-	struct can_frame cf;
-	static struct timeval tv; /* current frame timestamp */
-	static struct timeval read_tv; /* frame timestamp from ASC file */
+	static struct timeval tmp_tv; /* tmp frame timestamp from ASC file */
 	static struct timeval date_tv; /* date of the ASC file */
 	static int dplace; /* decimal place 4, 5 or 6 or uninitialized */
 	static char base; /* 'd'ec or 'h'ex */
 	static char timestamps; /* 'a'bsolute or 'r'elative */
-
-	int interface;
-	char rtr;
-	int dlc = 0;
-	int data[8];
-	int i, found, opt;
+	int opt;
 
 	while ((opt = getopt(argc, argv, "I:O:v?")) != -1) {
 		switch (opt) {
@@ -226,7 +300,7 @@ int main(int argc, char **argv)
 	}
 
 
-	while (fgets(buf, 99, infile)) {
+	while (fgets(buf, BUFLEN-1, infile)) {
 
 		if (!dplace) { /* the representation of a valid CAN frame not known */
 
@@ -266,7 +340,7 @@ int main(int argc, char **argv)
 			}
 
 			/* check for decimal places length in valid CAN frames */
-			if (sscanf(buf, "%ld.%s %d ", &tv.tv_sec, tmp2, &i) == 3){
+			if (sscanf(buf, "%ld.%s %s ", &tmp_tv.tv_sec, tmp2, tmp1) == 3){
 				dplace = strlen(tmp2);
 				if (verbose)
 					printf("decimal place %d, e.g. '%s'\n", dplace, tmp2);
@@ -281,67 +355,12 @@ int main(int argc, char **argv)
 		/* the representation of a valid CAN frame is known here */
 		/* so try to get CAN frames and ErrorFrames and convert them */
 
-		/* 0.002367 1 390x Rx d 8 17 00 14 00 C0 00 08 00 */
-
-		found = 0; /* found valid CAN frame ? */
-
-		if (base == 'h') { /* check for CAN frames with hexadecimal values */
-
-			if (sscanf(buf, "%ld.%ld %d %s %*s %c %d %x %x %x %x %x %x %x %x",
-				   &read_tv.tv_sec, &read_tv.tv_usec, &interface,
-				   tmp1, &rtr, &dlc,
-				   &data[0], &data[1], &data[2], &data[3],
-				   &data[4], &data[5], &data[6], &data[7]
-				    ) == dlc + 6 ) {
-
-				found = 1;
-				get_can_id(&cf, tmp1, 16);
-			}
-
-		} else { /* check for CAN frames with decimal values */
-
-			if (sscanf(buf, "%ld.%ld %d %s %*s %c %d %d %d %d %d %d %d %d %d",
-				   &read_tv.tv_sec, &read_tv.tv_usec, &interface,
-				   tmp1, &rtr, &dlc,
-				   &data[0], &data[1], &data[2], &data[3],
-				   &data[4], &data[5], &data[6], &data[7]
-				    ) == dlc + 6 ) {
-
-				found = 1;
-				get_can_id(&cf, tmp1, 10);
-			}
-		}
-
-		if (found) {
-			if (rtr == 'r')
-				cf.can_id |= CAN_RTR_FLAG;
- 
-			cf.can_dlc = dlc & 0x0FU;
-			for (i=0; i<dlc; i++)
-				cf.data[i] = data[i] & 0xFFU;
-
-			calc_tv(&tv, &read_tv, &date_tv, timestamps, dplace);
-			prframe(outfile, &tv, interface, &cf);
-			fflush(outfile);
-			continue;
-		}
-
-		/* check for ErrorFrames */
-		if (sscanf(buf, "%ld.%ld %d %s",
-			   &read_tv.tv_sec, &read_tv.tv_usec,
-			   &interface, tmp1) == 4) {
-		
-			if (!strncmp(tmp1, "ErrorFrame", strlen("ErrorFrame"))) {
-
-				memset(&cf, 0, sizeof(cf));
-				/* do not know more than 'Error' */
-				cf.can_id  = (CAN_ERR_FLAG | CAN_ERR_BUSERROR);
-				cf.can_dlc =  CAN_ERR_DLC;
-		    
-				calc_tv(&tv, &read_tv, &date_tv, timestamps, dplace);
-				prframe(outfile, &tv, interface, &cf);
-				fflush(outfile);
-			}
+		/* check classic CAN format or the CANFD tag which can take both types */
+		if (sscanf(buf, "%ld.%ld %s ", &tmp_tv.tv_sec,  &tmp_tv.tv_usec, tmp1) == 3){
+			if (!strncmp(tmp1, "CANFD", 5))
+				eval_canfd(buf, &date_tv, timestamps, base, dplace, outfile);
+			else
+				eval_can(buf, &date_tv, timestamps, base, dplace, outfile);
 		}
 	}
 	fclose(outfile);
