@@ -207,12 +207,12 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, char base,
 
 int get_date(struct timeval *tv, char *date) {
 
-	char ctmp[10];
+	char ctmp[14];
 	int  itmp;
 
 	struct tm tms;
 
-	if (sscanf(date, "%9s %d %9s %9s %d", ctmp, &itmp, ctmp, ctmp, &itmp) == 5) {
+	if (sscanf(date, "%9s %d %13s %3s %d", ctmp, &itmp, ctmp, ctmp, &itmp) == 5) {
 		/* assume EN/US date due to existing am/pm field */
 
 		if (!setlocale(LC_TIME, "en_US")) {
@@ -220,13 +220,18 @@ int get_date(struct timeval *tv, char *date) {
 			return 1;
 		}
 
-		if (!strptime(date, "%B %d %r %Y", &tms))
-			return 1;
+		if (!strptime(date, "%B %d %I:%M:%S %p %Y", &tms)) {
+			/* The string might contain a milliseconds value which strptime()
+			   does not support. So we read the ms value into the year variable
+			   before parsing the real year value (hack) */
+			if (!strptime(date, "%B %d %I:%M:%S.%Y %p %Y", &tms))
+				return 1;
+		}
 
 	} else {
 		/* assume DE date due to non existing am/pm field */
 
-		if (sscanf(date, "%9s %d %9s %d", ctmp, &itmp, ctmp, &itmp) != 4)
+		if (sscanf(date, "%9s %d %13s %d", ctmp, &itmp, ctmp, &itmp) != 4)
 			return 1;
 
 		if (!setlocale(LC_TIME, "de_DE")) {
@@ -234,8 +239,13 @@ int get_date(struct timeval *tv, char *date) {
 			return 1;
 		}
 
-		if (!strptime(date, "%B %d %T %Y", &tms))
-			return 1;
+		if (!strptime(date, "%B %d %H:%M:%S %Y", &tms)) {
+			/* The string might contain a milliseconds value which strptime()
+			   does not support. So we read the ms value into the year variable
+			   before parsing the real year value (hack) */
+			if (!strptime(date, "%B %d %H:%M:%S.%Y %Y", &tms))
+				return 1;
+		}
 	}
     
 	//printf("h %d m %d s %d d %d m %d y %d\n",
