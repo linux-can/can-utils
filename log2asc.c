@@ -97,6 +97,36 @@ void can_asc(struct canfd_frame *cf, int devno, FILE *outfile)
 
 void canfd_asc(struct canfd_frame *cf, int devno, FILE *outfile)
 {
+	int i;
+	char id[10];
+	unsigned int flags;
+
+	fprintf(outfile, "CANFD %3d Rx ", devno); /* 3 column channel number right aligned */
+
+	sprintf(id, "%X%c", cf->can_id & CAN_EFF_MASK,
+		(cf->can_id & CAN_EFF_FLAG)?'x':' ');
+	fprintf(outfile, "%11s                                  ", id);
+	fprintf(outfile, "%c ", (cf->flags & CANFD_BRS)?'1':'0');
+	fprintf(outfile, "%c ", (cf->flags & CANFD_ESI)?'1':'0');
+	fprintf(outfile, "%x ", can_len2dlc(cf->len));
+	fprintf(outfile, "%2d", cf->len);
+
+	for (i = 0; i < cf->len; i++) {
+		fprintf(outfile, " %02X", cf->data[i]);
+	}
+
+	/* relevant flags in Flags field */
+#define ASC_F_FDF 0x00001000
+#define ASC_F_BRS 0x00002000
+#define ASC_F_ESI 0x00004000
+
+	flags = ASC_F_FDF;
+	if (cf->flags & CANFD_BRS)
+		flags |= ASC_F_BRS;
+	if (cf->flags & CANFD_ESI)
+		flags |= ASC_F_ESI;
+
+	fprintf(outfile, " %8d %4d %8X 0 0 0 0 0", 130000, 130, flags);
 }
 
 int main(int argc, char **argv)
@@ -195,6 +225,10 @@ int main(int argc, char **argv)
 			mtu = parse_canframe(ascframe, &cf);
 			if ((mtu != CAN_MTU) && (mtu != CANFD_MTU))
 				return 1;
+
+			/* we don't support error message frames in CAN FD */
+			if ((mtu == CANFD_MTU) && (cf.can_id & CAN_ERR_FLAG))
+				continue;
 
 			tv.tv_sec  = tv.tv_sec - start_tv.tv_sec;
 			tv.tv_usec = tv.tv_usec - start_tv.tv_usec;
