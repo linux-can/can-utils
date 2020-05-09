@@ -69,15 +69,45 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -n  (set newline to cr/lf - default lf)\n");
 }
 
+void can_asc(struct canfd_frame *cf, int devno, FILE *outfile)
+{
+	int i;
+	char id[10];
+
+	fprintf(outfile, "%-2d ", devno); /* channel number left aligned */
+
+	if (cf->can_id & CAN_ERR_FLAG)
+		fprintf(outfile, "ErrorFrame");
+	else {
+		sprintf(id, "%X%c", cf->can_id & CAN_EFF_MASK,
+			(cf->can_id & CAN_EFF_FLAG)?'x':' ');
+		fprintf(outfile, "%-15s Rx   ", id);
+
+		if (cf->can_id & CAN_RTR_FLAG)
+			fprintf(outfile, "r"); /* RTR frame */
+		else {
+			fprintf(outfile, "d %d", cf->len); /* data frame */
+
+			for (i = 0; i < cf->len; i++) {
+				fprintf(outfile, " %02X", cf->data[i]);
+			}
+		}
+	}
+}
+
+void canfd_asc(struct canfd_frame *cf, int devno, FILE *outfile)
+{
+}
+
 int main(int argc, char **argv)
 {
-	static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ], id[10];
+	static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ];
 
 	struct canfd_frame cf;
 	static struct timeval tv, start_tv;
 	FILE *infile = stdin;
 	FILE *outfile = stdout;
-	static int maxdev, devno, i, crlf, d4, opt;
+	static int maxdev, devno, i, crlf, d4, opt, mtu;
 
 	while ((opt = getopt(argc, argv, "I:O:4n?")) != -1) {
 		switch (opt) {
@@ -162,7 +192,8 @@ int main(int argc, char **argv)
 		}
 
 		if (devno) { /* only convert for selected CAN devices */
-			if (parse_canframe(ascframe, &cf) != CAN_MTU) /* no CAN FD support so far */
+			mtu = parse_canframe(ascframe, &cf);
+			if ((mtu != CAN_MTU) && (mtu != CANFD_MTU))
 				return 1;
 
 			tv.tv_sec  = tv.tv_sec - start_tv.tv_sec;
@@ -177,25 +208,11 @@ int main(int argc, char **argv)
 			else
 				fprintf(outfile, "%4ld.%06ld ", tv.tv_sec, tv.tv_usec);
 
-			fprintf(outfile, "%-2d ", devno); /* channel number left aligned */
+			if (mtu == CAN_MTU)
+				can_asc(&cf, devno, outfile);
+			else
+				canfd_asc(&cf, devno, outfile);
 
-			if (cf.can_id & CAN_ERR_FLAG)
-				fprintf(outfile, "ErrorFrame");
-			else {
-				sprintf(id, "%X%c", cf.can_id & CAN_EFF_MASK,
-					(cf.can_id & CAN_EFF_FLAG)?'x':' ');
-				fprintf(outfile, "%-15s Rx   ", id);
-		
-				if (cf.can_id & CAN_RTR_FLAG)
-					fprintf(outfile, "r"); /* RTR frame */
-				else {
-					fprintf(outfile, "d %d", cf.len); /* data frame */
-		    
-					for (i = 0; i < cf.len; i++) {
-						fprintf(outfile, " %02X", cf.data[i]);
-					}
-				}
-			}
 			if (crlf)
 				fprintf(outfile, "\r");
 			fprintf(outfile, "\n");
