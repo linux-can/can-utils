@@ -135,7 +135,7 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 	int dlc = 0;
 	int data[8];
 	char tmp1[BUFLEN];
-	int i, found;
+	int i, items, found;
 
 	/* 0.002367 1 390x Rx d 8 17 00 14 00 C0 00 08 00 */
 
@@ -143,26 +143,30 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 
 	if (base == 'h') { /* check for CAN frames with hexadecimal values */
 
-		if (sscanf(buf, "%ld.%ld %d %s %*s %c %d %x %x %x %x %x %x %x %x",
-			   &read_tv.tv_sec, &read_tv.tv_usec, &interface,
-			   tmp1, &rtr, &dlc,
-			   &data[0], &data[1], &data[2], &data[3],
-			   &data[4], &data[5], &data[6], &data[7]
-			    ) == dlc + 6 ) {
+		items = sscanf(buf, "%ld.%ld %d %s %*s %c %d %x %x %x %x %x %x %x %x",
+			       &read_tv.tv_sec, &read_tv.tv_usec, &interface,
+			       tmp1, &rtr, &dlc,
+			       &data[0], &data[1], &data[2], &data[3],
+			       &data[4], &data[5], &data[6], &data[7]);
 
+		if ((items == dlc + 6 ) || /* data frame */
+		    ((items == 5) && (rtr == 'r')) || /* RTR without DLC */
+		    ((items == 6) && (rtr == 'r'))) { /* RTR with DLC */
 			found = 1;
 			get_can_id(&cf, tmp1, 16);
 		}
 
 	} else { /* check for CAN frames with decimal values */
 
-		if (sscanf(buf, "%ld.%ld %d %s %*s %c %d %d %d %d %d %d %d %d %d",
-			   &read_tv.tv_sec, &read_tv.tv_usec, &interface,
-			   tmp1, &rtr, &dlc,
-			   &data[0], &data[1], &data[2], &data[3],
-			   &data[4], &data[5], &data[6], &data[7]
-			    ) == dlc + 6 ) {
+		items = sscanf(buf, "%ld.%ld %d %s %*s %c %d %d %d %d %d %d %d %d %d",
+			       &read_tv.tv_sec, &read_tv.tv_usec, &interface,
+			       tmp1, &rtr, &dlc,
+			       &data[0], &data[1], &data[2], &data[3],
+			       &data[4], &data[5], &data[6], &data[7]);
 
+		if ((items == dlc + 6 ) || /* data frame */
+		    ((items == 5) && (rtr == 'r')) || /* RTR without DLC */
+		    ((items == 6) && (rtr == 'r'))) { /* RTR with DLC */
 			found = 1;
 			get_can_id(&cf, tmp1, 10);
 		}
