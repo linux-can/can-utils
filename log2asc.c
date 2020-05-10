@@ -68,9 +68,10 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -4  (reduce decimal place to 4 digits)\n");
 	fprintf(stderr, "         -n  (set newline to cr/lf - default lf)\n");
 	fprintf(stderr, "         -f  (use CANFD format also for Classic CAN)\n");
+	fprintf(stderr, "         -r  (supress dlc for RTR frames - pre v8.5 tools)\n");
 }
 
-void can_asc(struct canfd_frame *cf, int devno, FILE *outfile)
+void can_asc(struct canfd_frame *cf, int devno, int nortrdlc, FILE *outfile)
 {
 	int i;
 	char id[10];
@@ -84,9 +85,12 @@ void can_asc(struct canfd_frame *cf, int devno, FILE *outfile)
 			(cf->can_id & CAN_EFF_FLAG)?'x':' ');
 		fprintf(outfile, "%-15s Rx   ", id);
 
-		if (cf->can_id & CAN_RTR_FLAG)
-			fprintf(outfile, "r"); /* RTR frame */
-		else {
+		if (cf->can_id & CAN_RTR_FLAG) {
+			if (nortrdlc)
+				fprintf(outfile, "r"); /* RTR frame */
+			else
+				fprintf(outfile, "r %d", cf->len); /* RTR frame */
+		} else {
 			fprintf(outfile, "d %d", cf->len); /* data frame */
 
 			for (i = 0; i < cf->len; i++) {
@@ -149,9 +153,9 @@ int main(int argc, char **argv)
 	static struct timeval tv, start_tv;
 	FILE *infile = stdin;
 	FILE *outfile = stdout;
-	static int maxdev, devno, i, crlf, fdfmt, d4, opt, mtu;
+	static int maxdev, devno, i, crlf, fdfmt, nortrdlc, d4, opt, mtu;
 
-	while ((opt = getopt(argc, argv, "I:O:4nf?")) != -1) {
+	while ((opt = getopt(argc, argv, "I:O:4nfr?")) != -1) {
 		switch (opt) {
 		case 'I':
 			infile = fopen(optarg, "r");
@@ -175,6 +179,10 @@ int main(int argc, char **argv)
 
 		case 'f':
 			fdfmt = 1;
+			break;
+
+		case 'r':
+			nortrdlc = 1;
 			break;
 
 		case '4':
@@ -259,7 +267,7 @@ int main(int argc, char **argv)
 				fprintf(outfile, "%4ld.%06ld ", tv.tv_sec, tv.tv_usec);
 
 			if ((mtu == CAN_MTU) && (fdfmt == 0))
-				can_asc(&cf, devno, outfile);
+				can_asc(&cf, devno, nortrdlc, outfile);
 			else
 				canfd_asc(&cf, devno, mtu, outfile);
 
