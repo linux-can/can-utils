@@ -318,12 +318,9 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 
 int get_date(struct timeval *tv, char *date) {
 
-	char ctmp[14];
-	int  itmp;
-
 	struct tm tms;
 
-	if (sscanf(date, "%9s %d %13s %3s %d", ctmp, &itmp, ctmp, ctmp, &itmp) == 5) {
+	if (strcasestr(date, " pm ") != NULL) {
 		/* assume EN/US date due to existing am/pm field */
 
 		if (!setlocale(LC_TIME, "en_US")) {
@@ -341,9 +338,6 @@ int get_date(struct timeval *tv, char *date) {
 
 	} else {
 		/* assume DE date due to non existing am/pm field */
-
-		if (sscanf(date, "%9s %d %13s %d", ctmp, &itmp, ctmp, &itmp) != 4)
-			return 1;
 
 		if (!setlocale(LC_TIME, "de_DE")) {
 			fprintf(stderr, "Setting locale to 'de_DE' failed!\n");
