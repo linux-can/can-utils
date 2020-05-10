@@ -227,16 +227,29 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 
 	memset(&cf, 0, sizeof(cf));
 
+	/* check for valid line without symbolic name */
 	if (sscanf(buf, "%ld.%ld %*s %d %*s %s %hhx %hhx %x %d ",
 		   &read_tv.tv_sec, &read_tv.tv_usec, &interface,
-		   tmp1, &brs, &esi, &dlc, &dlen) == 8) {
-		/* no symbolic name */
-	} else if (sscanf(buf, "%ld.%ld %*s %d %*s %s %*s %hhx %hhx %x %d ",
+		   tmp1, &brs, &esi, &dlc, &dlen) != 8) {
+
+		/* check for valid line with a symbolic name */
+		if (sscanf(buf, "%ld.%ld %*s %d %*s %s %*s %hhx %hhx %x %d ",
 		   &read_tv.tv_sec, &read_tv.tv_usec, &interface,
-		   tmp1, &brs, &esi, &dlc, &dlen) == 8) {
-		/* with symbolic name */
-	} else
-		return; /* no valid CANFD format pattern */
+		   tmp1, &brs, &esi, &dlc, &dlen) != 8) {
+
+			/* no valid CANFD format pattern */
+			return;
+		}
+	}
+
+	/* check for allowed (unsigned) value ranges */
+	if ((dlen > CANFD_MAX_DLEN) || (dlc > CANFD_MAX_DLC) ||
+	    (brs > 1) || (esi > 1))
+		return;
+
+	/* don't trust ASCII content - sanitize data length */
+	if (dlen != can_dlc2len(can_len2dlc(dlen)))
+		return;
 
 	get_can_id(&cf, tmp1, 16);
 
@@ -248,14 +261,7 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	if (ptr == NULL)
 		return;
 
-	ptr += strlen(tmp1); /* hop to the start of hex data */
-
-	if (dlen > CANFD_MAX_DLEN)
-		return;
-
-	/* don't trust ASCII content - sanitize data length */
-	if (dlen != can_dlc2len(can_len2dlc(dlen)))
-		return;
+	ptr += strlen(tmp1); /* start of ASCII hex frame data */
 
 	cf.len = dlen;
 
