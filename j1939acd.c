@@ -30,7 +30,7 @@
 #include "libj1939.h"
 
 static const char help_msg[] =
-	"jacd: An SAE J1939 address claiming daemon" "\n"
+	"j1939acd: An SAE J1939 address claiming daemon" "\n"
 	"Usage: j1939acd [options] NAME [INTF]" "\n"
 	"Options:\n"
 	"  -v, --verbose		Increase verbosity" "\n"
