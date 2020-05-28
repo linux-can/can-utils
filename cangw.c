@@ -80,7 +80,7 @@ struct fdmodattr {
 
 /* some netlink helpers stolen from iproute2 package */
 #define NLMSG_TAIL(nmsg) \
-        ((struct rtattr *)(((void *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
+        ((struct rtattr *)(((char *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 
 int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	      int alen)
