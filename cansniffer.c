@@ -129,7 +129,7 @@ static char *vdl = LDL; /* variable delimiter */
 static char *ldl = LDL; /* long delimiter */
 
 void print_snifline(int slot);
-int handle_keyb(int fd);
+int handle_keyb(void);
 int handle_frame(int fd, long currcms);
 int handle_timeo(long currcms);
 void writesettings(char* name);
@@ -367,7 +367,7 @@ int main(int argc, char **argv)
 		currcms = (tv.tv_sec - start_tv.tv_sec) * 100 + (tv.tv_usec / 10000);
 
 		if (FD_ISSET(0, &rdfs))
-			running &= handle_keyb(s);
+			running &= handle_keyb();
 
 		if (FD_ISSET(s, &rdfs))
 			running &= handle_frame(s, currcms);
@@ -398,7 +398,7 @@ void do_modify_sniftab(unsigned int value, unsigned int mask, char cmd)
 	}
 }
 
-int handle_keyb(int fd)
+int handle_keyb(void)
 {
 	char cmd [25] = {0};
 	int i, clen;

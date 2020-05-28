@@ -135,7 +135,7 @@ void childdied(int i)
 	wait(NULL);
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
 
 	int sl, sa, sc;

@@ -52,7 +52,7 @@
 #define COMMENTSZ 200
 #define BUFSZ (sizeof("(1345212884.318850)") + IFNAMSIZ + 4 + CL_CFSZ + COMMENTSZ) /* for one line in the logfile */
 
-int main(int argc, char **argv)
+int main(void)
 {
 	char buf[BUFSZ], timestamp[BUFSZ], device[BUFSZ], ascframe[BUFSZ];
 	struct canfd_frame cf;
