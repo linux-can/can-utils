@@ -365,7 +365,7 @@ int main(int argc, char **argv)
 					percent = 100;
 
 				for (i=0; i < NUMBAR; i++){
-					if (i < percent/PERCENTRES)
+					if (i < (int)(percent/PERCENTRES))
 						printf("X");
 					else
 						printf(".");

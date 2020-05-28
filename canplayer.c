@@ -359,7 +359,7 @@ int main(int argc, char **argv)
 				return 1;
 			}
 			strcpy(buf, argv[optind+i]);
-			for (j=0; j<BUFSZ; j++) { /* find '=' in assignment */
+			for (j=0; j<(int)BUFSZ; j++) { /* find '=' in assignment */
 				if (buf[j] == '=')
 					break;
 			}
@@ -495,7 +495,7 @@ int main(int argc, char **argv)
 					/* test for logfile timestamps jumping backwards OR      */
 					/* if the user likes to skip long gaps in the timestamps */
 					if ((last_log_tv.tv_sec > log_tv.tv_sec) ||
-					    (skipgap && labs(last_log_tv.tv_sec - log_tv.tv_sec) > skipgap))
+					    (skipgap && labs(last_log_tv.tv_sec - log_tv.tv_sec) > (long)skipgap))
 						create_diff_tv(&today_tv, &diff_tv, &log_tv);
 
 					last_log_tv = log_tv;

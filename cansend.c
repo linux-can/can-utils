@@ -121,7 +121,7 @@ int main(int argc, char **argv)
 	addr.can_family = AF_CAN;
 	addr.can_ifindex = ifr.ifr_ifindex;
 
-	if (required_mtu > CAN_MTU) {
+	if (required_mtu > (int)CAN_MTU) {
 
 		/* check if the frame fits into the CAN netdevice */
 		if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {

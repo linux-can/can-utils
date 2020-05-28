@@ -300,7 +300,7 @@ int main(int argc, char **argv)
 		ptr = argv[optind+i];
 
 		nbytes = strlen(ptr);
-		if (nbytes >= IFNAMSIZ+sizeof("@1000000")+1) {
+		if (nbytes >= (int)(IFNAMSIZ+sizeof("@1000000")+1)) {
 			printf("name of CAN device '%s' is too long!\n", ptr);
 			return 1;
 		}
@@ -324,7 +324,7 @@ int main(int argc, char **argv)
 
 		nbytes = nptr - ptr;  /* interface name is up the first '@' */
 
-		if (nbytes >= IFNAMSIZ) {
+		if (nbytes >= (int)IFNAMSIZ) {
 			printf("name of CAN device '%s' is too long!\n", ptr);
 			return 1;
 		}
@@ -396,7 +396,7 @@ int main(int argc, char **argv)
 					return 1;
 				}
 
-				if (nbytes < sizeof(struct can_frame)) {
+				if (nbytes < (int)sizeof(struct can_frame)) {
 					fprintf(stderr, "read: incomplete CAN frame\n");
 					return 1;
 				}
