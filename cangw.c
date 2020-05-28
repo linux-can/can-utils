@@ -88,7 +88,7 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	int len = RTA_LENGTH(alen);
 	struct rtattr *rta;
 
-	if (NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len) > maxlen) {
+	if ((int)(NLMSG_ALIGN(n->nlmsg_len) + RTA_ALIGN(len)) > maxlen) {
 		fprintf(stderr, "addattr_l: message exceeded bound of %d\n",
 			maxlen);
 		return -1;

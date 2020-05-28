@@ -201,7 +201,7 @@ int idx2dindex(int ifidx, int socket) {
 	if (ioctl(socket, SIOCGIFNAME, &ifr) < 0)
 		perror("SIOCGIFNAME");
 
-	if (max_devname_len < strlen(ifr.ifr_name))
+	if (max_devname_len < (int)strlen(ifr.ifr_name))
 		max_devname_len = strlen(ifr.ifr_name);
 
 	strcpy(devname[i], ifr.ifr_name);

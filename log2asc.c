@@ -138,7 +138,7 @@ void canfd_asc(struct canfd_frame *cf, int devno, int mtu, FILE *outfile)
 
 	fprintf(outfile, "%2d", dlen);
 
-	for (i = 0; i < dlen; i++) {
+	for (i = 0; i < (int)dlen; i++) {
 		fprintf(outfile, " %02X", cf->data[i]);
 	}
 

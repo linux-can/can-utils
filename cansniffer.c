@@ -405,7 +405,7 @@ int handle_keyb(void)
 	unsigned int mask;
 	unsigned int value;
 
-	if (read(0, cmd, 24) > strlen("+1234567812345678\n"))
+	if (read(0, cmd, 24) > (long)strlen("+1234567812345678\n"))
 		return 1; /* ignore */
 
 	if (strlen(cmd) > 0)

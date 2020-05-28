@@ -583,7 +583,7 @@ void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *c
 	if (!sep)
 		sep = defsep;
 
-	for (i = 0; i < ARRAY_SIZE(error_classes); i++) {
+	for (i = 0; i < (int)ARRAY_SIZE(error_classes); i++) {
 		mask = 1 << i;
 		if (class & mask) {
 			if (classes)
