@@ -165,11 +165,11 @@ static void j1939cat_scm_opt_stats(struct j1939cat_priv *priv, void *buf, int le
 	int offset = 0;
 
 	while (offset < len) {
-		struct nlattr *nla = (struct nlattr *) (buf + offset);
+		struct nlattr *nla = (struct nlattr *) ((char *)buf + offset);
 
 		switch (nla->nla_type) {
 		case J1939_NLA_BYTES_ACKED:
-			stats->send = *(uint32_t *)((void *)nla + NLA_HDRLEN);
+			stats->send = *(uint32_t *)((char *)nla + NLA_HDRLEN);
 			break;
 		default:
 			warnx("not supported J1939_NLA field\n");
