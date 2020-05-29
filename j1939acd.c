@@ -200,7 +200,7 @@ static int open_socket(const char *device, uint64_t name)
 			.addr = J1939_IDLE_ADDR,
 			.pgn = J1939_NO_PGN,
 		},
-		.can_ifindex = if_nametoindex(s.intf),
+		.can_ifindex = if_nametoindex(device),
 	};
 
 	if (s.verbose)
