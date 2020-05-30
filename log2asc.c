@@ -227,9 +227,13 @@ int main(int argc, char **argv)
 			continue;
 
 		if (sscanf(buf, "(%ld.%ld) %s %s %s", &tv.tv_sec, &tv.tv_usec,
-			   device, msgdir, ascframe) != 5) {
+			   device, ascframe,msgdir) != 5) {
+			sscanf("Rx", "%s", msgdir); /* To support candump log file without Rx/Tx info */
+			if (sscanf(buf, "(%ld.%ld) %s %s", &tv.tv_sec, &tv.tv_usec,
+				   device, ascframe) != 4) {
 			fprintf(stderr, "incorrect line format in logfile\n");
 			return 1;
+		}
 		}
 
 		if (!start_tv.tv_sec) { /* print banner */

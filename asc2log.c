@@ -72,6 +72,8 @@ void print_usage(char *prg)
 
 void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, unsigned int max_dlen, char *msgdir) {
 
+	char buf[CL_CFSZ]; /* max length */
+
 	fprintf(file, "(%ld.%06ld) ", tv->tv_sec, tv->tv_usec);
 
 	if (dev > 0)
@@ -79,9 +81,11 @@ void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, un
 	else
 		fprintf(file, "canX ");
 
-	fprintf(file, "%s ", msgdir);
+	sprint_canframe(buf, cf, 0, max_dlen);
+	fprintf(file, "%-25s ", buf);
 
-	fprint_canframe(file, cf, "\n", 0, max_dlen);
+	fprintf(file, "%s \n", msgdir);
+
 }
 
 void get_can_id(struct canfd_frame *cf, char *idstring, int base) {
