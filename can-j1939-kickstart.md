@@ -44,7 +44,7 @@ You should have this output in terminal 1
 	40 02300: 01 23
 
 This means, from NAME 0, SA 40, PGN 02300 was received,
-with 2 databytes, *01* & *02*.
+with 2 databytes, *01* & *23*.
 
 now emit this CAN message:
 
