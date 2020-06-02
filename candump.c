@@ -706,7 +706,7 @@ int main(int argc, char **argv)
 
 					/* log CAN frame with absolute timestamp & device */
 					sprint_canframe(buf, &frame, 0, maxdlen);
-					fprintf(logfile, "(%010ld.%06ld) %*s %-25s %s\n",
+					fprintf(logfile, "(%010ld.%06ld) %*s %s %s\n",
 						tv.tv_sec, tv.tv_usec,
 						max_devname_len, devname[idx], buf, (msg.msg_flags & MSG_DONTROUTE)?"Tx":"Rx");
 				}
@@ -716,9 +716,9 @@ int main(int argc, char **argv)
 
 					/* print CAN frame in log file style to stdout */
 					sprint_canframe(buf, &frame, 0, maxdlen);
-					printf("(%010ld.%06ld) %*s %s\n",
+					printf("(%010ld.%06ld) %*s %s %s\n",
 					       tv.tv_sec, tv.tv_usec,
-					       max_devname_len, devname[idx], buf);
+					       max_devname_len, devname[idx], buf, (msg.msg_flags & MSG_DONTROUTE)?"Tx":"Rx");
 					goto out_fflush; /* no other output to stdout */
 				}
 

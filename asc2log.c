@@ -82,7 +82,7 @@ void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, un
 		fprintf(file, "canX ");
 
 	sprint_canframe(buf, cf, 0, max_dlen);
-	fprintf(file, "%-25s ", buf);
+	fprintf(file, "%s ", buf);
 
 	fprintf(file, "%s \n", msgdir);
 
