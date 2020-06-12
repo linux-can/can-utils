@@ -253,7 +253,7 @@ static int repeat_address(int sock, uint64_t name)
 	ret = sendto(sock, dat, sizeof(dat), 0, (const struct sockaddr *)&saddr,
 		     sizeof(saddr));
 	if (must_warn(ret))
-		fprintf(stdout, "send address claim for 0x%02x", s.last_sa);
+		fprintf(stderr, "send address claim for 0x%02x\n", s.last_sa);
 	return ret;
 }
 static int claim_address(int sock, uint64_t name, int sa)
@@ -514,12 +514,12 @@ int main(int argc, char *argv[])
 
 	if ((s.current_sa < J1939_IDLE_ADDR) && !(addr[s.current_sa].flags & F_USE)) {
 		if (s.verbose)
-			fprintf(stdout, "forget saved address 0x%02x", s.current_sa);
+			fprintf(stderr, "- forget saved address 0x%02x\n", s.current_sa);
 		s.current_sa = J1939_IDLE_ADDR;
 	}
 
 	if (s.verbose)
-		fprintf(stdout, "ready for %s:%016llx", s.intf, (long long)s.name);
+		fprintf(stderr, "- ready for %s:%016llx\n", s.intf, (long long)s.name);
 	if (!s.intf || !s.name)
 		err(1, "bad arguments");
 	ret = sock = open_socket(s.intf, s.name);
@@ -583,7 +583,7 @@ int main(int argc, char *argv[])
 				break;
 			if (s.state == STATE_REQ_SENT) {
 				if (s.verbose)
-					fprintf(stdout, "request sent, pending for 1250 ms");
+					fprintf(stderr, "- request sent, pending for 1250 ms\n");
 				schedule_itimer(1250);
 				s.state = STATE_REQ_PENDING;
 			} else if (s.state == STATE_OPERATIONAL) {
@@ -613,10 +613,10 @@ int main(int argc, char *argv[])
 				/* ourselves, disable itimer */
 				s.current_sa = sa;
 				if (s.verbose)
-					fprintf(stdout, "claimed 0x%02x", sa);
+					fprintf(stderr, "- claimed 0x%02x\n", sa);
 			} else if (sa == s.current_sa) {
 				if (s.verbose)
-					fprintf(stdout, "address collision for 0x%02x", sa);
+					fprintf(stderr, "- address collision for 0x%02x\n", sa);
 				if (s.name > saddr.can_addr.j1939.name) {
 					sa = choose_new_sa(s.name, sa);
 					if (sa == J1939_IDLE_ADDR) {
@@ -645,7 +645,7 @@ int main(int argc, char *argv[])
 	}
 done:
 	if (s.verbose)
-		fprintf(stdout, "shutdown");
+		fprintf(stderr, "- shutdown\n");
 	claim_address(sock, s.name, J1939_IDLE_ADDR);
 	save_cache();
 	return 0;
