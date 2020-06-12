@@ -72,7 +72,8 @@ static void schedule_oneshot_itimer(double delay)
 /* main */
 int main(int argc, char *argv[])
 {
-	int ret, sock, opt, j;
+	int ret, sock, opt;
+	unsigned int j;
 	int verbose = 0;
 	socklen_t peernamelen;
 	struct sockaddr_can sockname = {
@@ -92,7 +93,8 @@ int main(int argc, char *argv[])
 	};
 	uint8_t dat[128];
 	int valid_peername = 0;
-	int todo_send = 0, todo_recv = 0, todo_echo = 0, todo_prio = -1;
+	unsigned int todo_send = 0;
+	int todo_recv = 0, todo_echo = 0, todo_prio = -1;
 	int todo_connect = 0, todo_names = 0, todo_wait = 0, todo_rebind = 0;
 	int todo_broadcast = 0, todo_promisc = 0;
 	int no_bind = 0;
@@ -289,16 +291,16 @@ int main(int argc, char *argv[])
 				err(1, "sendto");
 		}
 		if (todo_recv) {
-			int i = 0;
+			int i;
 
 			if (todo_names && peername.can_addr.j1939.name)
 				printf("%016llx ", peername.can_addr.j1939.name);
 			printf("%02x %05x:", peername.can_addr.j1939.addr,
 					peername.can_addr.j1939.pgn);
-			for (j = 0; j < ret; ++j, i++) {
-				if (i == 8) {
+			for (i = 0, j = 0; i < ret; ++i, j++) {
+				if (j == 8) {
 					printf("\n%05x    ", j);
-					i = 0;
+					j = 0;
 				}
 				printf(" %02x", dat[j]);
 			}

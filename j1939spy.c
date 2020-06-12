@@ -95,8 +95,8 @@ static uint8_t *buf;
  */
 int main(int argc, char **argv)
 {
-	int ret, sock, j, opt;
-	unsigned int len;
+	int ret, sock, opt;
+	unsigned int j, len;
 	struct timeval tref, tdut, ttmp;
 	struct sockaddr_can src;
 	struct j1939_filter filt;
@@ -287,7 +287,7 @@ int main(int argc, char **argv)
 
 		printf("[%i%s]", len, (msg.msg_flags & MSG_TRUNC) ? "..." : "");
 		for (j = 0; j < len; ) {
-			int end = j + 4;
+			unsigned int end = j + 4;
 			if (end > len)
 				end = len;
 			printf(" ");
