@@ -53,7 +53,7 @@ static const char *libj1939_ifnam(int ifindex)
 	fetch_names();
 
 	for (lp = saved; lp->if_index; ++lp) {
-		if (lp->if_index == ifindex)
+		if (lp->if_index == (unsigned int)ifindex)
 			return lp->if_name;
 	}
 	if (cached) {

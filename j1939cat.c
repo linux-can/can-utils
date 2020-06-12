@@ -121,7 +121,7 @@ static ssize_t j1939cat_send_one(struct j1939cat_priv *priv, int out_fd,
 		return -EINVAL;
 	}
 
-	if (num_sent > buf_size) /* Should never happen */ {
+	if (num_sent > (ssize_t)buf_size) /* Should never happen */ {
 		warn("%s: send more then read", __func__);
 		return -EINVAL;
 	}
@@ -372,7 +372,8 @@ static int j1939cat_sendfile(struct j1939cat_priv *priv, int out_fd, int in_fd,
 	int ret = EXIT_SUCCESS;
 	off_t orig = 0;
 	char *buf;
-	size_t to_read, num_read, buf_size;
+	ssize_t num_read;
+	size_t to_read, buf_size;
 
 	buf_size = min(priv->max_transfer, count);
 	buf = malloc(buf_size);
@@ -454,7 +455,8 @@ static size_t j1939cat_get_file_size(int fd)
 static int j1939cat_send(struct j1939cat_priv *priv)
 {
 	unsigned int size = 0;
-	int ret, i;
+	unsigned int i;
+	int ret;
 
 	if (priv->todo_filesize)
 		size = j1939cat_get_file_size(priv->infile);
