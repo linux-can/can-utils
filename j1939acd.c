@@ -253,7 +253,7 @@ static int repeat_address(int sock, uint64_t name)
 	ret = sendto(sock, dat, sizeof(dat), 0, (const struct sockaddr *)&saddr,
 		     sizeof(saddr));
 	if (must_warn(ret))
-		err(1, "send address claim for 0x%02x", s.last_sa);
+		fprintf(stdout, "send address claim for 0x%02x", s.last_sa);
 	return ret;
 }
 static int claim_address(int sock, uint64_t name, int sa)
@@ -292,7 +292,7 @@ static int request_addresses(int sock)
 		fprintf(stderr, "- sendto(, { 0, 0xee, 0, }, %zi, 0, %s, %zi);\n", sizeof(dat), libj1939_addr2str(&saddr), sizeof(saddr));
 	ret = sendto(sock, dat, sizeof(dat), 0, (void *)&saddr, sizeof(saddr));
 	if (must_warn(ret))
-		err(1, "send request for address claims");
+		fprintf(stdout, "send request for address claims");
 	return ret;
 }
 
@@ -514,12 +514,12 @@ int main(int argc, char *argv[])
 
 	if ((s.current_sa < J1939_IDLE_ADDR) && !(addr[s.current_sa].flags & F_USE)) {
 		if (s.verbose)
-			err(0, "forget saved address 0x%02x", s.current_sa);
+			fprintf(stdout, "forget saved address 0x%02x", s.current_sa);
 		s.current_sa = J1939_IDLE_ADDR;
 	}
 
 	if (s.verbose)
-		err(0, "ready for %s:%016llx", s.intf, (long long)s.name);
+		fprintf(stdout, "ready for %s:%016llx", s.intf, (long long)s.name);
 	if (!s.intf || !s.name)
 		err(1, "bad arguments");
 	ret = sock = open_socket(s.intf, s.name);
@@ -583,7 +583,7 @@ int main(int argc, char *argv[])
 				break;
 			if (s.state == STATE_REQ_SENT) {
 				if (s.verbose)
-					err(0, "request sent, pending for 1250 ms");
+					fprintf(stdout, "request sent, pending for 1250 ms");
 				schedule_itimer(1250);
 				s.state = STATE_REQ_PENDING;
 			} else if (s.state == STATE_OPERATIONAL) {
@@ -613,14 +613,14 @@ int main(int argc, char *argv[])
 				/* ourselves, disable itimer */
 				s.current_sa = sa;
 				if (s.verbose)
-					err(0, "claimed 0x%02x", sa);
+					fprintf(stdout, "claimed 0x%02x", sa);
 			} else if (sa == s.current_sa) {
 				if (s.verbose)
-					err(0, "address collision for 0x%02x", sa);
+					fprintf(stdout, "address collision for 0x%02x", sa);
 				if (s.name > saddr.can_addr.j1939.name) {
 					sa = choose_new_sa(s.name, sa);
 					if (sa == J1939_IDLE_ADDR) {
-						err(0, "no address left");
+						fprintf(stdout, "no address left");
 						/* put J1939_IDLE_ADDR in cache file */
 						s.current_sa = sa;
 						goto done;
@@ -645,7 +645,7 @@ int main(int argc, char *argv[])
 	}
 done:
 	if (s.verbose)
-		err(0, "shutdown");
+		fprintf(stdout, "shutdown");
 	claim_address(sock, s.name, J1939_IDLE_ADDR);
 	save_cache();
 	return 0;
