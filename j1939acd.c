@@ -631,7 +631,7 @@ int main(int argc, char *argv[])
 					schedule_itimer(50);
 			}
 			break;
-		case 0x0fed8:
+		case J1939_PGN_ADDRESS_COMMANDED:
 			if (!host_is_little_endian())
 				bswap(dat, 8);
 			memcpy(&cmd_name, dat, 8);
