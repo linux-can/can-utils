@@ -240,7 +240,7 @@ static int can_echo_dut(void)
 
 static int can_echo_gen(void)
 {
-	struct can_frame tx_frames[CAN_MSG_COUNT];
+	struct can_frame tx_frames[CAN_MSG_COUNT] = { };
 	int recv_tx[CAN_MSG_COUNT];
 	struct can_frame rx_frame;
 	unsigned char counter = 0;
