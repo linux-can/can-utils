@@ -184,7 +184,7 @@ static const struct j1939_filter filt[] = {
 		.pgn = J1939_PGN_REQUEST,
 		.pgn_mask = J1939_PGN_PDU1_MAX,
 	}, {
-		.pgn = 0x0fed8,
+		.pgn = J1939_PGN_ADDRESS_COMMANDED,
 		.pgn_mask = J1939_PGN_MAX,
 	},
 };
