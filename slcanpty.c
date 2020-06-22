@@ -24,17 +24,17 @@
  *
  */
 
+#include <fcntl.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <libgen.h>
 #include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <termios.h>
+#include <unistd.h>
 
 #include <net/if.h>
-#include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
