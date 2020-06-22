@@ -114,7 +114,7 @@ static void compare_frame(struct can_frame *exp, struct can_frame *rec, int inc)
 	} else {
 		for (i = 0; i < rec->can_dlc; i++) {
 			if (rec->data[i] != ((exp->data[i] + inc) & 0xff)) {
-				printf("Databyte %x mismatch !\n", i);
+				printf("Databyte %x mismatch!\n", i);
 				print_compare(exp,
 					      rec, inc);
 				running = 0;
