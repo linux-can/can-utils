@@ -331,7 +331,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'l':
-			test_loops = atoi(optarg);;
+			test_loops = atoi(optarg);
 			break;
 
 		case 'g':
