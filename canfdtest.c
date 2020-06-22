@@ -210,15 +210,7 @@ static int can_echo_dut(void)
 		if (verbose == 1) {
 			echo_progress(frame.data[0]);
 		} else if (verbose > 1) {
-			printf("%04x: ", frame.can_id);
-			if (frame.can_id & CAN_RTR_FLAG) {
-				printf("remote request");
-			} else {
-				printf("[%d]", frame.can_dlc);
-				for (i = 0; i < frame.can_dlc; i++)
-					printf(" %02x", frame.data[i]);
-			}
-			printf("\n");
+			print_frame(&frame, 0);
 		}
 		frame.can_id++;
 		for (i = 0; i < frame.can_dlc; i++)
