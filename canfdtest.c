@@ -76,7 +76,7 @@ static void print_usage(char *prg)
 	exit(1);
 }
 
-static void print_frame(struct can_frame *frame, int inc)
+static void print_frame(const struct can_frame *frame, int inc)
 {
 	int i;
 
@@ -91,7 +91,7 @@ static void print_frame(struct can_frame *frame, int inc)
 	printf("\n");
 }
 
-static void print_compare(struct can_frame *exp, struct can_frame *rec, int inc)
+static void print_compare(const struct can_frame *exp, const struct can_frame *rec, int inc)
 {
 	printf("expected: ");
 	print_frame(exp, inc);
