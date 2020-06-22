@@ -197,11 +197,19 @@ static int send_frame(struct can_frame *frame)
 	return 0;
 }
 
+static void inc_frame(struct can_frame *frame)
+{
+	int i;
+
+	frame->can_id++;
+	for (i = 0; i < frame->can_dlc; i++)
+		frame->data[i]++;
+}
+
 static int can_echo_dut(void)
 {
 	unsigned int frame_count = 0;
 	struct can_frame frame;
-	int i;
 
 	while (running) {
 		if (recv_frame(&frame))
@@ -212,9 +220,8 @@ static int can_echo_dut(void)
 		} else if (verbose > 1) {
 			print_frame(&frame, 0);
 		}
-		frame.can_id++;
-		for (i = 0; i < frame.can_dlc; i++)
-			frame.data[i]++;
+
+		inc_frame(&frame);
 		if (send_frame(&frame))
 			return -1;
 
