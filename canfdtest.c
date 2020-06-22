@@ -197,6 +197,34 @@ static int send_frame(struct can_frame *frame)
 	return 0;
 }
 
+static int check_frame(const struct can_frame *frame)
+{
+	int err = 0;
+	int i;
+	
+	if (frame->can_id != CAN_MSG_ID) {
+		printf("unexpected Message ID 0x%04x!\n", frame->can_id);
+		err = -1;
+	}
+
+	if (frame->can_dlc != CAN_MSG_LEN) {
+		printf("unexpected Message length %d!\n", frame->can_dlc);
+		err = -1;
+	}
+	
+	for (i = 1; i < frame->can_dlc; i++) {
+		if (frame->data[i] != frame->data[i-1]) {
+			printf("Frame inconsistent!\n");
+			print_frame(frame, 0);
+			err = -1;
+			goto out;
+		}
+	}
+
+ out:
+	return err;
+}
+
 static void inc_frame(struct can_frame *frame)
 {
 	int i;
@@ -221,6 +249,7 @@ static int can_echo_dut(void)
 			print_frame(&frame, 0);
 		}
 
+		check_frame(&frame);
 		inc_frame(&frame);
 		if (send_frame(&frame))
 			return -1;
