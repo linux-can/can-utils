@@ -2,13 +2,15 @@ cmake_minimum_required(VERSION 3.3)
 
 project(can-utils LANGUAGES C)
 
+include (CheckSymbolExists)
 include (GNUInstallDirs)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
+check_symbol_exists(__GNU_LIBRARY__ "features.h" _GNU_SOURCE)
+if(_GNU_SOURCE)
   add_definitions(-D_GNU_SOURCE)
 endif()
 
