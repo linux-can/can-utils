@@ -49,6 +49,7 @@ static int verbose;
 static int sockfd;
 static int test_loops;
 static int exit_sig;
+static int inflight_count = CAN_MSG_COUNT;
 
 static void print_usage(char *prg)
 {
@@ -61,6 +62,7 @@ static void print_usage(char *prg)
 		"         -vv      (high verbosity)\n"
 		"         -g       (generate messages)\n"
 		"         -l COUNT (test loop count)\n"
+		"         -f COUNT (number of frames in flight, default: %d)\n"
 		"\n"
 		"With the option '-g' CAN messages are generated and checked\n"
 		"on <can-interface>, otherwise all messages received on the\n"
@@ -72,7 +74,7 @@ static void print_usage(char *prg)
 		"%s -v can0\n"
 		"\ton Host:\n"
 		"%s -g -v can2\n",
-		prg, prg, prg, prg);
+		prg, prg, CAN_MSG_COUNT, prg, prg);
 
 	exit(1);
 }
@@ -269,15 +271,26 @@ static int can_echo_dut(void)
 
 static int can_echo_gen(void)
 {
-	struct can_frame tx_frames[CAN_MSG_COUNT] = { };
-	int recv_tx[CAN_MSG_COUNT];
+	struct can_frame *tx_frames;
+	int *recv_tx;
 	struct can_frame rx_frame;
 	unsigned char counter = 0;
 	int send_pos = 0, recv_rx_pos = 0, recv_tx_pos = 0, unprocessed = 0, loops = 0;
+	int err = 0;
 	int i;
 
+	tx_frames = calloc(inflight_count, sizeof(* tx_frames));
+	if (!tx_frames)
+		return -1;
+
+	recv_tx = calloc(inflight_count, sizeof(* recv_tx));
+	if (!recv_tx) {
+		err = -1;
+		goto out_free_tx_frames;
+	}
+
 	while (running) {
-		if (unprocessed < CAN_MSG_COUNT) {
+		if (unprocessed < inflight_count) {
 			/* still send messages */
 			tx_frames[send_pos].can_dlc = CAN_MSG_LEN;
 			tx_frames[send_pos].can_id = CAN_MSG_ID;
@@ -285,11 +298,13 @@ static int can_echo_gen(void)
 
 			for (i = 0; i < CAN_MSG_LEN; i++)
 				tx_frames[send_pos].data[i] = counter + i;
-			if (send_frame(&tx_frames[send_pos]))
-				return -1;
+			if (send_frame(&tx_frames[send_pos])) {
+				err = -1;
+				goto out_free;
+			}
 
 			send_pos++;
-			if (send_pos == CAN_MSG_COUNT)
+			if (send_pos == inflight_count)
 				send_pos = 0;
 			unprocessed++;
 			if (verbose == 1)
@@ -301,8 +316,10 @@ static int can_echo_gen(void)
 			else
 				millisleep(1);
 		} else {
-			if (recv_frame(&rx_frame))
-				return -1;
+			if (recv_frame(&rx_frame)) {
+				err = -1;
+				goto out_free;
+			}
 
 			if (verbose > 1)
 				print_frame(&rx_frame, 0);
@@ -312,7 +329,7 @@ static int can_echo_gen(void)
 				compare_frame(&tx_frames[recv_tx_pos], &rx_frame, 0);
 				recv_tx[recv_tx_pos] = 1;
 				recv_tx_pos++;
-				if (recv_tx_pos == CAN_MSG_COUNT)
+				if (recv_tx_pos == inflight_count)
 					recv_tx_pos = 0;
 				continue;
 			} else {
@@ -323,7 +340,7 @@ static int can_echo_gen(void)
 				/* compare with expected */
 				compare_frame(&tx_frames[recv_rx_pos], &rx_frame, 1);
 				recv_rx_pos++;
-				if (recv_rx_pos == CAN_MSG_COUNT)
+				if (recv_rx_pos == inflight_count)
 					recv_rx_pos = 0;
 			}
 
@@ -337,7 +354,12 @@ static int can_echo_gen(void)
 
 	printf("\nTest messages sent and received: %d\n", loops);
 
-	return 0;
+ out_free:
+	free(recv_tx);
+ out_free_tx_frames:
+	free(tx_frames);
+
+	return err;
 }
 
 int main(int argc, char *argv[])
@@ -353,10 +375,13 @@ int main(int argc, char *argv[])
 	signal(SIGHUP, signal_handler);
 	signal(SIGINT, signal_handler);
 
-	while ((opt = getopt(argc, argv, "gl:v?")) != -1) {
+	while ((opt = getopt(argc, argv, "f:gl:v?")) != -1) {
 		switch (opt) {
 		case 'v':
 			verbose++;
+			break;
+		case 'f':
+			inflight_count = atoi(optarg);
 			break;
 
 		case 'l':
