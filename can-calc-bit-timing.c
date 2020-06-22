@@ -444,7 +444,7 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
 	unsigned int spt_nominal;	/* nominal sample point */
 	unsigned int best_tseg = 0;	/* current best value for tseg */
 	unsigned int best_brp = 0;	/* current best value for brp */
-	unsigned int brp, tsegall, tseg, tseg1, tseg2;
+	unsigned int brp, tsegall, tseg, tseg1 = 0, tseg2 = 0;
 	u64 v64;
 
 	/* Use CiA recommended sample points */
