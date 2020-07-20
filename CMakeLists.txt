@@ -37,10 +37,10 @@ set(PROGRAMS_CANLIB
 )
 
 set(PROGRAMS_J1939
-    jacd
-    jcat
-    jspy
-    jsr
+    j1939acd
+    j1939cat
+    j1939spy
+    j1939sr
     testj1939
 )
 

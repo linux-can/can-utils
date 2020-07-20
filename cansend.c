@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause) */
 /*
- * cansend.c - simple command line tool to send CAN-frames via CAN_RAW sockets
+ * cansend.c - send CAN-frames via CAN_RAW sockets
  *
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research
  * All rights reserved.
@@ -56,6 +56,29 @@
 
 #include "lib.h"
 
+void print_usage(char *prg)
+{
+	fprintf(stderr, "%s - send CAN-frames via CAN_RAW sockets.\n", prg);
+	fprintf(stderr, "\nUsage: %s <device> <can_frame>.\n", prg);
+	fprintf(stderr, "\n<can_frame>:\n");
+	fprintf(stderr, " <can_id>#{data}          for 'classic' CAN 2.0 data frames\n");
+	fprintf(stderr, " <can_id>#R{len}          for 'classic' CAN 2.0 data frames\n");
+	fprintf(stderr, " <can_id>##<flags>{data}  for CAN FD frames\n\n");
+	fprintf(stderr, "<can_id>:\n"
+	        " 3 (SFF) or 8 (EFF) hex chars\n");
+	fprintf(stderr, "{data}:\n"
+	        " 0..8 (0..64 CAN FD) ASCII hex-values (optionally separated by '.')\n");
+	fprintf(stderr, "{len}:\n"
+		 " an optional 0..8 value as RTR frames can contain a valid dlc field\n");
+	fprintf(stderr, "<flags>:\n"
+	        " a single ASCII Hex value (0 .. F) which defines canfd_frame.flags\n\n");
+	fprintf(stderr, "Examples:\n");
+	fprintf(stderr, "  5A1#11.2233.44556677.88 / 123#DEADBEEF / 5AA# / 123##1 / 213##311223344 /\n"
+		 "  1F334455#1122334455667788 / 123#R / 00000123#R3\n\n");
+}
+
+
+
 int main(int argc, char **argv)
 {
 	int s; /* can raw socket */ 
@@ -68,27 +91,15 @@ int main(int argc, char **argv)
 
 	/* check command line options */
 	if (argc != 3) {
-		fprintf(stderr, "Usage: %s <device> <can_frame>.\n", argv[0]);
+		print_usage(argv[0]);
 		return 1;
 	}
 
 	/* parse CAN frame */
 	required_mtu = parse_canframe(argv[2], &frame);
 	if (!required_mtu){
-		fprintf(stderr, "\nWrong CAN-frame format! Try:\n\n");
-		fprintf(stderr, "    <can_id>#{data}            for 'classic' CAN 2.0 data frames\n");
-		fprintf(stderr, "    <can_id>#R{len}            for 'classic' CAN 2.0 RTR frames\n");
-		fprintf(stderr, "    <can_id>##<flags>{data}    for CAN FD frames\n\n");
-		fprintf(stderr, "<can_id> can have 3 (SFF) or 8 (EFF) hex chars\n");
-		fprintf(stderr, "{data} has 0..8 (0..64 CAN FD) ASCII hex-values (optionally");
-		fprintf(stderr, " separated by '.')\n");
-		fprintf(stderr, "{len} is an optional 0..8 value as RTR frames can contain a");
-		fprintf(stderr, " valid dlc field\n");
-		fprintf(stderr, "<flags> a single ASCII Hex value (0 .. F) which defines");
-		fprintf(stderr, " canfd_frame.flags\n\n");
-		fprintf(stderr, "e.g. 5A1#11.2233.44556677.88 / 123#DEADBEEF / 5AA# / ");
-		fprintf(stderr, "123##1 / 213##311223344\n     1F334455#1122334455667788 / ");
-		fprintf(stderr, "123#R / 00000123#R3\n\n");
+		fprintf(stderr, "\nWrong CAN-frame format!\n\n");
+		print_usage(argv[0]);
 		return 1;
 	}
 
@@ -110,7 +121,7 @@ int main(int argc, char **argv)
 	addr.can_family = AF_CAN;
 	addr.can_ifindex = ifr.ifr_ifindex;
 
-	if (required_mtu > CAN_MTU) {
+	if (required_mtu > (int)CAN_MTU) {
 
 		/* check if the frame fits into the CAN netdevice */
 		if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {

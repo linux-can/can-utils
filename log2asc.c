@@ -60,24 +60,102 @@ extern int optind, opterr, optopt;
 
 void print_usage(char *prg)
 {
-	fprintf(stderr, "Usage: %s [can-interfaces]\n", prg);
-	fprintf(stderr, "Options: -I <infile>  (default stdin)\n");
-	fprintf(stderr, "         -O <outfile> (default stdout)\n");
-	fprintf(stderr, "         -4 (reduce decimal place to 4 digits)\n");
-	fprintf(stderr, "         -n (set newline to cr/lf - default lf)\n");
+	fprintf(stderr, "%s - convert compact CAN frame logfile to ASC logfile.\n", prg);
+	fprintf(stderr, "Usage: %s <options> [can-interfaces]\n", prg);
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -I <infile>   (default stdin)\n");
+	fprintf(stderr, "         -O <outfile>  (default stdout)\n");
+	fprintf(stderr, "         -4  (reduce decimal place to 4 digits)\n");
+	fprintf(stderr, "         -n  (set newline to cr/lf - default lf)\n");
+	fprintf(stderr, "         -f  (use CANFD format also for Classic CAN)\n");
+	fprintf(stderr, "         -r  (supress dlc for RTR frames - pre v8.5 tools)\n");
+}
+
+void can_asc(struct canfd_frame *cf, int devno, int nortrdlc, FILE *outfile)
+{
+	int i;
+	char id[10];
+
+	fprintf(outfile, "%-2d ", devno); /* channel number left aligned */
+
+	if (cf->can_id & CAN_ERR_FLAG)
+		fprintf(outfile, "ErrorFrame");
+	else {
+		sprintf(id, "%X%c", cf->can_id & CAN_EFF_MASK,
+			(cf->can_id & CAN_EFF_FLAG)?'x':' ');
+		fprintf(outfile, "%-15s Rx   ", id);
+
+		if (cf->can_id & CAN_RTR_FLAG) {
+			if (nortrdlc)
+				fprintf(outfile, "r"); /* RTR frame */
+			else
+				fprintf(outfile, "r %d", cf->len); /* RTR frame */
+		} else {
+			fprintf(outfile, "d %d", cf->len); /* data frame */
+
+			for (i = 0; i < cf->len; i++) {
+				fprintf(outfile, " %02X", cf->data[i]);
+			}
+		}
+	}
+}
+
+void canfd_asc(struct canfd_frame *cf, int devno, int mtu, FILE *outfile)
+{
+	int i;
+	char id[10];
+	unsigned int flags = 0;
+	unsigned int dlen = cf->len;
+
+	/* relevant flags in Flags field */
+#define ASC_F_RTR 0x00000010
+#define ASC_F_FDF 0x00001000
+#define ASC_F_BRS 0x00002000
+#define ASC_F_ESI 0x00004000
+
+	fprintf(outfile, "CANFD %3d Rx ", devno); /* 3 column channel number right aligned */
+
+	sprintf(id, "%X%c", cf->can_id & CAN_EFF_MASK,
+		(cf->can_id & CAN_EFF_FLAG)?'x':' ');
+	fprintf(outfile, "%11s                                  ", id);
+	fprintf(outfile, "%c ", (cf->flags & CANFD_BRS)?'1':'0');
+	fprintf(outfile, "%c ", (cf->flags & CANFD_ESI)?'1':'0');
+	fprintf(outfile, "%x ", can_len2dlc(dlen));
+
+	if (mtu == CAN_MTU) {
+		if (cf->can_id & CAN_RTR_FLAG) {
+			/* no data length but dlc for RTR frames */
+			dlen = 0;
+			flags = ASC_F_RTR;
+		}
+	} else {
+		flags = ASC_F_FDF;
+		if (cf->flags & CANFD_BRS)
+			flags |= ASC_F_BRS;
+		if (cf->flags & CANFD_ESI)
+			flags |= ASC_F_ESI;
+	}
+
+	fprintf(outfile, "%2d", dlen);
+
+	for (i = 0; i < (int)dlen; i++) {
+		fprintf(outfile, " %02X", cf->data[i]);
+	}
+
+	fprintf(outfile, " %8d %4d %8X 0 0 0 0 0", 130000, 130, flags);
 }
 
 int main(int argc, char **argv)
 {
-	static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ], id[10];
+	static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ];
 
 	struct canfd_frame cf;
 	static struct timeval tv, start_tv;
 	FILE *infile = stdin;
 	FILE *outfile = stdout;
-	static int maxdev, devno, i, crlf, d4, opt;
+	static int maxdev, devno, i, crlf, fdfmt, nortrdlc, d4, opt, mtu;
 
-	while ((opt = getopt(argc, argv, "I:O:4n?")) != -1) {
+	while ((opt = getopt(argc, argv, "I:O:4nfr?")) != -1) {
 		switch (opt) {
 		case 'I':
 			infile = fopen(optarg, "r");
@@ -97,6 +175,14 @@ int main(int argc, char **argv)
 
 		case 'n':
 			crlf = 1;
+			break;
+
+		case 'f':
+			fdfmt = 1;
+			break;
+
+		case 'r':
+			nortrdlc = 1;
 			break;
 
 		case '4':
@@ -160,8 +246,13 @@ int main(int argc, char **argv)
 		}
 
 		if (devno) { /* only convert for selected CAN devices */
-			if (parse_canframe(ascframe, &cf) != CAN_MTU) /* no CAN FD support so far */
+			mtu = parse_canframe(ascframe, &cf);
+			if ((mtu != CAN_MTU) && (mtu != CANFD_MTU))
 				return 1;
+
+			/* we don't support error message frames in CAN FD */
+			if ((mtu == CANFD_MTU) && (cf.can_id & CAN_ERR_FLAG))
+				continue;
 
 			tv.tv_sec  = tv.tv_sec - start_tv.tv_sec;
 			tv.tv_usec = tv.tv_usec - start_tv.tv_usec;
@@ -175,25 +266,11 @@ int main(int argc, char **argv)
 			else
 				fprintf(outfile, "%4ld.%06ld ", tv.tv_sec, tv.tv_usec);
 
-			fprintf(outfile, "%-2d ", devno); /* channel number left aligned */
+			if ((mtu == CAN_MTU) && (fdfmt == 0))
+				can_asc(&cf, devno, nortrdlc, outfile);
+			else
+				canfd_asc(&cf, devno, mtu, outfile);
 
-			if (cf.can_id & CAN_ERR_FLAG)
-				fprintf(outfile, "ErrorFrame");
-			else {
-				sprintf(id, "%X%c", cf.can_id & CAN_EFF_MASK,
-					(cf.can_id & CAN_EFF_FLAG)?'x':' ');
-				fprintf(outfile, "%-15s Rx   ", id);
-		
-				if (cf.can_id & CAN_RTR_FLAG)
-					fprintf(outfile, "r"); /* RTR frame */
-				else {
-					fprintf(outfile, "d %d", cf.len); /* data frame */
-		    
-					for (i = 0; i < cf.len; i++) {
-						fprintf(outfile, " %02X", cf.data[i]);
-					}
-				}
-			}
 			if (crlf)
 				fprintf(outfile, "\r");
 			fprintf(outfile, "\n");

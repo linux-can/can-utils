@@ -36,13 +36,13 @@
 	_min1 < _min2 ? _min1 : _min2; })
 
 
-struct jcat_stats {
+struct j1939cat_stats {
 	int err;
 	uint32_t tskey;
 	uint32_t send;
 };
 
-struct jcat_priv {
+struct j1939cat_priv {
 	int sock;
 	int infile;
 	int outfile;
@@ -63,12 +63,12 @@ struct jcat_priv {
 
 	struct sock_extended_err *serr;
 	struct scm_timestamping *tss;
-	struct jcat_stats stats;
+	struct j1939cat_stats stats;
 };
 
 static const char help_msg[] =
-	"jcat: netcat tool for j1939\n"
-	"Usage: jcat FROM TO\n"
+	"j1939cat: netcat-like tool for j1939\n"
+	"Usage: j1939cat [options] FROM TO\n"
 	" FROM / TO	- or [IFACE][:[SA][,[PGN][,NAME]]]\n"
 	"Options:\n"
 	" -i <infile>	(default stdin)\n"
@@ -79,15 +79,15 @@ static const char help_msg[] =
 	" -R <count>	Set send repeat count. Default: 1\n"
 	"\n"
 	"Example:\n"
-	"jcat -i some_file_to_send  can0:0x80 :0x90,0x12300\n"
-	"jcat can0:0x90 -r > /tmp/some_file_to_receive\n"
+	"j1939cat -i some_file_to_send  can0:0x80 :0x90,0x12300\n"
+	"j1939cat can0:0x90 -r > /tmp/some_file_to_receive\n"
 	"\n"
 	;
 
-static const char optstring[] = "?i:vs:rp:P:R:";
+static const char optstring[] = "?hi:vs:rp:P:R:";
 
 
-static void jcat_init_sockaddr_can(struct sockaddr_can *sac)
+static void j1939cat_init_sockaddr_can(struct sockaddr_can *sac)
 {
 	sac->can_family = AF_CAN;
 	sac->can_addr.j1939.addr = J1939_NO_ADDR;
@@ -95,7 +95,7 @@ static void jcat_init_sockaddr_can(struct sockaddr_can *sac)
 	sac->can_addr.j1939.pgn = J1939_NO_PGN;
 }
 
-static ssize_t jcat_send_one(struct jcat_priv *priv, int out_fd,
+static ssize_t j1939cat_send_one(struct j1939cat_priv *priv, int out_fd,
 			     const void *buf, size_t buf_size)
 {
 	ssize_t num_sent;
@@ -121,7 +121,7 @@ static ssize_t jcat_send_one(struct jcat_priv *priv, int out_fd,
 		return -EINVAL;
 	}
 
-	if (num_sent > buf_size) /* Should never happen */ {
+	if (num_sent > (ssize_t)buf_size) /* Should never happen */ {
 		warn("%s: send more then read", __func__);
 		return -EINVAL;
 	}
@@ -129,10 +129,10 @@ static ssize_t jcat_send_one(struct jcat_priv *priv, int out_fd,
 	return num_sent;
 }
 
-static void jcat_print_timestamp(struct jcat_priv *priv, const char *name,
+static void j1939cat_print_timestamp(struct j1939cat_priv *priv, const char *name,
 			      struct timespec *cur)
 {
-	struct jcat_stats *stats = &priv->stats;
+	struct j1939cat_stats *stats = &priv->stats;
 
 	if (!(cur->tv_sec | cur->tv_nsec))
 		return;
@@ -144,7 +144,7 @@ static void jcat_print_timestamp(struct jcat_priv *priv, const char *name,
 	fprintf(stderr, "\n");
 }
 
-static const char *jcat_tstype_to_str(int tstype)
+static const char *j1939cat_tstype_to_str(int tstype)
 {
 	switch (tstype) {
 	case SCM_TSTAMP_SCHED:
@@ -159,17 +159,17 @@ static const char *jcat_tstype_to_str(int tstype)
 }
 
 /* Check the stats of SCM_TIMESTAMPING_OPT_STATS */
-static void jcat_scm_opt_stats(struct jcat_priv *priv, void *buf, int len)
+static void j1939cat_scm_opt_stats(struct j1939cat_priv *priv, void *buf, int len)
 {
-	struct jcat_stats *stats = &priv->stats;
+	struct j1939cat_stats *stats = &priv->stats;
 	int offset = 0;
 
 	while (offset < len) {
-		struct nlattr *nla = (struct nlattr *) (buf + offset);
+		struct nlattr *nla = (struct nlattr *) ((char *)buf + offset);
 
 		switch (nla->nla_type) {
 		case J1939_NLA_BYTES_ACKED:
-			stats->send = *(uint32_t *)((void *)nla + NLA_HDRLEN);
+			stats->send = *(uint32_t *)((char *)nla + NLA_HDRLEN);
 			break;
 		default:
 			warnx("not supported J1939_NLA field\n");
@@ -179,9 +179,9 @@ static void jcat_scm_opt_stats(struct jcat_priv *priv, void *buf, int len)
 	}
 }
 
-static int jcat_extract_serr(struct jcat_priv *priv)
+static int j1939cat_extract_serr(struct j1939cat_priv *priv)
 {
-	struct jcat_stats *stats = &priv->stats;
+	struct j1939cat_stats *stats = &priv->stats;
 	struct sock_extended_err *serr = priv->serr;
 	struct scm_timestamping *tss = priv->tss;
 
@@ -205,7 +205,7 @@ static int jcat_extract_serr(struct jcat_priv *priv)
 			      serr->ee_errno);
 		stats->tskey = serr->ee_data;
 
-		jcat_print_timestamp(priv, jcat_tstype_to_str(serr->ee_info),
+		j1939cat_print_timestamp(priv, j1939cat_tstype_to_str(serr->ee_info),
 				     &tss->ts[0]);
 
 		if (serr->ee_info == SCM_TSTAMP_SCHED)
@@ -232,7 +232,7 @@ static int jcat_extract_serr(struct jcat_priv *priv)
 			warnx("serr: unknown ee_info: %i",
 			      serr->ee_info);
 
-		jcat_print_timestamp(priv, "  ABT", &tss->ts[0]);
+		j1939cat_print_timestamp(priv, "  ABT", &tss->ts[0]);
 		warnx("serr: tx error: %i, %s", serr->ee_errno, strerror(serr->ee_errno));
 
 		return serr->ee_errno;
@@ -243,7 +243,7 @@ static int jcat_extract_serr(struct jcat_priv *priv)
 	return 0;
 }
 
-static int jcat_parse_cm(struct jcat_priv *priv, struct cmsghdr *cm)
+static int j1939cat_parse_cm(struct j1939cat_priv *priv, struct cmsghdr *cm)
 {
 	const size_t hdr_len = CMSG_ALIGN(sizeof(struct cmsghdr));
 
@@ -253,7 +253,7 @@ static int jcat_parse_cm(struct jcat_priv *priv, struct cmsghdr *cm)
 		void *jstats = (void *)CMSG_DATA(cm);
 
 		/* Activated with SOF_TIMESTAMPING_OPT_STATS */
-		jcat_scm_opt_stats(priv, jstats, cm->cmsg_len - hdr_len);
+		j1939cat_scm_opt_stats(priv, jstats, cm->cmsg_len - hdr_len);
 	} else if (cm->cmsg_level == SOL_CAN_J1939 &&
 		   cm->cmsg_type == SCM_J1939_ERRQUEUE) {
 		priv->serr = (void *)CMSG_DATA(cm);
@@ -264,7 +264,7 @@ static int jcat_parse_cm(struct jcat_priv *priv, struct cmsghdr *cm)
 	return 0;
 }
 
-static int jcat_recv_err(struct jcat_priv *priv)
+static int j1939cat_recv_err(struct j1939cat_priv *priv)
 {
 	char control[100];
 	struct cmsghdr *cm;
@@ -285,18 +285,18 @@ static int jcat_recv_err(struct jcat_priv *priv)
 
 	for (cm = CMSG_FIRSTHDR(&msg); cm && cm->cmsg_len;
 	     cm = CMSG_NXTHDR(&msg, cm)) {
-		jcat_parse_cm(priv, cm);
+		j1939cat_parse_cm(priv, cm);
 		if (priv->serr && priv->tss)
-			return jcat_extract_serr(priv);
+			return j1939cat_extract_serr(priv);
 	}
 
 	return 0;
 }
 
-static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
+static int j1939cat_send_loop(struct j1939cat_priv *priv, int out_fd, char *buf,
 			  size_t buf_size)
 {
-	struct jcat_stats *stats = &priv->stats;
+	struct j1939cat_stats *stats = &priv->stats;
 	ssize_t count;
 	char *tmp_buf = buf;
 	unsigned int events = POLLOUT | POLLERR;
@@ -328,7 +328,7 @@ static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
 			}
 
 			if (fds.revents & POLLERR) {
-				ret = jcat_recv_err(priv);
+				ret = j1939cat_recv_err(priv);
 				if (ret == -EINTR)
 					continue;
 				else if (ret)
@@ -339,12 +339,12 @@ static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
 			}
 
 			if (fds.revents & POLLOUT) {
-				num_sent = jcat_send_one(priv, out_fd, tmp_buf, count);
+				num_sent = j1939cat_send_one(priv, out_fd, tmp_buf, count);
 				if (num_sent < 0)
 					return num_sent;
 			}
 		} else {
-			num_sent = jcat_send_one(priv, out_fd, tmp_buf, count);
+			num_sent = j1939cat_send_one(priv, out_fd, tmp_buf, count);
 			if (num_sent < 0)
 				return num_sent;
 		}
@@ -366,13 +366,14 @@ static int jcat_send_loop(struct jcat_priv *priv, int out_fd, char *buf,
 	return 0;
 }
 
-static int jcat_sendfile(struct jcat_priv *priv, int out_fd, int in_fd,
+static int j1939cat_sendfile(struct j1939cat_priv *priv, int out_fd, int in_fd,
 			 off_t *offset, size_t count)
 {
 	int ret = EXIT_SUCCESS;
 	off_t orig = 0;
 	char *buf;
-	size_t to_read, num_read, buf_size;
+	ssize_t num_read;
+	size_t to_read, buf_size;
 
 	buf_size = min(priv->max_transfer, count);
 	buf = malloc(buf_size);
@@ -408,7 +409,7 @@ static int jcat_sendfile(struct jcat_priv *priv, int out_fd, int in_fd,
 		if (num_read == 0)
 			break; /* EOF */
 
-		ret = jcat_send_loop(priv, out_fd, buf, num_read);
+		ret = j1939cat_send_loop(priv, out_fd, buf, num_read);
 		if (ret)
 			goto do_free;
 
@@ -437,7 +438,7 @@ do_nofree:
 	return ret;
 }
 
-static size_t jcat_get_file_size(int fd)
+static size_t j1939cat_get_file_size(int fd)
 {
 	off_t offset;
 
@@ -451,20 +452,21 @@ static size_t jcat_get_file_size(int fd)
 	return offset;
 }
 
-static int jcat_send(struct jcat_priv *priv)
+static int j1939cat_send(struct j1939cat_priv *priv)
 {
 	unsigned int size = 0;
-	int ret, i;
+	unsigned int i;
+	int ret;
 
 	if (priv->todo_filesize)
-		size = jcat_get_file_size(priv->infile);
+		size = j1939cat_get_file_size(priv->infile);
 
 	if (!size)
 		return EXIT_FAILURE;
 
 	for (i = 0; i < priv->repeat; i++) {
 		priv->round++;
-		ret = jcat_sendfile(priv, priv->sock, priv->infile, NULL, size);
+		ret = j1939cat_sendfile(priv, priv->sock, priv->infile, NULL, size);
 		if (ret)
 			break;
 
@@ -475,7 +477,7 @@ static int jcat_send(struct jcat_priv *priv)
 	return ret;
 }
 
-static int jcat_recv_one(struct jcat_priv *priv, uint8_t *buf, size_t buf_size)
+static int j1939cat_recv_one(struct j1939cat_priv *priv, uint8_t *buf, size_t buf_size)
 {
 	int ret;
 
@@ -494,7 +496,7 @@ static int jcat_recv_one(struct jcat_priv *priv, uint8_t *buf, size_t buf_size)
 	return EXIT_SUCCESS;
 }
 
-static int jcat_recv(struct jcat_priv *priv)
+static int j1939cat_recv(struct j1939cat_priv *priv)
 {
 	int ret = EXIT_SUCCESS;
 	size_t buf_size;
@@ -508,7 +510,7 @@ static int jcat_recv(struct jcat_priv *priv)
 	}
 
 	while (priv->todo_recv) {
-		ret = jcat_recv_one(priv, buf, buf_size);
+		ret = j1939cat_recv_one(priv, buf, buf_size);
 		if (ret)
 			break;
 	}
@@ -517,7 +519,7 @@ static int jcat_recv(struct jcat_priv *priv)
 	return ret;
 }
 
-static int jcat_sock_prepare(struct jcat_priv *priv)
+static int j1939cat_sock_prepare(struct j1939cat_priv *priv)
 {
 	unsigned int sock_opt;
 	int value;
@@ -581,7 +583,7 @@ static int jcat_sock_prepare(struct jcat_priv *priv)
 	return EXIT_SUCCESS;
 }
 
-static int jcat_parse_args(struct jcat_priv *priv, int argc, char *argv[])
+static int j1939cat_parse_args(struct j1939cat_priv *priv, int argc, char *argv[])
 {
 	int opt;
 
@@ -617,6 +619,7 @@ static int jcat_parse_args(struct jcat_priv *priv, int argc, char *argv[])
 		if (priv->repeat < 1)
 			err(EXIT_FAILURE, "send/repeat count can't be less then 1\n");
 		break;
+	case 'h': /*fallthrough*/
 	default:
 		fputs(help_msg, stderr);
 		return EXIT_FAILURE;
@@ -641,7 +644,7 @@ static int jcat_parse_args(struct jcat_priv *priv, int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-	struct jcat_priv *priv;
+	struct j1939cat_priv *priv;
 	int ret;
 
 	priv = malloc(sizeof(*priv));
@@ -657,21 +660,21 @@ int main(int argc, char *argv[])
 	priv->polltimeout = 100000;
 	priv->repeat = 1;
 
-	jcat_init_sockaddr_can(&priv->sockname);
-	jcat_init_sockaddr_can(&priv->peername);
+	j1939cat_init_sockaddr_can(&priv->sockname);
+	j1939cat_init_sockaddr_can(&priv->peername);
 
-	ret = jcat_parse_args(priv, argc, argv);
+	ret = j1939cat_parse_args(priv, argc, argv);
 	if (ret)
 		return ret;
 
-	ret = jcat_sock_prepare(priv);
+	ret = j1939cat_sock_prepare(priv);
 	if (ret)
 		return ret;
 
 	if (priv->todo_recv)
-		ret = jcat_recv(priv);
+		ret = j1939cat_recv(priv);
 	else
-		ret = jcat_send(priv);
+		ret = j1939cat_send(priv);
 
 	close(priv->infile);
 	close(priv->outfile);

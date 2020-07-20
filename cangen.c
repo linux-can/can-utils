@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause) */
 /*
- * cangen.c - CAN frames generator for testing purposes
+ * cangen.c - CAN frames generator
  *
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research
  * All rights reserved.
@@ -66,6 +66,7 @@
 #include "lib.h"
 
 #define DEFAULT_GAP 200 /* ms */
+#define DEFAULT_BURST_COUNT 1
 
 #define MODE_RANDOM	0
 #define MODE_INCREMENT	1
@@ -78,17 +79,20 @@ static unsigned long long enobufs_count;
 
 void print_usage(char *prg)
 {
-	fprintf(stderr, "\n%s: generate CAN frames\n\n", prg);
+	fprintf(stderr, "%s - CAN frames generator.\n\n", prg);
 	fprintf(stderr, "Usage: %s [options] <CAN interface>\n", prg);
-	fprintf(stderr, "Options: -g <ms>       (gap in milli seconds "
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -g <ms>       (gap in milli seconds "
 		"- default: %d ms)\n", DEFAULT_GAP);
 	fprintf(stderr, "         -e            (generate extended frame mode "
 		"(EFF) CAN frames)\n");
 	fprintf(stderr, "         -f            (generate CAN FD CAN frames)\n");
 	fprintf(stderr, "         -b            (generate CAN FD CAN frames"
 		" with bitrate switch (BRS))\n");
+	fprintf(stderr, "         -E            (generate CAN FD CAN frames"
+		" with error state (ESI))\n");
 	fprintf(stderr, "         -R            (send RTR frame)\n");
-	fprintf(stderr, "         -m            (mix -e -f -b -R frames)\n");
+	fprintf(stderr, "         -m            (mix -e -f -b -E -R frames)\n");
 	fprintf(stderr, "         -I <mode>     (CAN ID"
 		" generation mode - see below)\n");
 	fprintf(stderr, "         -L <mode>     (CAN data length code (dlc)"
@@ -103,28 +107,30 @@ void print_usage(char *prg)
 		" write() syscalls)\n");
 	fprintf(stderr, "         -x            (disable local loopback of "
 		"generated CAN frames)\n");
+	fprintf(stderr, "         -c            (number of messages to send in burst, "
+		"default 1)\n");
 	fprintf(stderr, "         -v            (increment verbose level for "
 		"printing sent CAN frames)\n\n");
 	fprintf(stderr, "Generation modes:\n");
-	fprintf(stderr, "'r'        => random values (default)\n");
-	fprintf(stderr, "'i'        => increment values\n");
-	fprintf(stderr, "<hexvalue> => fix value using <hexvalue>\n\n");
+	fprintf(stderr, " 'r'         => random values (default)\n");
+	fprintf(stderr, " 'i'         => increment values\n");
+	fprintf(stderr, " <hexvalue>  => fix value using <hexvalue>\n\n");
 	fprintf(stderr, "When incrementing the CAN data the data length code "
 		"minimum is set to 1.\n");
 	fprintf(stderr, "CAN IDs and data content are given and expected in hexadecimal values.\n\n");
 	fprintf(stderr, "Examples:\n");
-	fprintf(stderr, "%s vcan0 -g 4 -I 42A -L 1 -D i -v -v   ", prg);
-	fprintf(stderr, "(fixed CAN ID and length, inc. data)\n");
-	fprintf(stderr, "%s vcan0 -e -L i -v -v -v              ", prg);
-	fprintf(stderr, "(generate EFF frames, incr. length)\n");
-	fprintf(stderr, "%s vcan0 -D 11223344DEADBEEF -L 8      ", prg);
-	fprintf(stderr, "(fixed CAN data payload and length)\n");
-	fprintf(stderr, "%s vcan0 -g 0 -i -x                    ", prg);
-	fprintf(stderr, "(full load test ignoring -ENOBUFS)\n");
-	fprintf(stderr, "%s vcan0 -g 0 -p 10 -x                 ", prg);
-	fprintf(stderr, "(full load test with polling, 10ms timeout)\n");
-	fprintf(stderr, "%s vcan0                               ", prg);
-	fprintf(stderr, "(my favourite default :)\n\n");
+	fprintf(stderr, "%s vcan0 -g 4 -I 42A -L 1 -D i -v -v\n", prg);
+	fprintf(stderr, "\t(fixed CAN ID and length, inc. data)\n");
+	fprintf(stderr, "%s vcan0 -e -L i -v -v -v\n", prg);
+	fprintf(stderr, "\t(generate EFF frames, incr. length)\n");
+	fprintf(stderr, "%s vcan0 -D 11223344DEADBEEF -L 8\n", prg);
+	fprintf(stderr, "\t(fixed CAN data payload and length)\n");
+	fprintf(stderr, "%s vcan0 -g 0 -i -x\n", prg);
+	fprintf(stderr, "\t(full load test ignoring -ENOBUFS)\n");
+	fprintf(stderr, "%s vcan0 -g 0 -p 10 -x\n", prg);
+	fprintf(stderr, "\t(full load test with polling, 10ms timeout)\n");
+	fprintf(stderr, "%s vcan0\n", prg);
+	fprintf(stderr, "\t(my favourite default :)\n\n");
 }
 
 void sigterm(int signo)
@@ -135,11 +141,13 @@ void sigterm(int signo)
 int main(int argc, char **argv)
 {
 	double gap = DEFAULT_GAP;
+	unsigned long burst_count = DEFAULT_BURST_COUNT;
 	unsigned long polltimeout = 0;
 	unsigned char ignore_enobufs = 0;
 	unsigned char extended = 0;
 	unsigned char canfd = 0;
 	unsigned char brs = 0;
+	unsigned char esi = 0;
 	unsigned char mix = 0;
 	unsigned char id_mode = MODE_RANDOM;
 	unsigned char data_mode = MODE_RANDOM;
@@ -148,6 +156,7 @@ int main(int argc, char **argv)
 	unsigned char verbose = 0;
 	unsigned char rtr_frame = 0;
 	int count = 0;
+	unsigned long burst_sent_count = 0;
 	int mtu, maxdlen;
 	uint64_t incdata = 0;
 	int incdlc = 0;
@@ -175,7 +184,7 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	while ((opt = getopt(argc, argv, "ig:ebfmI:L:D:xp:n:vRh?")) != -1) {
+	while ((opt = getopt(argc, argv, "ig:ebEfmI:L:D:xp:n:c:vRh?")) != -1) {
 		switch (opt) {
 
 		case 'i':
@@ -196,6 +205,11 @@ int main(int argc, char **argv)
 
 		case 'b':
 			brs = 1; /* bitrate switch implies CAN FD */
+			canfd = 1;
+			break;
+
+		case 'E':
+			esi = 1; /* error state indicator implies CAN FD */
 			canfd = 1;
 			break;
 
@@ -238,6 +252,10 @@ int main(int argc, char **argv)
 					return 1;
 				}
 			}
+			break;
+
+		case 'c':
+			burst_count = strtoul(optarg, NULL, 10);
 			break;
 
 		case 'v':
@@ -369,6 +387,8 @@ int main(int argc, char **argv)
 			maxdlen = CANFD_MAX_DLEN;
 			if (brs)
 				frame.flags |= CANFD_BRS;
+			if (esi)
+				frame.flags |= CANFD_ESI;
 		} else {
 			mtu = CAN_MTU;
 			maxdlen = CAN_MAX_DLEN;
@@ -458,9 +478,13 @@ resend:
 			return 1;
 		}
 
-		if (gap) /* gap == 0 => performance test :-] */
+		burst_sent_count++;
+		if (gap && burst_sent_count >= burst_count) /* gap == 0 => performance test :-] */
 			if (nanosleep(&ts, NULL))
 				return 1;
+
+		if (burst_sent_count >= burst_count)
+			burst_sent_count = 0;
 
 		if (id_mode == MODE_INCREMENT)
 			frame.can_id++;
@@ -490,8 +514,10 @@ resend:
 			i = random();
 			extended = i&1;
 			canfd = i&2;
-			if (canfd)
+			if (canfd) {
 				brs = i&4;
+				esi = i&8;
+			}
 			rtr_frame = ((i&24) == 24); /* reduce RTR frames to 1/4 */
 		}
 	}

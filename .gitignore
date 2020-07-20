@@ -41,10 +41,10 @@ GNUmakefile.in
 /isotpserver
 /isotpsniffer
 /isotptun
-/jacd
-/jcat
-/jspy
-/jsr
+/j1939acd
+/j1939cat
+/j1939spy
+/j1939sr
 /log2asc
 /log2long
 /slcan_attach

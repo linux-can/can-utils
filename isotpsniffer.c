@@ -69,14 +69,15 @@
 void print_usage(char *prg)
 {
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>\n", prg);
-	fprintf(stderr, "Options: -s <can_id> (source can_id. Use 8 digits for extended IDs)\n");
-	fprintf(stderr, "         -d <can_id> (destination can_id. Use 8 digits for extended IDs)\n");
-	fprintf(stderr, "         -x <addr>   (extended addressing mode)\n");
-	fprintf(stderr, "         -X <addr>   (extended addressing mode - rx addr)\n");
-	fprintf(stderr, "         -c          (color mode)\n");
-	fprintf(stderr, "         -t <type>   (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
-	fprintf(stderr, "         -f <format> (1 = HEX, 2 = ASCII, 3 = HEX & ASCII - default: %d)\n", FORMAT_DEFAULT);
-	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags> (link layer options for CAN FD)\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -s <can_id>  (source can_id. Use 8 digits for extended IDs)\n");
+	fprintf(stderr, "         -d <can_id>  (destination can_id. Use 8 digits for extended IDs)\n");
+	fprintf(stderr, "         -x <addr>    (extended addressing mode)\n");
+	fprintf(stderr, "         -X <addr>    (extended addressing mode - rx addr)\n");
+	fprintf(stderr, "         -c           (color mode)\n");
+	fprintf(stderr, "         -t <type>    (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
+	fprintf(stderr, "         -f <format>  (1 = HEX, 2 = ASCII, 3 = HEX & ASCII - default: %d)\n", FORMAT_DEFAULT);
+	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags>  (link layer options for CAN FD)\n");
 	fprintf(stderr, "         -h <len>    (head: print only first <len> bytes)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "\n");

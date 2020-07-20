@@ -77,30 +77,32 @@ extern int optind, opterr, optopt;
 
 void print_usage(char *prg)
 {
+	fprintf(stderr, "%s - replay a compact CAN frame logfile to CAN devices.\n", prg);
 	fprintf(stderr, "\nUsage: %s <options> [interface assignment]*\n\n", prg);
-	fprintf(stderr, "Options:              -I <infile>  (default stdin)\n");
-	fprintf(stderr, "                      -l <num>     "
-		"(process input file <num> times)\n"
-		"                                   "
-		"(Use 'i' for infinite loop - default: %d)\n", DEFAULT_LOOPS);
-	fprintf(stderr, "                      -t           (ignore timestamps: "
-		"send frames immediately)\n");
-	fprintf(stderr, "                      -g <ms>      (gap in milli "
-		"seconds - default: %d ms)\n", DEFAULT_GAP);
-	fprintf(stderr, "                      -s <s>       (skip gaps in "
-		"timestamps > 's' seconds)\n");
-	fprintf(stderr, "                      -x           (disable local "
-		"loopback of sent CAN frames)\n");
-	fprintf(stderr, "                      -v           (verbose: print "
-		"sent CAN frames)\n\n");
-	fprintf(stderr, "Interface assignment:  0..n assignments like "
-		"<write-if>=<log-if>\n");
-	fprintf(stderr, "e.g. vcan2=can0 ( send frames received from can0 on "
-		"vcan2 )\n");
-	fprintf(stderr, "extra hook: stdout=can0 ( print logfile line marked with can0 on "
-		"stdout )\n");
-	fprintf(stderr, "No assignments => send frames to the interface(s) they "
-		"had been received from.\n\n");
+        fprintf(stderr, "Options:\n");
+        fprintf(stderr, "         -I <infile>  (default stdin)\n");
+        fprintf(stderr, "         -l <num>     "
+                "(process input file <num> times)\n"
+                "                      "
+                "(Use 'i' for infinite loop - default: %d)\n", DEFAULT_LOOPS);
+        fprintf(stderr, "         -t           (ignore timestamps: "
+                "send frames immediately)\n");
+        fprintf(stderr, "         -g <ms>      (gap in milli "
+                "seconds - default: %d ms)\n", DEFAULT_GAP);
+        fprintf(stderr, "         -s <s>       (skip gaps in "
+                "timestamps > 's' seconds)\n");
+        fprintf(stderr, "         -x           (disable local "
+                "loopback of sent CAN frames)\n");
+        fprintf(stderr, "         -v           (verbose: print "
+                "sent CAN frames)\n\n");
+        fprintf(stderr, "Interface assignment:\n");
+	fprintf(stderr, " 0..n assignments like <write-if>=<log-if>\n\n");
+	fprintf(stderr, " e.g. vcan2=can0  (send frames received from can0 on "
+		"vcan2)\n");
+	fprintf(stderr, " extra hook: stdout=can0  (print logfile line marked with can0 on "
+		"stdout)\n");
+	fprintf(stderr, " No assignments  => send frames to the interface(s) they "
+		"had been received from\n\n");
 	fprintf(stderr, "Lines in the logfile not beginning with '(' (start of "
 		"timestamp) are ignored.\n\n");
 }
@@ -357,7 +359,7 @@ int main(int argc, char **argv)
 				return 1;
 			}
 			strcpy(buf, argv[optind+i]);
-			for (j=0; j<BUFSZ; j++) { /* find '=' in assignment */
+			for (j=0; j<(int)BUFSZ; j++) { /* find '=' in assignment */
 				if (buf[j] == '=')
 					break;
 			}
@@ -493,7 +495,7 @@ int main(int argc, char **argv)
 					/* test for logfile timestamps jumping backwards OR      */
 					/* if the user likes to skip long gaps in the timestamps */
 					if ((last_log_tv.tv_sec > log_tv.tv_sec) ||
-					    (skipgap && labs(last_log_tv.tv_sec - log_tv.tv_sec) > skipgap))
+					    (skipgap && labs(last_log_tv.tv_sec - log_tv.tv_sec) > (long)skipgap))
 						create_diff_tv(&today_tv, &diff_tv, &log_tv);
 
 					last_log_tv = log_tv;

@@ -72,22 +72,23 @@ static syslog_t syslogger = syslog;
 
 void print_usage(char *prg)
 {
+	fprintf(stderr, "%s - userspace daemon for serial line CAN interface driver SLCAN.\n", prg);
 	fprintf(stderr, "\nUsage: %s [options] <tty> [canif-name]\n\n", prg);
-	fprintf(stderr, "Options: -o         (send open command 'O\\r')\n");
-	fprintf(stderr, "         -c         (send close command 'C\\r')\n");
-	fprintf(stderr, "         -f         (read status flags with 'F\\r' to reset error states)\n");
-	fprintf(stderr, "         -l         (send listen only command 'L\\r', overrides -o)\n");
-	fprintf(stderr, "         -s <speed> (set CAN speed 0..8)\n");
-	fprintf(stderr, "         -S <speed> (set UART speed in baud)\n");
-	fprintf(stderr, "         -t <type>  (set UART flow control type 'hw' or 'sw')\n");
-	fprintf(stderr, "         -b <btr>   (set bit time register value)\n");
-	fprintf(stderr, "         -F         (stay in foreground; no daemonize)\n");
-	fprintf(stderr, "         -h         (show this help page)\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "         -o          (send open command 'O\\r')\n");
+	fprintf(stderr, "         -c          (send close command 'C\\r')\n");
+	fprintf(stderr, "         -f          (read status flags with 'F\\r' to reset error states)\n");
+	fprintf(stderr, "         -l          (send listen only command 'L\\r', overrides -o)\n");
+	fprintf(stderr, "         -s <speed>  (set CAN speed 0..8)\n");
+	fprintf(stderr, "         -S <speed>  (set UART speed in baud)\n");
+	fprintf(stderr, "         -t <type>   (set UART flow control type 'hw' or 'sw')\n");
+	fprintf(stderr, "         -b <btr>    (set bit time register value)\n");
+	fprintf(stderr, "         -F          (stay in foreground; no daemonize)\n");
+	fprintf(stderr, "         -h          (show this help page)\n");
 	fprintf(stderr, "\nExamples:\n");
-	fprintf(stderr, "slcand -o -c -f -s6 ttyUSB0\n");
-	fprintf(stderr, "slcand -o -c -f -s6 ttyUSB0 can0\n");
-	fprintf(stderr, "slcand -o -c -f -s6 /dev/ttyUSB0\n");
-	fprintf(stderr, "\n");
+	fprintf(stderr, "slcand -o -c -f -s6 ttyUSB0\n\n");
+	fprintf(stderr, "slcand -o -c -f -s6 ttyUSB0 can0\n\n");
+	fprintf(stderr, "slcand -o -c -f -s6 /dev/ttyUSB0\n\n");
 	exit(EXIT_FAILURE);
 }
 

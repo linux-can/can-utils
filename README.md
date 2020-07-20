@@ -14,7 +14,7 @@ subsystem (aka SocketCAN):
 * cansend : send a single frame
 * cangen : generate (random) CAN traffic
 * cansequence : send and check sequence of CAN frames with incrementing payload
-* cansniffer : display CAN data content differences (just 11bit CAN IDs)
+* cansniffer : display CAN data content differences
 
 #### CAN access via IP sockets
 * canlogserver : log CAN frames from a remote/local host

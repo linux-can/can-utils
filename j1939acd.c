@@ -30,9 +30,9 @@
 #include "libj1939.h"
 
 static const char help_msg[] =
-	"jacd: An SAE J1939 address claiming daemon" "\n"
-	"Usage: jacd [options] NAME [INTF]" "\n"
-	"\n"
+	"j1939acd: An SAE J1939 address claiming daemon" "\n"
+	"Usage: j1939acd [options] NAME [INTF]" "\n"
+	"Options:\n"
 	"  -v, --verbose		Increase verbosity" "\n"
 	"  -r, --range=RANGE	Ranges of source addresses" "\n"
 	"			e.g. 80,50-100,200-210 (defaults to 0-253)" "\n"
@@ -43,7 +43,9 @@ static const char help_msg[] =
 	"NAME is the 64bit nodename" "\n"
 	"\n"
 	"Example:" "\n"
-	"jacd -r 100,80-120 -c /tmp/1122334455667788.jacd 1122334455667788" "\n"
+	"j1939acd -r 100,80-120 -c /tmp/1122334455667788.jacd 1122334455667788" "\n"
+	"Examples:" "\n"
+	"j1939acd -r 100,80-120 -c /tmp/1122334455667788.jacd 1122334455667788" "\n"
 	;
 
 #ifdef _GNU_SOURCE
@@ -182,7 +184,7 @@ static const struct j1939_filter filt[] = {
 		.pgn = J1939_PGN_REQUEST,
 		.pgn_mask = J1939_PGN_PDU1_MAX,
 	}, {
-		.pgn = 0x0fed8,
+		.pgn = J1939_PGN_ADDRESS_COMMANDED,
 		.pgn_mask = J1939_PGN_MAX,
 	},
 };
@@ -198,7 +200,7 @@ static int open_socket(const char *device, uint64_t name)
 			.addr = J1939_IDLE_ADDR,
 			.pgn = J1939_NO_PGN,
 		},
-		.can_ifindex = if_nametoindex(s.intf),
+		.can_ifindex = if_nametoindex(device),
 	};
 
 	if (s.verbose)
@@ -251,7 +253,7 @@ static int repeat_address(int sock, uint64_t name)
 	ret = sendto(sock, dat, sizeof(dat), 0, (const struct sockaddr *)&saddr,
 		     sizeof(saddr));
 	if (must_warn(ret))
-		err(1, "send address claim for 0x%02x", s.last_sa);
+		fprintf(stderr, "send address claim for 0x%02x\n", s.last_sa);
 	return ret;
 }
 static int claim_address(int sock, uint64_t name, int sa)
@@ -290,7 +292,7 @@ static int request_addresses(int sock)
 		fprintf(stderr, "- sendto(, { 0, 0xee, 0, }, %zi, 0, %s, %zi);\n", sizeof(dat), libj1939_addr2str(&saddr), sizeof(saddr));
 	ret = sendto(sock, dat, sizeof(dat), 0, (void *)&saddr, sizeof(saddr));
 	if (must_warn(ret))
-		err(1, "send request for address claims");
+		fprintf(stdout, "send request for address claims");
 	return ret;
 }
 
@@ -512,12 +514,12 @@ int main(int argc, char *argv[])
 
 	if ((s.current_sa < J1939_IDLE_ADDR) && !(addr[s.current_sa].flags & F_USE)) {
 		if (s.verbose)
-			err(0, "forget saved address 0x%02x", s.current_sa);
+			fprintf(stderr, "- forget saved address 0x%02x\n", s.current_sa);
 		s.current_sa = J1939_IDLE_ADDR;
 	}
 
 	if (s.verbose)
-		err(0, "ready for %s:%016llx", s.intf, (long long)s.name);
+		fprintf(stderr, "- ready for %s:%016llx\n", s.intf, (long long)s.name);
 	if (!s.intf || !s.name)
 		err(1, "bad arguments");
 	ret = sock = open_socket(s.intf, s.name);
@@ -581,7 +583,7 @@ int main(int argc, char *argv[])
 				break;
 			if (s.state == STATE_REQ_SENT) {
 				if (s.verbose)
-					err(0, "request sent, pending for 1250 ms");
+					fprintf(stderr, "- request sent, pending for 1250 ms\n");
 				schedule_itimer(1250);
 				s.state = STATE_REQ_PENDING;
 			} else if (s.state == STATE_OPERATIONAL) {
@@ -611,14 +613,14 @@ int main(int argc, char *argv[])
 				/* ourselves, disable itimer */
 				s.current_sa = sa;
 				if (s.verbose)
-					err(0, "claimed 0x%02x", sa);
+					fprintf(stderr, "- claimed 0x%02x\n", sa);
 			} else if (sa == s.current_sa) {
 				if (s.verbose)
-					err(0, "address collision for 0x%02x", sa);
+					fprintf(stderr, "- address collision for 0x%02x\n", sa);
 				if (s.name > saddr.can_addr.j1939.name) {
 					sa = choose_new_sa(s.name, sa);
 					if (sa == J1939_IDLE_ADDR) {
-						err(0, "no address left");
+						fprintf(stdout, "no address left");
 						/* put J1939_IDLE_ADDR in cache file */
 						s.current_sa = sa;
 						goto done;
@@ -629,7 +631,7 @@ int main(int argc, char *argv[])
 					schedule_itimer(50);
 			}
 			break;
-		case 0x0fed8:
+		case J1939_PGN_ADDRESS_COMMANDED:
 			if (!host_is_little_endian())
 				bswap(dat, 8);
 			memcpy(&cmd_name, dat, 8);
@@ -643,7 +645,7 @@ int main(int argc, char *argv[])
 	}
 done:
 	if (s.verbose)
-		err(0, "shutdown");
+		fprintf(stderr, "- shutdown\n");
 	claim_address(sock, s.name, J1939_IDLE_ADDR);
 	save_cache();
 	return 0;
