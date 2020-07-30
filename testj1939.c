@@ -302,7 +302,7 @@ int main(int argc, char *argv[])
 					printf("\n%05x    ", j);
 					j = 0;
 				}
-				printf(" %02x", dat[j]);
+				printf(" %02x", dat[i]);
 			}
 			printf("\n");
 		}
