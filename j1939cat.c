@@ -55,6 +55,7 @@ struct j1939cat_priv {
 	bool todo_recv;
 	bool todo_filesize;
 	bool todo_connect;
+	int todo_broadcast;
 
 	unsigned long polltimeout;
 
@@ -77,6 +78,7 @@ static const char help_msg[] =
 	" -P <timeout>  poll timeout in milliseconds before sending data.\n"
 	"		With this option send() will be used with MSG_DONTWAIT flag.\n"
 	" -R <count>	Set send repeat count. Default: 1\n"
+	" -B		Allow to send and receive broadcast packets.\n"
 	"\n"
 	"Example:\n"
 	"j1939cat -i some_file_to_send  can0:0x80 :0x90,0x12300\n"
@@ -84,7 +86,7 @@ static const char help_msg[] =
 	"\n"
 	;
 
-static const char optstring[] = "?hi:vs:rp:P:R:";
+static const char optstring[] = "?hi:vs:rp:P:R:B";
 
 
 static void j1939cat_init_sockaddr_can(struct sockaddr_can *sac)
@@ -560,6 +562,16 @@ static int j1939cat_sock_prepare(struct j1939cat_priv *priv)
 		       (char *) &sock_opt, sizeof(sock_opt)))
 		err(1, "setsockopt timestamping");
 
+	if (priv->todo_broadcast) {
+		ret = setsockopt(priv->sock, SOL_SOCKET, SO_BROADCAST,
+				 &priv->todo_broadcast,
+				 sizeof(priv->todo_broadcast));
+		if (ret < 0) {
+			warn("setsockopt: filed to set broadcast");
+			return EXIT_FAILURE;
+		}
+	}
+
 	ret = bind(priv->sock, (void *)&priv->sockname, sizeof(priv->sockname));
 	if (ret < 0) {
 		warn("bind()");
@@ -618,6 +630,9 @@ static int j1939cat_parse_args(struct j1939cat_priv *priv, int argc, char *argv[
 		priv->repeat = strtoul(optarg, NULL, 0);
 		if (priv->repeat < 1)
 			err(EXIT_FAILURE, "send/repeat count can't be less then 1\n");
+		break;
+	case 'B':
+		priv->todo_broadcast = 1;
 		break;
 	case 'h': /*fallthrough*/
 	default:
