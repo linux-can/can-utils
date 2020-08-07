@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
 					peername.can_addr.j1939.pgn);
 			for (i = 0, j = 0; i < ret; ++i, j++) {
 				if (j == 8) {
-					printf("\n%05x    ", j);
+					printf("\n%05x    ", i);
 					j = 0;
 				}
 				printf(" %02x", dat[i]);
