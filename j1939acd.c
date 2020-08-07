@@ -42,10 +42,9 @@ static const char help_msg[] =
 	"\n"
 	"NAME is the 64bit nodename" "\n"
 	"\n"
-	"Example:" "\n"
-	"j1939acd -r 100,80-120 -c /tmp/1122334455667788.jacd 1122334455667788" "\n"
 	"Examples:" "\n"
 	"j1939acd -r 100,80-120 -c /tmp/1122334455667788.jacd 1122334455667788" "\n"
+	"j1939acd -r 100,80-120 -c /tmp/1122334455667788.jacd 1122334455667788 vcan0" "\n"
 	;
 
 #ifdef _GNU_SOURCE
