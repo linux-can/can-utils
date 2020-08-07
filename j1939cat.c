@@ -645,7 +645,7 @@ static int j1939cat_parse_args(struct j1939cat_priv *priv, int argc, char *argv[
 int main(int argc, char *argv[])
 {
 	struct j1939cat_priv *priv;
-	int ret;
+	int ret = 0;
 
 	priv = malloc(sizeof(*priv));
 	if (!priv)
@@ -679,6 +679,6 @@ int main(int argc, char *argv[])
 	close(priv->infile);
 	close(priv->outfile);
 	close(priv->sock);
+
 	return ret;
 }
-
