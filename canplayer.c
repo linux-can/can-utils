@@ -395,7 +395,7 @@ int main(int argc, char **argv)
 
 		eof = 0;
 
-		if (sscanf(buf, "(%ld.%ld) %s %s", &log_tv.tv_sec, &log_tv.tv_usec,
+		if (sscanf(buf, "(%lu.%lu) %s %s", &log_tv.tv_sec, &log_tv.tv_usec,
 			   device, ascframe) != 4) {
 			fprintf(stderr, "incorrect line format in logfile\n");
 			return 1;
@@ -474,7 +474,7 @@ int main(int argc, char **argv)
 					break;
 				}
 
-				if (sscanf(buf, "(%ld.%ld) %s %s", &log_tv.tv_sec, &log_tv.tv_usec,
+				if (sscanf(buf, "(%lu.%lu) %s %s", &log_tv.tv_sec, &log_tv.tv_usec,
 					   device, ascframe) != 4) {
 					fprintf(stderr, "incorrect line format in logfile\n");
 					return 1;

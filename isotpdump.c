@@ -356,7 +356,7 @@ int main(int argc, char **argv)
 				switch (timestamp) {
 
 				case 'a': /* absolute with timestamp */
-					printf("(%ld.%06ld) ", tv.tv_sec, tv.tv_usec);
+					printf("(%lu.%06lu) ", tv.tv_sec, tv.tv_usec);
 					break;
 
 				case 'A': /* absolute with date */
@@ -366,7 +366,7 @@ int main(int argc, char **argv)
 
 					tm = *localtime(&tv.tv_sec);
 					strftime(timestring, 24, "%Y-%m-%d %H:%M:%S", &tm);
-					printf("(%s.%06ld) ", timestring, tv.tv_usec);
+					printf("(%s.%06lu) ", timestring, tv.tv_usec);
 				}
 				break;
 
@@ -383,7 +383,7 @@ int main(int argc, char **argv)
 						diff.tv_sec--, diff.tv_usec += 1000000;
 					if (diff.tv_sec < 0)
 						diff.tv_sec = diff.tv_usec = 0;
-					printf("(%ld.%06ld) ", diff.tv_sec, diff.tv_usec);
+					printf("(%lu.%06lu) ", diff.tv_sec, diff.tv_usec);
 
 					if (timestamp == 'd')
 						last_tv = tv; /* update for delta calculation */

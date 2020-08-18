@@ -223,7 +223,7 @@ int main(int argc, char **argv)
 		if (buf[0] != '(')
 			continue;
 
-		if (sscanf(buf, "(%ld.%ld) %s %s", &tv.tv_sec, &tv.tv_usec,
+		if (sscanf(buf, "(%lu.%lu) %s %s", &tv.tv_sec, &tv.tv_usec,
 			   device, ascframe) != 4) {
 			fprintf(stderr, "incorrect line format in logfile\n");
 			return 1;
@@ -262,9 +262,9 @@ int main(int argc, char **argv)
 				tv.tv_sec = tv.tv_usec = 0;
 
 			if (d4)
-				fprintf(outfile, "%4ld.%04ld ", tv.tv_sec, tv.tv_usec/100);
+				fprintf(outfile, "%4lu.%04lu ", tv.tv_sec, tv.tv_usec/100);
 			else
-				fprintf(outfile, "%4ld.%06ld ", tv.tv_sec, tv.tv_usec);
+				fprintf(outfile, "%4lu.%06lu ", tv.tv_sec, tv.tv_usec);
 
 			if ((mtu == CAN_MTU) && (fdfmt == 0))
 				can_asc(&cf, devno, nortrdlc, outfile);

@@ -410,7 +410,7 @@ int main(int argc, char **argv)
 
 				idx = idx2dindex(addr.can_ifindex, s[i]);
 
-				sprintf(temp, "(%ld.%06ld) %*s ",
+				sprintf(temp, "(%lu.%06lu) %*s ",
 					tv.tv_sec, tv.tv_usec, max_devname_len, devname[idx]);
 				sprint_canframe(temp+strlen(temp), &frame, 0, maxdlen); 
 				strcat(temp, "\n");
@@ -422,7 +422,7 @@ int main(int argc, char **argv)
 		    
 #if 0
 				/* print CAN frame in log file style to stdout */
-				printf("(%ld.%06ld) ", tv.tv_sec, tv.tv_usec);
+				printf("(%lu.%06lu) ", tv.tv_sec, tv.tv_usec);
 				printf("%*s ", max_devname_len, devname[idx]);
 				fprint_canframe(stdout, &frame, "\n", 0, maxdlen);
 #endif
