@@ -71,10 +71,11 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -r  (supress dlc for RTR frames - pre v8.5 tools)\n");
 }
 
-void can_asc(struct canfd_frame *cf, int devno, int nortrdlc, FILE *outfile)
+void can_asc(struct canfd_frame *cf, int devno, int nortrdlc, char *extra_info, FILE *outfile)
 {
 	int i;
 	char id[10];
+	char *dir = "Rx";
 
 	fprintf(outfile, "%-2d ", devno); /* channel number left aligned */
 
@@ -83,7 +84,15 @@ void can_asc(struct canfd_frame *cf, int devno, int nortrdlc, FILE *outfile)
 	else {
 		sprintf(id, "%X%c", cf->can_id & CAN_EFF_MASK,
 			(cf->can_id & CAN_EFF_FLAG)?'x':' ');
-		fprintf(outfile, "%-15s Rx   ", id);
+
+		/* check for extra info */
+		if (strlen(extra_info) > 0) {
+			/* only the first char is defined so far */
+			if (extra_info[0] == 'T')
+				dir = "Tx";
+		}
+
+		fprintf(outfile, "%-15s %s   ", id, dir);
 
 		if (cf->can_id & CAN_RTR_FLAG) {
 			if (nortrdlc)
@@ -100,10 +109,11 @@ void can_asc(struct canfd_frame *cf, int devno, int nortrdlc, FILE *outfile)
 	}
 }
 
-void canfd_asc(struct canfd_frame *cf, int devno, int mtu, FILE *outfile)
+void canfd_asc(struct canfd_frame *cf, int devno, int mtu, char *extra_info, FILE *outfile)
 {
 	int i;
 	char id[10];
+	char *dir = "Rx";
 	unsigned int flags = 0;
 	unsigned int dlen = cf->len;
 
@@ -113,7 +123,14 @@ void canfd_asc(struct canfd_frame *cf, int devno, int mtu, FILE *outfile)
 #define ASC_F_BRS 0x00002000
 #define ASC_F_ESI 0x00004000
 
-	fprintf(outfile, "CANFD %3d Rx ", devno); /* 3 column channel number right aligned */
+	/* check for extra info */
+	if (strlen(extra_info) > 0) {
+		/* only the first char is defined so far */
+		if (extra_info[0] == 'T')
+			dir = "Tx";
+	}
+
+	fprintf(outfile, "CANFD %3d %s ", devno, dir); /* 3 column channel number right aligned */
 
 	sprintf(id, "%X%c", cf->can_id & CAN_EFF_MASK,
 		(cf->can_id & CAN_EFF_FLAG)?'x':' ');
@@ -147,7 +164,7 @@ void canfd_asc(struct canfd_frame *cf, int devno, int mtu, FILE *outfile)
 
 int main(int argc, char **argv)
 {
-	static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ];
+	static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ], extra_info[BUFSZ];
 
 	struct canfd_frame cf;
 	static struct timeval tv, start_tv;
@@ -223,10 +240,17 @@ int main(int argc, char **argv)
 		if (buf[0] != '(')
 			continue;
 
-		if (sscanf(buf, "(%lu.%lu) %s %s", &tv.tv_sec, &tv.tv_usec,
-			   device, ascframe) != 4) {
-			fprintf(stderr, "incorrect line format in logfile\n");
-			return 1;
+		if (sscanf(buf, "(%lu.%lu) %s %s %s", &tv.tv_sec, &tv.tv_usec,
+			   device, ascframe, extra_info) != 5) {
+
+			/* do not evaluate the extra info */
+			extra_info[0] = 0;
+
+			if (sscanf(buf, "(%lu.%lu) %s %s", &tv.tv_sec, &tv.tv_usec,
+				   device, ascframe) != 4) {
+				fprintf(stderr, "incorrect line format in logfile\n");
+				return 1;
+			}
 		}
 
 		if (!start_tv.tv_sec) { /* print banner */
@@ -267,9 +291,9 @@ int main(int argc, char **argv)
 				fprintf(outfile, "%4lu.%06lu ", tv.tv_sec, tv.tv_usec);
 
 			if ((mtu == CAN_MTU) && (fdfmt == 0))
-				can_asc(&cf, devno, nortrdlc, outfile);
+				can_asc(&cf, devno, nortrdlc, extra_info, outfile);
 			else
-				canfd_asc(&cf, devno, mtu, outfile);
+				canfd_asc(&cf, devno, mtu, extra_info, outfile);
 
 			if (crlf)
 				fprintf(outfile, "\r");

@@ -628,6 +628,7 @@ int main(int argc, char **argv)
 			if (FD_ISSET(s[i], &rdfs)) {
 
 				int idx;
+				char *extra_info = "";
 
 				/* these settings may be modified by recvmsg() */
 				iov.iov_len = sizeof(frame);
@@ -701,14 +702,22 @@ int main(int argc, char **argv)
 				if (frame.can_id & CAN_EFF_FLAG)
 					view |= CANLIB_VIEW_INDENT_SFF;
 
+				if (extra_msg_info) {
+					if (msg.msg_flags & MSG_DONTROUTE)
+						extra_info = " T";
+					else
+						extra_info = " R";
+				}
+
 				if (log) {
 					char buf[CL_CFSZ]; /* max length */
 
 					/* log CAN frame with absolute timestamp & device */
 					sprint_canframe(buf, &frame, 0, maxdlen);
-					fprintf(logfile, "(%010lu.%06lu) %*s %s\n",
+					fprintf(logfile, "(%010lu.%06lu) %*s %s%s\n",
 						tv.tv_sec, tv.tv_usec,
-						max_devname_len, devname[idx], buf);
+						max_devname_len, devname[idx], buf,
+						extra_info);
 				}
 
 				if ((logfrmt) && (silent == SILENT_OFF)){
@@ -716,9 +725,10 @@ int main(int argc, char **argv)
 
 					/* print CAN frame in log file style to stdout */
 					sprint_canframe(buf, &frame, 0, maxdlen);
-					printf("(%010lu.%06lu) %*s %s\n",
+					printf("(%010lu.%06lu) %*s %s%s\n",
 					       tv.tv_sec, tv.tv_usec,
-					       max_devname_len, devname[idx], buf);
+					       max_devname_len, devname[idx], buf,
+					       extra_info);
 					goto out_fflush; /* no other output to stdout */
 				}
 

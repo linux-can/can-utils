@@ -70,7 +70,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "\t-O <outfile>\t(default stdout)\n");
 }
 
-void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, unsigned int max_dlen) {
+void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, unsigned int max_dlen, char *extra_info) {
 
 	fprintf(file, "(%lu.%06lu) ", tv->tv_sec, tv->tv_usec);
 
@@ -79,7 +79,7 @@ void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, un
 	else
 		fprintf(file, "canX ");
 
-	fprint_canframe(file, cf, "\n", 0, max_dlen);
+	fprint_canframe(file, cf, extra_info, 0, max_dlen);
 }
 
 void get_can_id(struct canfd_frame *cf, char *idstring, int base) {
@@ -135,6 +135,8 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 	int dlc = 0;
 	int data[8];
 	char tmp1[BUFLEN];
+	char dir[3]; /* 'Rx' or 'Tx' plus terminating zero */
+	char *extra_info;
 	int i, items, found;
 
 	/* 0.002367 1 390x Rx d 8 17 00 14 00 C0 00 08 00 */
@@ -143,30 +145,30 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 
 	if (base == 'h') { /* check for CAN frames with hexadecimal values */
 
-		items = sscanf(buf, "%lu.%lu %d %s %*s %c %d %x %x %x %x %x %x %x %x",
+		items = sscanf(buf, "%lu.%lu %d %s %2s %c %d %x %x %x %x %x %x %x %x",
 			       &read_tv.tv_sec, &read_tv.tv_usec, &interface,
-			       tmp1, &rtr, &dlc,
+			       tmp1, dir, &rtr, &dlc,
 			       &data[0], &data[1], &data[2], &data[3],
 			       &data[4], &data[5], &data[6], &data[7]);
 
-		if ((items == dlc + 6 ) || /* data frame */
-		    ((items == 5) && (rtr == 'r')) || /* RTR without DLC */
-		    ((items == 6) && (rtr == 'r'))) { /* RTR with DLC */
+		if ((items == dlc + 7 ) || /* data frame */
+		    ((items == 6) && (rtr == 'r')) || /* RTR without DLC */
+		    ((items == 7) && (rtr == 'r'))) { /* RTR with DLC */
 			found = 1;
 			get_can_id(&cf, tmp1, 16);
 		}
 
 	} else { /* check for CAN frames with decimal values */
 
-		items = sscanf(buf, "%lu.%lu %d %s %*s %c %d %d %d %d %d %d %d %d %d",
+		items = sscanf(buf, "%lu.%lu %d %s %2s %c %d %d %d %d %d %d %d %d %d",
 			       &read_tv.tv_sec, &read_tv.tv_usec, &interface,
-			       tmp1, &rtr, &dlc,
+			       tmp1, dir, &rtr, &dlc,
 			       &data[0], &data[1], &data[2], &data[3],
 			       &data[4], &data[5], &data[6], &data[7]);
 
-		if ((items == dlc + 6 ) || /* data frame */
-		    ((items == 5) && (rtr == 'r')) || /* RTR without DLC */
-		    ((items == 6) && (rtr == 'r'))) { /* RTR with DLC */
+		if ((items == dlc + 7 ) || /* data frame */
+		    ((items == 6) && (rtr == 'r')) || /* RTR without DLC */
+		    ((items == 7) && (rtr == 'r'))) { /* RTR with DLC */
 			found = 1;
 			get_can_id(&cf, tmp1, 10);
 		}
@@ -177,6 +179,14 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 		if (dlc > CAN_MAX_DLC)
 			return;
 
+		if (strlen(dir) != 2) /* "Rx" or "Tx" */
+			return;
+
+		if (dir[0] == 'R')
+			extra_info = " R\n";
+		else
+			extra_info = " T\n";
+
 		cf.len = dlc;
 		if (rtr == 'r')
 			cf.can_id |= CAN_RTR_FLAG;
@@ -185,7 +195,7 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 				cf.data[i] = data[i] & 0xFFU;
 
 		calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-		prframe(outfile, &tv, interface, &cf, CAN_MAX_DLEN);
+		prframe(outfile, &tv, interface, &cf, CAN_MAX_DLEN, extra_info);
 		fflush(outfile);
 		return;
 	}
@@ -203,7 +213,7 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 			cf.len = CAN_ERR_DLC;
 
 			calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-			prframe(outfile, &tv, interface, &cf, CAN_MAX_DLEN);
+			prframe(outfile, &tv, interface, &cf, CAN_MAX_DLEN, "\n");
 			fflush(outfile);
 		}
 	}
@@ -219,6 +229,8 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	unsigned int flags;
 	int dlc, dlen = 0;
 	char tmp1[BUFLEN];
+	char dir[3]; /* 'Rx' or 'Tx' plus terminating zero */
+	char *extra_info;
 	char *ptr;
 	int i;
 
@@ -232,14 +244,14 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	memset(&cf, 0, sizeof(cf));
 
 	/* check for valid line without symbolic name */
-	if (sscanf(buf, "%lu.%lu %*s %d %*s %s %hhx %hhx %x %d ",
+	if (sscanf(buf, "%lu.%lu %*s %d %2s %s %hhx %hhx %x %d ",
 		   &read_tv.tv_sec, &read_tv.tv_usec, &interface,
-		   tmp1, &brs, &esi, &dlc, &dlen) != 8) {
+		   dir, tmp1, &brs, &esi, &dlc, &dlen) != 9) {
 
 		/* check for valid line with a symbolic name */
-		if (sscanf(buf, "%lu.%lu %*s %d %*s %s %*s %hhx %hhx %x %d ",
-		   &read_tv.tv_sec, &read_tv.tv_usec, &interface,
-		   tmp1, &brs, &esi, &dlc, &dlen) != 8) {
+		if (sscanf(buf, "%lu.%lu %*s %d %2s %s %*s %hhx %hhx %x %d ",
+			   &read_tv.tv_sec, &read_tv.tv_usec, &interface,
+			   dir, tmp1, &brs, &esi, &dlc, &dlen) != 9) {
 
 			/* no valid CANFD format pattern */
 			return;
@@ -250,6 +262,14 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	if ((dlen > CANFD_MAX_DLEN) || (dlc > CANFD_MAX_DLC) ||
 	    (brs > 1) || (esi > 1))
 		return;
+
+	if (strlen(dir) != 2) /* "Rx" or "Tx" */
+		return;
+
+	if (dir[0] == 'R')
+		extra_info = " R\n";
+	else
+		extra_info = " T\n";
 
 	/* don't trust ASCII content - sanitize data length */
 	if (dlen != can_dlc2len(can_len2dlc(dlen)))
@@ -313,7 +333,7 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	}
 
 	calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-	prframe(outfile, &tv, interface, &cf, dlen);
+	prframe(outfile, &tv, interface, &cf, dlen, extra_info);
 	fflush(outfile);
 	return;
 
