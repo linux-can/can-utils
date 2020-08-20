@@ -215,7 +215,7 @@ static int check_frame(const struct can_frame *frame)
 	}
 	
 	for (i = 1; i < frame->can_dlc; i++) {
-		if (frame->data[i] != frame->data[i-1]) {
+		if (frame->data[i] != (uint8_t)(frame->data[i-1] + 1)) {
 			printf("Frame inconsistent!\n");
 			print_frame(frame, 0);
 			err = -1;
