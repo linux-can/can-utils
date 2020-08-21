@@ -38,6 +38,16 @@ subsystem (aka SocketCAN):
 * isotpperf : ISO15765-2 protocol performance visualisation
 * isotptun : create a bi-directional IP tunnel on CAN via ISO-TP
 
+#### J1939/ISOBus tools
+* j1939acd : address claim daemon
+* j1939cat : take a file and send and receive it over CAN
+* j1939spy : spy on J1939 messages using SOC_J1939
+* j1939sr : send/recv from stdin or to stdout
+* testj1939 : send/receive test packet
+
+Follow the link to see examples on how this tools can be used:
+[Kickstart guide to can-j1939 on linux](https://github.com/linux-can/can-utils/blob/master/can-j1939-kickstart.md)
+
 #### Log file converters
 * asc2log : convert ASC logfile to compact CAN frame logfile
 * log2asc : convert compact CAN frame logfile to ASC logfile
