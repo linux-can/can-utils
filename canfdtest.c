@@ -335,6 +335,7 @@ static int can_echo_gen(void)
 			} else {
 				if (!recv_tx[recv_rx_pos]) {
 					printf("RX before TX!\n");
+					print_frame(&rx_frame, 0);
 					running = 0;
 				}
 				/* compare with expected */
