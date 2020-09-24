@@ -203,7 +203,7 @@ static int check_frame(const struct can_frame *frame)
 {
 	int err = 0;
 	int i;
-	
+
 	if (frame->can_id != CAN_MSG_ID) {
 		printf("unexpected Message ID 0x%04x!\n", frame->can_id);
 		err = -1;
@@ -213,7 +213,7 @@ static int check_frame(const struct can_frame *frame)
 		printf("unexpected Message length %d!\n", frame->can_dlc);
 		err = -1;
 	}
-	
+
 	for (i = 1; i < frame->can_dlc; i++) {
 		if (frame->data[i] != (uint8_t)(frame->data[i-1] + 1)) {
 			printf("Frame inconsistent!\n");
@@ -335,6 +335,7 @@ static int can_echo_gen(void)
 			} else {
 				if (!recv_tx[recv_rx_pos]) {
 					printf("RX before TX!\n");
+					print_frame(&rx_frame, 0);
 					running = 0;
 				}
 				/* compare with expected */
