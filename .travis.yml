@@ -27,7 +27,7 @@ matrix:
           before_script:
               - mkdir gcc_rel && cd gcc_rel
               - cmake ..
-          script:  make
+          script: make
 
         - env: test="x64 5.0 (CMake clang)"
           os: linux
@@ -36,7 +36,7 @@ matrix:
           before_script:
               - mkdir clang_rel && cd clang_rel
               - cmake ..
-          script:  make
+          script: make
 
         - env: test="x64 5.0 (CMake clang - Ninja) Debug"
           os: linux
@@ -45,15 +45,15 @@ matrix:
           before_script:
               - mkdir clang_ninja_dbg && cd clang_ninja_dbg
               - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug
-          script:  ninja
+          script: ninja
 
         - env: test="Android NDK (CMake)"
           os: linux
           language: android
           android:
-            components:
-              - build-tools-25.0.2
-          install: 
+              components:
+                  - build-tools-25.0.2
+          install:
               - echo y | sdkmanager "ndk-bundle"
               - echo y | sdkmanager "cmake;3.6.4111459"
           before_script:
