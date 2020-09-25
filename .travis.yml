@@ -45,7 +45,7 @@ matrix:
           before_script:
               - mkdir clang_ninja_dbg && cd clang_ninja_dbg
               - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug
-          script:  ninja
+          script: ninja
 
         - env: test="Android NDK (CMake)"
           os: linux
@@ -102,7 +102,15 @@ matrix:
           before_script:
               - mkdir clang_ninja_dbg && cd clang_ninja_dbg
               - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug
-          script:  ninja
+          script: ninja
+          arch: ppc64le
+
+        - env: test="Android NDK (CMake)"
+          os: linux
+          language: android
+          android:
+            components:
+              - build-tools-25.0.2
           arch: ppc64le
           install: 
               - echo y | sdkmanager "ndk-bundle"
@@ -153,5 +161,6 @@ addons:
             - m4
             - cmake
             - ninja-build
+            - ant
         sources:
             - ubuntu-toolchain-r-test
