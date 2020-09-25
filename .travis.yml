@@ -2,6 +2,9 @@ language: c
 
 matrix:
     include:
+
+# native
+
         - env: test="x64 4.8.4 (make)"
           os: linux
           dist: trusty
@@ -46,6 +49,8 @@ matrix:
               - mkdir clang_ninja_dbg && cd clang_ninja_dbg
               - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug
           script: ninja
+
+# Android
 
         - env: test="Android NDK (CMake)"
           os: linux
