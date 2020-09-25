@@ -27,7 +27,7 @@ matrix:
           before_script:
               - mkdir gcc_rel && cd gcc_rel
               - cmake ..
-          script:  make
+          script: make
 
         - env: test="x64 5.0 (CMake clang)"
           os: linux
@@ -36,7 +36,7 @@ matrix:
           before_script:
               - mkdir clang_rel && cd clang_rel
               - cmake ..
-          script:  make
+          script: make
 
         - env: test="x64 5.0 (CMake clang - Ninja) Debug"
           os: linux
@@ -53,7 +53,7 @@ matrix:
           android:
             components:
               - build-tools-25.0.2
-              #Including script to run on power
+ #Including script to run on power
         - env: test="x64 4.8.4 (make)"
           os: linux
           dist: trusty
@@ -92,7 +92,7 @@ matrix:
           before_script:
               - mkdir clang_rel && cd clang_rel
               - cmake ..
-          script:  make
+          script: make
           arch: ppc64le
 
         - env: test="x64 5.0 (CMake clang - Ninja) Debug"
