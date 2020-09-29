@@ -422,6 +422,11 @@ int main(int argc, char *argv[])
 
 	addr.can_family = family;
 	addr.can_ifindex = if_nametoindex(intf_name);
+	if (!addr.can_ifindex) {
+		perror("if_nametoindex");
+		close(sockfd);
+		return 1;
+	}
 
 	if (bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
