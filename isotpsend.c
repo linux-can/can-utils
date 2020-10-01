@@ -71,6 +71,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -t <time ns>  (frame transmit time (N_As) in nanosecs)\n");
 	fprintf(stderr, "         -f <time ns>  (ignore FC and force local tx stmin value in nanosecs)\n");
 	fprintf(stderr, "         -D <len>      (send a fixed PDU with len bytes - no STDIN data)\n");
+	fprintf(stderr, "         -b            (block until the PDU transmission is completed)\n");
 	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags>  (link layer options for CAN FD)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "The pdu data is expected on STDIN in space separated ASCII hex values.\n");
@@ -93,7 +94,7 @@ int main(int argc, char **argv)
 
     addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-    while ((opt = getopt(argc, argv, "s:d:x:p:P:t:f:D:L:?")) != -1) {
+    while ((opt = getopt(argc, argv, "s:d:x:p:P:t:f:D:bL:?")) != -1) {
 	    switch (opt) {
 	    case 's':
 		    addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
@@ -174,6 +175,10 @@ int main(int argc, char **argv)
 			    print_usage(basename(argv[0]));
 			    exit(0);
 		    }
+		    break;
+
+	    case 'b':
+		    opts.flags |= CAN_ISOTP_WAIT_TX_DONE;
 		    break;
 
 	    case 'L':
