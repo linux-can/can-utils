@@ -22,7 +22,7 @@ testj1939: socket(j1939): Protocol not supported
 
 ### Solution
 
-Above errors mean that **can-j1939** was not enabled in your kernel and you need to do it manually. There are several ways to do it. Any Linux kernel since 5.4 has **can-j1939** module, but you will probably want to install fresher version, which leads to downloading kernel sources, enabling **can-j1939** module, recompiling kernel and installing it. I will be using Debian 10.5 x64 (buster testing) virtual machine.
+Above errors mean that **can-j1939** was not enabled in your kernel and you need to compile it manually. There are several ways to do it. Any Linux kernel since 5.4 has **can-j1939** module, but you will probably want to install fresher version, which leads to downloading kernel sources, enabling **can-j1939** module, recompiling kernel and installing it. I will be using Debian 10.5 x64 (buster testing) virtual machine.
 
 
 
@@ -30,7 +30,9 @@ Above errors mean that **can-j1939** was not enabled in your kernel and you need
 
 We will download Debian patched kernel 5.8. First update your sources
 
-```avra@vm-debian:~$ sudo apt update```
+```
+avra@vm-debian:~$ sudo apt update
+```
 
 and then see if what Debian pathed kernel source versions are available
 
@@ -45,7 +47,7 @@ linux-source-5.7 - Linux kernel source for version 5.7 with Debian patches
 linux-source-5.8 - Linux kernel source for version 5.8 with Debian patches
 ```
 
-If kernel 5.8 does not show in the list (I can see it since I have already upgraded my 4.19 kernel to backported 5.7), then you will need to add backports to your sources list. Here is how my **/etc/apt/sources.list** looks like (you will need to append at least last line to yours):
+If kernel 5.8 does not show in your linux-sources list (it shows in mine since I have already upgraded stock 4.19 kernel to backported 5.7), then you will need to add backports to your sources list. Here is how my **/etc/apt/sources.list** looks like (you will need to append at least last line to yours):
 
 ```
 deb http://security.debian.org/debian-security buster/updates main contrib
@@ -76,7 +78,9 @@ avra@vm-debian:/usr/src$ cd linux-source-5.8
 
 First we need some packages for **menuconfig** 
 
-```sudo apt-get install libncurses5 libncurses5-dev```
+```
+sudo apt-get install libncurses5 libncurses5-dev
+```
 
 copy and use our old configuration to run **menuconfig**
 
@@ -106,11 +110,15 @@ and save it.
 
 We will have to download necessary packages
 
-```sudo apt install build-essential libssl-dev libelf-dev bison flex```
+```
+sudo apt install build-essential libssl-dev libelf-dev bison flex
+```
 
 compile kernel (using threads to make it faster)
 
-```avra@vm-debian:/usr/src/linux-source-5.8$ sudo make -j $(nproc)```
+```
+avra@vm-debian:/usr/src/linux-source-5.8$ sudo make -j $(nproc)
+```
 
 install
 
@@ -134,11 +142,15 @@ sudo modprobe can-j1939
 
 and if you get no error then you can enjoy **can-j1939**. If you get some error then you might check if this alternative command works:
 
-``` sudo insmod /lib/modules/5.8.10/kernel/net/can/j1939/can-j1939.ko```
+```
+sudo insmod /lib/modules/5.8.10/kernel/net/can/j1939/can-j1939.ko
+```
 
 If it does then all you need to do is 
 
-```sudo depmod -av```
+```
+sudo depmod -av
+```
 
 reboot once, and **modprobe** command from the above should finally work now.
 
