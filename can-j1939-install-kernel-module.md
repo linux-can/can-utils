@@ -53,7 +53,7 @@ If kernel 5.8 does not show in your linux-sources list (it shows in mine since I
 echo 'deb http://deb.debian.org/debian buster-backports main contrib' | sudo tee -a /etc/apt/sources.list.d/debian-backports.list
 ```
 
-Just in case you have any problems with packages, or you want to have everything in a single list, here is what my **/etc/apt/sources.list** looks like (you will need to append at least last line to yours)
+Alternatively, in case you have problems with installation of some packages, or you just want to have everything in a single list, here is what my **/etc/apt/sources.list** looks like (you will need to append at least last line to yours)
 
 ```
 deb http://security.debian.org/debian-security buster/updates main contrib
