@@ -34,7 +34,7 @@ We will download Debian patched kernel 5.8. First update your sources
 avra@vm-debian:~$ sudo apt update
 ```
 
-and then see if what Debian pathed kernel source versions are available
+and then look at available Debian patched kernel source packages
 
 ```
 avra@vm-debian:~$ apt-cache search linux-source
@@ -47,7 +47,13 @@ linux-source-5.7 - Linux kernel source for version 5.7 with Debian patches
 linux-source-5.8 - Linux kernel source for version 5.8 with Debian patches
 ```
 
-If kernel 5.8 does not show in your linux-sources list (it shows in mine since I have already upgraded stock 4.19 kernel to backported 5.7), then you will need to add backports to your sources list. Here is how my **/etc/apt/sources.list** looks like (you will need to append at least last line to yours):
+If kernel 5.8 does not show in your linux-sources list (it shows above in mine since I have already upgraded stock 4.19 kernel to backported 5.7), then you will need to add backports to your sources list. It is best to do it like this
+
+```
+echo 'deb http://deb.debian.org/debian buster-backports main contrib' | sudo tee -a /etc/apt/sources.list.d/debian-backports.list
+```
+
+Alternatively, or in case you have problems with installation of some packages, or you just want to have everything in a single list, here is what my **/etc/apt/sources.list** looks like (you will need to append at least last line to yours)
 
 ```
 deb http://security.debian.org/debian-security buster/updates main contrib
@@ -56,10 +62,10 @@ deb-src http://security.debian.org/debian-security buster/updates main contrib
 deb http://deb.debian.org/debian/ buster main contrib non-free
 deb-src http://deb.debian.org/debian/ buster main contrib non-free
 
-deb http://deb.debian.org/debian buster-backports main contrib non-free
+deb http://deb.debian.org/debian buster-backports main contrib
 ```
 
-After adding backports try **sudo apt update** again, and **apt-cache search linux-source** should now show kernel 5.8 in the list, so you can install it's source package
+After adding backports in one way or another, try **sudo apt update** again, and after that **apt-cache search linux-source** should show kernel 5.8 in the list, so you can install it's source package
 
 ```
 sudo apt install linux-source-5.8
@@ -67,7 +73,7 @@ sudo apt install linux-source-5.8
 
 and unpack it
 ```
-avra@vm-debian:/usr/src$ cd /usr/src
+avra@vm-debian:~$ cd /usr/src
 avra@vm-debian:/usr/src$ sudo tar -xaf linux-source-5.8.tar.xz
 avra@vm-debian:/usr/src$ cd linux-source-5.8
 ```
@@ -97,12 +103,12 @@ where we enable SAE  J1939 kernel module as shown
 			- <M> SAE J1939
 ```
 
-Now edit **/usr/src/linux-source-5.8/.config**, find below key and change it as this
+Now edit **/usr/src/linux-source-5.8/.config**, find CONFIG_SYSTEM_TRUSTED_KEYS, change it as following
 ```
 CONFIG_SYSTEM_TRUSTED_KEYS=""
 ```
 
-and save it.
+and save the file.
 
 
 
@@ -152,23 +158,23 @@ If it does then all you need to do is
 sudo depmod -av
 ```
 
-reboot once, and **modprobe** command from the above should finally work now.
+reboot once, and **modprobe** command from the above should finally work.
 
 
 
 #### 4. Install headers if needed
 
-You can have a problem with header file, to check that go in the file **/usr/include/linux/can.h**
+You might have a problem with headers not being updated. To check that open file **/usr/include/linux/can.h** with
 
 ```
 nano /usr/include/linux/can.h
 ```
 
-If in the struct **sockaddr_can** you don’t see **j1939**, then header files did not upgrade, so you need to do this manually
+If in the struct **sockaddr_can** you don’t see **j1939**, then header files did not upgrade and you need to do it manually
 
 ```
 sudo cp /usr/src/linux-source-5.8/include/uapi/linux/can.h /usr/include/linux/can.h
 sudo cp /usr/src/linux-source-5.8/include/uapi/linux/can/j1939.h /usr/include/linux/can/
 ```
 
-This is the minimum for compiling some **J1939** code,  but you might want to upgrade other header files as well. That's up to you. Enjoy!
+That is the minimum for compiling some **J1939** C code, but you might want to upgrade other header files as well. That's up to you. Enjoy!
