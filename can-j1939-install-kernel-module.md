@@ -47,7 +47,13 @@ linux-source-5.7 - Linux kernel source for version 5.7 with Debian patches
 linux-source-5.8 - Linux kernel source for version 5.8 with Debian patches
 ```
 
-If kernel 5.8 does not show in your linux-sources list (it shows in mine since I have already upgraded stock 4.19 kernel to backported 5.7), then you will need to add backports to your sources list. Here is how my **/etc/apt/sources.list** looks like (you will need to append at least last line to yours):
+If kernel 5.8 does not show in your linux-sources list (it shows in mine since I have already upgraded stock 4.19 kernel to backported 5.7), then you will need to add backports to your sources list. It is best to do it like this
+
+```
+echo 'deb http://deb.debian.org/debian buster-backports main contrib' | sudo tee -a /etc/apt/sources.list.d/debian-backports.list
+```
+
+Just in case you have any problems with packages, or you want to have everything in a single list, here is what my **/etc/apt/sources.list** looks like (you will need to append at least last line to yours)
 
 ```
 deb http://security.debian.org/debian-security buster/updates main contrib
@@ -56,7 +62,7 @@ deb-src http://security.debian.org/debian-security buster/updates main contrib
 deb http://deb.debian.org/debian/ buster main contrib non-free
 deb-src http://deb.debian.org/debian/ buster main contrib non-free
 
-deb http://deb.debian.org/debian buster-backports main contrib non-free
+deb http://deb.debian.org/debian buster-backports main contrib
 ```
 
 After adding backports try **sudo apt update** again, and **apt-cache search linux-source** should now show kernel 5.8 in the list, so you can install it's source package
