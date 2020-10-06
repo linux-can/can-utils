@@ -34,7 +34,7 @@ We will download Debian patched kernel 5.8. First update your sources
 avra@vm-debian:~$ sudo apt update
 ```
 
-and then see what versions of Debian pathed kernel source are available
+and then look at available Debian patched kernel source packages
 
 ```
 avra@vm-debian:~$ apt-cache search linux-source
