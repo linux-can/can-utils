@@ -300,15 +300,14 @@ int main(int argc, char **argv)
 			//printf("accepted\n");
 			if (!fork())
 				break;
-			else
-				close(accsocket);
+			close(accsocket);
 		}
 		else if (errno != EINTR) {
 			perror("accept");
 			exit(1);
 		}
 	}
-  
+
 	for (i=0; i<currmax; i++) {
 
 #ifdef DEBUG

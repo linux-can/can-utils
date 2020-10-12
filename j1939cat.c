@@ -212,8 +212,7 @@ static int j1939cat_extract_serr(struct j1939cat_priv *priv)
 
 		if (serr->ee_info == SCM_TSTAMP_SCHED)
 			return -EINTR;
-		else
-			return 0;
+		return 0;
 	case SO_EE_ORIGIN_LOCAL:
 		/*
 		 * The serr->ee_origin == SO_EE_ORIGIN_LOCAL is
@@ -319,11 +318,10 @@ static int j1939cat_send_loop(struct j1939cat_priv *priv, int out_fd, char *buf,
 			ret = poll(&fds, 1, priv->polltimeout);
 			if (ret == -EINTR)
 				continue;
-			else if (ret < 0)
+			if (ret < 0)
 				return -errno;
-			else if (!ret)
+			if (!ret)
 				return -ETIME;
-
 			if (!(fds.revents & events)) {
 				warn("%s: something else is wrong", __func__);
 				return -EIO;
@@ -333,11 +331,10 @@ static int j1939cat_send_loop(struct j1939cat_priv *priv, int out_fd, char *buf,
 				ret = j1939cat_recv_err(priv);
 				if (ret == -EINTR)
 					continue;
-				else if (ret)
+				if (ret)
 					return ret;
-				else if ((priv->repeat - 1) == stats->tskey)
+				if ((priv->repeat - 1) == stats->tskey)
 					tx_done = true;
-
 			}
 
 			if (fds.revents & POLLOUT) {

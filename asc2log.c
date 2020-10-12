@@ -359,8 +359,7 @@ int get_date(struct timeval *tv, char *date) {
 			   before parsing the real year value (hack) */
 			if (!strptime(date, "%B %d %I:%M:%S.%Y %p %Y", &tms))
 				return 1;
-			else
-				sscanf(date, "%*s %*d %*d:%*d:%*d.%3u ", &msecs);
+			sscanf(date, "%*s %*d %*d:%*d:%*d.%3u ", &msecs);
 		}
 
 	} else {
@@ -377,11 +376,10 @@ int get_date(struct timeval *tv, char *date) {
 			   before parsing the real year value (hack) */
 			if (!strptime(date, "%B %d %H:%M:%S.%Y %Y", &tms))
 				return 1;
-			else
-				sscanf(date, "%*s %*d %*d:%*d:%*d.%3u ", &msecs);
+			sscanf(date, "%*s %*d %*d:%*d:%*d.%3u ", &msecs);
 		}
 	}
-    
+
 	//printf("h %d m %d s %d ms %03d d %d m %d y %d\n",
 	//tms.tm_hour, tms.tm_min, tms.tm_sec, msecs,
 	//tms.tm_mday, tms.tm_mon+1, tms.tm_year+1900);

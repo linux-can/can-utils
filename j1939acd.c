@@ -383,10 +383,9 @@ static inline int addr_status_mine(int sa)
 {
 	if (sa == s.current_sa)
 		return '*';
-	else if (addr[sa].flags & F_USE)
+	if (addr[sa].flags & F_USE)
 		return '+';
-	else
-		return '-';
+	return '-';
 }
 
 static void dump_status(void)

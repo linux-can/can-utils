@@ -468,8 +468,8 @@ resend:
 				if (poll(&fds, 1, polltimeout) < 0) {
 					perror("poll");
 					return 1;
-				} else
-					goto resend;
+				}
+				goto resend;
 			} else
 				enobufs_count++;
 
