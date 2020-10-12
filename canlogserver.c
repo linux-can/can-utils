@@ -281,8 +281,12 @@ int main(int argc, char **argv)
 	inaddr.sin_port = htons(port);
 
 	while(bind(socki, (struct sockaddr*)&inaddr, sizeof(inaddr)) < 0) {
+		struct timespec f = {
+			.tv_nsec = 100 * 1000 * 1000,
+		};
+
 		printf(".");fflush(NULL);
-		usleep(100000);
+		nanosleep(&f, NULL);
 	}
 
 	if (listen(socki, 3) != 0) {
