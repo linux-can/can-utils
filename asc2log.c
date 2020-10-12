@@ -335,7 +335,6 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
 	prframe(outfile, &tv, interface, &cf, dlen, extra_info);
 	fflush(outfile);
-	return;
 
 	/* No support for really strange CANFD ErrorFrames format m( */
 }
