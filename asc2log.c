@@ -224,7 +224,7 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	int interface;
 	static struct timeval tv; /* current frame timestamp */
 	static struct timeval read_tv; /* frame timestamp from ASC file */
-	struct canfd_frame cf;
+	struct canfd_frame cf = {};
 	unsigned char brs, esi, ctmp;
 	unsigned int flags;
 	int dlc, dlen = 0;
@@ -240,8 +240,6 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	/* 21.671796 CANFD   1 Tx         11  msgCanFdFr1                      1 0 a 16 \
 	   00 00 00 00 00 00 00 00 00 00 00 00 00 00 59 c0		\
 	   100000  214   223040 80000000 46500250 460a0250 20011736 20010205 */
-
-	memset(&cf, 0, sizeof(cf));
 
 	/* check for valid line without symbolic name */
 	if (sscanf(buf, "%lu.%lu %*s %d %2s %s %hhx %hhx %x %d ",

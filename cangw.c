@@ -706,8 +706,8 @@ int main(int argc, char **argv)
 	struct can_filter filter;
 	struct sockaddr_nl nladdr;
 
-	struct cgw_csum_xor cs_xor;
-	struct cgw_csum_crc8 cs_crc8;
+	struct cgw_csum_xor cs_xor = {};
+	struct cgw_csum_crc8 cs_crc8 = {};
 	char crc8tab[513] = {0};
 
 	struct modattr modmsg[CGW_MOD_FUNCS];
@@ -717,8 +717,6 @@ int main(int argc, char **argv)
 	int i;
 
 	memset(&req, 0, sizeof(req));
-	memset(&cs_xor, 0, sizeof(cs_xor));
-	memset(&cs_crc8, 0, sizeof(cs_crc8));
 
 	while ((opt = getopt(argc, argv, "ADFLs:d:Xteiu:l:f:c:p:x:m:M:?")) != -1) {
 		switch (opt) {
