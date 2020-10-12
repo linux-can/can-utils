@@ -114,6 +114,7 @@
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
+#include <time.h>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -180,8 +181,12 @@ int main(void)
 	saddr.sin_port = htons(PORT);
 
 	while(bind(sl,(struct sockaddr*)&saddr, sizeof(saddr)) < 0) {
+		struct timespec f = {
+			.tv_nsec = 100 * 1000 * 1000,
+		};
+
 		printf(".");fflush(NULL);
-		usleep(100000);
+		nanosleep(&f, NULL);
 	}
 
 	if (listen(sl,3) != 0) {
