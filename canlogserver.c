@@ -356,15 +356,14 @@ int main(int argc, char **argv)
 
 		addr.can_family = AF_CAN;
 
-		if (strcmp(ANYDEV, argv[optind+i])) {
+		if (strcmp(ANYDEV, argv[optind + i]) != 0) {
 			strcpy(ifr.ifr_name, argv[optind+i]);
 			if (ioctl(s[i], SIOCGIFINDEX, &ifr) < 0) {
 				perror("SIOCGIFINDEX");
 				exit(1);
 			}
 			addr.can_ifindex = ifr.ifr_ifindex;
-		}
-		else
+		} else
 			addr.can_ifindex = 0; /* any can interface */
 
 		if (bind(s[i], (struct sockaddr *)&addr, sizeof(addr)) < 0) {

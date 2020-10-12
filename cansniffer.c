@@ -333,7 +333,7 @@ int main(int argc, char **argv)
 
 	addr.can_family = AF_CAN;
 
-	if (strcmp(ANYDEV, argv[optind]))
+	if (strcmp(ANYDEV, argv[optind]) != 0)
 		addr.can_ifindex = if_nametoindex(argv[optind]);
 	else
 		addr.can_ifindex = 0; /* any can interface */

@@ -641,13 +641,13 @@ static int j1939cat_parse_args(struct j1939cat_priv *priv, int argc, char *argv[
 		}
 
 	if (argv[optind]) {
-		if (strcmp("-", argv[optind]))
+		if (strcmp("-", argv[optind]) != 0)
 			libj1939_parse_canaddr(argv[optind], &priv->sockname);
 		optind++;
 	}
 
 	if (argv[optind]) {
-		if (strcmp("-", argv[optind])) {
+		if (strcmp("-", argv[optind]) != 0) {
 			libj1939_parse_canaddr(argv[optind], &priv->peername);
 			priv->valid_peername = 1;
 		}

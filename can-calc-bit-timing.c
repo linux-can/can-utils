@@ -691,7 +691,8 @@ int main(int argc, char *argv[])
 	}
 
 	for (i = 0; i < ARRAY_SIZE(can_calc_consts); i++) {
-		if (name && strcmp(can_calc_consts[i].bittiming_const.name, name))
+		if (name &&
+		    strcmp(can_calc_consts[i].bittiming_const.name, name) != 0)
 			continue;
 
 		found = true;

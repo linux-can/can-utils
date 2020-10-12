@@ -417,7 +417,7 @@ int main(int argc, char **argv)
 		printf("using interface name '%s'.\n", ifr.ifr_name);
 #endif
 
-		if (strcmp(ANYDEV, ifr.ifr_name)) {
+		if (strcmp(ANYDEV, ifr.ifr_name) != 0) {
 			if (ioctl(s[i], SIOCGIFINDEX, &ifr) < 0) {
 				perror("SIOCGIFINDEX");
 				exit(1);

@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
 		}
 
 	if (argv[optind]) {
-		if (strcmp("-", argv[optind]))
+		if (strcmp("-", argv[optind]) != 0)
 			libj1939_parse_canaddr(argv[optind], &sockname);
 		++optind;
 	}
@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
 		sockname.can_addr.j1939.addr++;
 
 	if (argv[optind]) {
-		if (strcmp("-", argv[optind])) {
+		if (strcmp("-", argv[optind]) != 0) {
 			libj1939_parse_canaddr(argv[optind], &peername);
 			valid_peername = 1;
 		}
