@@ -107,30 +107,32 @@ int main(int argc, char **argv)
 
 	/* argument parsing */
 	while ((opt = getopt_long(argc, argv, optstring, long_opts, NULL)) != -1)
-	switch (opt) {
-	case 'v':
-		++s.verbose;
-		break;
-	case 'b':
-		s.pkt_len = strtoul(optarg, 0, 0);
-		break;
-	case 'P':
-		++s.promisc;
-		break;
-	case 't':
-		if (optarg) {
-			if (!strchr("adzA", optarg[0]))
-				err(1, "unknown time option '%c'", optarg[0]);
-			s.time = optarg[0];
-		} else {
-			s.time = 'z';
+		switch (opt) {
+		case 'v':
+			++s.verbose;
+			break;
+		case 'b':
+			s.pkt_len = strtoul(optarg, 0, 0);
+			break;
+		case 'P':
+			++s.promisc;
+			break;
+		case 't':
+			if (optarg) {
+				if (!strchr("adzA", optarg[0]))
+					err(1, "unknown time option '%c'",
+					    optarg[0]);
+				s.time = optarg[0];
+			} else {
+				s.time = 'z';
+			}
+			break;
+		default:
+			fputs(help_msg, stderr);
+			exit(1);
+			break;
 		}
-		break;
-	default:
-		fputs(help_msg, stderr);
-		exit(1);
-		break;
-	}
+
 	if (argv[optind]) {
 		optarg = argv[optind];
 		ret = libj1939_str2addr(optarg, 0, &s.addr);

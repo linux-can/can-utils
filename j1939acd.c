@@ -471,32 +471,34 @@ int main(int argc, char *argv[])
 #endif
 	/* argument parsing */
 	while ((opt = getopt_long(argc, argv, optstring, long_opts, NULL)) != -1)
-	switch (opt) {
-	case 'v':
-		++s.verbose;
-		break;
-	case 'c':
-		s.cachefile = optarg;
-		break;
-	case 'r':
-		s.ranges = optarg;
-		break;
-	case 'a':
-		s.current_sa = strtoul(optarg, 0, 0);
-		break;
-	case 'p':
+		switch (opt) {
+		case 'v':
+			++s.verbose;
+			break;
+		case 'c':
+			s.cachefile = optarg;
+			break;
+		case 'r':
+			s.ranges = optarg;
+			break;
+		case 'a':
+			s.current_sa = strtoul(optarg, 0, 0);
+			break;
+		case 'p':
 #ifdef _GNU_SOURCE
-		if (asprintf(&program_invocation_name, "%s.%s", program_invocation_short_name, optarg) < 0)
-			err(1, "asprintf(program invocation name)");
+			if (asprintf(&program_invocation_name, "%s.%s",
+				     program_invocation_short_name, optarg) < 0)
+				err(1, "asprintf(program invocation name)");
 #else
-		err(0, "compile with -D_GNU_SOURCE to use -p");
+			err(0, "compile with -D_GNU_SOURCE to use -p");
 #endif
-		break;
-	default:
-		fputs(help_msg, stderr);
-		exit(1);
-		break;
-	}
+			break;
+		default:
+			fputs(help_msg, stderr);
+			exit(1);
+			break;
+		}
+
 	if (argv[optind])
 		s.name = strtoull(argv[optind++], 0, 16);
 	if (argv[optind])

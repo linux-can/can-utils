@@ -99,27 +99,27 @@ int main(int argc, char **argv)
 #endif
 	/* argument parsing */
 	while ((opt = getopt_long(argc, argv, optstring, long_opts, NULL)) != -1)
-	switch (opt) {
-	case 'v':
-		++s.verbose;
-		break;
-	case 's':
-		s.pkt_len = strtoul(optarg, 0, 0);
-		if (!s.pkt_len)
-			err(1, "packet size of %s", optarg);
-		break;
-	case 'p':
-		s.priority = strtoul(optarg, 0, 0);
-		s.defined |= DEF_PRIO;
-		break;
-	case 'S':
-		s.sendflags |= MSG_SYN;
-		break;
-	default:
-		fputs(help_msg, stderr);
-		exit(1);
-		break;
-	}
+		switch (opt) {
+		case 'v':
+			++s.verbose;
+			break;
+		case 's':
+			s.pkt_len = strtoul(optarg, 0, 0);
+			if (!s.pkt_len)
+				err(1, "packet size of %s", optarg);
+			break;
+		case 'p':
+			s.priority = strtoul(optarg, 0, 0);
+			s.defined |= DEF_PRIO;
+			break;
+		case 'S':
+			s.sendflags |= MSG_SYN;
+			break;
+		default:
+			fputs(help_msg, stderr);
+			exit(1);
+			break;
+		}
 
 	if (argv[optind]) {
 		optarg = argv[optind++];

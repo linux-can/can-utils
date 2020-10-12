@@ -598,44 +598,47 @@ static int j1939cat_parse_args(struct j1939cat_priv *priv, int argc, char *argv[
 
 	/* argument parsing */
 	while ((opt = getopt(argc, argv, optstring)) != -1)
-	switch (opt) {
-	case 'i':
-		priv->infile = open(optarg, O_RDONLY);
-		if (priv->infile == -1)
-			err(EXIT_FAILURE, "can't open input file");
-		priv->todo_filesize = 1;
-		break;
-	case 's':
-		priv->max_transfer = strtoul(optarg, NULL, 0);
-		if (priv->max_transfer > J1939_MAX_ETP_PACKET_SIZE)
-			err(EXIT_FAILURE, "used value (%zu) is bigger then allowed maximal size: %u.\n",
-			    priv->max_transfer, J1939_MAX_ETP_PACKET_SIZE);
-		break;
-	case 'r':
-		priv->todo_recv = 1;
-		break;
-	case 'p':
-		priv->todo_prio = strtoul(optarg, NULL, 0);
-		break;
-	case 'P':
-		priv->polltimeout = strtoul(optarg, NULL, 0);
-		break;
-	case 'c':
-		priv->todo_connect = 1;
-		break;
-	case 'R':
-		priv->repeat = strtoul(optarg, NULL, 0);
-		if (priv->repeat < 1)
-			err(EXIT_FAILURE, "send/repeat count can't be less then 1\n");
-		break;
-	case 'B':
-		priv->todo_broadcast = 1;
-		break;
-	case 'h': /*fallthrough*/
-	default:
-		fputs(help_msg, stderr);
-		return EXIT_FAILURE;
-	}
+		switch (opt) {
+		case 'i':
+			priv->infile = open(optarg, O_RDONLY);
+			if (priv->infile == -1)
+				err(EXIT_FAILURE, "can't open input file");
+			priv->todo_filesize = 1;
+			break;
+		case 's':
+			priv->max_transfer = strtoul(optarg, NULL, 0);
+			if (priv->max_transfer > J1939_MAX_ETP_PACKET_SIZE)
+				err(EXIT_FAILURE,
+				    "used value (%zu) is bigger then allowed maximal size: %u.\n",
+				    priv->max_transfer,
+				    J1939_MAX_ETP_PACKET_SIZE);
+			break;
+		case 'r':
+			priv->todo_recv = 1;
+			break;
+		case 'p':
+			priv->todo_prio = strtoul(optarg, NULL, 0);
+			break;
+		case 'P':
+			priv->polltimeout = strtoul(optarg, NULL, 0);
+			break;
+		case 'c':
+			priv->todo_connect = 1;
+			break;
+		case 'R':
+			priv->repeat = strtoul(optarg, NULL, 0);
+			if (priv->repeat < 1)
+				err(EXIT_FAILURE,
+				    "send/repeat count can't be less then 1\n");
+			break;
+		case 'B':
+			priv->todo_broadcast = 1;
+			break;
+		case 'h': /*fallthrough*/
+		default:
+			fputs(help_msg, stderr);
+			return EXIT_FAILURE;
+		}
 
 	if (argv[optind]) {
 		if (strcmp("-", argv[optind]))
