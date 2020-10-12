@@ -662,11 +662,9 @@ int main(int argc, char *argv[])
 	struct j1939cat_priv *priv;
 	int ret = 0;
 
-	priv = malloc(sizeof(*priv));
+	priv = calloc(1, sizeof(*priv));
 	if (!priv)
 		err(EXIT_FAILURE, "can't allocate priv");
-
-	bzero(priv, sizeof(*priv));
 
 	priv->todo_prio = -1;
 	priv->infile = STDIN_FILENO;
