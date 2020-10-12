@@ -45,12 +45,12 @@
  */
 
 #include "canframelen.h"
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
 #include <arpa/inet.h>
+#include <assert.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 /**
  * Functions and types for CRC checks.

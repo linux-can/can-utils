@@ -42,19 +42,19 @@
  *
  */
 
+#include <libgen.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <libgen.h>
-#include <stdlib.h>
 #include <unistd.h>
 
-#include <net/if.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <sys/time.h>
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/time.h>
 
 #include "lib.h"
 

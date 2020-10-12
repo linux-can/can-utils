@@ -42,23 +42,23 @@
  *
  */
 
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
-#include <libgen.h>
-#include <time.h>
 #include <strings.h>
+#include <time.h>
+#include <unistd.h>
 
 #include <net/if.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
+#include "terminal.h"
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include <linux/sockios.h>
-#include "terminal.h"
 
 #define NO_CAN_ID 0xFFFFFFFFU
 

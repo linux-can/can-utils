@@ -8,16 +8,16 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <net/if.h>
+#include <poll.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <poll.h>
 
 #include <linux/errqueue.h>
-#include <linux/netlink.h>
 #include <linux/net_tstamp.h>
+#include <linux/netlink.h>
 #include <linux/socket.h>
 
 #include "libj1939.h"

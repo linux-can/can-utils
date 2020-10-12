@@ -42,15 +42,15 @@
  *
  */
 
+#include <libgen.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include <libgen.h>
 #include <unistd.h>
 
+#include <linux/can.h>
 #include <net/if.h>
 #include <sys/time.h>
-#include <linux/can.h>
 
 #include "lib.h"
 

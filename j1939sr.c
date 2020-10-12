@@ -10,20 +10,20 @@
  * as published by the Free Software Foundation
  */
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include <unistd.h>
-#include <getopt.h>
 #include <err.h>
+#include <getopt.h>
 #include <poll.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "libj1939.h"
 

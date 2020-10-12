@@ -42,17 +42,17 @@
  *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <libgen.h>
-#include <string.h>
-#include <unistd.h>
 #include <errno.h>
-#include <sys/socket.h>
-#include <net/if.h>
+#include <libgen.h>
+#include <linux/can/gw.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
-#include <linux/can/gw.h>
+#include <net/if.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 enum {
 	UNSPEC,

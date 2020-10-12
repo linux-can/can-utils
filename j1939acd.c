@@ -10,22 +10,22 @@
  * as published by the Free Software Foundation
  */
 
-#include <signal.h>
-#include <time.h>
-#include <inttypes.h>
 #include <errno.h>
-#include <string.h>
-#include <stdlib.h>
+#include <inttypes.h>
+#include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
-#include <unistd.h>
-#include <getopt.h>
 #include <err.h>
-#include <sys/time.h>
-#include <sys/socket.h>
-#include <net/if.h>
+#include <getopt.h>
 #include <linux/can.h>
 #include <linux/can/j1939.h>
+#include <net/if.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include "libj1939.h"
 

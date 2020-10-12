@@ -42,18 +42,18 @@
  *
  */
 
+#include <libgen.h>
+#include <locale.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
-#include <libgen.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <locale.h>
 
-#include <net/if.h>
 #include <linux/can.h>
 #include <linux/can/error.h>
+#include <net/if.h>
 
 #include "lib.h"
 
