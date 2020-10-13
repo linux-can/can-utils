@@ -224,7 +224,7 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	int interface;
 	static struct timeval tv; /* current frame timestamp */
 	static struct timeval read_tv; /* frame timestamp from ASC file */
-	struct canfd_frame cf = {};
+	struct canfd_frame cf = { 0 };
 	unsigned char brs, esi, ctmp;
 	unsigned int flags;
 	int dlc, dlen = 0;

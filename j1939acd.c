@@ -365,7 +365,7 @@ static void install_signal(int sig)
 static void schedule_itimer(int msec)
 {
 	int ret;
-	struct itimerval val = {};
+	struct itimerval val = { 0 };
 
 	val.it_value.tv_sec = msec / 1000;
 	val.it_value.tv_usec = (msec % 1000) * 1000;

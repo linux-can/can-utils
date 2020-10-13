@@ -706,8 +706,8 @@ int main(int argc, char **argv)
 	struct can_filter filter;
 	struct sockaddr_nl nladdr;
 
-	struct cgw_csum_xor cs_xor = {};
-	struct cgw_csum_crc8 cs_crc8 = {};
+	struct cgw_csum_xor cs_xor = { 0 };
+	struct cgw_csum_crc8 cs_crc8 = { 0 };
 	char crc8tab[513] = {0};
 
 	struct modattr modmsg[CGW_MOD_FUNCS];
