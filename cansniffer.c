@@ -544,7 +544,7 @@ int handle_keyb(void)
 	clearscreen = 1;
 
 	return 1; /* ok */
-};
+}
 
 int handle_frame(int fd, long currcms)
 {
@@ -619,7 +619,7 @@ int handle_frame(int fd, long currcms)
 		qsort(sniftab, idx, sizeof(sniftab[0]), comp);
 
 	return 1; /* ok */
-};
+}
 
 int handle_timeo(long currcms)
 {
@@ -678,7 +678,7 @@ int handle_timeo(long currcms)
 	}
 
 	return 1; /* ok */
-};
+}
 
 void print_snifline(int slot)
 {
@@ -764,7 +764,7 @@ void print_snifline(int slot)
 	putchar('\n');
 
 	memset(&sniftab[slot].marker.data, 0, 8);
-};
+}
 
 void writesettings(char* name)
 {
@@ -794,7 +794,7 @@ void writesettings(char* name)
 	}
 	else
 		printf("unable to write setting file '%s'!\n", fname);
-};
+}
 
 int readsettings(char* name)
 {
@@ -838,7 +838,7 @@ int readsettings(char* name)
 		return -1;
 
 	return idx;
-};
+}
 
 int sniftab_index(canid_t id)
 {
