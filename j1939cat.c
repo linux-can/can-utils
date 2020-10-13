@@ -21,6 +21,7 @@
 #include <linux/socket.h>
 
 #include "libj1939.h"
+
 #define J1939_MAX_ETP_PACKET_SIZE (7 * 0x00ffffff)
 #define JCAT_BUF_SIZE (1000 * 1024)
 

@@ -61,9 +61,10 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 
-#include "lib.h"
 #include <linux/can.h>
 #include <linux/can/raw.h>
+
+#include "lib.h"
 
 #define DEFAULT_GAP 200 /* ms */
 #define DEFAULT_BURST_COUNT 1
