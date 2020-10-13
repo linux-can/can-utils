@@ -251,11 +251,11 @@ int main(int argc, char **argv)
 
 				n_pci = frame.data[rx_ext];
 				/* check flow control PCI only */
-				if ((n_pci & 0xF0) == 0x30) {
-					bs = frame.data[rx_ext+1];
-					stmin = frame.data[rx_ext+2];
-				} else
+				if ((n_pci & 0xF0) != 0x30)
 					continue;
+
+				bs = frame.data[rx_ext + 1];
+				stmin = frame.data[rx_ext + 2];
 			}
 
 			/* data content starts and index datidx */

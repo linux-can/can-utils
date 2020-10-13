@@ -317,11 +317,9 @@ int main(int argc, char **argv)
 	while (1) { 
 		sa = accept(sl,(struct sockaddr *)&clientaddr, &sin_size);
 		if (sa > 0 ){
-
-			if (fork())
-				close(sa);
-			else
+			if (!fork())
 				break;
+			close(sa);
 		}
 		else {
 			if (errno != EINTR) {
