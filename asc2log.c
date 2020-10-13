@@ -480,17 +480,20 @@ int main(int argc, char **argv)
 			}
 
 			/* check for decimal places length in valid CAN frames */
-			if (sscanf(buf, "%lu.%s %s ", &tmp_tv.tv_sec, tmp2, tmp1) == 3){
-				dplace = strlen(tmp2);
-				if (verbose)
-					printf("decimal place %d, e.g. '%s'\n", dplace, tmp2);
-				if (dplace < 4 || dplace > 6) {
-					printf("invalid dplace %d (must be 4, 5 or 6)!\n", dplace);
-					return 1;
-				}
-			} else
+			if (sscanf(buf, "%lu.%s %s ", &tmp_tv.tv_sec, tmp2,
+				   tmp1) != 3)
 				continue; /* dplace remains zero until first found CAN frame */
-		} 
+
+			dplace = strlen(tmp2);
+			if (verbose)
+				printf("decimal place %d, e.g. '%s'\n", dplace,
+				       tmp2);
+			if (dplace < 4 || dplace > 6) {
+				printf("invalid dplace %d (must be 4, 5 or 6)!\n",
+				       dplace);
+				return 1;
+			}
+		}
 
 		/* the representation of a valid CAN frame is known here */
 		/* so try to get CAN frames and ErrorFrames and convert them */
