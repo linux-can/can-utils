@@ -295,14 +295,14 @@ int parse_crc8_profile(char *optarg, struct cgw_csum_crc8 *crc8)
 	int ret = 1;
 	char *ptr;
 
-	if (sscanf(optarg, "%hhd:", &crc8->profile) != 1)
+	if (sscanf(optarg, "%hhu:", &crc8->profile) != 1)
 		return ret;
 
 	switch (crc8->profile) {
 
 	case  CGW_CRC8PRF_1U8:
 
-		if (sscanf(optarg, "%hhd:%2hhx", &crc8->profile, &crc8->profile_data[0]) == 2)
+		if (sscanf(optarg, "%hhu:%2hhx", &crc8->profile, &crc8->profile_data[0]) == 2)
 			ret = 0;
 
 		break;
@@ -770,7 +770,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 'l':
-			if (sscanf(optarg, "%hhd", &limit_hops) != 1 || !(limit_hops)) {
+			if (sscanf(optarg, "%hhu", &limit_hops) != 1 || !(limit_hops)) {
 				printf("Bad hop limit definition '%s'.\n", optarg);
 				exit(1);
 			}
