@@ -10,16 +10,16 @@
  * as published by the Free Software Foundation
  */
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <err.h>
 #include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include <unistd.h>
 #include <fcntl.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
+#include <unistd.h>
 
 #include <net/if.h>
 
@@ -64,8 +64,8 @@ static const char *libj1939_ifnam(int ifindex)
 		 */
 		libj1939_cleanup();
 		return libj1939_ifnam(ifindex);
-	} else
-		return NULL;
+	}
+	return NULL;
 }
 
 /* retrieve index */
@@ -88,8 +88,8 @@ static int libj1939_ifindex(const char *str)
 	if (cached) {
 		libj1939_cleanup();
 		return libj1939_ifindex(str);
-	} else
-		return 0;
+	}
+	return 0;
 }
 
 void libj1939_parse_canaddr(char *spec, struct sockaddr_can *paddr)

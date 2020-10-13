@@ -42,28 +42,28 @@
  *
  */
 
+#include <ctype.h>
+#include <errno.h>
+#include <libgen.h>
+#include <poll.h>
+#include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
 #include <string.h>
-#include <signal.h>
-#include <poll.h>
-#include <ctype.h>
-#include <libgen.h>
 #include <time.h>
-#include <errno.h>
+#include <unistd.h>
 
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
 #include <sys/uio.h>
-#include <net/if.h>
 
+#include "lib.h"
 #include <linux/can.h>
 #include <linux/can/raw.h>
-#include "lib.h"
 
 #define DEFAULT_GAP 200 /* ms */
 #define DEFAULT_BURST_COUNT 1
@@ -297,7 +297,7 @@ int main(int argc, char **argv)
 	}
 
 	ts.tv_sec = gap / 1000;
-	ts.tv_nsec = (long)(((long long)(gap * 1000000)) % 1000000000ll);
+	ts.tv_nsec = (long)(((long long)(gap * 1000000)) % 1000000000LL);
 
 	/* recognize obviously missing commandline option */
 	if (id_mode == MODE_FIX && frame.can_id > 0x7FF && !extended) {
@@ -468,8 +468,8 @@ resend:
 				if (poll(&fds, 1, polltimeout) < 0) {
 					perror("poll");
 					return 1;
-				} else
-					goto resend;
+				}
+				goto resend;
 			} else
 				enobufs_count++;
 

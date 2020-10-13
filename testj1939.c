@@ -10,20 +10,20 @@
  * as published by the Free Software Foundation
  */
 
-#include <signal.h>
-#include <time.h>
-#include <inttypes.h>
 #include <errno.h>
-#include <string.h>
-#include <stdlib.h>
+#include <inttypes.h>
+#include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
-#include <unistd.h>
-#include <getopt.h>
 #include <err.h>
-#include <sys/time.h>
-#include <sys/socket.h>
+#include <getopt.h>
 #include <net/if.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include "libj1939.h"
 
@@ -101,55 +101,56 @@ int main(int argc, char *argv[])
 
 	/* argument parsing */
 	while ((opt = getopt(argc, argv, optstring)) != -1)
-	switch (opt) {
-	case 'v':
-		verbose = 1;
-		break;
-	case 's':
-		todo_send = strtoul(optarg ?: "8", NULL, 0);
-		if (todo_send > sizeof(dat))
-			err(1, "Unsupported size. max: %zu", sizeof(dat));
-		break;
-	case 'r':
-		todo_recv = 1;
-		break;
-	case 'e':
-		todo_echo = 1;
-		break;
-	case 'p':
-		todo_prio = strtoul(optarg, NULL, 0);
-		break;
-	case 'P':
-		todo_promisc = 1;
-		break;
-	case 'c':
-		todo_connect = 1;
-		break;
-	case 'n':
-		todo_names = 1;
-		break;
-	case 'b':
-		todo_rebind = 1;
-		break;
-	case 'B':
-		todo_broadcast = 1;
-		break;
-	case 'o':
-		no_bind = 1;
-		break;
-	case 'w':
-		schedule_oneshot_itimer(strtod(optarg ?: "1", NULL));
-		signal(SIGALRM, onsigalrm);
-		todo_wait = 1;
-		break;
-	default:
-		fputs(help_msg, stderr);
-		exit(1);
-		break;
-	}
+		switch (opt) {
+		case 'v':
+			verbose = 1;
+			break;
+		case 's':
+			todo_send = strtoul(optarg ?: "8", NULL, 0);
+			if (todo_send > sizeof(dat))
+				err(1, "Unsupported size. max: %zu",
+				    sizeof(dat));
+			break;
+		case 'r':
+			todo_recv = 1;
+			break;
+		case 'e':
+			todo_echo = 1;
+			break;
+		case 'p':
+			todo_prio = strtoul(optarg, NULL, 0);
+			break;
+		case 'P':
+			todo_promisc = 1;
+			break;
+		case 'c':
+			todo_connect = 1;
+			break;
+		case 'n':
+			todo_names = 1;
+			break;
+		case 'b':
+			todo_rebind = 1;
+			break;
+		case 'B':
+			todo_broadcast = 1;
+			break;
+		case 'o':
+			no_bind = 1;
+			break;
+		case 'w':
+			schedule_oneshot_itimer(strtod(optarg ?: "1", NULL));
+			signal(SIGALRM, onsigalrm);
+			todo_wait = 1;
+			break;
+		default:
+			fputs(help_msg, stderr);
+			exit(1);
+			break;
+		}
 
 	if (argv[optind]) {
-		if (strcmp("-", argv[optind]))
+		if (strcmp("-", argv[optind]) != 0)
 			libj1939_parse_canaddr(argv[optind], &sockname);
 		++optind;
 	}
@@ -158,7 +159,7 @@ int main(int argc, char *argv[])
 		sockname.can_addr.j1939.addr++;
 
 	if (argv[optind]) {
-		if (strcmp("-", argv[optind])) {
+		if (strcmp("-", argv[optind]) != 0) {
 			libj1939_parse_canaddr(argv[optind], &peername);
 			valid_peername = 1;
 		}

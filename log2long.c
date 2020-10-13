@@ -44,8 +44,8 @@
 
 #include <stdio.h>
 
-#include <net/if.h>
 #include <linux/can.h>
+#include <net/if.h>
 
 #include "lib.h"
 

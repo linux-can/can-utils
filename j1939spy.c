@@ -10,19 +10,19 @@
  * as published by the Free Software Foundation
  */
 
-#include <string.h>
-#include <time.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
-#include <unistd.h>
-#include <getopt.h>
 #include <err.h>
-#include <sys/socket.h>
+#include <getopt.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include "libj1939.h"
 
@@ -107,30 +107,32 @@ int main(int argc, char **argv)
 
 	/* argument parsing */
 	while ((opt = getopt_long(argc, argv, optstring, long_opts, NULL)) != -1)
-	switch (opt) {
-	case 'v':
-		++s.verbose;
-		break;
-	case 'b':
-		s.pkt_len = strtoul(optarg, 0, 0);
-		break;
-	case 'P':
-		++s.promisc;
-		break;
-	case 't':
-		if (optarg) {
-			if (!strchr("adzA", optarg[0]))
-				err(1, "unknown time option '%c'", optarg[0]);
-			s.time = optarg[0];
-		} else {
-			s.time = 'z';
+		switch (opt) {
+		case 'v':
+			++s.verbose;
+			break;
+		case 'b':
+			s.pkt_len = strtoul(optarg, 0, 0);
+			break;
+		case 'P':
+			++s.promisc;
+			break;
+		case 't':
+			if (optarg) {
+				if (!strchr("adzA", optarg[0]))
+					err(1, "unknown time option '%c'",
+					    optarg[0]);
+				s.time = optarg[0];
+			} else {
+				s.time = 'z';
+			}
+			break;
+		default:
+			fputs(help_msg, stderr);
+			exit(1);
+			break;
 		}
-		break;
-	default:
-		fputs(help_msg, stderr);
-		exit(1);
-		break;
-	}
+
 	if (argv[optind]) {
 		optarg = argv[optind];
 		ret = libj1939_str2addr(optarg, 0, &s.addr);

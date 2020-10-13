@@ -8,16 +8,16 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <net/if.h>
+#include <poll.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <poll.h>
 
 #include <linux/errqueue.h>
-#include <linux/netlink.h>
 #include <linux/net_tstamp.h>
+#include <linux/netlink.h>
 #include <linux/socket.h>
 
 #include "libj1939.h"
@@ -212,8 +212,7 @@ static int j1939cat_extract_serr(struct j1939cat_priv *priv)
 
 		if (serr->ee_info == SCM_TSTAMP_SCHED)
 			return -EINTR;
-		else
-			return 0;
+		return 0;
 	case SO_EE_ORIGIN_LOCAL:
 		/*
 		 * The serr->ee_origin == SO_EE_ORIGIN_LOCAL is
@@ -319,11 +318,10 @@ static int j1939cat_send_loop(struct j1939cat_priv *priv, int out_fd, char *buf,
 			ret = poll(&fds, 1, priv->polltimeout);
 			if (ret == -EINTR)
 				continue;
-			else if (ret < 0)
+			if (ret < 0)
 				return -errno;
-			else if (!ret)
+			if (!ret)
 				return -ETIME;
-
 			if (!(fds.revents & events)) {
 				warn("%s: something else is wrong", __func__);
 				return -EIO;
@@ -333,11 +331,10 @@ static int j1939cat_send_loop(struct j1939cat_priv *priv, int out_fd, char *buf,
 				ret = j1939cat_recv_err(priv);
 				if (ret == -EINTR)
 					continue;
-				else if (ret)
+				if (ret)
 					return ret;
-				else if ((priv->repeat - 1) == stats->tskey)
+				if ((priv->repeat - 1) == stats->tskey)
 					tx_done = true;
-
 			}
 
 			if (fds.revents & POLLOUT) {
@@ -601,53 +598,56 @@ static int j1939cat_parse_args(struct j1939cat_priv *priv, int argc, char *argv[
 
 	/* argument parsing */
 	while ((opt = getopt(argc, argv, optstring)) != -1)
-	switch (opt) {
-	case 'i':
-		priv->infile = open(optarg, O_RDONLY);
-		if (priv->infile == -1)
-			err(EXIT_FAILURE, "can't open input file");
-		priv->todo_filesize = 1;
-		break;
-	case 's':
-		priv->max_transfer = strtoul(optarg, NULL, 0);
-		if (priv->max_transfer > J1939_MAX_ETP_PACKET_SIZE)
-			err(EXIT_FAILURE, "used value (%zu) is bigger then allowed maximal size: %u.\n",
-			    priv->max_transfer, J1939_MAX_ETP_PACKET_SIZE);
-		break;
-	case 'r':
-		priv->todo_recv = 1;
-		break;
-	case 'p':
-		priv->todo_prio = strtoul(optarg, NULL, 0);
-		break;
-	case 'P':
-		priv->polltimeout = strtoul(optarg, NULL, 0);
-		break;
-	case 'c':
-		priv->todo_connect = 1;
-		break;
-	case 'R':
-		priv->repeat = strtoul(optarg, NULL, 0);
-		if (priv->repeat < 1)
-			err(EXIT_FAILURE, "send/repeat count can't be less then 1\n");
-		break;
-	case 'B':
-		priv->todo_broadcast = 1;
-		break;
-	case 'h': /*fallthrough*/
-	default:
-		fputs(help_msg, stderr);
-		return EXIT_FAILURE;
-	}
+		switch (opt) {
+		case 'i':
+			priv->infile = open(optarg, O_RDONLY);
+			if (priv->infile == -1)
+				err(EXIT_FAILURE, "can't open input file");
+			priv->todo_filesize = 1;
+			break;
+		case 's':
+			priv->max_transfer = strtoul(optarg, NULL, 0);
+			if (priv->max_transfer > J1939_MAX_ETP_PACKET_SIZE)
+				err(EXIT_FAILURE,
+				    "used value (%zu) is bigger then allowed maximal size: %u.\n",
+				    priv->max_transfer,
+				    J1939_MAX_ETP_PACKET_SIZE);
+			break;
+		case 'r':
+			priv->todo_recv = 1;
+			break;
+		case 'p':
+			priv->todo_prio = strtoul(optarg, NULL, 0);
+			break;
+		case 'P':
+			priv->polltimeout = strtoul(optarg, NULL, 0);
+			break;
+		case 'c':
+			priv->todo_connect = 1;
+			break;
+		case 'R':
+			priv->repeat = strtoul(optarg, NULL, 0);
+			if (priv->repeat < 1)
+				err(EXIT_FAILURE,
+				    "send/repeat count can't be less then 1\n");
+			break;
+		case 'B':
+			priv->todo_broadcast = 1;
+			break;
+		case 'h': /*fallthrough*/
+		default:
+			fputs(help_msg, stderr);
+			return EXIT_FAILURE;
+		}
 
 	if (argv[optind]) {
-		if (strcmp("-", argv[optind]))
+		if (strcmp("-", argv[optind]) != 0)
 			libj1939_parse_canaddr(argv[optind], &priv->sockname);
 		optind++;
 	}
 
 	if (argv[optind]) {
-		if (strcmp("-", argv[optind])) {
+		if (strcmp("-", argv[optind]) != 0) {
 			libj1939_parse_canaddr(argv[optind], &priv->peername);
 			priv->valid_peername = 1;
 		}

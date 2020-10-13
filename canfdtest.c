@@ -17,24 +17,24 @@
  * Send feedback to <linux-can@vger.kernel.org>
  */
 
+#include <errno.h>
+#include <getopt.h>
+#include <libgen.h>
+#include <limits.h>
+#include <sched.h>
+#include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
-#include <signal.h>
-#include <libgen.h>
-#include <getopt.h>
 #include <time.h>
-#include <sched.h>
-#include <limits.h>
-#include <errno.h>
-#include <stdint.h>
+#include <unistd.h>
 
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
 #include <net/if.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
@@ -181,19 +181,17 @@ static int send_frame(struct can_frame *frame)
 
 	while ((ret = send(sockfd, frame, sizeof(*frame), 0))
 	       != sizeof(*frame)) {
-		if (ret < 0) {
-			if (errno != ENOBUFS) {
-				perror("send failed");
-				return -1;
-			} else {
-				if (verbose) {
-					printf("N");
-					fflush(stdout);
-				}
-			}
-		} else {
+		if (ret >= 0) {
 			fprintf(stderr, "send returned %d", ret);
 			return -1;
+		}
+		if (errno != ENOBUFS) {
+			perror("send failed");
+			return -1;
+		}
+		if (verbose) {
+			printf("N");
+			fflush(stdout);
 		}
 	}
 	return 0;
@@ -332,18 +330,18 @@ static int can_echo_gen(void)
 				if (recv_tx_pos == inflight_count)
 					recv_tx_pos = 0;
 				continue;
-			} else {
-				if (!recv_tx[recv_rx_pos]) {
-					printf("RX before TX!\n");
-					print_frame(&rx_frame, 0);
-					running = 0;
-				}
-				/* compare with expected */
-				compare_frame(&tx_frames[recv_rx_pos], &rx_frame, 1);
-				recv_rx_pos++;
-				if (recv_rx_pos == inflight_count)
-					recv_rx_pos = 0;
 			}
+
+			if (!recv_tx[recv_rx_pos]) {
+				printf("RX before TX!\n");
+				print_frame(&rx_frame, 0);
+				running = 0;
+			}
+			/* compare with expected */
+			compare_frame(&tx_frames[recv_rx_pos], &rx_frame, 1);
+			recv_rx_pos++;
+			if (recv_rx_pos == inflight_count)
+				recv_rx_pos = 0;
 
 			loops++;
 			if (test_loops && loops >= test_loops)

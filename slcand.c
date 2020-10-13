@@ -22,25 +22,25 @@
  *
  */
 
+#include <errno.h>
+#include <fcntl.h>
+#include <linux/serial.h>
+#include <linux/sockios.h>
+#include <linux/tty.h>
+#include <net/if.h>
+#include <pwd.h>
+#include <signal.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <fcntl.h>
-#include <syslog.h>
-#include <errno.h>
-#include <pwd.h>
-#include <signal.h>
 #include <sys/ioctl.h>
-#include <net/if.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <syslog.h>
 #include <termios.h>
-#include <linux/tty.h>
-#include <linux/sockios.h>
-#include <linux/serial.h>
-#include <stdarg.h>
+#include <unistd.h>
 
 /* Change this to whatever your daemon is called */
 #define DAEMON_NAME "slcand"

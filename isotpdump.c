@@ -42,23 +42,23 @@
  *
  */
 
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
-#include <libgen.h>
-#include <time.h>
 #include <strings.h>
+#include <time.h>
+#include <unistd.h>
 
 #include <net/if.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
+#include "terminal.h"
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include <linux/sockios.h>
-#include "terminal.h"
 
 #define NO_CAN_ID 0xFFFFFFFFU
 
@@ -335,65 +335,66 @@ int main(int argc, char **argv)
 		if (nbytes < 0) {
 			perror("read");
 			return 1;
-		} else if (nbytes != CAN_MTU && nbytes != CANFD_MTU) {
+		}
+		if (nbytes != CAN_MTU && nbytes != CANFD_MTU) {
 			fprintf(stderr, "read: incomplete CAN frame %zu %d\n", sizeof(frame), nbytes);
 			return 1;
-		} else {
+		}
+		if (frame.can_id == src && ext && !extany &&
+		    extaddr != frame.data[0])
+			continue;
 
-			if (frame.can_id == src && ext && !extany && extaddr != frame.data[0])
-				continue;
+		if (frame.can_id == dst && rx_ext && !rx_extany &&
+		    rx_extaddr != frame.data[0])
+			continue;
 
-			if (frame.can_id == dst && rx_ext && !rx_extany && rx_extaddr != frame.data[0])
-				continue;
+		if (color)
+			printf("%s", (frame.can_id == src) ? FGRED : FGBLUE);
 
-			if (color)
-				printf("%s", (frame.can_id == src)? FGRED:FGBLUE);
+		if (timestamp) {
+			ioctl(s, SIOCGSTAMP, &tv);
 
-			if (timestamp) {
-				ioctl(s, SIOCGSTAMP, &tv);
-
-
-				switch (timestamp) {
-
-				case 'a': /* absolute with timestamp */
-					printf("(%lu.%06lu) ", tv.tv_sec, tv.tv_usec);
-					break;
-
-				case 'A': /* absolute with date */
-				{
-					struct tm tm;
-					char timestring[25];
-
-					tm = *localtime(&tv.tv_sec);
-					strftime(timestring, 24, "%Y-%m-%d %H:%M:%S", &tm);
-					printf("(%s.%06lu) ", timestring, tv.tv_usec);
-				}
+			switch (timestamp) {
+			case 'a': /* absolute with timestamp */
+				printf("(%lu.%06lu) ", tv.tv_sec, tv.tv_usec);
 				break;
 
-				case 'd': /* delta */
-				case 'z': /* starting with zero */
-				{
-					struct timeval diff;
+			case 'A': /* absolute with date */
+			{
+				struct tm tm;
+				char timestring[25];
 
-					if (last_tv.tv_sec == 0)   /* first init */
-						last_tv = tv;
-					diff.tv_sec  = tv.tv_sec  - last_tv.tv_sec;
-					diff.tv_usec = tv.tv_usec - last_tv.tv_usec;
-					if (diff.tv_usec < 0)
-						diff.tv_sec--, diff.tv_usec += 1000000;
-					if (diff.tv_sec < 0)
-						diff.tv_sec = diff.tv_usec = 0;
-					printf("(%lu.%06lu) ", diff.tv_sec, diff.tv_usec);
+				tm = *localtime(&tv.tv_sec);
+				strftime(timestring, 24, "%Y-%m-%d %H:%M:%S",
+					 &tm);
+				printf("(%s.%06lu) ", timestring, tv.tv_usec);
+			} break;
 
-					if (timestamp == 'd')
-						last_tv = tv; /* update for delta calculation */
-				}
+			case 'd': /* delta */
+			case 'z': /* starting with zero */
+			{
+				struct timeval diff;
+
+				if (last_tv.tv_sec == 0) /* first init */
+					last_tv = tv;
+				diff.tv_sec = tv.tv_sec - last_tv.tv_sec;
+				diff.tv_usec = tv.tv_usec - last_tv.tv_usec;
+				if (diff.tv_usec < 0)
+					diff.tv_sec--, diff.tv_usec += 1000000;
+				if (diff.tv_sec < 0)
+					diff.tv_sec = diff.tv_usec = 0;
+				printf("(%lu.%06lu) ", diff.tv_sec,
+				       diff.tv_usec);
+
+				if (timestamp == 'd')
+					last_tv =
+						tv; /* update for delta calculation */
+			} break;
+
+			default: /* no timestamp output */
 				break;
-
-				default: /* no timestamp output */
-					break;
-				}
 			}
+		}
 
 			if (frame.can_id & CAN_EFF_FLAG)
 				printf(" %s  %8X", argv[optind], frame.can_id & CAN_EFF_MASK);
@@ -410,7 +411,7 @@ int main(int argc, char **argv)
 
 			datidx = 0;
 			n_pci = frame.data[ext];
-	    
+
 			switch (n_pci & 0xF0) {
 			case 0x00:
 			        is_ff = 1;
@@ -501,7 +502,6 @@ int main(int argc, char **argv)
 				printf("%s", ATTRESET);
 			printf("\n");
 			fflush(stdout);
-		}
 	}
 
 	close(s);

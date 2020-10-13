@@ -42,23 +42,23 @@
  *
  */
 
+#include <ctype.h>
+#include <errno.h>
+#include <libgen.h>
+#include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
 #include <string.h>
-#include <signal.h>
-#include <ctype.h>
-#include <libgen.h>
 #include <time.h>
-#include <errno.h>
+#include <unistd.h>
 
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
 #include <sys/uio.h>
-#include <net/if.h>
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
@@ -417,7 +417,7 @@ int main(int argc, char **argv)
 		printf("using interface name '%s'.\n", ifr.ifr_name);
 #endif
 
-		if (strcmp(ANYDEV, ifr.ifr_name)) {
+		if (strcmp(ANYDEV, ifr.ifr_name) != 0) {
 			if (ioctl(s[i], SIOCGIFINDEX, &ifr) < 0) {
 				perror("SIOCGIFINDEX");
 				exit(1);

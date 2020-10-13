@@ -10,22 +10,22 @@
  * as published by the Free Software Foundation
  */
 
-#include <signal.h>
-#include <time.h>
-#include <inttypes.h>
 #include <errno.h>
-#include <string.h>
-#include <stdlib.h>
+#include <inttypes.h>
+#include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
-#include <unistd.h>
-#include <getopt.h>
 #include <err.h>
-#include <sys/time.h>
-#include <sys/socket.h>
-#include <net/if.h>
+#include <getopt.h>
 #include <linux/can.h>
 #include <linux/can/j1939.h>
+#include <net/if.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include "libj1939.h"
 
@@ -383,10 +383,9 @@ static inline int addr_status_mine(int sa)
 {
 	if (sa == s.current_sa)
 		return '*';
-	else if (addr[sa].flags & F_USE)
+	if (addr[sa].flags & F_USE)
 		return '+';
-	else
-		return '-';
+	return '-';
 }
 
 static void dump_status(void)
@@ -472,32 +471,34 @@ int main(int argc, char *argv[])
 #endif
 	/* argument parsing */
 	while ((opt = getopt_long(argc, argv, optstring, long_opts, NULL)) != -1)
-	switch (opt) {
-	case 'v':
-		++s.verbose;
-		break;
-	case 'c':
-		s.cachefile = optarg;
-		break;
-	case 'r':
-		s.ranges = optarg;
-		break;
-	case 'a':
-		s.current_sa = strtoul(optarg, 0, 0);
-		break;
-	case 'p':
+		switch (opt) {
+		case 'v':
+			++s.verbose;
+			break;
+		case 'c':
+			s.cachefile = optarg;
+			break;
+		case 'r':
+			s.ranges = optarg;
+			break;
+		case 'a':
+			s.current_sa = strtoul(optarg, 0, 0);
+			break;
+		case 'p':
 #ifdef _GNU_SOURCE
-		if (asprintf(&program_invocation_name, "%s.%s", program_invocation_short_name, optarg) < 0)
-			err(1, "asprintf(program invocation name)");
+			if (asprintf(&program_invocation_name, "%s.%s",
+				     program_invocation_short_name, optarg) < 0)
+				err(1, "asprintf(program invocation name)");
 #else
-		err(0, "compile with -D_GNU_SOURCE to use -p");
+			err(0, "compile with -D_GNU_SOURCE to use -p");
 #endif
-		break;
-	default:
-		fputs(help_msg, stderr);
-		exit(1);
-		break;
-	}
+			break;
+		default:
+			fputs(help_msg, stderr);
+			exit(1);
+			break;
+		}
+
 	if (argv[optind])
 		s.name = strtoull(argv[optind++], 0, 16);
 	if (argv[optind])

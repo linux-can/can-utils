@@ -42,18 +42,18 @@
  *
  */
 
+#include <libgen.h>
+#include <locale.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
-#include <libgen.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <locale.h>
 
-#include <net/if.h>
 #include <linux/can.h>
 #include <linux/can/error.h>
+#include <net/if.h>
 
 #include "lib.h"
 
@@ -224,7 +224,7 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	int interface;
 	static struct timeval tv; /* current frame timestamp */
 	static struct timeval read_tv; /* frame timestamp from ASC file */
-	struct canfd_frame cf;
+	struct canfd_frame cf = {};
 	unsigned char brs, esi, ctmp;
 	unsigned int flags;
 	int dlc, dlen = 0;
@@ -240,8 +240,6 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	/* 21.671796 CANFD   1 Tx         11  msgCanFdFr1                      1 0 a 16 \
 	   00 00 00 00 00 00 00 00 00 00 00 00 00 00 59 c0		\
 	   100000  214   223040 80000000 46500250 460a0250 20011736 20010205 */
-
-	memset(&cf, 0, sizeof(cf));
 
 	/* check for valid line without symbolic name */
 	if (sscanf(buf, "%lu.%lu %*s %d %2s %s %hhx %hhx %x %d ",
@@ -335,7 +333,6 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
 	prframe(outfile, &tv, interface, &cf, dlen, extra_info);
 	fflush(outfile);
-	return;
 
 	/* No support for really strange CANFD ErrorFrames format m( */
 }
@@ -359,8 +356,7 @@ int get_date(struct timeval *tv, char *date) {
 			   before parsing the real year value (hack) */
 			if (!strptime(date, "%B %d %I:%M:%S.%Y %p %Y", &tms))
 				return 1;
-			else
-				sscanf(date, "%*s %*d %*d:%*d:%*d.%3u ", &msecs);
+			sscanf(date, "%*s %*d %*d:%*d:%*d.%3u ", &msecs);
 		}
 
 	} else {
@@ -377,11 +373,10 @@ int get_date(struct timeval *tv, char *date) {
 			   before parsing the real year value (hack) */
 			if (!strptime(date, "%B %d %H:%M:%S.%Y %Y", &tms))
 				return 1;
-			else
-				sscanf(date, "%*s %*d %*d:%*d:%*d.%3u ", &msecs);
+			sscanf(date, "%*s %*d %*d:%*d:%*d.%3u ", &msecs);
 		}
 	}
-    
+
 	//printf("h %d m %d s %d ms %03d d %d m %d y %d\n",
 	//tms.tm_hour, tms.tm_min, tms.tm_sec, msecs,
 	//tms.tm_mday, tms.tm_mon+1, tms.tm_year+1900);

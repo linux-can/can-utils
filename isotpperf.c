@@ -42,18 +42,18 @@
  *
  */
 
+#include <libgen.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
 #include <string.h>
-#include <libgen.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <net/if.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
@@ -223,19 +223,21 @@ int main(int argc, char **argv)
 			ret = nbytes;
 			running = 0;
 			continue;
-		} else if (nbytes != CAN_MTU && nbytes != CANFD_MTU) {
+		}
+		if (nbytes != CAN_MTU && nbytes != CANFD_MTU) {
 			fprintf(stderr, "read: incomplete CAN frame %zu %d\n", sizeof(frame), nbytes);
 			ret = nbytes;
 			running = 0;
 			continue;
-		} else {
-			if (rcvlen) {
-				/* make sure to process only the detected PDU CAN frame type */
-				if (canfd_on && (nbytes != CANFD_MTU))
-					continue;
-				if (!canfd_on && (nbytes != CAN_MTU))
-					continue;
-			}
+		}
+
+		if (rcvlen) {
+			/* make sure to process only the detected PDU CAN frame type */
+			if (canfd_on && (nbytes != CANFD_MTU))
+				continue;
+			if (!canfd_on && (nbytes != CAN_MTU))
+				continue;
+		}
 
 			/* check extended address if provided */
 			if (ext && extaddr != frame.data[0])
@@ -255,7 +257,7 @@ int main(int argc, char **argv)
 				} else
 					continue;
 			}
-			
+
 			/* data content starts and index datidx */
 			datidx = 0;
 
@@ -355,7 +357,7 @@ int main(int argc, char **argv)
 			if (rcvlen) {
 				if (rcvlen > fflen)
 					rcvlen = fflen;
-				
+
 				percent = (rcvlen * 100 / fflen);
 				printf("\r %3lu%% ", percent);
 
@@ -408,7 +410,6 @@ int main(int argc, char **argv)
 				fflen = rcvlen = 0;
 			}
 			fflush(stdout);
-		}
 	}
 
 	close(s);

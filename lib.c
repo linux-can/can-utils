@@ -42,13 +42,13 @@
  *
  */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdint.h>
 
-#include <sys/socket.h> /* for sa_family_t */
 #include <linux/can.h>
 #include <linux/can/error.h>
+#include <sys/socket.h> /* for sa_family_t */
 
 #include "lib.h"
 
@@ -588,7 +588,7 @@ void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *c
 		if (class & mask) {
 			if (classes)
 				n += snprintf(buf + n, len - n, "%s", sep);
- 			n += snprintf(buf + n, len - n, "%s", error_classes[i]);
+			n += snprintf(buf + n, len - n, "%s", error_classes[i]);
 			if (mask == CAN_ERR_LOSTARB)
 				n += snprintf_error_lostarb(buf + n, len - n,
 							   cf);
