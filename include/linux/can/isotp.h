@@ -1,10 +1,10 @@
+/* SPDX-License-Identifier: ((GPL-2.0-only WITH Linux-syscall-note) OR BSD-3-Clause) */
 /*
  * linux/can/isotp.h
  *
- * Definitions for isotp CAN sockets
+ * Definitions for isotp CAN sockets (ISO 15765-2:2016)
  *
- * Author: Oliver Hartkopp <oliver.hartkopp@volkswagen.de>
- * Copyright (c) 2008 Volkswagen Group Electronic Research
+ * Copyright (c) 2020 Volkswagen Group Electronic Research
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,13 +39,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- *
- * Send feedback to <linux-can@vger.kernel.org>
  */
 
-#ifndef CAN_ISOTP_H
-#define CAN_ISOTP_H
+#ifndef _UAPI_CAN_ISOTP_H
+#define _UAPI_CAN_ISOTP_H
 
+#include <linux/types.h>
 #include <linux/can.h>
 
 #define SOL_CAN_ISOTP (SOL_CAN_BASE + CAN_ISOTP)
@@ -123,7 +122,6 @@ struct can_isotp_ll_options {
 				/* by the CAN netdriver configuration	*/
 };
 
-
 /* flags for isotp behaviour */
 
 #define CAN_ISOTP_LISTEN_MODE	0x001	/* listen only (do not send FC) */
@@ -162,7 +160,6 @@ struct can_isotp_ll_options {
  * these default settings can be changed via sockopts.
  * For that reason the STmin value is intentionally _not_ checked for
  * consistency and copied directly into the flow control (FC) frame.
- *
  */
 
-#endif
+#endif /* !_UAPI_CAN_ISOTP_H */
