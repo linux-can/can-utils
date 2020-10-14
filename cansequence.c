@@ -1,3 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+// Copyright (c) 2007, 2008, 2009, 2010, 2014, 2015, 2019 Pengutronix,
+//		 Marc Kleine-Budde <kernel@pengutronix.de>
+// Copyright (c) 2005 Pengutronix,
+//		 Sascha Hauer <kernel@pengutronix.de>
+
 #include <can_config.h>
 
 #include <errno.h>
