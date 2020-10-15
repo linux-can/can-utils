@@ -2,6 +2,9 @@ language: c
 
 matrix:
     include:
+
+# native
+
         - env: test="x64 4.8.4 (make)"
           os: linux
           dist: trusty
@@ -46,6 +49,61 @@ matrix:
               - mkdir clang_ninja_dbg && cd clang_ninja_dbg
               - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug
           script: ninja
+
+# ppc64le
+
+        - env: test="x64 4.8.4 (make)"
+          os: linux
+          dist: trusty
+          compiler: gcc
+          script: make
+          arch: ppc64le
+
+        - env: test="x64 4.8.4 (autotools)"
+          os: linux
+          dist: trusty
+          compiler: gcc
+          script: ./autogen.sh && ./configure CFLAGS="-Werror -Wno-unused-result" && make distcheck
+          arch: ppc64le
+
+        - env: test="x64 5.0 (autotools)"
+          os: linux
+          dist: trusty
+          compiler: clang
+          script: ./autogen.sh && ./configure CFLAGS="-Werror -Wno-unused-result" && make distcheck
+          arch: ppc64le
+
+        - env: test="x64 4.8.4 (CMake gcc)"
+          os: linux
+          dist: trusty
+          compiler: gcc
+          before_script:
+              - mkdir gcc_rel && cd gcc_rel
+              - cmake ..
+          script: make
+          arch: ppc64le
+
+        - env: test="x64 5.0 (CMake clang)"
+          os: linux
+          dist: trusty
+          compiler: clang
+          before_script:
+              - mkdir clang_rel && cd clang_rel
+              - cmake ..
+          script: make
+          arch: ppc64le
+
+        - env: test="x64 5.0 (CMake clang - Ninja) Debug"
+          os: linux
+          dist: trusty
+          compiler: clang
+          before_script:
+              - mkdir clang_ninja_dbg && cd clang_ninja_dbg
+              - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug
+          script: ninja
+          arch: ppc64le
+
+# Android
 
         - env: test="Android NDK (CMake)"
           os: linux
