@@ -147,6 +147,35 @@ LOCAL_VENDOR_MODULE := true
 include $(BUILD_EXECUTABLE)
 
 #
+# cansequence
+#
+
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := cansequence.c
+LOCAL_MODULE := cansequence
+LOCAL_MODULE_TAGS := optional
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/include/
+LOCAL_CFLAGS := $(PRIVATE_LOCAL_CFLAGS)
+
+include $(BUILD_EXECUTABLE)
+
+#
+# cansequence
+#
+
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := cansequence.c
+LOCAL_MODULE := cansequence
+LOCAL_MODULE_TAGS := optional
+LOCAL_STATIC_LIBRARIES := libcan
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/include/
+LOCAL_CFLAGS := $(PRIVATE_LOCAL_CFLAGS)
+
+include $(BUILD_EXECUTABLE)
+
+#
 # bcmserver
 #
 

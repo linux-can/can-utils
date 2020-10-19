@@ -33,6 +33,7 @@ set(PROGRAMS_CANLIB
     canlogserver
     canplayer
     cansend
+    cansequence
     log2asc
     log2long
 )

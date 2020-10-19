@@ -89,6 +89,7 @@ PROGRAMS := \
 	candump \
 	canfdtest \
 	cangen \
+	cansequence \
 	canlogserver \
 	canplayer \
 	cansend \
@@ -116,6 +117,7 @@ cangen.o:	lib.h
 canlogserver.o:	lib.h
 canplayer.o:	lib.h
 cansend.o:	lib.h
+cansequence.o:	lib.h
 log2asc.o:	lib.h
 log2long.o:	lib.h
 j1939acd.o:	libj1939.h
@@ -131,6 +133,7 @@ cangen:		cangen.o	lib.o
 canlogserver:	canlogserver.o	lib.o
 canplayer:	canplayer.o	lib.o
 cansend:	cansend.o	lib.o
+cansequence:	cansequence.o	lib.o
 log2asc:	log2asc.o	lib.o
 log2long:	log2long.o	lib.o
 j1939acd:	j1939acd.o	libj1939.o

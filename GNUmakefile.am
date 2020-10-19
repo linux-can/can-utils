@@ -50,6 +50,7 @@ bin_PROGRAMS = \
 	canlogserver \
 	canplayer \
 	cansend \
+	cansequence \
 	cansniffer \
 	isotpdump \
 	isotpperf \
