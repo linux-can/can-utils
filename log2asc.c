@@ -68,7 +68,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -4  (reduce decimal place to 4 digits)\n");
 	fprintf(stderr, "         -n  (set newline to cr/lf - default lf)\n");
 	fprintf(stderr, "         -f  (use CANFD format also for Classic CAN)\n");
-	fprintf(stderr, "         -r  (supress dlc for RTR frames - pre v8.5 tools)\n");
+	fprintf(stderr, "         -r  (suppress dlc for RTR frames - pre v8.5 tools)\n");
 }
 
 void can_asc(struct canfd_frame *cf, int devno, int nortrdlc, char *extra_info, FILE *outfile)
