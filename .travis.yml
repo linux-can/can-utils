@@ -52,28 +52,28 @@ matrix:
 
 # ppc64le
 
-        - env: test="x64 4.8.4 (make)"
+        - env: test="ppc64le 4.8.4 (make)"
           os: linux
           dist: trusty
           compiler: gcc
           script: make
           arch: ppc64le
 
-        - env: test="x64 4.8.4 (autotools)"
+        - env: test="ppc64le 4.8.4 (autotools)"
           os: linux
           dist: trusty
           compiler: gcc
           script: ./autogen.sh && ./configure CFLAGS="-Werror -Wno-unused-result" && make distcheck
           arch: ppc64le
 
-        - env: test="x64 5.0 (autotools)"
+        - env: test="ppc64le 5.0 (autotools)"
           os: linux
           dist: trusty
           compiler: clang
           script: ./autogen.sh && ./configure CFLAGS="-Werror -Wno-unused-result" && make distcheck
           arch: ppc64le
 
-        - env: test="x64 4.8.4 (CMake gcc)"
+        - env: test="ppc64le 4.8.4 (CMake gcc)"
           os: linux
           dist: trusty
           compiler: gcc
@@ -83,7 +83,7 @@ matrix:
           script: make
           arch: ppc64le
 
-        - env: test="x64 5.0 (CMake clang)"
+        - env: test="ppc64le 5.0 (CMake clang)"
           os: linux
           dist: trusty
           compiler: clang
@@ -93,7 +93,7 @@ matrix:
           script: make
           arch: ppc64le
 
-        - env: test="x64 5.0 (CMake clang - Ninja) Debug"
+        - env: test="ppc64le 5.0 (CMake clang - Ninja) Debug"
           os: linux
           dist: trusty
           compiler: clang
