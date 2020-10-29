@@ -99,10 +99,11 @@ int parse_canframe(char *cs, struct canfd_frame *cf);
 /*
  * Transfers a valid ASCII string describing a CAN frame into struct canfd_frame.
  *
- * CAN 2.0 frames
- * - string layout <can_id>#{R{len}|data}
+ * CAN 2.0 frames (aka Classical CAN)
+ * - string layout <can_id>#{R{len}|data}{_len8_dlc}
  * - {data} has 0 to 8 hex-values that can (optionally) be separated by '.'
  * - {len} can take values from 0 to 8 and can be omitted if zero
+ * - {_len8_dlc} can take hex values from '_9' to '_F' when len is CAN_MAX_DLEN
  * - return value on successful parsing: CAN_MTU
  *
  * CAN FD frames
@@ -124,10 +125,12 @@ int parse_canframe(char *cs, struct canfd_frame *cf);
  * 123#R -> standard CAN-Id = 0x123, len = 0, RTR-frame
  * 123#R0 -> standard CAN-Id = 0x123, len = 0, RTR-frame
  * 123#R7 -> standard CAN-Id = 0x123, len = 7, RTR-frame
+ * 123#R8_9 -> standard CAN-Id = 0x123, len = 8, dlc = 9, RTR-frame
  * 7A1#r -> standard CAN-Id = 0x7A1, len = 0, RTR-frame
  *
  * 123#00 -> standard CAN-Id = 0x123, len = 1, data[0] = 0x00
  * 123#1122334455667788 -> standard CAN-Id = 0x123, len = 8
+ * 123#1122334455667788_E -> standard CAN-Id = 0x123, len = 8, dlc = 14
  * 123#11.22.33.44.55.66.77.88 -> standard CAN-Id = 0x123, len = 8
  * 123#11.2233.44556677.88 -> standard CAN-Id = 0x123, len = 8
  * 32345678#112233 -> error frame with CAN_ERR_FLAG (0x2000000) set
@@ -155,10 +158,11 @@ void sprint_canframe(char *buf , struct canfd_frame *cf, int sep, int maxdlen);
  * The CAN data[] is separated by '.' when sep != 0.
  *
  * The type of the CAN frame (CAN 2.0 / CAN FD) is specified by maxdlen:
- * maxdlen = 8 -> CAN2.0 frame
+ * maxdlen = 8 -> CAN2.0 frame (aka Classical CAN)
  * maxdlen = 64 -> CAN FD frame
  *
  * 12345678#112233 -> extended CAN-Id = 0x12345678, len = 3, data, sep = 0
+ * 123#1122334455667788_E -> standard CAN-Id = 0x123, len = 8, dlc = 14, data, sep = 0
  * 12345678#R -> extended CAN-Id = 0x12345678, RTR, len = 0
  * 12345678#R5 -> extended CAN-Id = 0x12345678, RTR, len = 5
  * 123#11.22.33.44.55.66.77.88 -> standard CAN-Id = 0x123, dlc = 8, sep = 1
@@ -187,7 +191,7 @@ void sprint_long_canframe(char *buf , struct canfd_frame *cf, int view, int maxd
  * Creates a CAN frame hexadecimal output in user readable format.
  *
  * The type of the CAN frame (CAN 2.0 / CAN FD) is specified by maxdlen:
- * maxdlen = 8 -> CAN2.0 frame
+ * maxdlen = 8 -> CAN2.0 frame (aka Classical CAN)
  * maxdlen = 64 -> CAN FD frame
  *
  * 12345678   [3]  11 22 33 -> extended CAN-Id = 0x12345678, dlc = 3, data
