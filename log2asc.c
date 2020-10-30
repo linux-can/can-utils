@@ -116,6 +116,7 @@ void canfd_asc(struct canfd_frame *cf, int devno, int mtu, char *extra_info, FIL
 	char *dir = "Rx";
 	unsigned int flags = 0;
 	unsigned int dlen = cf->len;
+	unsigned int dlc = can_len2dlc(dlen);
 
 	/* relevant flags in Flags field */
 #define ASC_F_RTR 0x00000010
@@ -137,7 +138,16 @@ void canfd_asc(struct canfd_frame *cf, int devno, int mtu, char *extra_info, FIL
 	fprintf(outfile, "%11s                                  ", id);
 	fprintf(outfile, "%c ", (cf->flags & CANFD_BRS)?'1':'0');
 	fprintf(outfile, "%c ", (cf->flags & CANFD_ESI)?'1':'0');
-	fprintf(outfile, "%x ", can_len2dlc(dlen));
+
+	/* check for extra DLC when having a Classic CAN with 8 bytes payload */
+	if ((mtu == CAN_MTU) && (dlen == CAN_MAX_DLEN)) {
+		struct can_frame *ccf = (struct can_frame *)cf;
+
+		if ((ccf->len8_dlc > CAN_MAX_DLEN) && (ccf->len8_dlc <= CAN_MAX_RAW_DLC))
+			dlc = ccf->len8_dlc;
+	}
+
+	fprintf(outfile, "%x ", dlc);
 
 	if (mtu == CAN_MTU) {
 		if (cf->can_id & CAN_RTR_FLAG) {

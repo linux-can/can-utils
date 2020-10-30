@@ -327,6 +327,15 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 			/* dlen is always 0 for classic CAN RTR frames
 			   but the DLC value is valid in RTR cases */
 			cf.len = dlc;
+			/* sanitize payload length value */
+			if (dlc > CAN_MAX_DLEN)
+				cf.len = CAN_MAX_DLEN;
+		}
+		/* check for extra DLC when having a Classic CAN with 8 bytes payload */
+		if ((cf.len == CAN_MAX_DLEN) && (dlc > CAN_MAX_DLEN) && (dlc <= CAN_MAX_RAW_DLC)) {
+			struct can_frame *ccf = (struct can_frame *)&cf;
+
+			ccf->len8_dlc = dlc;
 		}
 	}
 
