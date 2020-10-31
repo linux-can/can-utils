@@ -92,7 +92,8 @@ void print_usage(char *prg)
 		" with bitrate switch (BRS))\n");
 	fprintf(stderr, "         -E            (generate CAN FD CAN frames"
 		" with error state (ESI))\n");
-	fprintf(stderr, "         -R            (send RTR frame)\n");
+	fprintf(stderr, "         -R            (generate RTR frames)\n");
+	fprintf(stderr, "         -8            (allow DLC values greater then 8 for Classic CAN frames)\n");
 	fprintf(stderr, "         -m            (mix -e -f -b -E -R frames)\n");
 	fprintf(stderr, "         -I <mode>     (CAN ID"
 		" generation mode - see below)\n");
@@ -156,6 +157,7 @@ int main(int argc, char **argv)
 	unsigned char loopback_disable = 0;
 	unsigned char verbose = 0;
 	unsigned char rtr_frame = 0;
+	unsigned char len8_dlc = 0;
 	int count = 0;
 	unsigned long burst_sent_count = 0;
 	int mtu, maxdlen;
@@ -185,7 +187,7 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	while ((opt = getopt(argc, argv, "ig:ebEfmI:L:D:xp:n:c:vRh?")) != -1) {
+	while ((opt = getopt(argc, argv, "ig:ebEfmI:L:D:xp:n:c:vR8h?")) != -1) {
 		switch (opt) {
 
 		case 'i':
@@ -269,6 +271,10 @@ int main(int argc, char **argv)
 
 		case 'R':
 			rtr_frame = 1;
+			break;
+
+		case '8':
+			len8_dlc = 1;
 			break;
 
 		case 'p':
@@ -414,11 +420,13 @@ int main(int argc, char **argv)
 			else {
 				frame.len = random() & 0xF;
 
-				/* generate Classic CAN len8 DLCs */
 				if (frame.len > CAN_MAX_DLEN) {
-					struct can_frame *ccf = (struct can_frame *)&frame;
+					if (len8_dlc) {
+						struct can_frame *ccf = (struct can_frame *)&frame;
 
-					ccf->len8_dlc = frame.len;
+						/* generate Classic CAN len8 DLCs */
+						ccf->len8_dlc = frame.len;
+					}
 					frame.len = 8; /* for about 50% of the frames */
 				}
 			}
