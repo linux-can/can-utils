@@ -172,6 +172,7 @@ int main(int argc, char **argv)
 
 	struct sockaddr_can addr;
 	static struct canfd_frame frame;
+	struct can_frame *ccf = (struct can_frame *)&frame;
 	int nbytes;
 	int i;
 	struct ifreq ifr;
@@ -385,6 +386,7 @@ int main(int argc, char **argv)
 
 	while (running) {
 		frame.flags = 0;
+		ccf->len8_dlc = 0;
 
 		if (count && (--count == 0))
 			running = 0;
