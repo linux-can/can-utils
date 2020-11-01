@@ -423,12 +423,10 @@ int main(int argc, char **argv)
 				frame.len = random() & 0xF;
 
 				if (frame.len > CAN_MAX_DLEN) {
-					if (len8_dlc) {
-						struct can_frame *ccf = (struct can_frame *)&frame;
-
-						/* generate Classic CAN len8 DLCs */
+					/* generate Classic CAN len8 DLCs? */
+					if (len8_dlc)
 						ccf->len8_dlc = frame.len;
-					}
+
 					frame.len = 8; /* for about 50% of the frames */
 				}
 			}
