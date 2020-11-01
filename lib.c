@@ -381,9 +381,23 @@ void sprint_long_canframe(char *buf , struct canfd_frame *cf, int view, int maxd
 
 	/* The len value is sanitized by maxdlen (see above) */
 	if (maxdlen == CAN_MAX_DLEN) {
-		buf[offset + 1] = '[';
-		buf[offset + 2] = len + '0';
-		buf[offset + 3] = ']';
+		if (view & CANLIB_VIEW_LEN8_DLC) {
+			struct can_frame *ccf = (struct can_frame *)cf;
+			unsigned char dlc = ccf->len8_dlc;
+
+			/* fall back to len if we don't have a valid DLC > 8 */
+			if (!((len == CAN_MAX_DLEN) && (dlc > CAN_MAX_DLEN) &&
+			      (dlc <= CAN_MAX_RAW_DLC)))
+				dlc = len;
+
+			buf[offset + 1] = '{';
+			buf[offset + 2] = hex_asc_upper[dlc];
+			buf[offset + 3] = '}';
+		} else {
+			buf[offset + 1] = '[';
+			buf[offset + 2] = len + '0';
+			buf[offset + 3] = ']';
+		}
 
 		/* standard CAN frames may have RTR enabled */
 		if (cf->can_id & CAN_RTR_FLAG) {

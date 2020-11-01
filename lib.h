@@ -182,6 +182,7 @@ void sprint_canframe(char *buf , struct canfd_frame *cf, int sep, int maxdlen);
 #define CANLIB_VIEW_SWAP	0x4
 #define CANLIB_VIEW_ERROR	0x8
 #define CANLIB_VIEW_INDENT_SFF	0x10
+#define CANLIB_VIEW_LEN8_DLC	0x20
 
 #define SWAP_DELIMITER '`'
 
@@ -194,11 +195,12 @@ void sprint_long_canframe(char *buf , struct canfd_frame *cf, int view, int maxd
  * maxdlen = 8 -> CAN2.0 frame (aka Classical CAN)
  * maxdlen = 64 -> CAN FD frame
  *
- * 12345678   [3]  11 22 33 -> extended CAN-Id = 0x12345678, dlc = 3, data
+ * 12345678   [3]  11 22 33 -> extended CAN-Id = 0x12345678, len = 3, data
  * 12345678   [0]  remote request -> extended CAN-Id = 0x12345678, RTR
  * 14B0DC51   [8]  4A 94 E8 2A EC 58 55 62   'J..*.XUb' -> (with ASCII output)
+ * 321   {B}  11 22 33 44 55 66 77 88 -> Classical CAN with raw '{DLC}' value B
  * 20001111   [7]  C6 23 7B 32 69 98 3C      ERRORFRAME -> (CAN_ERR_FLAG set)
- * 12345678  [03]  11 22 33 -> CAN FD with extended CAN-Id = 0x12345678, dlc = 3
+ * 12345678  [03]  11 22 33 -> CAN FD with extended CAN-Id = 0x12345678, len = 3
  *
  * 123   [3]  11 22 33         -> CANLIB_VIEW_INDENT_SFF == 0
  *      123   [3]  11 22 33    -> CANLIB_VIEW_INDENT_SFF == set
@@ -208,7 +210,7 @@ void sprint_long_canframe(char *buf , struct canfd_frame *cf, int view, int maxd
  * // CAN FD frame with eol to STDOUT
  * fprint_long_canframe(stdout, &frame, "\n", 0, CANFD_MAX_DLEN);
  *
- * // CAN 2.0 frame without eol to STDERR
+ * // Classical CAN 2.0 frame without eol to STDERR
  * fprint_long_canframe(stderr, &frame, NULL, 0, CAN_MAX_DLEN);
  *
  */

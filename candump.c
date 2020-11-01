@@ -134,6 +134,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -D          (Don't exit if a \"detected\" can device goes down.\n");
 	fprintf(stderr, "         -d          (monitor dropped CAN frames)\n");
 	fprintf(stderr, "         -e          (dump CAN error frames in human-readable format)\n");
+	fprintf(stderr, "         -8          (display raw DLC values in {} for Classical CAN)\n");
 	fprintf(stderr, "         -x          (print extra message infos, rx/tx brs esi)\n");
 	fprintf(stderr, "         -T <msecs>  (terminate after <msecs> without any reception)\n");
 	fprintf(stderr, "\n");
@@ -255,7 +256,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:HciaSs:lDdxLn:r:heT:?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:HciaSs:lDdxLn:r:he8T:?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -289,6 +290,10 @@ int main(int argc, char **argv)
 
 		case 'e':
 			view |= CANLIB_VIEW_ERROR;
+			break;
+
+		case '8':
+			view |= CANLIB_VIEW_LEN8_DLC;
 			break;
 
 		case 's':
@@ -359,7 +364,7 @@ int main(int argc, char **argv)
 	}
 	
 	if (logfrmt && view) {
-		fprintf(stderr, "Log file format selected: Please disable ASCII/BINARY/SWAP options!\n");
+		fprintf(stderr, "Log file format selected: Please disable ASCII/BINARY/SWAP/RAWDLC options!\n");
 		exit(0);
 	}
 
