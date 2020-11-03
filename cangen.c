@@ -386,7 +386,6 @@ int main(int argc, char **argv)
 
 	while (running) {
 		frame.flags = 0;
-		ccf->len8_dlc = 0;
 
 		if (count && (--count == 0))
 			running = 0;
@@ -428,6 +427,8 @@ int main(int argc, char **argv)
 						ccf->len8_dlc = frame.len;
 
 					frame.len = 8; /* for about 50% of the frames */
+				} else {
+					ccf->len8_dlc = 0;
 				}
 			}
 		}
@@ -507,12 +508,20 @@ resend:
 		if (dlc_mode == MODE_INCREMENT) {
 
 			incdlc++;
+			incdlc %= CAN_MAX_RAW_DLC + 1;
 
-			if (canfd && !mix) {
-				incdlc &= 0xF;
+			if (canfd && !mix)
 				frame.len = can_dlc2len(incdlc);
+			else if (len8_dlc) {
+				if (incdlc > CAN_MAX_DLEN) {
+					frame.len = CAN_MAX_DLEN;
+					ccf->len8_dlc = incdlc;
+				} else {
+					frame.len = incdlc;
+					ccf->len8_dlc = 0;
+				}
 			} else {
-				incdlc %= 9;
+				incdlc %= CAN_MAX_DLEN + 1;
 				frame.len = incdlc;
 			}
 		}
