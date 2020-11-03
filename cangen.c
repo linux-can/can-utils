@@ -369,9 +369,17 @@ int main(int argc, char **argv)
 		/* ensure discrete CAN FD length values 0..8, 12, 16, 20, 24, 32, 64 */
 		frame.len = can_dlc2len(can_len2dlc(frame.len));
 	} else {
-		/* sanitize CAN 2.0 frame length */
-		if (frame.len > 8)
-			frame.len = 8;
+		/* sanitize Classical CAN 2.0 frame length */
+		if (len8_dlc) {
+			if (frame.len > CAN_MAX_RAW_DLC)
+				frame.len = CAN_MAX_RAW_DLC;
+
+			if (frame.len > CAN_MAX_DLEN)
+				ccf->len8_dlc = frame.len;
+		}
+
+		if (frame.len > CAN_MAX_DLEN)
+			frame.len = CAN_MAX_DLEN;
 	}
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
