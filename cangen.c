@@ -114,9 +114,9 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -v            (increment verbose level for "
 		"printing sent CAN frames)\n\n");
 	fprintf(stderr, "Generation modes:\n");
-	fprintf(stderr, " 'r'         => random values (default)\n");
-	fprintf(stderr, " 'i'         => increment values\n");
-	fprintf(stderr, " <hexvalue>  => fix value using <hexvalue>\n\n");
+	fprintf(stderr, " 'r'     => random values (default)\n");
+	fprintf(stderr, " 'i'     => increment values\n");
+	fprintf(stderr, " <value> => fixed value (in hexadecimal for -I and -D)\n\n");
 	fprintf(stderr, "When incrementing the CAN data the data length code "
 		"minimum is set to 1.\n");
 	fprintf(stderr, "CAN IDs and data content are given and expected in hexadecimal values.\n\n");
