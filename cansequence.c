@@ -229,7 +229,7 @@ static void do_send()
 			}
 		}
 
-		(unsigned char)frame.data[0]++;
+		frame.data[0]++;
 		sequence++;
 
 		if (verbose && !sequence)
