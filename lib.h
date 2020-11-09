@@ -61,11 +61,11 @@
 
 /* CAN DLC to real data length conversion helpers especially for CAN FD */
 
-/* get data length from can_dlc with sanitized can_dlc */
-unsigned char can_dlc2len(unsigned char can_dlc);
+/* get data length from raw data length code (DLC) */
+unsigned char can_fd_dlc2len(unsigned char dlc);
 
 /* map the sanitized data length to an appropriate data length code */
-unsigned char can_len2dlc(unsigned char len);
+unsigned char can_fd_len2dlc(unsigned char len);
 
 unsigned char asc2nibble(char c);
 /*

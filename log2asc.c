@@ -116,7 +116,7 @@ void canfd_asc(struct canfd_frame *cf, int devno, int mtu, char *extra_info, FIL
 	char *dir = "Rx";
 	unsigned int flags = 0;
 	unsigned int dlen = cf->len;
-	unsigned int dlc = can_len2dlc(dlen);
+	unsigned int dlc = can_fd_len2dlc(dlen);
 
 	/* relevant flags in Flags field */
 #define ASC_F_RTR 0x00000010

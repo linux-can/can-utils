@@ -270,7 +270,7 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 		extra_info = " T\n";
 
 	/* don't trust ASCII content - sanitize data length */
-	if (dlen != can_dlc2len(can_len2dlc(dlen)))
+	if (dlen != can_fd_dlc2len(can_fd_len2dlc(dlen)))
 		return;
 
 	get_can_id(&cf, tmp1, 16);
