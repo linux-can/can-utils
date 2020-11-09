@@ -367,7 +367,7 @@ int main(int argc, char **argv)
 		}
 
 		/* ensure discrete CAN FD length values 0..8, 12, 16, 20, 24, 32, 64 */
-		frame.len = can_dlc2len(can_len2dlc(frame.len));
+		frame.len = can_fd_dlc2len(can_fd_len2dlc(frame.len));
 	} else {
 		/* sanitize Classical CAN 2.0 frame length */
 		if (len8_dlc) {
@@ -425,7 +425,7 @@ int main(int argc, char **argv)
 		if (dlc_mode == MODE_RANDOM) {
 
 			if (canfd)
-				frame.len = can_dlc2len(random() & 0xF);
+				frame.len = can_fd_dlc2len(random() & 0xF);
 			else {
 				frame.len = random() & 0xF;
 
@@ -519,7 +519,7 @@ resend:
 			incdlc %= CAN_MAX_RAW_DLC + 1;
 
 			if (canfd && !mix)
-				frame.len = can_dlc2len(incdlc);
+				frame.len = can_fd_dlc2len(incdlc);
 			else if (len8_dlc) {
 				if (incdlc > CAN_MAX_DLEN) {
 					frame.len = CAN_MAX_DLEN;

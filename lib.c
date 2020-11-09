@@ -84,10 +84,10 @@ static inline void _put_id(char *buf, int end_offset, canid_t id)
 static const unsigned char dlc2len[] = {0, 1, 2, 3, 4, 5, 6, 7,
 					8, 12, 16, 20, 24, 32, 48, 64};
 
-/* get data length from can_dlc with sanitized can_dlc */
-unsigned char can_dlc2len(unsigned char can_dlc)
+/* get data length from raw data length code (DLC) */
+unsigned char can_fd_dlc2len(unsigned char dlc)
 {
-	return dlc2len[can_dlc & 0x0F];
+	return dlc2len[dlc & 0x0F];
 }
 
 static const unsigned char len2dlc[] = {0, 1, 2, 3, 4, 5, 6, 7, 8,		/* 0 - 8 */
@@ -102,7 +102,7 @@ static const unsigned char len2dlc[] = {0, 1, 2, 3, 4, 5, 6, 7, 8,		/* 0 - 8 */
 					15, 15, 15, 15, 15, 15, 15, 15};	/* 57 - 64 */
 
 /* map the sanitized data length to an appropriate data length code */
-unsigned char can_len2dlc(unsigned char len)
+unsigned char can_fd_len2dlc(unsigned char len)
 {
 	if (len > 64)
 		return 0xF;

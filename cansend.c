@@ -147,7 +147,7 @@ int main(int argc, char **argv)
 		}
 
 		/* ensure discrete CAN FD length values 0..8, 12, 16, 20, 24, 32, 64 */
-		frame.len = can_dlc2len(can_len2dlc(frame.len));
+		frame.len = can_fd_dlc2len(can_fd_len2dlc(frame.len));
 	}
 
 	/* disable default receive filter on this RAW socket */
