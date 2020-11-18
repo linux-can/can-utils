@@ -240,7 +240,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "          -u <uid>  (user defined modification identifier)\n");
 	fprintf(stderr, "          -l <hops>  (limit the number of frame hops / routings)\n");
 	fprintf(stderr, "          -f <filter>  (set CAN filter)\n");
-	fprintf(stderr, "          -m <mod>  (set Classic CAN frame modifications)\n");
+	fprintf(stderr, "          -m <mod>  (set Classical CAN frame modifications)\n");
 	fprintf(stderr, "          -M <MOD>  (set CAN FD frame modifications)\n");
 	fprintf(stderr, "          -x <from_idx>:<to_idx>:<result_idx>:<init_xor_val>  (XOR checksum)\n");
 	fprintf(stderr, "          -c <from>:<to>:<result>:<init_val>:<xor_val>:<crctab[256]>  (CRC8 cs)\n");
@@ -251,12 +251,12 @@ void print_usage(char *prg)
 	fprintf(stderr, "  <can_id>:<can_mask>  (matches when <received_can_id> & mask == can_id & mask)\n");
 	fprintf(stderr, "  <can_id>~<can_mask>  (matches when <received_can_id> & mask != can_id & mask)\n");
 	fprintf(stderr, "\n");
-	fprintf(stderr, "<mod> is a CAN frame modification instruction consisting of\n");
+	fprintf(stderr, "<mod> is a Classical CAN frame modification instruction consisting of\n");
 	fprintf(stderr, "<instruction>:<can_frame-elements>:<can_id>.<can_dlc>.<can_data>\n");
 	fprintf(stderr, "  <instruction>  is one of 'AND' 'OR' 'XOR' 'SET'\n");
 	fprintf(stderr, "  <can_frame-elements>  is _one_ or _more_ of 'I'dentifier 'L'ength 'D'ata\n");
 	fprintf(stderr, "  <can_id>  is an u32 value containing the CAN Identifier\n");
-	fprintf(stderr, "  <can_dlc>  is an u8 value containing the data length code (0 .. 8)\n");
+	fprintf(stderr, "  <can_dlc>  is an u8 value containing the data length code (0 .. 15)\n");
 	fprintf(stderr, "  <can_data>  is always eight(!) u8 values containing the CAN frames data\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "<MOD> is a CAN FD frame modification instruction consisting of\n");
