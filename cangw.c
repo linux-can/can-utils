@@ -256,7 +256,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "  <instruction>  is one of 'AND' 'OR' 'XOR' 'SET'\n");
 	fprintf(stderr, "  <can_frame-elements>  is _one_ or _more_ of 'I'dentifier 'L'ength 'D'ata\n");
 	fprintf(stderr, "  <can_id>  is an u32 value containing the CAN Identifier\n");
-	fprintf(stderr, "  <can_dlc>  is an u8 value containing the data length code (0 .. 15)\n");
+	fprintf(stderr, "  <can_dlc>  is an u8 value containing the data length code in hex (0 .. F)\n");
 	fprintf(stderr, "  <can_data>  is always eight(!) u8 values containing the CAN frames data\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "<MOD> is a CAN FD frame modification instruction consisting of\n");
@@ -265,7 +265,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "  <canfd_frame-elements>  is _one_ or _more_ of 'I'd 'F'lags 'L'ength 'D'ata\n");
 	fprintf(stderr, "  <can_id>  is an u32 value containing the CAN FD Identifier\n");
 	fprintf(stderr, "  <flags>  is an u8 value containing CAN FD flags (CANFD_BRS, CANFD_ESI)\n");
-	fprintf(stderr, "  <len>  is an u8 value containing the data length (0 .. 64)\n");
+	fprintf(stderr, "  <len>  is an u8 value containing the data length in hex (0 .. 40)\n");
 	fprintf(stderr, "  <can_data>  is always 64(!) u8 values containing the CAN FD frames data\n");
 	fprintf(stderr, "The max. four modifications are performed in the order AND -> OR -> XOR -> SET\n");
 	fprintf(stderr, "\n");
