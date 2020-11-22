@@ -53,6 +53,7 @@
 #include "lib.h"
 
 #define CANID_DELIM '#'
+#define CC_DLC_DELIM '_'
 #define DATA_SEPERATOR '.'
 
 const char hex_asc_upper[] = "0123456789ABCDEF";
@@ -195,9 +196,19 @@ int parse_canframe(char *cs, struct canfd_frame *cf) {
 		cf->can_id |= CAN_RTR_FLAG;
 
 		/* check for optional DLC value for CAN 2.0B frames */
-		if(cs[++idx] && (tmp = asc2nibble(cs[idx])) <= CAN_MAX_DLC)
+		if(cs[++idx] && (tmp = asc2nibble(cs[idx++])) <= CAN_MAX_DLEN) {
 			cf->len = tmp;
 
+			/* check for optional raw DLC value for CAN 2.0B frames */
+			if ((tmp == CAN_MAX_DLEN) && (cs[idx++] == CC_DLC_DELIM)) {
+				tmp = asc2nibble(cs[idx]);
+				if ((tmp > CAN_MAX_DLEN) && (tmp <= CAN_MAX_RAW_DLC)) {
+					struct can_frame *ccf = (struct can_frame *)cf;
+
+					ccf->len8_dlc = tmp;
+				}
+			}
+		}
 		return ret;
 	}
 
@@ -231,6 +242,17 @@ int parse_canframe(char *cs, struct canfd_frame *cf) {
 		dlen++;
 	}
 	cf->len = dlen;
+
+	/* check for extra DLC when having a Classic CAN with 8 bytes payload */
+	if ((maxdlen == CAN_MAX_DLEN) && (dlen == CAN_MAX_DLEN) && (cs[idx++] == CC_DLC_DELIM)) {
+		unsigned char dlc = asc2nibble(cs[idx]);
+
+		if ((dlc > CAN_MAX_DLEN) && (dlc <= CAN_MAX_RAW_DLC)) {
+			struct can_frame *ccf = (struct can_frame *)cf;
+
+			ccf->len8_dlc = dlc;
+		}
+	}
 
 	return ret;
 }
@@ -270,8 +292,19 @@ void sprint_canframe(char *buf , struct canfd_frame *cf, int sep, int maxdlen) {
 	if (maxdlen == CAN_MAX_DLEN && cf->can_id & CAN_RTR_FLAG) {
 		buf[offset++] = 'R';
 		/* print a given CAN 2.0B DLC if it's not zero */
-		if (cf->len && cf->len <= CAN_MAX_DLC)
+		if (cf->len && cf->len <= CAN_MAX_DLEN) {
 			buf[offset++] = hex_asc_upper_lo(cf->len);
+
+			/* check for optional raw DLC value for CAN 2.0B frames */
+			if (cf->len == CAN_MAX_DLEN) {
+				struct can_frame *ccf = (struct can_frame *)cf;
+
+				if ((ccf->len8_dlc > CAN_MAX_DLEN) && (ccf->len8_dlc <= CAN_MAX_RAW_DLC)) {
+					buf[offset++] = CC_DLC_DELIM;
+					buf[offset++] = hex_asc_upper_lo(ccf->len8_dlc);
+				}
+			}
+		}
 
 		buf[offset] = 0;
 		return;
@@ -290,6 +323,17 @@ void sprint_canframe(char *buf , struct canfd_frame *cf, int sep, int maxdlen) {
 		offset += 2;
 		if (sep && (i+1 < len))
 			buf[offset++] = '.';
+	}
+
+	/* check for extra DLC when having a Classic CAN with 8 bytes payload */
+	if ((maxdlen == CAN_MAX_DLEN) && (len == CAN_MAX_DLEN)) {
+		struct can_frame *ccf = (struct can_frame *)cf;
+		unsigned char dlc = ccf->len8_dlc;
+
+		if ((dlc > CAN_MAX_DLEN) && (dlc <= CAN_MAX_RAW_DLC)) {
+			buf[offset++] = CC_DLC_DELIM;
+			buf[offset++] = hex_asc_upper_lo(dlc);
+		}
 	}
 
 	buf[offset] = 0;
@@ -337,9 +381,23 @@ void sprint_long_canframe(char *buf , struct canfd_frame *cf, int view, int maxd
 
 	/* The len value is sanitized by maxdlen (see above) */
 	if (maxdlen == CAN_MAX_DLEN) {
-		buf[offset + 1] = '[';
-		buf[offset + 2] = len + '0';
-		buf[offset + 3] = ']';
+		if (view & CANLIB_VIEW_LEN8_DLC) {
+			struct can_frame *ccf = (struct can_frame *)cf;
+			unsigned char dlc = ccf->len8_dlc;
+
+			/* fall back to len if we don't have a valid DLC > 8 */
+			if (!((len == CAN_MAX_DLEN) && (dlc > CAN_MAX_DLEN) &&
+			      (dlc <= CAN_MAX_RAW_DLC)))
+				dlc = len;
+
+			buf[offset + 1] = '{';
+			buf[offset + 2] = hex_asc_upper[dlc];
+			buf[offset + 3] = '}';
+		} else {
+			buf[offset + 1] = '[';
+			buf[offset + 2] = len + '0';
+			buf[offset + 3] = ']';
+		}
 
 		/* standard CAN frames may have RTR enabled */
 		if (cf->can_id & CAN_RTR_FLAG) {
