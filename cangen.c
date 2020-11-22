@@ -92,7 +92,8 @@ void print_usage(char *prg)
 		" with bitrate switch (BRS))\n");
 	fprintf(stderr, "         -E            (generate CAN FD CAN frames"
 		" with error state (ESI))\n");
-	fprintf(stderr, "         -R            (send RTR frame)\n");
+	fprintf(stderr, "         -R            (generate RTR frames)\n");
+	fprintf(stderr, "         -8            (allow DLC values greater then 8 for Classic CAN frames)\n");
 	fprintf(stderr, "         -m            (mix -e -f -b -E -R frames)\n");
 	fprintf(stderr, "         -I <mode>     (CAN ID"
 		" generation mode - see below)\n");
@@ -113,9 +114,9 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -v            (increment verbose level for "
 		"printing sent CAN frames)\n\n");
 	fprintf(stderr, "Generation modes:\n");
-	fprintf(stderr, " 'r'         => random values (default)\n");
-	fprintf(stderr, " 'i'         => increment values\n");
-	fprintf(stderr, " <hexvalue>  => fix value using <hexvalue>\n\n");
+	fprintf(stderr, " 'r'     => random values (default)\n");
+	fprintf(stderr, " 'i'     => increment values\n");
+	fprintf(stderr, " <value> => fixed value (in hexadecimal for -I and -D)\n\n");
 	fprintf(stderr, "When incrementing the CAN data the data length code "
 		"minimum is set to 1.\n");
 	fprintf(stderr, "CAN IDs and data content are given and expected in hexadecimal values.\n\n");
@@ -156,6 +157,7 @@ int main(int argc, char **argv)
 	unsigned char loopback_disable = 0;
 	unsigned char verbose = 0;
 	unsigned char rtr_frame = 0;
+	unsigned char len8_dlc = 0;
 	int count = 0;
 	unsigned long burst_sent_count = 0;
 	int mtu, maxdlen;
@@ -170,6 +172,7 @@ int main(int argc, char **argv)
 
 	struct sockaddr_can addr;
 	static struct canfd_frame frame;
+	struct can_frame *ccf = (struct can_frame *)&frame;
 	int nbytes;
 	int i;
 	struct ifreq ifr;
@@ -185,7 +188,7 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	while ((opt = getopt(argc, argv, "ig:ebEfmI:L:D:xp:n:c:vRh?")) != -1) {
+	while ((opt = getopt(argc, argv, "ig:ebEfmI:L:D:xp:n:c:vR8h?")) != -1) {
 		switch (opt) {
 
 		case 'i':
@@ -269,6 +272,10 @@ int main(int argc, char **argv)
 
 		case 'R':
 			rtr_frame = 1;
+			break;
+
+		case '8':
+			len8_dlc = 1;
 			break;
 
 		case 'p':
@@ -362,9 +369,17 @@ int main(int argc, char **argv)
 		/* ensure discrete CAN FD length values 0..8, 12, 16, 20, 24, 32, 64 */
 		frame.len = can_dlc2len(can_len2dlc(frame.len));
 	} else {
-		/* sanitize CAN 2.0 frame length */
-		if (frame.len > 8)
-			frame.len = 8;
+		/* sanitize Classical CAN 2.0 frame length */
+		if (len8_dlc) {
+			if (frame.len > CAN_MAX_RAW_DLC)
+				frame.len = CAN_MAX_RAW_DLC;
+
+			if (frame.len > CAN_MAX_DLEN)
+				ccf->len8_dlc = frame.len;
+		}
+
+		if (frame.len > CAN_MAX_DLEN)
+			frame.len = CAN_MAX_DLEN;
 	}
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -413,8 +428,16 @@ int main(int argc, char **argv)
 				frame.len = can_dlc2len(random() & 0xF);
 			else {
 				frame.len = random() & 0xF;
-				if (frame.len & 8)
+
+				if (frame.len > CAN_MAX_DLEN) {
+					/* generate Classic CAN len8 DLCs? */
+					if (len8_dlc)
+						ccf->len8_dlc = frame.len;
+
 					frame.len = 8; /* for about 50% of the frames */
+				} else {
+					ccf->len8_dlc = 0;
+				}
 			}
 		}
 
@@ -493,12 +516,20 @@ resend:
 		if (dlc_mode == MODE_INCREMENT) {
 
 			incdlc++;
+			incdlc %= CAN_MAX_RAW_DLC + 1;
 
-			if (canfd && !mix) {
-				incdlc &= 0xF;
+			if (canfd && !mix)
 				frame.len = can_dlc2len(incdlc);
+			else if (len8_dlc) {
+				if (incdlc > CAN_MAX_DLEN) {
+					frame.len = CAN_MAX_DLEN;
+					ccf->len8_dlc = incdlc;
+				} else {
+					frame.len = incdlc;
+					ccf->len8_dlc = 0;
+				}
 			} else {
-				incdlc %= 9;
+				incdlc %= CAN_MAX_DLEN + 1;
 				frame.len = incdlc;
 			}
 		}
