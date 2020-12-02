@@ -844,7 +844,7 @@ int sniftab_index(canid_t id)
 {
 	int i;
 
-	for (i = 0; i <= idx; i++)
+	for (i = 0; i < idx; i++)
 		if (id == sniftab[i].current.can_id)
 			return i;
 
