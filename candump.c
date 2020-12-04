@@ -87,6 +87,8 @@
 #define SILENT_ANI 1  /* silent mode with animation */
 #define SILENT_ON  2  /* silent mode (completely silent) */
 
+#define TIMESTAMPSZ 44 /* sprintf of timestamp format output between 14 and 44 bytes */
+
 #define BOLD    ATTBOLD
 #define RED     ATTBOLD FGRED
 #define GREEN   ATTBOLD FGGREEN
@@ -211,6 +213,58 @@ int idx2dindex(int ifidx, int socket) {
 #endif
 
 	return i;
+}
+
+static inline void sprint_timestamp(const char timestamp, struct timeval * const tv, struct timeval * const last_tv, char * ts_buffer)
+{
+	switch (timestamp) {
+
+		case 'a': /* absolute with timestamp */
+			sprintf(ts_buffer,"(%010lu.%06lu) ", tv->tv_sec, tv->tv_usec);
+			break;
+
+		case 'A': /* absolute with date */
+		{
+			struct tm tm;
+			char timestring[25];
+
+			tm = *localtime(&tv->tv_sec);
+			strftime(timestring, 24, "%Y-%m-%d %H:%M:%S", &tm);
+			sprintf(ts_buffer,"(%s.%06lu) ", timestring, tv->tv_usec);
+		}
+		break;
+
+		case 'd': /* delta */
+		case 'z': /* starting with zero */
+		{
+			struct timeval diff;
+
+			if (last_tv->tv_sec == 0)   /* first init */
+				*last_tv = *tv;
+			diff.tv_sec  = tv->tv_sec  - last_tv->tv_sec;
+			diff.tv_usec = tv->tv_usec - last_tv->tv_usec;
+			if (diff.tv_usec < 0)
+				diff.tv_sec--, diff.tv_usec += 1000000;
+			if (diff.tv_sec < 0)
+				diff.tv_sec = diff.tv_usec = 0;
+			sprintf(ts_buffer,"(%03lu.%06lu) ", diff.tv_sec, diff.tv_usec);
+		
+			if (timestamp == 'd')
+				*last_tv = *tv; /* update for delta calculation */
+		}
+		break;
+
+		default: /* no timestamp output */
+			break;
+		}
+}
+
+static inline void print_timestamp(const char timestamp, struct timeval * const tv, struct timeval * const last_tv)
+{
+	static char buffer[TIMESTAMPSZ];
+	sprint_timestamp(timestamp,tv,last_tv,&buffer[0]);
+
+	printf("%s",buffer);
 }
 
 int main(int argc, char **argv)
@@ -711,11 +765,14 @@ int main(int argc, char **argv)
 
 				if (log) {
 					char buf[CL_CFSZ]; /* max length */
+					char ts_buf[TIMESTAMPSZ];
+
+					sprint_timestamp(timestamp,&tv,&last_tv,&ts_buf[0]);
 
 					/* log CAN frame with absolute timestamp & device */
 					sprint_canframe(buf, &frame, 0, maxdlen);
-					fprintf(logfile, "(%010lu.%06lu) %*s %s%s\n",
-						tv.tv_sec, tv.tv_usec,
+
+					fprintf(logfile, "%s%*s %s%s\n", ts_buf,
 						max_devname_len, devname[idx], buf,
 						extra_info);
 				}
@@ -725,10 +782,13 @@ int main(int argc, char **argv)
 
 					/* print CAN frame in log file style to stdout */
 					sprint_canframe(buf, &frame, 0, maxdlen);
-					printf("(%010lu.%06lu) %*s %s%s\n",
-					       tv.tv_sec, tv.tv_usec,
-					       max_devname_len, devname[idx], buf,
-					       extra_info);
+
+					const char logtimestamp = (timestamp == 0 ? 'a' : timestamp); //logfrmt ts format defaults to absolute
+					print_timestamp(logtimestamp,&tv,&last_tv);
+
+					printf("%*s %s%s\n",
+						max_devname_len, devname[idx], buf,
+						extra_info);
 					goto out_fflush; /* no other output to stdout */
 				}
 
@@ -742,46 +802,7 @@ int main(int argc, char **argv)
 		      
 				printf(" %s", (color>2)?col_on[idx%MAXCOL]:"");
 
-				switch (timestamp) {
-
-				case 'a': /* absolute with timestamp */
-					printf("(%010lu.%06lu) ", tv.tv_sec, tv.tv_usec);
-					break;
-
-				case 'A': /* absolute with date */
-				{
-					struct tm tm;
-					char timestring[25];
-
-					tm = *localtime(&tv.tv_sec);
-					strftime(timestring, 24, "%Y-%m-%d %H:%M:%S", &tm);
-					printf("(%s.%06lu) ", timestring, tv.tv_usec);
-				}
-				break;
-
-				case 'd': /* delta */
-				case 'z': /* starting with zero */
-				{
-					struct timeval diff;
-
-					if (last_tv.tv_sec == 0)   /* first init */
-						last_tv = tv;
-					diff.tv_sec  = tv.tv_sec  - last_tv.tv_sec;
-					diff.tv_usec = tv.tv_usec - last_tv.tv_usec;
-					if (diff.tv_usec < 0)
-						diff.tv_sec--, diff.tv_usec += 1000000;
-					if (diff.tv_sec < 0)
-						diff.tv_sec = diff.tv_usec = 0;
-					printf("(%03lu.%06lu) ", diff.tv_sec, diff.tv_usec);
-				
-					if (timestamp == 'd')
-						last_tv = tv; /* update for delta calculation */
-				}
-				break;
-
-				default: /* no timestamp output */
-					break;
-				}
+				print_timestamp(timestamp,&tv,&last_tv);
 
 				printf(" %s", (color && (color<3))?col_on[idx%MAXCOL]:"");
 				printf("%*s", max_devname_len, devname[idx]);
