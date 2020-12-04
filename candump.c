@@ -198,7 +198,7 @@ int idx2dindex(int ifidx, int socket) {
 
 	if (i == MAXIFNAMES) {
 		fprintf(stderr, "Interface index cache only supports %d interfaces.\n",
-		       MAXIFNAMES);
+			MAXIFNAMES);
 		exit(1);
 	}
 
@@ -272,7 +272,7 @@ int main(int argc, char **argv)
 			if ((timestamp != 'a') && (timestamp != 'A') &&
 			    (timestamp != 'd') && (timestamp != 'z')) {
 				fprintf(stderr, "%s: unknown timestamp mode '%c' - ignored\n",
-				       basename(argv[0]), optarg[0]);
+					basename(argv[0]), optarg[0]);
 				timestamp = 0;
 			}
 			break;
@@ -480,15 +480,15 @@ int main(int argc, char **argv)
 				if (sscanf(ptr, "%x:%x",
 					   &rfilter[numfilter].can_id,
 					   &rfilter[numfilter].can_mask) == 2) {
- 					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
+					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
 					if (*(ptr+8) == ':')
 						rfilter[numfilter].can_id |= CAN_EFF_FLAG;
 					numfilter++;
 				} else if (sscanf(ptr, "%x~%x",
 						  &rfilter[numfilter].can_id,
 						  &rfilter[numfilter].can_mask) == 2) {
- 					rfilter[numfilter].can_id |= CAN_INV_FILTER;
- 					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
+					rfilter[numfilter].can_id |= CAN_INV_FILTER;
+					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
 					if (*(ptr+8) == '~')
 						rfilter[numfilter].can_id |= CAN_EFF_FLAG;
 					numfilter++;
@@ -560,7 +560,7 @@ int main(int argc, char **argv)
 								SOF_TIMESTAMPING_RAW_HARDWARE);
 
 				if (setsockopt(obj->s, SOL_SOCKET, SO_TIMESTAMPING,
-						&timestamping_flags, sizeof(timestamping_flags)) < 0) {
+					       &timestamping_flags, sizeof(timestamping_flags)) < 0) {
 					perror("setsockopt SO_TIMESTAMPING is not supported by your Linux kernel");
 					return 1;
 				}
