@@ -73,9 +73,9 @@
 #endif
 
 /* from #include <linux/net_tstamp.h> - since Linux 2.6.30 */
-#define SOF_TIMESTAMPING_SOFTWARE (1<<4)
-#define SOF_TIMESTAMPING_RX_SOFTWARE (1<<3)
-#define SOF_TIMESTAMPING_RAW_HARDWARE (1<<6)
+#define SOF_TIMESTAMPING_SOFTWARE (1 << 4)
+#define SOF_TIMESTAMPING_RX_SOFTWARE (1 << 3)
+#define SOF_TIMESTAMPING_RAW_HARDWARE (1 << 6)
 
 #define MAXSOCK 16    /* max. number of CAN interfaces given on the cmdline */
 #define MAXIFNAMES 30 /* size of receive name index to omit ioctls */
@@ -86,18 +86,18 @@
 #define SILENT_INI 42 /* detect user setting on commandline */
 #define SILENT_OFF 0  /* no silent mode */
 #define SILENT_ANI 1  /* silent mode with animation */
-#define SILENT_ON  2  /* silent mode (completely silent) */
+#define SILENT_ON 2   /* silent mode (completely silent) */
 
-#define BOLD    ATTBOLD
-#define RED     ATTBOLD FGRED
-#define GREEN   ATTBOLD FGGREEN
-#define YELLOW  ATTBOLD FGYELLOW
-#define BLUE    ATTBOLD FGBLUE
-#define MAGENTA ATTBOLD FGMAGENTA
-#define CYAN    ATTBOLD FGCYAN
+#define BOLD ATTBOLD
+#define RED (ATTBOLD FGRED)
+#define GREEN (ATTBOLD FGGREEN)
+#define YELLOW (ATTBOLD FGYELLOW)
+#define BLUE (ATTBOLD FGBLUE)
+#define MAGENTA (ATTBOLD FGMAGENTA)
+#define CYAN (ATTBOLD FGCYAN)
 
-const char col_on [MAXCOL][19] = {BLUE, RED, GREEN, BOLD, MAGENTA, CYAN};
-const char col_off [] = ATTRESET;
+static const char col_on[MAXCOL][19] = { BLUE, RED, GREEN, BOLD, MAGENTA, CYAN };
+static const char col_off[] = ATTRESET;
 
 struct if_info { /* bundled information per open socket */
 	int s; /* socket */
@@ -108,19 +108,19 @@ struct if_info { /* bundled information per open socket */
 static struct if_info sock_info[MAXSOCK];
 
 static char devname[MAXIFNAMES][IFNAMSIZ+1];
-static int  dindex[MAXIFNAMES];
-static int  max_devname_len; /* to prevent frazzled device name output */ 
-const int canfd_on = 1;
+static int dindex[MAXIFNAMES];
+static int max_devname_len; /* to prevent frazzled device name output */
+static const int canfd_on = 1;
 
 #define MAXANI 4
-const char anichar[MAXANI] = {'|', '/', '-', '\\'};
-const char extra_m_info[4][4] = {"- -", "B -", "- E", "B E"};
+static const char anichar[MAXANI] = { '|', '/', '-', '\\' };
+static const char extra_m_info[4][4] = { "- -", "B -", "- E", "B E" };
 
 extern int optind, opterr, optopt;
 
 static volatile int running = 1;
 
-void print_usage(char *prg)
+static void print_usage(char *prg)
 {
 	fprintf(stderr, "%s - dump CAN bus traffic.\n", prg);
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>+\n", prg);
@@ -166,17 +166,18 @@ void print_usage(char *prg)
 	fprintf(stderr, "\n");
 }
 
-void sigterm(int signo)
+static void sigterm(int signo)
 {
 	running = 0;
 }
 
-int idx2dindex(int ifidx, int socket) {
+static int idx2dindex(int ifidx, int socket)
+{
 
 	int i;
 	struct ifreq ifr;
 
-	for (i=0; i < MAXIFNAMES; i++) {
+	for (i = 0; i < MAXIFNAMES; i++) {
 		if (dindex[i] == ifidx)
 			return i;
 	}
@@ -184,7 +185,7 @@ int idx2dindex(int ifidx, int socket) {
 	/* create new interface index cache entry */
 
 	/* remove index cache zombies first */
-	for (i=0; i < MAXIFNAMES; i++) {
+	for (i = 0; i < MAXIFNAMES; i++) {
 		if (dindex[i]) {
 			ifr.ifr_ifindex = dindex[i];
 			if (ioctl(socket, SIOCGIFNAME, &ifr) < 0)
@@ -192,13 +193,13 @@ int idx2dindex(int ifidx, int socket) {
 		}
 	}
 
-	for (i=0; i < MAXIFNAMES; i++)
+	for (i = 0; i < MAXIFNAMES; i++)
 		if (!dindex[i]) /* free entry */
 			break;
 
 	if (i == MAXIFNAMES) {
 		fprintf(stderr, "Interface index cache only supports %d interfaces.\n",
-		       MAXIFNAMES);
+			MAXIFNAMES);
 		exit(1);
 	}
 
@@ -245,7 +246,7 @@ int main(int argc, char **argv)
 	int join_filter;
 	char *ptr, *nptr;
 	struct sockaddr_can addr;
-	char ctrlmsg[CMSG_SPACE(sizeof(struct timeval) + 3*sizeof(struct timespec) + sizeof(__u32))];
+	char ctrlmsg[CMSG_SPACE(sizeof(struct timeval) + 3 * sizeof(struct timespec) + sizeof(__u32))];
 	struct iovec iov;
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
@@ -262,7 +263,7 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	last_tv.tv_sec  = 0;
+	last_tv.tv_sec = 0;
 	last_tv.tv_usec = 0;
 
 	while ((opt = getopt(argc, argv, "t:HciaSs:lDdxLn:r:he8T:?")) != -1) {
@@ -272,7 +273,7 @@ int main(int argc, char **argv)
 			if ((timestamp != 'a') && (timestamp != 'A') &&
 			    (timestamp != 'd') && (timestamp != 'z')) {
 				fprintf(stderr, "%s: unknown timestamp mode '%c' - ignored\n",
-				       basename(argv[0]), optarg[0]);
+					basename(argv[0]), optarg[0]);
 				timestamp = 0;
 			}
 			break;
@@ -312,6 +313,7 @@ int main(int argc, char **argv)
 				exit(1);
 			}
 			break;
+
 
 		case 'l':
 			log = 1;
@@ -368,7 +370,7 @@ int main(int argc, char **argv)
 		print_usage(basename(argv[0]));
 		exit(0);
 	}
-	
+
 	if (logfrmt && view) {
 		fprintf(stderr, "Log file format selected: Please disable ASCII/BINARY/SWAP/RAWDLC options!\n");
 		exit(0);
@@ -474,27 +476,27 @@ int main(int argc, char **argv)
 
 			while (nptr) {
 
-				ptr = nptr+1; /* hop behind the ',' */
+				ptr = nptr + 1; /* hop behind the ',' */
 				nptr = strchr(ptr, ','); /* update exit condition */
 
 				if (sscanf(ptr, "%x:%x",
-					   &rfilter[numfilter].can_id, 
+					   &rfilter[numfilter].can_id,
 					   &rfilter[numfilter].can_mask) == 2) {
- 					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
-					if (*(ptr+8) == ':')
+					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
+					if (*(ptr + 8) == ':')
 						rfilter[numfilter].can_id |= CAN_EFF_FLAG;
 					numfilter++;
 				} else if (sscanf(ptr, "%x~%x",
-						  &rfilter[numfilter].can_id, 
+						  &rfilter[numfilter].can_id,
 						  &rfilter[numfilter].can_mask) == 2) {
- 					rfilter[numfilter].can_id |= CAN_INV_FILTER;
- 					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
-					if (*(ptr+8) == '~')
+					rfilter[numfilter].can_id |= CAN_INV_FILTER;
+					rfilter[numfilter].can_mask &= ~CAN_ERR_FLAG;
+					if (*(ptr + 8) == '~')
 						rfilter[numfilter].can_id |= CAN_EFF_FLAG;
 					numfilter++;
 				} else if (*ptr == 'j' || *ptr == 'J') {
 					join_filter = 1;
-				} else if (sscanf(ptr, "#%x", &err_mask) != 1) { 
+				} else if (sscanf(ptr, "#%x", &err_mask) != 1) {
 					fprintf(stderr, "Error in filter option parsing: '%s'\n", ptr);
 					return 1;
 				}
@@ -522,7 +524,6 @@ int main(int argc, char **argv)
 		setsockopt(obj->s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));
 
 		if (rcvbuf_size) {
-
 			int curr_rcvbuf_size;
 			socklen_t curr_rcvbuf_size_len = sizeof(curr_rcvbuf_size);
 
@@ -546,21 +547,20 @@ int main(int argc, char **argv)
 
 				/* Only print a warning the first time we detect the adjustment */
 				/* n.b.: The wanted size is doubled in Linux in net/sore/sock.c */
-				if (!i && curr_rcvbuf_size < rcvbuf_size*2)
+				if (!i && curr_rcvbuf_size < rcvbuf_size * 2)
 					fprintf(stderr, "The socket receive buffer size was "
 						"adjusted due to /proc/sys/net/core/rmem_max.\n");
 			}
 		}
 
 		if (timestamp || log || logfrmt) {
-
 			if (hwtimestamp) {
-				const int timestamping_flags = (SOF_TIMESTAMPING_SOFTWARE | \
-								SOF_TIMESTAMPING_RX_SOFTWARE | \
+				const int timestamping_flags = (SOF_TIMESTAMPING_SOFTWARE |
+								SOF_TIMESTAMPING_RX_SOFTWARE |
 								SOF_TIMESTAMPING_RAW_HARDWARE);
 
 				if (setsockopt(obj->s, SOL_SOCKET, SO_TIMESTAMPING,
-						&timestamping_flags, sizeof(timestamping_flags)) < 0) {
+					       &timestamping_flags, sizeof(timestamping_flags)) < 0) {
 					perror("setsockopt SO_TIMESTAMPING is not supported by your Linux kernel");
 					return 1;
 				}
@@ -576,7 +576,6 @@ int main(int argc, char **argv)
 		}
 
 		if (dropmonitor) {
-
 			const int dropmonitor_on = 1;
 
 			if (setsockopt(obj->s, SOL_SOCKET, SO_RXQ_OVFL,
@@ -647,7 +646,7 @@ int main(int argc, char **argv)
 			/* these settings may be modified by recvmsg() */
 			iov.iov_len = sizeof(frame);
 			msg.msg_namelen = sizeof(addr);
-			msg.msg_controllen = sizeof(ctrlmsg);  
+			msg.msg_controllen = sizeof(ctrlmsg);
 			msg.msg_flags = 0;
 
 			nbytes = recvmsg(obj->s, &msg, 0);
@@ -748,13 +747,13 @@ int main(int argc, char **argv)
 
 			if (silent != SILENT_OFF){
 				if (silent == SILENT_ANI) {
-					printf("%c\b", anichar[silentani%=MAXANI]);
+					printf("%c\b", anichar[silentani %= MAXANI]);
 					silentani++;
 				}
 				goto out_fflush; /* no other output to stdout */
 			}
-			
-			printf(" %s", (color>2)?col_on[idx%MAXCOL]:"");
+
+			printf(" %s", (color > 2) ? col_on[idx % MAXCOL] : "");
 
 			switch (timestamp) {
 
@@ -780,14 +779,14 @@ int main(int argc, char **argv)
 
 				if (last_tv.tv_sec == 0)   /* first init */
 					last_tv = tv;
-				diff.tv_sec  = tv.tv_sec  - last_tv.tv_sec;
+				diff.tv_sec = tv.tv_sec - last_tv.tv_sec;
 				diff.tv_usec = tv.tv_usec - last_tv.tv_usec;
 				if (diff.tv_usec < 0)
 					diff.tv_sec--, diff.tv_usec += 1000000;
 				if (diff.tv_sec < 0)
 					diff.tv_sec = diff.tv_usec = 0;
 				printf("(%03lu.%06lu) ", diff.tv_sec, diff.tv_usec);
-			
+
 				if (timestamp == 'd')
 					last_tv = tv; /* update for delta calculation */
 			}
@@ -797,7 +796,7 @@ int main(int argc, char **argv)
 				break;
 			}
 
-			printf(" %s", (color && (color<3))?col_on[idx%MAXCOL]:"");
+			printf(" %s", (color && (color < 3)) ? col_on[idx % MAXCOL] : "");
 			printf("%*s", max_devname_len, devname[idx]);
 
 			if (extra_msg_info) {
@@ -808,19 +807,19 @@ int main(int argc, char **argv)
 					printf ("  RX %s", extra_m_info[frame.flags & 3]);
 			}
 
-			printf("%s  ", (color==1)?col_off:"");
+			printf("%s  ", (color == 1) ? col_off : "");
 
 			fprint_long_canframe(stdout, &frame, NULL, view, maxdlen);
 
-			printf("%s", (color>1)?col_off:"");
+			printf("%s", (color > 1) ? col_off : "");
 			printf("\n");
 
-		out_fflush:
+ out_fflush:
 			fflush(stdout);
 		}
 	}
 
-	for (i=0; i<currmax; i++)
+	for (i = 0; i < currmax; i++)
 		close(sock_info[i].s);
 
 	close(fd_epoll);
