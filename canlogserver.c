@@ -162,7 +162,7 @@ void childdied(int i)
 }
 
 /*
- * This is a Signalhandler for a cought SIGTERM
+ * This is a Signalhandler for a caught SIGTERM
  */
 void shutdown_gra(int i)
 {
