@@ -116,9 +116,18 @@ static const int canfd_on = 1;
 static const char anichar[MAXANI] = { '|', '/', '-', '\\' };
 static const char extra_m_info[4][4] = { "- -", "B -", "- E", "B E" };
 
+#define MAXLOGNAMESZ 100
+static FILE *logfile = NULL;
+static char log_filename[MAXLOGNAMESZ];
+
+static unsigned char silent = SILENT_INI;
+
 extern int optind, opterr, optopt;
 
 static volatile int running = 1;
+static volatile int flag_reopen_file;
+static int is_auto_log_name;
+static volatile unsigned long sighup_count;
 
 static void print_usage(char *prg)
 {
@@ -133,7 +142,7 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -a          (enable additional ASCII output)\n");
 	fprintf(stderr, "         -S          (swap byte order in printed CAN data[] - marked with '%c' )\n", SWAP_DELIMITER);
 	fprintf(stderr, "         -s <level>  (silent mode - %d: off (default) %d: animation %d: silent)\n", SILENT_OFF, SILENT_ANI, SILENT_ON);
-	fprintf(stderr, "         -l          (log CAN-frames into file. Sets '-s %d' by default)\n", SILENT_ON);
+	fprintf(stderr, "         -l <name>   (log CAN-frames into file. Sets '-s %d' by default)\n", SILENT_ON);
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "         -n <count>  (terminate after reception of <count> CAN frames)\n");
 	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
@@ -171,9 +180,16 @@ static void sigterm(int signo)
 	running = 0;
 }
 
+static void sighup(int signo)
+{
+	if (signo == SIGHUP && running) {
+		flag_reopen_file = 1;
+		sighup_count++;
+	}
+}
+
 static int idx2dindex(int ifidx, int socket)
 {
-
 	int i;
 	struct ifreq ifr;
 
@@ -221,6 +237,89 @@ static int idx2dindex(int ifidx, int socket)
 	return i;
 }
 
+static int sprint_auto_filename_format(char *buffer)
+{
+	time_t currtime;
+	struct tm now;
+
+	if (time(&currtime) == (time_t)-1) {
+		perror("time");
+		return 1;
+	}
+
+	localtime_r(&currtime, &now);
+
+	sprintf(buffer, "candump-%04d-%02d-%02d_%02d%02d%02d.log",
+		now.tm_year + 1900,
+		now.tm_mon + 1,
+		now.tm_mday,
+		now.tm_hour,
+		now.tm_min,
+		now.tm_sec);
+
+	fprintf(stderr, "Enabling Logfile '%s'\n", buffer);
+
+	return 0;
+}
+
+/* opens file using global var logfile */
+static int open_log_file(const char *file_name)
+{
+	if (silent != SILENT_ON)
+		fprintf(stderr, "Warning: Console output active while logging!\n");
+
+	logfile = fopen(file_name, "w");
+
+	if (!logfile) {
+		perror("logfile");
+		return 1;
+	}
+
+	return 0;
+}
+
+static int reopen_file(FILE *file_handle)
+{
+	const char *fopen_opts = (sighup_count > 0 && !is_auto_log_name) ? "a" : "w";
+
+	if (!file_handle)
+		return 1;
+
+	if (is_auto_log_name == 1) {
+		const int errcode = sprint_auto_filename_format(log_filename);
+
+		if (errcode != 0) {
+			return 1;
+		}
+	}
+
+	/* close existing filehandle, and open new one if necessary */
+	logfile = freopen(log_filename, fopen_opts, file_handle);
+
+	flag_reopen_file = 0;
+
+	return logfile == 0;
+}
+
+static int process_logname_arg(const char *arg)
+{
+	if (arg != 0) {
+		const size_t len = strnlen(arg, MAXLOGNAMESZ);
+
+		if (len > 0 && len < MAXLOGNAMESZ) {
+			strncpy(log_filename, arg, MAXLOGNAMESZ - 1);
+		} else {
+			return 1;
+		}
+		is_auto_log_name = 0;
+	} else {
+		is_auto_log_name = 1;	
+		sprint_auto_filename_format(log_filename);
+	}
+
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
 	int fd_epoll;
@@ -233,7 +332,7 @@ int main(int argc, char **argv)
 	unsigned char down_causes_exit = 1;
 	unsigned char dropmonitor = 0;
 	unsigned char extra_msg_info = 0;
-	unsigned char silent = SILENT_INI;
+	
 	unsigned char silentani = 0;
 	unsigned char color = 0;
 	unsigned char view = 0;
@@ -257,16 +356,32 @@ int main(int argc, char **argv)
 	struct ifreq ifr;
 	struct timeval tv, last_tv;
 	int timeout_ms = -1; /* default to no timeout */
-	FILE *logfile = NULL;
 
-	signal(SIGTERM, sigterm);
-	signal(SIGHUP, sigterm);
-	signal(SIGINT, sigterm);
+	sigset_t sig_block_mask;
+	sigset_t sig_empty_mask;
+	struct sigaction sighup_action = { .sa_flags = SA_RESTART };
+	struct sigaction sigterm_action = { .sa_flags = SA_RESTART, .sa_handler = sigterm };
+
+	sigfillset(&sig_block_mask);
+	sighup_action.sa_mask = sig_block_mask;
+	sigemptyset(&sig_empty_mask);
+	sigterm_action.sa_mask = sig_empty_mask;
+
+	sigaction (SIGHUP, &sigterm_action, NULL);
+	sigaction (SIGINT, &sigterm_action, NULL);
 
 	last_tv.tv_sec = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:HciaSs:lDdxLn:r:he8T:?")) != -1) {
+	int getoptargc = argc;
+
+	/* Since interface is a required argument, we don't need to parse opt for final arg
+	 * This enabled the -l option to take an optional filename */
+	if (getoptargc > 0) {
+		getoptargc = argc - 1;
+	}
+
+	while ((opt = getopt(getoptargc, argv, ":t:HciaSs:l:DdxLn:r:he8T:?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -314,9 +429,32 @@ int main(int argc, char **argv)
 			}
 			break;
 
+		case ':': //handle flags with optional values
+			
+			switch (optopt)
+			{
+			case 'l':
+				log = 1;
+
+				if (process_logname_arg(optarg) != 0) {
+					print_usage(basename(argv[0]));
+					exit(1);
+				}
+				break;
+			default:
+				fprintf(stderr, "option -%c is missing a required argument\n", optopt);
+				return EXIT_FAILURE;
+			}		
+			break;
 
 		case 'l':
 			log = 1;
+			
+			if (process_logname_arg(optarg) != 0) {
+				is_auto_log_name = 0;
+				print_usage(basename(argv[0]));
+				exit(1);
+			}
 			break;
 
 		case 'D':
@@ -370,6 +508,10 @@ int main(int argc, char **argv)
 		print_usage(basename(argv[0]));
 		exit(0);
 	}
+
+	/* Configure SIGHUP handler to reopen file if logging */
+	sighup_action.sa_handler = log ? sighup : sigterm;		
+	sigaction(SIGHUP, &sighup_action, NULL);
 
 	if (logfrmt && view) {
 		fprintf(stderr, "Log file format selected: Please disable ASCII/BINARY/SWAP/RAWDLC options!\n");
@@ -592,35 +734,10 @@ int main(int argc, char **argv)
 	}
 
 	if (log) {
-		time_t currtime;
-		struct tm now;
-		char fname[83]; /* suggested by -Wformat-overflow= */
+		const int result = open_log_file(log_filename);
 
-		if (time(&currtime) == (time_t)-1) {
-			perror("time");
+		if (result != 0)
 			return 1;
-		}
-
-		localtime_r(&currtime, &now);
-
-		sprintf(fname, "candump-%04d-%02d-%02d_%02d%02d%02d.log",
-			now.tm_year + 1900,
-			now.tm_mon + 1,
-			now.tm_mday,
-			now.tm_hour,
-			now.tm_min,
-			now.tm_sec);
-
-		if (silent != SILENT_ON)
-			fprintf(stderr, "Warning: Console output active while logging!\n");
-
-		fprintf(stderr, "Enabling Logfile '%s'\n", fname);
-
-		logfile = fopen(fname, "w");
-		if (!logfile) {
-			perror("logfile");
-			return 1;
-		}
 	}
 
 	/* these settings are static and can be held out of the hot path */
@@ -631,10 +748,17 @@ int main(int argc, char **argv)
 	msg.msg_control = &ctrlmsg;
 
 	while (running) {
-
 		if ((num_events = epoll_wait(fd_epoll, events_pending, currmax, timeout_ms)) <= 0) {
 			//perror("epoll_wait");
-			running = 0;
+			if(num_events == -1) {
+				const int serr = errno;
+				if (log && flag_reopen_file && serr == EINTR) {
+					if (reopen_file(logfile) != 0)
+						return -1;
+				} else {
+					running = 0;
+				}
+			}
 			continue;
 		}
 
@@ -816,6 +940,12 @@ int main(int argc, char **argv)
 
  out_fflush:
 			fflush(stdout);
+		}
+
+		if (log && flag_reopen_file == 1) { 
+			if (reopen_file(logfile) != 0) {
+				return -1;
+			}
 		}
 	}
 
