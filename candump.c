@@ -76,6 +76,7 @@
 #define SOF_TIMESTAMPING_SOFTWARE (1 << 4)
 #define SOF_TIMESTAMPING_RX_SOFTWARE (1 << 3)
 #define SOF_TIMESTAMPING_RAW_HARDWARE (1 << 6)
+#define TIMESTAMPSZ 50 /* string 'absolute with date' requires max 49 bytes */
 
 #define MAXSOCK 16    /* max. number of CAN interfaces given on the cmdline */
 #define MAXIFNAMES 30 /* size of receive name index to omit ioctls */
@@ -221,6 +222,58 @@ static int idx2dindex(int ifidx, int socket)
 	return i;
 }
 
+static inline void sprint_timestamp(const char timestamp, const struct timeval *tv, struct timeval *const last_tv, char *ts_buffer)
+{
+	switch (timestamp) {
+		
+	case 'a': /* absolute with timestamp */
+		sprintf(ts_buffer, "(%010lu.%06lu) ", tv->tv_sec, tv->tv_usec);
+		break;
+
+	case 'A': /* absolute with date */
+	{
+		struct tm tm;
+		char timestring[25];
+
+		tm = *localtime(&tv->tv_sec);
+		strftime(timestring, 24, "%Y-%m-%d %H:%M:%S", &tm);
+		sprintf(ts_buffer, "(%s.%06lu) ", timestring, tv->tv_usec);
+	}
+	break;
+
+	case 'd': /* delta */
+	case 'z': /* starting with zero */
+	{
+		struct timeval diff;
+
+		if (last_tv->tv_sec == 0)   /* first init */
+			*last_tv = *tv;
+		diff.tv_sec  = tv->tv_sec - last_tv->tv_sec;
+		diff.tv_usec = tv->tv_usec - last_tv->tv_usec;
+		if (diff.tv_usec < 0)
+			diff.tv_sec--, diff.tv_usec += 1000000;
+		if (diff.tv_sec < 0)
+			diff.tv_sec = diff.tv_usec = 0;
+		sprintf(ts_buffer, "(%03lu.%06lu) ", diff.tv_sec, diff.tv_usec);
+	
+		if (timestamp == 'd')
+			*last_tv = *tv; /* update for delta calculation */
+	}
+	break;
+
+	default: /* no timestamp output */
+		break;
+	}
+}
+
+static inline void print_timestamp(const char timestamp, const struct timeval *tv, struct timeval *const last_tv)
+{
+	static char buffer[TIMESTAMPSZ];
+
+	sprint_timestamp(timestamp, tv, last_tv, buffer);
+	printf("%s", buffer);
+}
+
 int main(int argc, char **argv)
 {
 	int fd_epoll;
@@ -229,6 +282,7 @@ int main(int argc, char **argv)
 		.events = EPOLLIN, /* prepare the common part */
 	};
 	unsigned char timestamp = 0;
+	unsigned char logtimestamp = 'a';
 	unsigned char hwtimestamp = 0;
 	unsigned char down_causes_exit = 1;
 	unsigned char dropmonitor = 0;
@@ -270,11 +324,15 @@ int main(int argc, char **argv)
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
+			logtimestamp = optarg[0];
 			if ((timestamp != 'a') && (timestamp != 'A') &&
 			    (timestamp != 'd') && (timestamp != 'z')) {
 				fprintf(stderr, "%s: unknown timestamp mode '%c' - ignored\n",
 					basename(argv[0]), optarg[0]);
 				timestamp = 0;
+			}
+			if ((logtimestamp != 'a') && (logtimestamp != 'z')) {
+				logtimestamp = 'a';
 			}
 			break;
 
@@ -313,7 +371,6 @@ int main(int argc, char **argv)
 				exit(1);
 			}
 			break;
-
 
 		case 'l':
 			log = 1;
@@ -724,11 +781,13 @@ int main(int argc, char **argv)
 
 			if (log) {
 				char buf[CL_CFSZ]; /* max length */
+				char ts_buf[TIMESTAMPSZ];
+
+				sprint_timestamp(logtimestamp, &tv, &last_tv, ts_buf);
 
 				/* log CAN frame with absolute timestamp & device */
 				sprint_canframe(buf, &frame, 0, maxdlen);
-				fprintf(logfile, "(%010lu.%06lu) %*s %s%s\n",
-					tv.tv_sec, tv.tv_usec,
+				fprintf(logfile, "%s%*s %s%s\n", ts_buf,
 					max_devname_len, devname[idx], buf,
 					extra_info);
 			}
@@ -738,10 +797,11 @@ int main(int argc, char **argv)
 
 				/* print CAN frame in log file style to stdout */
 				sprint_canframe(buf, &frame, 0, maxdlen);
-				printf("(%010lu.%06lu) %*s %s%s\n",
-				       tv.tv_sec, tv.tv_usec,
-				       max_devname_len, devname[idx], buf,
-				       extra_info);
+				print_timestamp(logtimestamp, &tv, &last_tv);
+
+				printf("%*s %s%s\n",
+					max_devname_len, devname[idx], buf,
+					extra_info);
 				goto out_fflush; /* no other output to stdout */
 			}
 
@@ -754,48 +814,7 @@ int main(int argc, char **argv)
 			}
 
 			printf(" %s", (color > 2) ? col_on[idx % MAXCOL] : "");
-
-			switch (timestamp) {
-
-			case 'a': /* absolute with timestamp */
-				printf("(%010lu.%06lu) ", tv.tv_sec, tv.tv_usec);
-				break;
-
-			case 'A': /* absolute with date */
-			{
-				struct tm tm;
-				char timestring[25];
-
-				tm = *localtime(&tv.tv_sec);
-				strftime(timestring, 24, "%Y-%m-%d %H:%M:%S", &tm);
-				printf("(%s.%06lu) ", timestring, tv.tv_usec);
-			}
-			break;
-
-			case 'd': /* delta */
-			case 'z': /* starting with zero */
-			{
-				struct timeval diff;
-
-				if (last_tv.tv_sec == 0)   /* first init */
-					last_tv = tv;
-				diff.tv_sec = tv.tv_sec - last_tv.tv_sec;
-				diff.tv_usec = tv.tv_usec - last_tv.tv_usec;
-				if (diff.tv_usec < 0)
-					diff.tv_sec--, diff.tv_usec += 1000000;
-				if (diff.tv_sec < 0)
-					diff.tv_sec = diff.tv_usec = 0;
-				printf("(%03lu.%06lu) ", diff.tv_sec, diff.tv_usec);
-
-				if (timestamp == 'd')
-					last_tv = tv; /* update for delta calculation */
-			}
-			break;
-
-			default: /* no timestamp output */
-				break;
-			}
-
+			print_timestamp(timestamp, &tv, &last_tv);
 			printf(" %s", (color && (color < 3)) ? col_on[idx % MAXCOL] : "");
 			printf("%*s", max_devname_len, devname[idx]);
 
