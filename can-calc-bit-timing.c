@@ -329,7 +329,7 @@ static struct calc_bittiming_const can_calc_consts[] = {
 		},
 		.ref_clk = {
 			{ .clk =  8000000, },
-			{ .clk = 16000000, },
+			{ .clk = 10000000, },
 		},
 		.printf_btr = printf_btr_mcp251x,
 	}, {
