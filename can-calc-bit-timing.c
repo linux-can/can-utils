@@ -201,6 +201,19 @@ static void printf_btr_mcp251x(struct can_bittiming *bt, bool hdr)
 	}
 }
 
+static void printf_btr_mcp251xfd(struct can_bittiming *bt, bool hdr)
+{
+	if (hdr) {
+		printf("NBTCFG");
+	} else {
+		uint32_t nbtcfg = ((bt->brp - 1) << 24) |
+			((bt->prop_seg + bt->phase_seg1 - 1) << 16) |
+			((bt->phase_seg2 - 1) << 8) |
+			(bt->sjw - 1);
+		printf("0x%08x", nbtcfg);
+	}
+}
+
 static void printf_btr_ti_hecc(struct can_bittiming *bt, bool hdr)
 {
 	if (hdr) {
@@ -332,6 +345,23 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			{ .clk = 10000000, },
 		},
 		.printf_btr = printf_btr_mcp251x,
+	}, {
+		.bittiming_const = {
+			.name = "mcp251xfd",
+			.tseg1_min = 2,
+			.tseg1_max = 256,
+			.tseg2_min = 1,
+			.tseg2_max = 128,
+			.sjw_max = 128,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 20000000, },
+			{ .clk = 40000000, },
+		},
+		.printf_btr = printf_btr_mcp251xfd,
 	}, {
 		.bittiming_const = {
 			.name = "ti_hecc",
