@@ -276,7 +276,6 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			{ .clk = 66660000, .name = "mpc5121", },
 			{ .clk = 66666666, .name = "mpc5121" },
 		},
-		.printf_btr = printf_btr_sja1000,
 	}, {
 		.bittiming_const = {
 			.name = "at91",
