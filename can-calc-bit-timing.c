@@ -579,7 +579,8 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 		       ref_clk->name ? ")" : "",
 		       ref_clk->clk / 1000000.0);
 
-		btc->printf_btr(&bt, true);
+		if (btc->printf_btr)
+			btc->printf_btr(&bt, true);
 		printf("\n");
 	}
 
@@ -611,7 +612,8 @@ static void print_bit_timing(const struct calc_bittiming_const *btc,
 	       bt.sample_point / 10.0,
 	       100.0 * spt_error / spt_nominal);
 
-	btc->printf_btr(&bt, false);
+	if (btc->printf_btr)
+		btc->printf_btr(&bt, false);
 	printf("\n");
 }
 
