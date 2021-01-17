@@ -654,20 +654,66 @@ static void do_list(void)
 		printf("%s\n", can_calc_consts[i].bittiming_const.name);
 }
 
+static void do_calc(const char *name,
+		    __u32 bitrate_nominal, unsigned int spt_nominal,
+		    struct calc_ref_clk *opt_ref_clk, bool quiet)
+{
+	const struct calc_bittiming_const *btc;
+	const struct calc_ref_clk *ref_clk;
+	unsigned int i, j, k;
+	bool found = false;
+
+	for (i = 0; i < ARRAY_SIZE(can_calc_consts); i++) {
+		if (name &&
+		    strcmp(can_calc_consts[i].bittiming_const.name, name) != 0)
+			continue;
+
+		found = true;
+		btc = &can_calc_consts[i];
+
+		for (j = 0; j < ARRAY_SIZE(btc->ref_clk); j++) {
+			if (opt_ref_clk)
+				ref_clk = opt_ref_clk;
+			else
+				ref_clk = &btc->ref_clk[j];
+
+			if (!ref_clk->clk)
+				break;
+
+			if (bitrate_nominal) {
+				print_bit_timing(btc, ref_clk, bitrate_nominal,
+						 spt_nominal, quiet);
+			} else {
+				for (k = 0; k < ARRAY_SIZE(common_bitrates); k++)
+					print_bit_timing(btc, ref_clk,
+							 common_bitrates[k],
+							 spt_nominal, k);
+			}
+			printf("\n");
+
+			if (opt_ref_clk)
+				break;
+		}
+	}
+
+	if (!found) {
+		printf("error: unknown CAN controller '%s', try one of these:\n\n", name);
+		do_list();
+		exit(EXIT_FAILURE);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	__u32 bitrate_nominal = 0;
+	unsigned int spt_nominal = 0;
 	struct calc_ref_clk opt_ref_clk = {
 		.name = "cmd-line",
 	};
-	const struct calc_ref_clk *ref_clk;
-	unsigned int spt_nominal = 0;
-	bool quiet = false, list = false, found = false;
-	char *name = NULL;
-	unsigned int i, j, k;
+	bool quiet = false, list = false;
+	const char *name = NULL;
 	int opt;
 
-	const struct calc_bittiming_const *btc;
 
 	while ((opt = getopt(argc, argv, "b:c:lqs:?")) != -1) {
 		switch (opt) {
@@ -721,44 +767,8 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	for (i = 0; i < ARRAY_SIZE(can_calc_consts); i++) {
-		if (name &&
-		    strcmp(can_calc_consts[i].bittiming_const.name, name) != 0)
-			continue;
-
-		found = true;
-		btc = &can_calc_consts[i];
-
-		for (j = 0; j < ARRAY_SIZE(btc->ref_clk); j++) {
-			if (opt_ref_clk.clk)
-				ref_clk = &opt_ref_clk;
-			else
-				ref_clk = &btc->ref_clk[j];
-
-			if (!ref_clk->clk)
-				break;
-
-			if (bitrate_nominal) {
-				print_bit_timing(btc, ref_clk, bitrate_nominal,
-						 spt_nominal, quiet);
-			} else {
-				for (k = 0; k < ARRAY_SIZE(common_bitrates); k++)
-					print_bit_timing(btc, ref_clk,
-							 common_bitrates[k],
-							 spt_nominal, k);
-			}
-			printf("\n");
-
-			if (opt_ref_clk.clk)
-				break;
-		}
-	}
-
-	if (!found) {
-		printf("error: unknown CAN controller '%s', try one of these:\n\n", name);
-		do_list();
-		exit(EXIT_FAILURE);
-	}
+	do_calc(name, bitrate_nominal, spt_nominal,
+		opt_ref_clk.clk ? &opt_ref_clk : NULL, quiet);
 
 	exit(EXIT_SUCCESS);
 }
