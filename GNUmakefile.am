@@ -93,7 +93,9 @@ EXTRA_DIST = \
 	README.md \
 	autogen.sh \
 	can-j1939-kickstart.md \
-	can-j1939.md
+	can-j1939.md \
+	mcp251xfd/99-devcoredump.rules \
+	mcp251xfd/devcoredump
 
 MAINTAINERCLEANFILES = \
 	configure \

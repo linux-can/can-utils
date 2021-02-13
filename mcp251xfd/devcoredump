@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -e
+
+timestamp=$(date +%+4Y%m%d-%H%M%S)
+filename=/var/log/devcoredump-${timestamp}.dump
+
+cat /sys/${DEVPATH}/data > ${filename}
+echo 1 > /sys/${DEVPATH}/data
+
+echo "devcoredump ${DEVPATH}" | logger
