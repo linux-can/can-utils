@@ -24,6 +24,7 @@ noinst_HEADERS = \
 	include/linux/can/raw.h \
 	include/linux/can/vxcan.h \
 	include/linux/errqueue.h \
+	include/linux/kernel.h \
 	include/linux/net_tstamp.h \
 	include/linux/netlink.h
 
@@ -37,6 +38,15 @@ libcan_la_SOURCES = \
 
 libj1939_la_SOURCES = \
 	libj1939.c
+
+mcp251xfd_dump_SOURCES = \
+	mcp251xfd/mcp251xfd-dev-coredump.c \
+	mcp251xfd/mcp251xfd-dump-userspace.h \
+	mcp251xfd/mcp251xfd-dump.c \
+	mcp251xfd/mcp251xfd-dump.h \
+	mcp251xfd/mcp251xfd-main.c \
+	mcp251xfd/mcp251xfd-regmap.c \
+	mcp251xfd/mcp251xfd.h
 
 bin_PROGRAMS = \
 	asc2log \
@@ -65,6 +75,7 @@ bin_PROGRAMS = \
 	j1939sr \
 	log2asc \
 	log2long \
+	mcp251xfd-dump \
 	slcan_attach \
 	slcand \
 	slcanpty \
@@ -82,7 +93,9 @@ EXTRA_DIST = \
 	README.md \
 	autogen.sh \
 	can-j1939-kickstart.md \
-	can-j1939.md
+	can-j1939.md \
+	mcp251xfd/99-devcoredump.rules \
+	mcp251xfd/devcoredump
 
 MAINTAINERCLEANFILES = \
 	configure \

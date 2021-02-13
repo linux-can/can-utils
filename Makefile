@@ -96,6 +96,7 @@ PROGRAMS := \
 	cansniffer \
 	log2asc \
 	log2long \
+	mcp251xfd-dump \
 	slcanpty
 
 all: $(PROGRAMS)
@@ -142,3 +143,6 @@ j1939spy:	j1939spy.o	libj1939.o
 j1939sr:	j1939sr.o	libj1939.o
 testj1939:	testj1939.o	libj1939.o
 canbusload:	canbusload.o	canframelen.o
+
+mcp251xfd-dump:	mcp251xfd/mcp251xfd-dev-coredump.o mcp251xfd/mcp251xfd-dump.o mcp251xfd/mcp251xfd-main.o mcp251xfd/mcp251xfd-regmap.o
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@

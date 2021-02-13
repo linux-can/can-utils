@@ -20,6 +20,7 @@ GNUmakefile.in
 /config/m4/ltsugar.m4
 /config/m4/ltversion.m4
 /config/m4/lt~obsolete.m4
+/mcp251xfd/.dirstamp
 
 /asc2log
 /bcmserver
@@ -47,6 +48,7 @@ GNUmakefile.in
 /j1939sr
 /log2asc
 /log2long
+/mcp251xfd-dump
 /slcan_attach
 /slcand
 /slcanpty
