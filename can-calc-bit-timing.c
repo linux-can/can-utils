@@ -362,8 +362,9 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			{ .clk =  8000000, },
-			{ .clk = 10000000, },
+			/* The mcp251x uses half of the external OSC clock as the base clock */
+			{ .clk = 16000000 / 2, },
+			{ .clk = 20000000 / 2, },
 		},
 		.printf_btr = printf_btr_mcp251x,
 	}, {
