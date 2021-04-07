@@ -111,7 +111,7 @@ void print_usage(char *prg)
 		" write() syscalls)\n");
 	fprintf(stderr, "         -x            (disable local loopback of "
 		"generated CAN frames)\n");
-	fprintf(stderr, "         -c            (number of messages to send in burst, "
+	fprintf(stderr, "         -c <count>    (number of messages to send in burst, "
 		"default 1)\n");
 	fprintf(stderr, "         -v            (increment verbose level for "
 		"printing sent CAN frames)\n\n");
