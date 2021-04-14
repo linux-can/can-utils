@@ -143,7 +143,7 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -e          (dump CAN error frames in human-readable format)\n");
 	fprintf(stderr, "         -8          (display raw DLC values in {} for Classical CAN)\n");
 	fprintf(stderr, "         -x          (print extra message infos, rx/tx brs esi)\n");
-	fprintf(stderr, "         -T <msecs>  (terminate after <msecs> without any reception)\n");
+	fprintf(stderr, "         -T <msecs>  (terminate after <msecs> if no frames were received)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with optional filter sets can be specified\n", MAXSOCK);
 	fprintf(stderr, "on the commandline in the form: <ifname>[,filter]*\n");
