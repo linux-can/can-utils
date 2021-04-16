@@ -139,7 +139,7 @@ static inline int frames_to_send(struct timeval *today, struct timeval *diff,
 	cmp.tv_sec  = log->tv_sec  + diff->tv_sec;
 	cmp.tv_usec = log->tv_usec + diff->tv_usec;
 
-	if (cmp.tv_usec > 1000000) {
+	if (cmp.tv_usec >= 1000000) {
 		cmp.tv_usec -= 1000000;
 		cmp.tv_sec++;
 	}
