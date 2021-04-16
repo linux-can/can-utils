@@ -119,7 +119,7 @@ void calc_tv(struct timeval *tv, struct timeval *read_tv,
 		tv->tv_usec += read_tv->tv_usec;
 	}
 
-	if (tv->tv_usec > 1000000) {
+	if (tv->tv_usec >= 1000000) {
 		tv->tv_usec -= 1000000;
 		tv->tv_sec++;
 	}
