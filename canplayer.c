@@ -87,6 +87,8 @@ void print_usage(char *prg)
                 "(Use 'i' for infinite loop - default: %d)\n", DEFAULT_LOOPS);
         fprintf(stderr, "         -t           (ignore timestamps: "
                 "send frames immediately)\n");
+        fprintf(stderr, "         -i           (interactive - wait "
+                "for ENTER key to process next frame)\n");
         fprintf(stderr, "         -g <ms>      (gap in milli "
                 "seconds - default: %d ms)\n", DEFAULT_GAP);
         fprintf(stderr, "         -s <s>       (skip gaps in "
@@ -244,6 +246,7 @@ int main(int argc, char **argv)
 	FILE *infile = stdin;
 	unsigned long gap = DEFAULT_GAP; 
 	int use_timestamps = 1;
+	int interactive = 0; /* wait for ENTER keypress to process next frame */
 	static int verbose, opt, delay_loops;
 	static unsigned long skipgap;
 	static int loopback_disable = 0;
@@ -254,7 +257,7 @@ int main(int argc, char **argv)
 	int eof, txmtu, i, j;
 	char *fret;
 
-	while ((opt = getopt(argc, argv, "I:l:tg:s:xv?")) != -1) {
+	while ((opt = getopt(argc, argv, "I:l:tig:s:xv?")) != -1) {
 		switch (opt) {
 		case 'I':
 			infile = fopen(optarg, "r");
@@ -276,6 +279,10 @@ int main(int argc, char **argv)
 
 		case 't':
 			use_timestamps = 0;
+			break;
+
+		case 'i':
+			interactive = 1;
 			break;
 
 		case 'g':
@@ -318,6 +325,12 @@ int main(int argc, char **argv)
 			printf("infinite_loops\n");
 		else
 			printf("%d loops\n", loops);
+	}
+
+	/* ignore timestamps from logfile when in single step keypress mode */
+	if (interactive) {
+		use_timestamps = 0;
+		printf("interactive mode: press ENTER to process next CAN frame ...\n");
 	}
 
 	sleep_ts.tv_sec  =  gap / 1000;
@@ -412,6 +425,10 @@ int main(int argc, char **argv)
 
 			while ((!use_timestamps) ||
 			       (frames_to_send(&today_tv, &diff_tv, &log_tv) < 0)) {
+
+				/* wait for keypress to process next frame */
+				if (interactive)
+					getchar();
 
 				/* log_tv/device/ascframe are valid here */
 
