@@ -135,7 +135,7 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -S          (swap byte order in printed CAN data[] - marked with '%c' )\n", SWAP_DELIMITER);
 	fprintf(stderr, "         -s <level>  (silent mode - %d: off (default) %d: animation %d: silent)\n", SILENT_OFF, SILENT_ANI, SILENT_ON);
 	fprintf(stderr, "         -l          (log CAN-frames into file. Sets '-s %d' by default)\n", SILENT_ON);
-	fprintf(stderr, "         -b <count>  (log CAN-frames into a ring buffer file of at most <count> CAN frames)\n");
+	fprintf(stderr, "         -b <count>  (similar to '-l', but using a ring buffer file of at most <count> CAN frames)\n");
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "         -n <count>  (terminate after reception of <count> CAN frames)\n");
 	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
