@@ -315,9 +315,9 @@ int main(int argc, char **argv)
 	struct timeval tv, last_tv;
 	int timeout_ms = -1; /* default to no timeout */
 	FILE *logfile = NULL;
-  int buffer_length = 0; /*  number of entries to store in ring buffer */
-  int buffer_index = 0;
-  unsigned char circular = 0;
+	int buffer_length = 0; /*	 number of entries to store in ring buffer */
+	int buffer_index = 0;
+	unsigned char circular = 0;
 
 
 	signal(SIGTERM, sigterm);
@@ -379,10 +379,10 @@ int main(int argc, char **argv)
 			}
 			break;
 
-    case 'b':
-      buffer_length = atoi(optarg);
-      circular = 1;
-      break;
+		case 'b':
+			buffer_length = atoi(optarg);
+			circular = 1;
+			break;
 
 		case 'l':
 			log = 1;
@@ -445,15 +445,15 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
-  if (circular && log){
-      fprintf(stderr, "Circular buffer and file output can't both be selected: please use either option in isolation\n");
-      exit(0);
-  }
+	if (circular && log){
+			fprintf(stderr, "Circular buffer and file output can't both be selected: please use either option in isolation\n");
+			exit(0);
+	}
 
-  if (circular && logfrmt){
-      fprintf(stderr, "Circular buffer and file format output can't both be selected: please use either option in isolation\n");
-      exit(0);
-  }
+	if (circular && logfrmt){
+			fprintf(stderr, "Circular buffer and file format output can't both be selected: please use either option in isolation\n");
+			exit(0);
+	}
 
 	if (silent == SILENT_INI) {
 		if (log || circular) {
@@ -693,10 +693,10 @@ int main(int argc, char **argv)
 		if (silent != SILENT_ON)
 			fprintf(stderr, "Warning: Console output active while logging!\n");
 
-    if(circular)
-        fprintf(stderr, "Enabling Circular Logfile (max %d data points) '%s'\n", buffer_length, fname);
-    else
-        fprintf(stderr, "Enabling Logfile '%s'\n", fname);
+		if(circular)
+				fprintf(stderr, "Enabling Circular Logfile (max %d data points) '%s'\n", buffer_length, fname);
+		else
+				fprintf(stderr, "Enabling Logfile '%s'\n", fname);
 
 		logfile = fopen(fname, circular? "w+" : "w");
 		if (!logfile) {
@@ -804,30 +804,30 @@ int main(int argc, char **argv)
 					extra_info = " R";
 			}
 
-      if (circular) {
-          char output[CL_CFSZ + TIMESTAMPSZ];
-          char buf[CL_CFSZ]; /* max length */
-          char ts_buf[TIMESTAMPSZ];
+			if (circular) {
+					char output[CL_CFSZ + TIMESTAMPSZ];
+					char buf[CL_CFSZ]; /* max length */
+					char ts_buf[TIMESTAMPSZ];
 
-          sprint_timestamp(logtimestamp, &tv, &last_tv, ts_buf);
-          /* log CAN frame with absolute timestamp & device */
-          sprint_canframe(buf, &frame, 0, maxdlen);
+					sprint_timestamp(logtimestamp, &tv, &last_tv, ts_buf);
+					/* log CAN frame with absolute timestamp & device */
+					sprint_canframe(buf, &frame, 0, maxdlen);
 
-          /*  force a payload size of exactly 25: this corresponds to
-              8 characters for an extended can-id, 1 character for the hash
-              and 16 character of payload (maximum allowable size)
-           */
-          snprintf(output, CL_CFSZ + TIMESTAMPSZ, "%s%*s %-25.25s%s\n", ts_buf,
-                   max_devname_len, devname[idx], buf,
-                   extra_info);
+					/*	force a payload size of exactly 25: this corresponds to
+							8 characters for an extended can-id, 1 character for the hash
+							and 16 character of payload (maximum allowable size)
+					 */
+					snprintf(output, CL_CFSZ + TIMESTAMPSZ, "%s%*s %-25.25s%s\n", ts_buf,
+									 max_devname_len, devname[idx], buf,
+									 extra_info);
 
-          /*  if the buffer index has grown past the desired count, seek to head of file and reset counter */
-          if(++buffer_index >= buffer_length){
-              rewind(logfile);
-              buffer_index = 0;
-          }
-          fprintf(logfile, output);
-      }
+					/*	if the buffer index has grown past the desired count, seek to head of file and reset counter */
+					if(++buffer_index >= buffer_length){
+							rewind(logfile);
+							buffer_index = 0;
+					}
+					fprintf(logfile, output);
+			}
 
 			if (log) {
 				char buf[CL_CFSZ]; /* max length */
