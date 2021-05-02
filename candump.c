@@ -316,6 +316,8 @@ int main(int argc, char **argv)
 	int timeout_ms = -1; /* default to no timeout */
 	FILE *logfile = NULL;
   int buffer_length = 0; /*  number of entries to store in ring buffer */
+  int buffer_index = 0;
+  int line_length = 0; /*  cached length of entries  */
   unsigned char circular = 0;
 
 
@@ -455,7 +457,7 @@ int main(int argc, char **argv)
   }
 
 	if (silent == SILENT_INI) {
-		if (log) {
+		if (log || circular) {
 			fprintf(stderr, "Disabled standard output while logging.\n");
 			silent = SILENT_ON; /* disable output on stdout */
 		} else
@@ -631,7 +633,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		if (timestamp || log || logfrmt) {
+		if (timestamp || log || circular || logfrmt) {
 			if (hwtimestamp) {
 				const int timestamping_flags = (SOF_TIMESTAMPING_SOFTWARE |
 								SOF_TIMESTAMPING_RX_SOFTWARE |
@@ -669,7 +671,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (log) {
+	if (log || circular) {
 		time_t currtime;
 		struct tm now;
 		char fname[83]; /* suggested by -Wformat-overflow= */
@@ -692,9 +694,12 @@ int main(int argc, char **argv)
 		if (silent != SILENT_ON)
 			fprintf(stderr, "Warning: Console output active while logging!\n");
 
-		fprintf(stderr, "Enabling Logfile '%s'\n", fname);
+    if(circular)
+        fprintf(stderr, "Enabling Circular Logfile (max %d data points) '%s'\n", buffer_length, fname);
+    else
+        fprintf(stderr, "Enabling Logfile '%s'\n", fname);
 
-		logfile = fopen(fname, "w");
+		logfile = fopen(fname, circular? "w+" : "w");
 		if (!logfile) {
 			perror("logfile");
 			return 1;
@@ -800,6 +805,35 @@ int main(int argc, char **argv)
 					extra_info = " R";
 			}
 
+      if (circular) {
+          char output[1024];
+          char buf[CL_CFSZ]; /* max length */
+          char ts_buf[TIMESTAMPSZ];
+
+          sprint_timestamp(logtimestamp, &tv, &last_tv, ts_buf);
+          /* log CAN frame with absolute timestamp & device */
+          sprint_canframe(buf, &frame, 0, maxdlen);
+
+          /*  force a payload size of exactly 25: this corresponds to
+              8 characters for an extended can-id, 1 character for the hash
+              and 16 character of payload (maximum allowable size)
+           */
+          int len = snprintf(output, 1024, "%s%*s %-25.25s%s\n", ts_buf,
+                             max_devname_len, devname[idx], buf,
+                             extra_info);
+
+          /*  store the formatted size of the finished output string  */
+          if(line_length == 0)
+              line_length = len;
+
+          /*  if the buffer index has grown past the desired count, seek to head of file and reset counter */
+          if(++buffer_index >= buffer_length){
+              rewind(logfile);
+              buffer_index = 0;
+          }
+          fprintf(logfile, output);
+      }
+
 			if (log) {
 				char buf[CL_CFSZ]; /* max length */
 				char ts_buf[TIMESTAMPSZ];
@@ -864,7 +898,7 @@ int main(int argc, char **argv)
 
 	close(fd_epoll);
 
-	if (log)
+	if (log || circular)
 		fclose(logfile);
 
 	return 0;
