@@ -135,6 +135,7 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -S          (swap byte order in printed CAN data[] - marked with '%c' )\n", SWAP_DELIMITER);
 	fprintf(stderr, "         -s <level>  (silent mode - %d: off (default) %d: animation %d: silent)\n", SILENT_OFF, SILENT_ANI, SILENT_ON);
 	fprintf(stderr, "         -l          (log CAN-frames into file. Sets '-s %d' by default)\n", SILENT_ON);
+	fprintf(stderr, "         -b <count>  (log CAN-frames into a ring buffer file of at most <count> CAN frames)\n");
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "         -n <count>  (terminate after reception of <count> CAN frames)\n");
 	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
@@ -314,6 +315,9 @@ int main(int argc, char **argv)
 	struct timeval tv, last_tv;
 	int timeout_ms = -1; /* default to no timeout */
 	FILE *logfile = NULL;
+  int buffer_length = 0; /*  number of entries to store in ring buffer */
+  unsigned char circular = 0;
+
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -322,7 +326,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:HciaSs:lDdxLn:r:he8T:?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:HciaSs:lb:DdxLc:n:r:he8T:?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -373,6 +377,11 @@ int main(int argc, char **argv)
 				exit(1);
 			}
 			break;
+
+    case 'b':
+      buffer_length = atoi(optarg);
+      circular = 1;
+      break;
 
 		case 'l':
 			log = 1;
@@ -434,6 +443,16 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Log file format selected: Please disable ASCII/BINARY/SWAP/RAWDLC options!\n");
 		exit(0);
 	}
+
+  if (circular && log){
+      fprintf(stderr, "Circular buffer and file output can't both be selected: please use either option in isolation\n");
+      exit(0);
+  }
+
+  if (circular && logfrmt){
+      fprintf(stderr, "Circular buffer and file format output can't both be selected: please use either option in isolation\n");
+      exit(0);
+  }
 
 	if (silent == SILENT_INI) {
 		if (log) {
