@@ -317,7 +317,6 @@ int main(int argc, char **argv)
 	FILE *logfile = NULL;
   int buffer_length = 0; /*  number of entries to store in ring buffer */
   int buffer_index = 0;
-  int line_length = 0; /*  cached length of entries  */
   unsigned char circular = 0;
 
 
@@ -806,7 +805,7 @@ int main(int argc, char **argv)
 			}
 
       if (circular) {
-          char output[1024];
+          char output[CL_CFSZ + TIMESTAMPSZ];
           char buf[CL_CFSZ]; /* max length */
           char ts_buf[TIMESTAMPSZ];
 
@@ -818,13 +817,9 @@ int main(int argc, char **argv)
               8 characters for an extended can-id, 1 character for the hash
               and 16 character of payload (maximum allowable size)
            */
-          int len = snprintf(output, 1024, "%s%*s %-25.25s%s\n", ts_buf,
-                             max_devname_len, devname[idx], buf,
-                             extra_info);
-
-          /*  store the formatted size of the finished output string  */
-          if(line_length == 0)
-              line_length = len;
+          snprintf(output, CL_CFSZ + TIMESTAMPSZ, "%s%*s %-25.25s%s\n", ts_buf,
+                   max_devname_len, devname[idx], buf,
+                   extra_info);
 
           /*  if the buffer index has grown past the desired count, seek to head of file and reset counter */
           if(++buffer_index >= buffer_length){
