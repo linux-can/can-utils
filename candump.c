@@ -136,6 +136,7 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -s <level>  (silent mode - %d: off (default) %d: animation %d: silent)\n", SILENT_OFF, SILENT_ANI, SILENT_ON);
 	fprintf(stderr, "         -l          (log CAN-frames into file. Sets '-s %d' by default)\n", SILENT_ON);
 	fprintf(stderr, "         -b <count>  (similar to '-l', but using a ring buffer file of at most <count> CAN frames)\n");
+	fprintf(stderr, "         -B <size>   (similar to '-b', but maintain a maximum file size in bytes)\n");
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "         -n <count>  (terminate after reception of <count> CAN frames)\n");
 	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
@@ -317,6 +318,7 @@ int main(int argc, char **argv)
 	FILE *logfile = NULL;
 	int buffer_length = 0; /*	 number of entries to store in ring buffer */
 	int buffer_index = 0;
+  int line_length = -1;
 	unsigned char circular = 0;
 
 
@@ -327,7 +329,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:HciaSs:lb:DdxLc:n:r:he8T:?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:HciaSs:lb:B:DdxLc:n:r:he8T:?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -379,6 +381,8 @@ int main(int argc, char **argv)
 			}
 			break;
 
+		case 'B':
+			line_length = 0;
 		case 'b':
 			buffer_length = atoi(optarg);
 			circular = 1;
@@ -694,7 +698,11 @@ int main(int argc, char **argv)
 			fprintf(stderr, "Warning: Console output active while logging!\n");
 
 		if(circular)
-				fprintf(stderr, "Enabling Circular Logfile (max %d data points) '%s'\n", buffer_length, fname);
+				fprintf(stderr,
+								"Enabling Circular Logfile (max %d %s) '%s'\n",
+								buffer_length,
+								(line_length == -1)? "samples" : "bytes",
+								fname);
 		else
 				fprintf(stderr, "Enabling Logfile '%s'\n", fname);
 
@@ -817,14 +825,27 @@ int main(int argc, char **argv)
 							8 characters for an extended can-id, 1 character for the hash
 							and 16 character of payload (maximum allowable size)
 					 */
-					snprintf(output, CL_CFSZ + TIMESTAMPSZ, "%s%*s %-25.25s%s\n", ts_buf,
-									 max_devname_len, devname[idx], buf,
-									 extra_info);
+					int len = snprintf(output, CL_CFSZ + TIMESTAMPSZ, "%s%*s %-25.25s%s\n", ts_buf,
+														 max_devname_len, devname[idx], buf,
+														 extra_info);
 
-					/*	if the buffer index has grown past the desired count, seek to head of file and reset counter */
-					if(++buffer_index >= buffer_length){
-							rewind(logfile);
-							buffer_index = 0;
+					/*	line_length == -1 indicates we are simply counting entries	*/
+					if(line_length == -1){
+							/*	if the buffer index has grown past the desired count, seek to head of file and reset counter */
+							if(buffer_index++ >= buffer_length){
+									rewind(logfile);
+									buffer_index = 1;
+							}
+					} else /* positive line_length inidcates we are counting size	 */
+					{
+							if(line_length == 0)
+									line_length = len;
+							buffer_index += line_length;
+
+							if(buffer_index >= buffer_length){
+									rewind(logfile);
+									buffer_index = line_length;
+							}
 					}
 					fprintf(logfile, output);
 			}
