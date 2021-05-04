@@ -376,21 +376,22 @@ int main(int argc, char *argv[])
 
 	while ((opt = getopt(argc, argv, "f:gl:v?")) != -1) {
 		switch (opt) {
-		case 'v':
-			verbose++;
-			break;
 		case 'f':
 			inflight_count = atoi(optarg);
-			break;
-
-		case 'l':
-			test_loops = atoi(optarg);
 			break;
 
 		case 'g':
 			echo_gen = 1;
 			break;
 
+		case 'l':
+			test_loops = atoi(optarg);
+			break;
+
+		case 'v':
+			verbose++;
+			break;
+			
 		case '?':
 		default:
 			print_usage(basename(argv[0]));
