@@ -69,6 +69,18 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -d          (only detach line discipline)\n");
 	fprintf(stderr, "         -w          (attach - wait for keypess - detach)\n");
 	fprintf(stderr, "         -n <name>   (assign created netdevice name)\n");
+	fprintf(stderr, "\n"
+			"    <speed>          Bitrate\n"
+			"          0            10 Kbit/s\n"
+			"          1            20 Kbit/s\n"
+			"          2            50 Kbit/s\n"
+			"          3           100 Kbit/s\n"
+			"          4           125 Kbit/s\n"
+			"          5           250 Kbit/s\n"
+			"          6           500 Kbit/s\n"
+			"          7           800 Kbit/s\n"
+			"          8          1000 Kbit/s\n"
+			"\n");
 	fprintf(stderr, "\nExamples:\n");
 	fprintf(stderr, "slcan_attach -w -o -f -s6 -c /dev/ttyS1\n\n");
 	fprintf(stderr, "slcan_attach /dev/ttyS1\n\n");
