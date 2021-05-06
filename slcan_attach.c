@@ -213,7 +213,7 @@ int main(int argc, char **argv)
 		/* try to rename the created device if requested */
 		if (name) {
 			int s = socket(PF_INET, SOCK_DGRAM, 0);
- 
+
 			printf("rename netdevice %s to %s ... ", buf, name);
 
 			if (s < 0)
@@ -222,12 +222,12 @@ int main(int argc, char **argv)
 				/* current slcan%d name is still in ifr.ifr_name */
 				memset (ifr.ifr_newname, 0, sizeof(ifr.ifr_newname));
 				strncpy (ifr.ifr_newname, name, sizeof(ifr.ifr_newname) - 1);
- 
+
 				if (ioctl(s, SIOCSIFNAME, &ifr) < 0)
 					printf("failed!\n");
 				else
 					printf("ok.\n");
- 
+
 				close(s);
 			}
 		}
