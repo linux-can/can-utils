@@ -114,14 +114,14 @@ struct can_frame {
 		__u8 len;
 		__u8 can_dlc; /* deprecated */
 	};
-	__u8 __pad; /* padding */
+	__u8 flags; /* additional flags */
 	__u8 __res0; /* reserved / padding */
 	__u8 len8_dlc; /* optional DLC for 8 byte payload length (9 .. 15) */
 	__u8 data[CAN_MAX_DLEN] __attribute__((aligned(8)));
 };
 
 /*
- * defined bits for canfd_frame.flags
+ * defined bits for canfd_frame.flags and can_frame.flags
  *
  * The use of struct canfd_frame implies the Extended Data Length (EDL) bit to
  * be set in the CAN frame bitstream on the wire. The EDL bit switch turns
