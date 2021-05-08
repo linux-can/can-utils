@@ -315,6 +315,7 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 
 	if (flags & ASC_F_FDF) {
 		dlen = CANFD_MAX_DLEN;
+		cf.flags |= CANFD_FDF;
 		if (flags & ASC_F_BRS)
 			cf.flags |= CANFD_BRS;
 		if (flags & ASC_F_ESI)

@@ -409,6 +409,7 @@ int main(int argc, char **argv)
 		if (canfd){
 			mtu = CANFD_MTU;
 			maxdlen = CANFD_MAX_DLEN;
+			frame.flags |= CANFD_FDF;
 			if (brs)
 				frame.flags |= CANFD_BRS;
 			if (esi)
