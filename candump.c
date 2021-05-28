@@ -690,10 +690,10 @@ int main(int argc, char **argv)
 	msg.msg_control = &ctrlmsg;
 
 	while (running) {
-
-		if ((num_events = epoll_wait(fd_epoll, events_pending, currmax, timeout_ms)) <= 0) {
-			//perror("epoll_wait");
-			running = 0;
+		num_events = epoll_wait(fd_epoll, events_pending, currmax, timeout_ms);
+		if (num_events == -1) {
+			if (errno != EINTR)
+				running = 0;
 			continue;
 		}
 
