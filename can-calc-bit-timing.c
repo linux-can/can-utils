@@ -273,6 +273,22 @@ static void printf_btr_rcar_can(struct can_bittiming *bt, bool hdr)
 	}
 }
 
+static void printf_btr_bxcan(struct can_bittiming *bt, bool hdr)
+{
+	if (hdr) {
+		printf("%10s", "CAN_BTR");
+	} else {
+		uint32_t btr;
+
+		btr = (((bt->brp -1) & 0x3ff) << 0) |
+			(((bt->prop_seg + bt->phase_seg1 -1) & 0xf) << 16) |
+			(((bt->phase_seg2 -1) & 0x7) << 20) |
+			(((bt->sjw -1) & 0x3) << 24);
+
+		printf("0x%08x", btr);
+	}
+}
+
 static struct calc_bittiming_const can_calc_consts[] = {
 	{
 		.bittiming_const = {
@@ -417,6 +433,22 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			{ .clk = 65000000, },
 		},
 		.printf_btr = printf_btr_rcar_can,
+	}, {
+		.bittiming_const = {
+			.name = "bxcan",
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 1024,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 48000000, },
+		},
+		.printf_btr = printf_btr_bxcan,
 	},
 };
 
