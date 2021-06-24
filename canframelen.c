@@ -236,13 +236,40 @@ static unsigned cfl_exact(struct can_frame *frame)
 		3;		/* IFS */
 }
 
+unsigned can_frame_dbitrate_length(struct canfd_frame *frame, enum cfl_mode mode, int mtu)
+{
+	if (mtu != CANFD_MTU || !(frame->flags & CANFD_BRS))
+		return 0;
+	switch (mode) {
+	case CFL_NO_BITSTUFFING:
+		return 1 /* brs/crcdel */ + 1 /* esi */ + 4 /* dlc */ +
+			((frame->len >= 16) ? 21 : 17) +
+			frame->len * 8;
+	case CFL_WORSTCASE:
+		return can_frame_dbitrate_length(frame, CFL_NO_BITSTUFFING, mtu) * 5 / 4;
+	default:
+		return 0;
+	}
+}
 
 unsigned can_frame_length(struct canfd_frame *frame, enum cfl_mode mode, int mtu)
 {
 	int eff = (frame->can_id & CAN_EFF_FLAG);
 
-	if (mtu != CAN_MTU)
-		return 0;	/* CANFD is not supported yet */
+	if (mtu == CANFD_MTU)
+		/* not correct, but close ? */
+		switch (mode) {
+		case CFL_NO_BITSTUFFING:
+			return 1 + (eff ? 29 : 11) + ((frame->len >= 16) ? 21 : 17) +
+				5 /* r1, ide, edl, r0, brs/crcdel, */ + 12 /* trail */ +
+				frame->len * 8;
+		case CFL_WORSTCASE:
+			return can_frame_length(frame, CFL_NO_BITSTUFFING, mtu) * 5 / 4;
+		case CFL_EXACT:
+			return 0; /* exact bittiming for CANFD not supported yet */
+		}
+	else if (mtu != CAN_MTU)
+		return 0; /* Only CAN2.0 and CANFD supported now */
 
 	switch (mode) {
 	case CFL_NO_BITSTUFFING:

@@ -80,5 +80,6 @@ enum cfl_mode {
  * Mode determines how to deal with stuffed bits.
  */
 unsigned can_frame_length(struct canfd_frame *frame, enum cfl_mode mode, int mtu);
+unsigned can_frame_dbitrate_length(struct canfd_frame *frame, enum cfl_mode mode, int mtu);
 
 #endif
