@@ -237,7 +237,7 @@ int main(int argc, char **argv)
 	int opt;
 	char *ptr, *nptr;
 	struct sockaddr_can addr;
-	struct can_frame frame;
+	struct canfd_frame frame;
 	int nbytes, i;
 	struct ifreq ifr;
 	sigset_t sigmask, savesigmask;
@@ -351,6 +351,9 @@ int main(int argc, char **argv)
 #ifdef DEBUG
 		printf("using interface name '%s'.\n", ifr.ifr_name);
 #endif
+		/* try to switch the socket into CAN FD mode */
+		const int canfd_on = 1;
+		setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));
 
 		if (ioctl(s[i], SIOCGIFINDEX, &ifr) < 0) {
 			perror("SIOCGIFINDEX");
@@ -402,9 +405,11 @@ int main(int argc, char **argv)
 				}
 
 				stat[i].recv_frames++;
-				stat[i].recv_bits_payload += frame.can_dlc*8;
-				stat[i].recv_bits_total += can_frame_length((struct canfd_frame*)&frame,
-									    mode, sizeof(frame));
+				stat[i].recv_bits_payload += frame.len * 8;
+				stat[i].recv_bits_dbitrate += can_frame_dbitrate_length(
+						&frame, mode, sizeof(frame));
+				stat[i].recv_bits_total += can_frame_length(&frame,
+									    mode, nbytes);
 			}
 		}
 	}
