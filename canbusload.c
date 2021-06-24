@@ -74,9 +74,11 @@ extern int optind, opterr, optopt;
 static struct {
 	char devname[IFNAMSIZ+1];
 	unsigned int bitrate;
+	unsigned int dbitrate;
 	unsigned int recv_frames;
 	unsigned int recv_bits_total;
 	unsigned int recv_bits_payload;
+	unsigned int recv_bits_dbitrate;
 } stat[MAXSOCK+1];
 
 static int  max_devname_len; /* to prevent frazzled device name output */ 
@@ -103,7 +105,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -e  (exact calculation of stuffed bits)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with mandatory bitrate can be specified on the \n", MAXSOCK);
-	fprintf(stderr, "commandline in the form: <ifname>@<bitrate>\n\n");
+	fprintf(stderr, "commandline in the form: <ifname>@<bitrate>[,<dbitrate>]\n\n");
 	fprintf(stderr, "The bitrate is mandatory as it is needed to know the CAN bus bitrate to\n");
 	fprintf(stderr, "calculate the bus load percentage based on the received CAN frames.\n");
 	fprintf(stderr, "Due to the bitstuffing estimation the calculated busload may exceed 100%%.\n");
@@ -184,16 +186,18 @@ void printstats(int signo)
 		}
 
 		if (stat[i].bitrate)
-			percent = (stat[i].recv_bits_total*100)/stat[i].bitrate;
+			percent = ((stat[i].recv_bits_total-stat[i].recv_bits_dbitrate) * 100) / stat[i].bitrate
+				+ (stat[i].recv_bits_dbitrate * 100) / stat[i].dbitrate;
 		else
 			percent = 0;
 
-		printf(" %*s@%-*d %5d %7d %6d %3d%%",
+		printf(" %*s@%-*d %5d %7d %6d %6d %3d%%",
 		       max_devname_len, stat[i].devname,
 		       max_bitrate_len, stat[i].bitrate,
 		       stat[i].recv_frames,
 		       stat[i].recv_bits_total,
 		       stat[i].recv_bits_payload,
+		       stat[i].recv_bits_dbitrate,
 		       percent);
 
 		if (bargraph) {
@@ -220,6 +224,7 @@ void printstats(int signo)
 
 		stat[i].recv_frames = 0;
 		stat[i].recv_bits_total = 0;
+		stat[i].recv_bits_dbitrate = 0;
 		stat[i].recv_bits_payload = 0;
 	}
 
@@ -237,7 +242,7 @@ int main(int argc, char **argv)
 	int opt;
 	char *ptr, *nptr;
 	struct sockaddr_can addr;
-	struct can_frame frame;
+	struct canfd_frame frame;
 	int nbytes, i;
 	struct ifreq ifr;
 	sigset_t sigmask, savesigmask;
@@ -336,7 +341,13 @@ int main(int argc, char **argv)
 		if (nbytes > max_devname_len)
 			max_devname_len = nbytes; /* for nice printing */
 
-		stat[i].bitrate = atoi(nptr+1); /* bitrate is placed behind the '@' */
+		char *endp;
+		stat[i].bitrate = strtol(nptr + 1, &endp, 0); /* bitrate is placed behind the '@' */
+		if (*endp == ',')
+			/* data bitrate is placed behind the ',' */
+			stat[i].dbitrate = strtol(endp + 1, &endp, 0);
+		else
+			stat[i].dbitrate = stat[i].bitrate;
 
 		if (!stat[i].bitrate || stat[i].bitrate > 1000000) {
 			printf("invalid bitrate for CAN device '%s'!\n", ptr);
@@ -351,6 +362,9 @@ int main(int argc, char **argv)
 #ifdef DEBUG
 		printf("using interface name '%s'.\n", ifr.ifr_name);
 #endif
+		/* try to switch the socket into CAN FD mode */
+		const int canfd_on = 1;
+		setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));
 
 		if (ioctl(s[i], SIOCGIFINDEX, &ifr) < 0) {
 			perror("SIOCGIFINDEX");
@@ -402,9 +416,11 @@ int main(int argc, char **argv)
 				}
 
 				stat[i].recv_frames++;
-				stat[i].recv_bits_payload += frame.can_dlc*8;
-				stat[i].recv_bits_total += can_frame_length((struct canfd_frame*)&frame,
-									    mode, sizeof(frame));
+				stat[i].recv_bits_payload += frame.len * 8;
+				stat[i].recv_bits_dbitrate += can_frame_dbitrate_length(
+						&frame, mode, sizeof(frame));
+				stat[i].recv_bits_total += can_frame_length(&frame,
+									    mode, nbytes);
 			}
 		}
 	}
