@@ -307,6 +307,23 @@ static void printf_btr_c_can(struct can_bittiming *bt, bool hdr)
 	}
 }
 
+static void printf_btr_mcan(struct can_bittiming *bt, bool hdr)
+{
+	if (hdr) {
+		printf("%10s", "NBTP");
+	} else {
+		uint32_t nbtp;
+
+
+		nbtp = (((bt->brp -1) & 0x1ff) << 16) |
+			(((bt->sjw -1) & 0x7f) << 25) |
+			(((bt->prop_seg + bt->phase_seg1 -1) & 0xff) << 8) |
+			(((bt->phase_seg2 -1) & 0x7f) << 0);
+
+		printf("0x%08x", nbtp);
+	}
+}
+
 static struct calc_bittiming_const can_calc_consts[] = {
 	{
 		.bittiming_const = {
@@ -483,6 +500,22 @@ static struct calc_bittiming_const can_calc_consts[] = {
 			{ .clk = 24000000, },
 		},
 		.printf_btr = printf_btr_c_can,
+	}, {
+		.bittiming_const = {
+			.name = "mcan-v3.1+",
+			.tseg1_min = 2,
+			.tseg1_max = 256,
+			.tseg2_min = 2,
+			.tseg2_max = 128,
+			.sjw_max = 128,
+			.brp_min = 1,
+			.brp_max = 512,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 40000000, },
+		},
+		.printf_btr = printf_btr_mcan,
 	},
 };
 
