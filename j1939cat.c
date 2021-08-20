@@ -42,6 +42,12 @@ struct j1939cat_stats {
 	int err;
 	uint32_t tskey;
 	uint32_t send;
+	uint32_t total;
+	uint32_t pgn;
+	uint8_t sa;
+	uint8_t da;
+	uint64_t src_name;
+	uint64_t dst_name;
 };
 
 struct j1939cat_priv {
@@ -67,6 +73,7 @@ struct j1939cat_priv {
 	struct sock_extended_err *serr;
 	struct scm_timestamping *tss;
 	struct j1939cat_stats stats;
+	int32_t last_dpo;
 };
 
 static const char help_msg[] =
@@ -141,7 +148,7 @@ static void j1939cat_print_timestamp(struct j1939cat_priv *priv, const char *nam
 	if (!(cur->tv_sec | cur->tv_nsec))
 		return;
 
-	fprintf(stderr, "  %s: %lu s %lu us (seq=%u, send=%u)",
+	fprintf(stderr, "  %s: %lu s %lu us (seq=%03u, send=%07u)",
 			name, cur->tv_sec, cur->tv_nsec / 1000,
 			stats->tskey, stats->send);
 
@@ -152,13 +159,13 @@ static const char *j1939cat_tstype_to_str(int tstype)
 {
 	switch (tstype) {
 	case SCM_TSTAMP_SCHED:
-		return "  ENQ";
+		return "TX ENQ";
 	case SCM_TSTAMP_SND:
-		return "  SND";
+		return "TX SND";
 	case SCM_TSTAMP_ACK:
-		return "  ACK";
+		return "TX ACK";
 	default:
-		return "  unk";
+		return "   unk";
 	}
 }
 
@@ -174,6 +181,24 @@ static void j1939cat_scm_opt_stats(struct j1939cat_priv *priv, void *buf, int le
 		switch (nla->nla_type) {
 		case J1939_NLA_BYTES_ACKED:
 			stats->send = *(uint32_t *)((char *)nla + NLA_HDRLEN);
+			break;
+		case J1939_NLA_TOTAL_SIZE:
+			stats->total = *(uint32_t *)((char *)nla + NLA_HDRLEN);
+			break;
+		case J1939_NLA_PGN:
+			stats->pgn = *(uint32_t *)((char *)nla + NLA_HDRLEN);
+			break;
+		case J1939_NLA_DEST_ADDR:
+			stats->da = *(uint8_t *)((char *)nla + NLA_HDRLEN);
+			break;
+		case J1939_NLA_SRC_ADDR:
+			stats->sa = *(uint8_t *)((char *)nla + NLA_HDRLEN);
+			break;
+		case J1939_NLA_DEST_NAME:
+			stats->dst_name = *(uint64_t *)((char *)nla + NLA_HDRLEN);
+			break;
+		case J1939_NLA_SRC_NAME:
+			stats->src_name = *(uint64_t *)((char *)nla + NLA_HDRLEN);
 			break;
 		default:
 			warnx("not supported J1939_NLA field\n");
@@ -231,14 +256,39 @@ static int j1939cat_extract_serr(struct j1939cat_priv *priv)
 		 *     error reason is converted from J1939
 		 *     abort to linux error name space.
 		 */
-		if (serr->ee_info != J1939_EE_INFO_TX_ABORT)
-			warnx("serr: unknown ee_info: %i",
-			      serr->ee_info);
+		switch (serr->ee_info) {
+		case J1939_EE_INFO_TX_ABORT:
+			j1939cat_print_timestamp(priv, "TX ABT", &tss->ts[0]);
+			warnx("serr: tx error: %i, %s", serr->ee_errno,
+			      strerror(serr->ee_errno));
+			return serr->ee_errno;
+		case J1939_EE_INFO_RX_RTS:
+			stats->tskey = serr->ee_data;
+			j1939cat_print_timestamp(priv, "RX RTS", &tss->ts[0]);
+			fprintf(stderr, "  total size: %u, pgn=0x%05x, sa=0x%02x, da=0x%02x src_name=0x%08llx, dst_name=0x%08llx)\n",
+				stats->total, stats->pgn,  stats->sa, stats->da,
+				stats->src_name, stats->dst_name);
+			priv->last_dpo = -1;
+			return 0;
+		case J1939_EE_INFO_RX_DPO:
+			stats->tskey = serr->ee_data;
+			j1939cat_print_timestamp(priv, "RX DPO", &tss->ts[0]);
+			if (stats->send <= priv->last_dpo && priv->last_dpo != -1)
+				warnx("same dpo? current: %i, last: %i",
+				      stats->send, priv->last_dpo);
+			priv->last_dpo = stats->send;
+			return 0;
+		case J1939_EE_INFO_RX_ABORT:
+			j1939cat_print_timestamp(priv, "RX ABT", &tss->ts[0]);
+			warnx("serr: rx error: %i, %s", serr->ee_errno,
+			      strerror(serr->ee_errno));
+			return serr->ee_errno;
+		default:
+			warnx("serr: unknown ee_info: %i", serr->ee_info);
+			return -ENOTSUP;
+		}
 
-		j1939cat_print_timestamp(priv, "  ABT", &tss->ts[0]);
-		warnx("serr: tx error: %i, %s", serr->ee_errno, strerror(serr->ee_errno));
-
-		return serr->ee_errno;
+		break;
 	default:
 		warnx("serr: wrong origin: %u", serr->ee_origin);
 	}
@@ -269,7 +319,7 @@ static int j1939cat_parse_cm(struct j1939cat_priv *priv, struct cmsghdr *cm)
 
 static int j1939cat_recv_err(struct j1939cat_priv *priv)
 {
-	char control[100];
+	char control[200];
 	struct cmsghdr *cm;
 	int ret;
 	struct msghdr msg = {
@@ -325,7 +375,7 @@ static int j1939cat_send_loop(struct j1939cat_priv *priv, int out_fd, char *buf,
 			if (!ret)
 				return -ETIME;
 			if (!(fds.revents & events)) {
-				warn("%s: something else is wrong", __func__);
+				warn("%s: something else is wrong %x %x", __func__, fds.revents, events);
 				return -EIO;
 			}
 
@@ -499,6 +549,7 @@ static int j1939cat_recv_one(struct j1939cat_priv *priv, uint8_t *buf, size_t bu
 
 static int j1939cat_recv(struct j1939cat_priv *priv)
 {
+	unsigned int events = POLLIN | POLLERR;
 	int ret = EXIT_SUCCESS;
 	size_t buf_size;
 	uint8_t *buf;
@@ -510,10 +561,46 @@ static int j1939cat_recv(struct j1939cat_priv *priv)
 		return EXIT_FAILURE;;
 	}
 
+	priv->last_dpo = -1;
+
 	while (priv->todo_recv) {
-		ret = j1939cat_recv_one(priv, buf, buf_size);
-		if (ret)
-			break;
+		if (priv->polltimeout) {
+			struct pollfd fds = {
+				.fd = priv->sock,
+				.events = events,
+			};
+			int ret;
+
+			ret = poll(&fds, 1, priv->polltimeout);
+			if (ret == -EINTR)
+				continue;
+			if (ret < 0)
+				return -errno;
+			if (!ret)
+				continue;
+			if (!(fds.revents & events)) {
+				warn("%s: something else is wrong %x %x", __func__, fds.revents, events);
+				return -EIO;
+			}
+
+			if (fds.revents & POLLERR) {
+				ret = j1939cat_recv_err(priv);
+				if (ret == -EINTR)
+					continue;
+				if (ret)
+					return ret;
+			}
+
+			if (fds.revents & POLLIN) {
+				ret = j1939cat_recv_one(priv, buf, buf_size);
+				if (ret < 0)
+					break;
+			}
+		} else {
+			ret = j1939cat_recv_one(priv, buf, buf_size);
+			if (ret)
+				break;
+		}
 	}
 
 	free(buf);
@@ -555,7 +642,7 @@ static int j1939cat_sock_prepare(struct j1939cat_priv *priv)
 		   SOF_TIMESTAMPING_TX_ACK |
 		   SOF_TIMESTAMPING_TX_SCHED |
 		   SOF_TIMESTAMPING_OPT_STATS | SOF_TIMESTAMPING_OPT_TSONLY |
-		   SOF_TIMESTAMPING_OPT_ID;
+		   SOF_TIMESTAMPING_OPT_ID | SOF_TIMESTAMPING_RX_SOFTWARE;
 
 	if (setsockopt(priv->sock, SOL_SOCKET, SO_TIMESTAMPING,
 		       (char *) &sock_opt, sizeof(sock_opt)))
