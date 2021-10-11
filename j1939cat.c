@@ -265,7 +265,7 @@ static int j1939cat_extract_serr(struct j1939cat_priv *priv)
 		case J1939_EE_INFO_RX_RTS:
 			stats->tskey = serr->ee_data;
 			j1939cat_print_timestamp(priv, "RX RTS", &tss->ts[0]);
-			fprintf(stderr, "  total size: %u, pgn=0x%05x, sa=0x%02x, da=0x%02x src_name=0x%08llx, dst_name=0x%08llx)\n",
+			fprintf(stderr, "  total size: %u, pgn=0x%05x, sa=0x%02x, da=0x%02x src_name=0x%08lx, dst_name=0x%08lx)\n",
 				stats->total, stats->pgn,  stats->sa, stats->da,
 				stats->src_name, stats->dst_name);
 			priv->last_dpo = -1;
