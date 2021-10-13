@@ -273,7 +273,7 @@ static int j1939cat_extract_serr(struct j1939cat_priv *priv)
 		case J1939_EE_INFO_RX_DPO:
 			stats->tskey = serr->ee_data;
 			j1939cat_print_timestamp(priv, "RX DPO", &tss->ts[0]);
-			if (stats->send <= priv->last_dpo && priv->last_dpo != -1)
+			if (stats->send <= (uint32_t)priv->last_dpo && priv->last_dpo != -1)
 				warnx("same dpo? current: %i, last: %i",
 				      stats->send, priv->last_dpo);
 			priv->last_dpo = stats->send;
