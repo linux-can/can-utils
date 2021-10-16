@@ -445,7 +445,7 @@ int handle_keyb(void)
 		}
 
 		/* check for single SFF/EFF CAN ID length */
-		if (!((clen == 3) || (clen == 8)))
+		if (clen != 3 && clen != 8)
 			break;
 
 		/* enable/disable single SFF/EFF CAN ID */
