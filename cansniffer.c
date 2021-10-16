@@ -580,16 +580,15 @@ int handle_frame(int fd, long currcms)
 	pos = sniftab_index(cf.can_id);
 	if (pos < 0) {
 		/* CAN ID not existing */
-		if (idx < MAX_SLOTS) {
-			/* assign new slot */
-			pos = idx++;
-			rx_changed = true;
-			run_qsort = true;
-		} else {
+		if (idx >= MAX_SLOTS) {
 			/* informative exit */
 			perror("number of different CAN IDs exceeded MAX_SLOTS");
 			return 0; /* quit */
 		}
+		/* assign new slot */
+		pos = idx++;
+		rx_changed = true;
+		run_qsort = true;
 	}
 	else {
 		if (cf.can_dlc == sniftab[pos].current.can_dlc)
