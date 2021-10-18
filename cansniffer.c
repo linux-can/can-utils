@@ -236,7 +236,7 @@ int main(int argc, char **argv)
 	long currcms = 0;
 	long lastcms = 0;
 	unsigned char quiet = 0;
-	int opt, ret;
+	int opt, ret = 0;
 	struct timeval timeo, start_tv, tv;
 	struct sockaddr_can addr;
 	int i;
@@ -313,7 +313,7 @@ int main(int argc, char **argv)
 		print_usage(basename(argv[0]));
 		exit(0);
 	}
-	
+
 	if (quiet)
 		for (i = 0; i < MAX_SLOTS; i++)
 			do_clr(i, ENABLE);
@@ -343,9 +343,11 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+	ret = bind(s, (struct sockaddr *)&addr, sizeof(addr));
+	if (ret < 0) {
 		perror("bind");
-		return 1;
+		close(s);
+		return ret;
 	}
 
 	gettimeofday(&start_tv, NULL);
@@ -362,11 +364,13 @@ int main(int argc, char **argv)
 		timeo.tv_sec  = 0;
 		timeo.tv_usec = 10000 * loop;
 
-		if ((ret = select(s+1, &rdfs, NULL, NULL, &timeo)) < 0) {
+		ret = select(s+1, &rdfs, NULL, NULL, &timeo);
+		if (ret < 0) {
 			//perror("select");
 			running = 0;
 			continue;
-		}
+		} else
+			ret = 0;
 
 		gettimeofday(&tv, NULL);
 		currcms = (tv.tv_sec - start_tv.tv_sec) * 100 + (tv.tv_usec / 10000);
@@ -386,7 +390,7 @@ int main(int argc, char **argv)
 	printf("%s", CSR_SHOW); /* show cursor */
 
 	close(s);
-	return 0;
+	return ret;
 }
 
 void do_modify_sniftab(unsigned int value, unsigned int mask, char cmd)
@@ -778,9 +782,9 @@ void writesettings(char* name)
 	int i,j;
 	char buf[13]= {0};
 
-	strncat(fname, name, 29 - strlen(fname)); 
+	strncat(fname, name, 29 - strlen(fname));
 	fd = open(fname, O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-    
+
 	if (fd > 0) {
 		for (i = 0; i < idx ;i++) {
 			sprintf(buf, "<%08X>%c.", sniftab[i].current.can_id, (is_set(i, ENABLE))?'1':'0');
@@ -809,9 +813,9 @@ int readsettings(char* name)
 	int j;
 	bool done = false;
 
-	strncat(fname, name, 29 - strlen(fname)); 
+	strncat(fname, name, 29 - strlen(fname));
 	fd = open(fname, O_RDONLY);
-    
+
 	if (fd > 0) {
 		idx = 0;
 		while (!done) {
