@@ -783,25 +783,25 @@ void writesettings(char* name)
 
 	strncat(fname, name, 29 - strlen(fname));
 	fd = open(fname, O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-
-	if (fd > 0) {
-		for (i = 0; i < idx ;i++) {
-			sprintf(buf, "<%08X>%c.", sniftab[i].current.can_id, (is_set(i, ENABLE))?'1':'0');
-			if (write(fd, buf, 12) < 0)
-				perror("write");
-			for (j = 0; j < 8 ; j++) {
-				sprintf(buf, "%02X", sniftab[i].notch.data[j]);
-				if (write(fd, buf, 2) < 0)
-					perror("write");
-			}
-			if (write(fd, "\n", 1) < 0)
-				perror("write");
-			/* 12 + 16 + 1 = 29 bytes per entry */
-		}
-		close(fd);
-	}
-	else
+	if (fd <= 0) {
 		printf("unable to write setting file '%s'!\n", fname);
+		return;
+	}
+
+	for (i = 0; i < idx ;i++) {
+		sprintf(buf, "<%08X>%c.", sniftab[i].current.can_id, (is_set(i, ENABLE))?'1':'0');
+		if (write(fd, buf, 12) < 0)
+			perror("write");
+		for (j = 0; j < 8 ; j++) {
+			sprintf(buf, "%02X", sniftab[i].notch.data[j]);
+			if (write(fd, buf, 2) < 0)
+				perror("write");
+		}
+		if (write(fd, "\n", 1) < 0)
+			perror("write");
+		/* 12 + 16 + 1 = 29 bytes per entry */
+	}
+	close(fd);
 }
 
 int readsettings(char* name)
@@ -815,36 +815,35 @@ int readsettings(char* name)
 	strncat(fname, name, 29 - strlen(fname));
 	fd = open(fname, O_RDONLY);
 
-	if (fd > 0) {
-		idx = 0;
-		while (!done) {
-			if (read(fd, &buf, 29) == 29) {
-				unsigned long id = strtoul(&buf[1], (char **)NULL, 16);
-
-				sniftab[idx].current.can_id = id;
-
-				if (buf[10] & 1)
-					do_set(idx, ENABLE);
-				else
-					do_clr(idx, ENABLE);
-
-				for (j = 7; j >= 0 ; j--) {
-					sniftab[idx].notch.data[j] =
-						(__u8) strtoul(&buf[2*j+12], (char **)NULL, 16) & 0xFF;
-					buf[2*j+12] = 0; /* cut off each time */
-				}
-
-				if (++idx >= MAX_SLOTS)
-					break;
-			}
-			else
-				done = true;
-		}
-		close(fd);
-	}
-	else
+	if (fd <= 0) {
 		return -1;
+	}
+	idx = 0;
+	while (!done) {
+		if (read(fd, &buf, 29) != 29) {
+			done = true;
+			continue;
+		}
+		unsigned long id = strtoul(&buf[1], (char **)NULL, 16);
 
+		sniftab[idx].current.can_id = id;
+
+		if (buf[10] & 1)
+			do_set(idx, ENABLE);
+		else
+			do_clr(idx, ENABLE);
+
+		for (j = 7; j >= 0 ; j--) {
+			sniftab[idx].notch.data[j] =
+				(__u8) strtoul(&buf[2*j+12], (char **)NULL, 16) & 0xFF;
+			buf[2*j+12] = 0; /* cut off each time */
+		}
+
+		if (++idx >= MAX_SLOTS)
+			break;
+
+	}
+	close(fd);
 	return idx;
 }
 
