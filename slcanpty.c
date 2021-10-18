@@ -501,6 +501,10 @@ int main(int argc, char **argv)
 
 	addr.can_family = AF_CAN;
 	addr.can_ifindex = if_nametoindex(argv[2]);
+	if (!addr.can_ifindex) {
+		perror("if_nametoindex");
+		return 1;
+	}
 
 	/* disable reception of CAN frames until we are opened by 'O' */
 	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);

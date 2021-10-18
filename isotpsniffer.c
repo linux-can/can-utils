@@ -296,6 +296,11 @@ int main(int argc, char **argv)
 
 	addr.can_family = AF_CAN;
 	addr.can_ifindex = if_nametoindex(if_name);
+	if (!addr.can_ifindex) {
+		perror("if_nametoindex");
+		r = 1;
+		goto out;
+	}
 
 	setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
 

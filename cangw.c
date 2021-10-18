@@ -743,10 +743,18 @@ int main(int argc, char **argv)
 
 		case 's':
 			src_ifindex = if_nametoindex(optarg);
+			if (!src_ifindex) {
+				perror("src if_nametoindex");
+				exit(1);
+			}
 			break;
 
 		case 'd':
 			dst_ifindex = if_nametoindex(optarg);
+			if (!dst_ifindex) {
+				perror("dst if_nametoindex");
+				exit(1);
+			}
 			break;
 
 		case 'X':

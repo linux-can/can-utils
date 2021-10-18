@@ -332,14 +332,19 @@ int main(int argc, char **argv)
 	}
 
 	addr.can_family = AF_CAN;
+	addr.can_ifindex = 0; /* 'any' CAN interface */
 
-	if (strcmp(ANYDEV, argv[optind]) != 0)
+	/* check for specific CAN interface */
+	if (strcmp(ANYDEV, argv[optind]) != 0) {
 		addr.can_ifindex = if_nametoindex(argv[optind]);
-	else
-		addr.can_ifindex = 0; /* any can interface */
+		if (!addr.can_ifindex) {
+			perror("if_nametoindex");
+			return 1;
+		}
+	}
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-		perror("connect");
+		perror("bind");
 		return 1;
 	}
 

@@ -350,6 +350,10 @@ int main(int argc, char **argv)
 
 	caddr.can_family = AF_CAN;
 	caddr.can_ifindex = if_nametoindex(argv[optind]);
+	if (!caddr.can_ifindex) {
+		perror("if_nametoindex");
+		exit(1);
+	}
 
 	if (bind(sc, (struct sockaddr *)&caddr, caddrlen) < 0) {
 		perror("bind");

@@ -237,6 +237,10 @@ int main(int argc, char **argv)
 
     addr.can_family = AF_CAN;
     addr.can_ifindex = if_nametoindex(argv[optind]);
+    if (!addr.can_ifindex) {
+	perror("if_nametoindex");
+	exit(1);
+    }
 
     if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 	perror("bind");
