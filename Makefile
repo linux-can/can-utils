@@ -102,14 +102,14 @@ PROGRAMS := \
 all: $(PROGRAMS)
 
 clean:
-	rm -f $(PROGRAMS) *.o
+	rm -f $(PROGRAMS) *.o mcp251xfd/*.o
 
 install:
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
 	cp -f $(PROGRAMS) $(DESTDIR)$(PREFIX)/bin
 
-distclean:
-	rm -f $(PROGRAMS) $(LIBRARIES) *.o *~
+distclean: clean
+	rm -f $(PROGRAMS) $(LIBRARIES) *~
 
 asc2log.o:	lib.h
 canbusload.o:	lib.h

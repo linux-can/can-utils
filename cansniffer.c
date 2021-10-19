@@ -236,7 +236,7 @@ int main(int argc, char **argv)
 	long currcms = 0;
 	long lastcms = 0;
 	unsigned char quiet = 0;
-	int opt, ret;
+	int opt, ret = 0;
 	struct timeval timeo, start_tv, tv;
 	struct sockaddr_can addr;
 	int i;
@@ -313,7 +313,7 @@ int main(int argc, char **argv)
 		print_usage(basename(argv[0]));
 		exit(0);
 	}
-	
+
 	if (quiet)
 		for (i = 0; i < MAX_SLOTS; i++)
 			do_clr(i, ENABLE);
@@ -343,9 +343,11 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+	ret = bind(s, (struct sockaddr *)&addr, sizeof(addr));
+	if (ret < 0) {
 		perror("bind");
-		return 1;
+		close(s);
+		return ret;
 	}
 
 	gettimeofday(&start_tv, NULL);
@@ -362,11 +364,13 @@ int main(int argc, char **argv)
 		timeo.tv_sec  = 0;
 		timeo.tv_usec = 10000 * loop;
 
-		if ((ret = select(s+1, &rdfs, NULL, NULL, &timeo)) < 0) {
+		ret = select(s+1, &rdfs, NULL, NULL, &timeo);
+		if (ret < 0) {
 			//perror("select");
 			running = 0;
 			continue;
-		}
+		} else
+			ret = 0;
 
 		gettimeofday(&tv, NULL);
 		currcms = (tv.tv_sec - start_tv.tv_sec) * 100 + (tv.tv_usec / 10000);
@@ -386,7 +390,7 @@ int main(int argc, char **argv)
 	printf("%s", CSR_SHOW); /* show cursor */
 
 	close(s);
-	return 0;
+	return ret;
 }
 
 void do_modify_sniftab(unsigned int value, unsigned int mask, char cmd)
@@ -441,7 +445,7 @@ int handle_keyb(void)
 		}
 
 		/* check for single SFF/EFF CAN ID length */
-		if (!((clen == 3) || (clen == 8)))
+		if (clen != 3 && clen != 8)
 			break;
 
 		/* enable/disable single SFF/EFF CAN ID */
@@ -576,16 +580,15 @@ int handle_frame(int fd, long currcms)
 	pos = sniftab_index(cf.can_id);
 	if (pos < 0) {
 		/* CAN ID not existing */
-		if (idx < MAX_SLOTS) {
-			/* assign new slot */
-			pos = idx++;
-			rx_changed = true;
-			run_qsort = true;
-		} else {
+		if (idx >= MAX_SLOTS) {
 			/* informative exit */
 			perror("number of different CAN IDs exceeded MAX_SLOTS");
 			return 0; /* quit */
 		}
+		/* assign new slot */
+		pos = idx++;
+		rx_changed = true;
+		run_qsort = true;
 	}
 	else {
 		if (cf.can_dlc == sniftab[pos].current.can_dlc)
@@ -778,27 +781,27 @@ void writesettings(char* name)
 	int i,j;
 	char buf[13]= {0};
 
-	strncat(fname, name, 29 - strlen(fname)); 
+	strncat(fname, name, 29 - strlen(fname));
 	fd = open(fname, O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
-    
-	if (fd > 0) {
-		for (i = 0; i < idx ;i++) {
-			sprintf(buf, "<%08X>%c.", sniftab[i].current.can_id, (is_set(i, ENABLE))?'1':'0');
-			if (write(fd, buf, 12) < 0)
-				perror("write");
-			for (j = 0; j < 8 ; j++) {
-				sprintf(buf, "%02X", sniftab[i].notch.data[j]);
-				if (write(fd, buf, 2) < 0)
-					perror("write");
-			}
-			if (write(fd, "\n", 1) < 0)
-				perror("write");
-			/* 12 + 16 + 1 = 29 bytes per entry */
-		}
-		close(fd);
-	}
-	else
+	if (fd <= 0) {
 		printf("unable to write setting file '%s'!\n", fname);
+		return;
+	}
+
+	for (i = 0; i < idx ;i++) {
+		sprintf(buf, "<%08X>%c.", sniftab[i].current.can_id, (is_set(i, ENABLE))?'1':'0');
+		if (write(fd, buf, 12) < 0)
+			perror("write");
+		for (j = 0; j < 8 ; j++) {
+			sprintf(buf, "%02X", sniftab[i].notch.data[j]);
+			if (write(fd, buf, 2) < 0)
+				perror("write");
+		}
+		if (write(fd, "\n", 1) < 0)
+			perror("write");
+		/* 12 + 16 + 1 = 29 bytes per entry */
+	}
+	close(fd);
 }
 
 int readsettings(char* name)
@@ -809,39 +812,38 @@ int readsettings(char* name)
 	int j;
 	bool done = false;
 
-	strncat(fname, name, 29 - strlen(fname)); 
+	strncat(fname, name, 29 - strlen(fname));
 	fd = open(fname, O_RDONLY);
-    
-	if (fd > 0) {
-		idx = 0;
-		while (!done) {
-			if (read(fd, &buf, 29) == 29) {
-				unsigned long id = strtoul(&buf[1], (char **)NULL, 16);
 
-				sniftab[idx].current.can_id = id;
-
-				if (buf[10] & 1)
-					do_set(idx, ENABLE);
-				else
-					do_clr(idx, ENABLE);
-
-				for (j = 7; j >= 0 ; j--) {
-					sniftab[idx].notch.data[j] =
-						(__u8) strtoul(&buf[2*j+12], (char **)NULL, 16) & 0xFF;
-					buf[2*j+12] = 0; /* cut off each time */
-				}
-
-				if (++idx >= MAX_SLOTS)
-					break;
-			}
-			else
-				done = true;
-		}
-		close(fd);
-	}
-	else
+	if (fd <= 0) {
 		return -1;
+	}
+	idx = 0;
+	while (!done) {
+		if (read(fd, &buf, 29) != 29) {
+			done = true;
+			continue;
+		}
+		unsigned long id = strtoul(&buf[1], (char **)NULL, 16);
 
+		sniftab[idx].current.can_id = id;
+
+		if (buf[10] & 1)
+			do_set(idx, ENABLE);
+		else
+			do_clr(idx, ENABLE);
+
+		for (j = 7; j >= 0 ; j--) {
+			sniftab[idx].notch.data[j] =
+				(__u8) strtoul(&buf[2*j+12], (char **)NULL, 16) & 0xFF;
+			buf[2*j+12] = 0; /* cut off each time */
+		}
+
+		if (++idx >= MAX_SLOTS)
+			break;
+
+	}
+	close(fd);
 	return idx;
 }
 
