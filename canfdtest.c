@@ -4,6 +4,7 @@
  *
  * (C) 2009 by Vladislav Gribov, IXXAT Automation GmbH, <gribov@ixxat.de>
  * (C) 2009 Wolfgang Grandegger <wg@grandegger.com>
+ * (C) 2021 Jean Gressmann <jean.steven.gressman@iav.de>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the version 2 of the GNU General Public License
@@ -39,7 +40,8 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
-#define CAN_MSG_ID	0x77
+#define CAN_MSG_ID_PING	0x77
+#define CAN_MSG_ID_PONG	0x78
 #define CAN_MSG_LEN	8
 #define CAN_MSG_COUNT	50
 #define CAN_MSG_WAIT	27
@@ -50,6 +52,9 @@ static int sockfd;
 static int test_loops;
 static int exit_sig;
 static int inflight_count = CAN_MSG_COUNT;
+static canid_t can_id_ping = CAN_MSG_ID_PING;
+static canid_t can_id_pong = CAN_MSG_ID_PONG;
+static int filter = 0;
 
 static void print_usage(char *prg)
 {
@@ -60,9 +65,12 @@ static void print_usage(char *prg)
 		"Options:\n"
 		"         -f COUNT (number of frames in flight, default: %d)\n"
 		"         -g       (generate messages)\n"
+		"         -i ID    (CAN ID to use for frames to DUT, default %x)\n"
 		"         -l COUNT (test loop count)\n"
+		"         -o ID    (CAN ID to use for frames to host, default %x)\n"
 		"         -v       (low verbosity)\n"
 		"         -vv      (high verbosity)\n"
+		"         -x       (ignore other frames on bus)\n"
 		"\n"
 		"With the option '-g' CAN messages are generated and checked\n"
 		"on <can-interface>, otherwise all messages received on the\n"
@@ -74,7 +82,7 @@ static void print_usage(char *prg)
 		"%s -v can0\n"
 		"\ton Host:\n"
 		"%s -g -v can2\n",
-		prg, prg, CAN_MSG_COUNT, prg, prg);
+		prg, prg, CAN_MSG_COUNT, CAN_MSG_ID_PING, CAN_MSG_ID_PONG, prg, prg);
 
 	exit(1);
 }
@@ -106,7 +114,7 @@ static void compare_frame(struct can_frame *exp, struct can_frame *rec, int inc)
 {
 	int i;
 
-	if (rec->can_id != exp->can_id + inc) {
+	if (inc ? (rec->can_id != can_id_pong) : (rec->can_id != can_id_ping)) {
 		printf("Message ID mismatch!\n");
 		print_compare(exp, rec, inc);
 		running = 0;
@@ -202,7 +210,7 @@ static int check_frame(const struct can_frame *frame)
 	int err = 0;
 	int i;
 
-	if (frame->can_id != CAN_MSG_ID) {
+	if (frame->can_id != can_id_ping) {
 		printf("unexpected Message ID 0x%04x!\n", frame->can_id);
 		err = -1;
 	}
@@ -229,7 +237,7 @@ static void inc_frame(struct can_frame *frame)
 {
 	int i;
 
-	frame->can_id++;
+	frame->can_id = can_id_pong;
 	for (i = 0; i < frame->can_dlc; i++)
 		frame->data[i]++;
 }
@@ -248,6 +256,9 @@ static int can_echo_dut(void)
 		} else if (verbose > 1) {
 			print_frame(&frame, 0);
 		}
+
+		if (filter && frame.can_id != can_id_ping)
+			continue;
 
 		check_frame(&frame);
 		inc_frame(&frame);
@@ -291,7 +302,7 @@ static int can_echo_gen(void)
 		if (unprocessed < inflight_count) {
 			/* still send messages */
 			tx_frames[send_pos].can_dlc = CAN_MSG_LEN;
-			tx_frames[send_pos].can_id = CAN_MSG_ID;
+			tx_frames[send_pos].can_id = can_id_ping;
 			recv_tx[send_pos] = 0;
 
 			for (i = 0; i < CAN_MSG_LEN; i++)
@@ -323,7 +334,7 @@ static int can_echo_gen(void)
 				print_frame(&rx_frame, 0);
 
 			/* own frame */
-			if (rx_frame.can_id == CAN_MSG_ID) {
+			if (rx_frame.can_id == can_id_ping) {
 				compare_frame(&tx_frames[recv_tx_pos], &rx_frame, 0);
 				recv_tx[recv_tx_pos] = 1;
 				recv_tx_pos++;
@@ -331,6 +342,9 @@ static int can_echo_gen(void)
 					recv_tx_pos = 0;
 				continue;
 			}
+
+			if (filter && rx_frame.can_id != can_id_pong)
+				continue;
 
 			if (!recv_tx[recv_rx_pos]) {
 				printf("RX before TX!\n");
@@ -374,7 +388,7 @@ int main(int argc, char *argv[])
 	signal(SIGHUP, signal_handler);
 	signal(SIGINT, signal_handler);
 
-	while ((opt = getopt(argc, argv, "f:gl:v?")) != -1) {
+	while ((opt = getopt(argc, argv, "f:gi:l:o:vx?")) != -1) {
 		switch (opt) {
 		case 'f':
 			inflight_count = atoi(optarg);
@@ -384,14 +398,26 @@ int main(int argc, char *argv[])
 			echo_gen = 1;
 			break;
 
+		case 'i':
+			can_id_ping = atoi(optarg) & CAN_SFF_MASK;
+			break;
+
 		case 'l':
 			test_loops = atoi(optarg);
+			break;
+
+		case 'o':
+			can_id_pong = atoi(optarg) & CAN_SFF_MASK;
 			break;
 
 		case 'v':
 			verbose++;
 			break;
-			
+
+		case 'x':
+			filter = 1;
+			break;
+
 		case '?':
 		default:
 			print_usage(basename(argv[0]));
