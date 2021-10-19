@@ -399,7 +399,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'i':
-			can_id_ping = atoi(optarg) & CAN_SFF_MASK;
+			can_id_ping = strtoul(optarg, NULL, 16) & CAN_SFF_MASK;
 			break;
 
 		case 'l':
@@ -407,7 +407,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'o':
-			can_id_pong = atoi(optarg) & CAN_SFF_MASK;
+			can_id_pong = strtoul(optarg, NULL, 16) & CAN_SFF_MASK;
 			break;
 
 		case 'v':
