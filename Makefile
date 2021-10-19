@@ -112,13 +112,11 @@ distclean: clean
 	rm -f $(PROGRAMS) $(LIBRARIES) *~
 
 asc2log.o:	lib.h
-canbusload.o:	lib.h
 candump.o:	lib.h
 cangen.o:	lib.h
 canlogserver.o:	lib.h
 canplayer.o:	lib.h
 cansend.o:	lib.h
-cansequence.o:	lib.h
 log2asc.o:	lib.h
 log2long.o:	lib.h
 j1939acd.o:	libj1939.h
