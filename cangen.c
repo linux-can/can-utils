@@ -121,6 +121,7 @@ void print_usage(char *prg)
 	fprintf(stderr, " 'o'     => random values, odd ID\n");
 	fprintf(stderr, " 'i'     => increment values\n");
 	fprintf(stderr, " <value> => fixed value (in hexadecimal for -I and -D)\n\n");
+	fprintf(stderr, "The gap value (in milliseconds) may have decimal places, e.g. '-g 4.73'\n");
 	fprintf(stderr, "When incrementing the CAN data the data length code "
 		"minimum is set to 1.\n");
 	fprintf(stderr, "CAN IDs and data content are given and expected in hexadecimal values.\n\n");
@@ -131,6 +132,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "\t(generate EFF frames, incr. length)\n");
 	fprintf(stderr, "%s vcan0 -D 11223344DEADBEEF -L 8\n", prg);
 	fprintf(stderr, "\t(fixed CAN data payload and length)\n");
+	fprintf(stderr, "%s vcan0 -I 555 -D CCCCCCCCCCCCCCCC -L 8 -g 3.75\n", prg);
+	fprintf(stderr, "\t(generate a fix busload without bit-stuffing effects)\n");
 	fprintf(stderr, "%s vcan0 -g 0 -i -x\n", prg);
 	fprintf(stderr, "\t(full load test ignoring -ENOBUFS)\n");
 	fprintf(stderr, "%s vcan0 -g 0 -p 10 -x\n", prg);
