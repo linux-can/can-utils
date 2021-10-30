@@ -89,6 +89,8 @@ void print_usage(char *prg)
                 "send frames immediately)\n");
         fprintf(stderr, "         -i           (interactive - wait "
                 "for ENTER key to process next frame)\n");
+	fprintf(stderr, "         -n <count>   (terminate after "
+		"processing <count> CAN frames)\n");
         fprintf(stderr, "         -g <ms>      (gap in milli "
                 "seconds - default: %d ms)\n", DEFAULT_GAP);
         fprintf(stderr, "         -s <s>       (skip gaps in "
@@ -247,6 +249,7 @@ int main(int argc, char **argv)
 	unsigned long gap = DEFAULT_GAP; 
 	int use_timestamps = 1;
 	int interactive = 0; /* wait for ENTER keypress to process next frame */
+	int count = 0; /* end replay after sending count frames. 0 = disabled */
 	static int verbose, opt, delay_loops;
 	static unsigned long skipgap;
 	static int loopback_disable = 0;
@@ -257,7 +260,7 @@ int main(int argc, char **argv)
 	int eof, txmtu, i, j;
 	char *fret;
 
-	while ((opt = getopt(argc, argv, "I:l:tig:s:xv?")) != -1) {
+	while ((opt = getopt(argc, argv, "I:l:tin:g:s:xv?")) != -1) {
 		switch (opt) {
 		case 'I':
 			infile = fopen(optarg, "r");
@@ -283,6 +286,14 @@ int main(int argc, char **argv)
 
 		case 'i':
 			interactive = 1;
+			break;
+
+		case 'n':
+			count = atoi(optarg);
+			if (count < 1) {
+				print_usage(basename(argv[0]));
+				exit(1);
+			}
 			break;
 
 		case 'g':
@@ -476,6 +487,9 @@ int main(int argc, char **argv)
 						else
 							fprint_long_canframe(stdout, &frame, "\n", CANLIB_VIEW_INDENT_SFF, CANFD_MAX_DLEN);
 					}
+
+					if (count && (--count == 0))
+						goto out;
 				}
 
 				/* read next non-comment frame from logfile */
