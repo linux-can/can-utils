@@ -138,7 +138,7 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "         -n <count>  (terminate after reception of <count> CAN frames)\n");
 	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
-	fprintf(stderr, "         -D          (Don't exit if a \"detected\" can device goes down.\n");
+	fprintf(stderr, "         -D          (Don't exit if a \"detected\" can device goes down)\n");
 	fprintf(stderr, "         -d          (monitor dropped CAN frames)\n");
 	fprintf(stderr, "         -e          (dump CAN error frames in human-readable format)\n");
 	fprintf(stderr, "         -8          (display raw DLC values in {} for Classical CAN)\n");
