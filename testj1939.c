@@ -295,7 +295,7 @@ int main(int argc, char *argv[])
 			int i;
 
 			if (todo_names && peername.can_addr.j1939.name)
-				printf("%016llx ", peername.can_addr.j1939.name);
+				printf("%016" PRIx64 " ", peername.can_addr.j1939.name);
 			printf("%02x %05x:", peername.can_addr.j1939.addr,
 					peername.can_addr.j1939.pgn);
 			for (i = 0, j = 0; i < ret; ++i, j++) {
