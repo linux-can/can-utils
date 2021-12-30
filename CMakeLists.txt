@@ -9,10 +9,7 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-check_symbol_exists(__GNU_LIBRARY__ "features.h" _GNU_SOURCE)
-if(_GNU_SOURCE)
-  add_definitions(-D_GNU_SOURCE)
-endif()
+add_definitions(-D_GNU_SOURCE)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wno-parentheses")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing")
