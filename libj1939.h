@@ -10,6 +10,8 @@
  * as published by the Free Software Foundation
  */
 
+#define __SANE_USERSPACE_TYPES__ // needed for some platforms to get proper 64-bit types
+
 #include <sys/socket.h>
 #include <linux/can.h>
 #include <linux/can/j1939.h>
