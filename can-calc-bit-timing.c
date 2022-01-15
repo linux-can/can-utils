@@ -205,7 +205,7 @@ static void printf_btr_sja1000(struct can_bittiming *bt, bool hdr)
 	uint8_t btr0, btr1;
 
 	if (hdr) {
-		printf("BTR0 BTR1");
+		printf("%9s", "BTR0 BTR1");
 	} else {
 		btr0 = ((bt->brp - 1) & 0x3f) | (((bt->sjw - 1) & 0x3) << 6);
 		btr1 = ((bt->prop_seg + bt->phase_seg1 - 1) & 0xf) |
@@ -260,7 +260,7 @@ static void printf_btr_mcp251x(struct can_bittiming *bt, bool hdr)
 static void printf_btr_mcp251xfd(struct can_bittiming *bt, bool hdr)
 {
 	if (hdr) {
-		printf("NBTCFG");
+		printf("%10s", "NBTCFG");
 	} else {
 		uint32_t nbtcfg = ((bt->brp - 1) << 24) |
 			((bt->prop_seg + bt->phase_seg1 - 1) << 16) |
@@ -327,7 +327,7 @@ static void printf_btr_bxcan(struct can_bittiming *bt, bool hdr)
 static void printf_btr_c_can(struct can_bittiming *bt, bool hdr)
 {
 	if (hdr) {
-		printf("%s", "  BTR  BRPEXT");
+		printf("%13s", "BTR BRPEXT");
 	} else {
 		uint32_t btr;
 		uint32_t brpext;
