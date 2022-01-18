@@ -849,6 +849,10 @@ static void print_bittiming(const struct calc_data *data)
 {
 	const struct calc_ref_clk *ref_clks = data->ref_clks;
 
+	if (!ref_clks->clk && !data->quiet)
+		printf("Skipping bit timing parameter calculation for %s, no ref clock defined\n\n",
+		       data->bittiming_const->name);
+
 	while (ref_clks->clk) {
 		void (*printf_btr)(struct can_bittiming *bt, bool hdr);
 		unsigned int const *bitrates = data->bitrates;
