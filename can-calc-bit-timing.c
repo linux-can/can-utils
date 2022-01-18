@@ -200,46 +200,24 @@ static void printf_btr_nop(struct can_bittiming *bt, bool hdr)
 {
 }
 
-static void printf_btr_sja1000(struct can_bittiming *bt, bool hdr)
-{
-	uint8_t btr0, btr1;
+#define RCAR_CAN_BCR_TSEG1(x)	(((x) & 0x0f) << 20)
+#define RCAR_CAN_BCR_BPR(x)	(((x) & 0x3ff) << 8)
+#define RCAR_CAN_BCR_SJW(x)	(((x) & 0x3) << 4)
+#define RCAR_CAN_BCR_TSEG2(x)	((x) & 0x07)
 
-	if (hdr) {
-		printf("%9s", "BTR0 BTR1");
-	} else {
-		btr0 = ((bt->brp - 1) & 0x3f) | (((bt->sjw - 1) & 0x3) << 6);
-		btr1 = ((bt->prop_seg + bt->phase_seg1 - 1) & 0xf) |
-			(((bt->phase_seg2 - 1) & 0x7) << 4);
-		printf("0x%02x 0x%02x", btr0, btr1);
-	}
-}
-
-static void printf_btr_at91(struct can_bittiming *bt, bool hdr)
+static void printf_btr_rcar_can(struct can_bittiming *bt, bool hdr)
 {
 	if (hdr) {
-		printf("%10s", "CAN_BR");
+		printf("%10s", "CiBCR");
 	} else {
-		uint32_t br = ((bt->phase_seg2 - 1) |
-			       ((bt->phase_seg1 - 1) << 4) |
-			       ((bt->prop_seg - 1) << 8) |
-			       ((bt->sjw - 1) << 12) |
-			       ((bt->brp - 1) << 16));
-		printf("0x%08x", br);
-	}
-}
+		uint32_t bcr;
 
-static void printf_btr_flexcan(struct can_bittiming *bt, bool hdr)
-{
-	if (hdr) {
-		printf("%10s", "CAN_CTRL");
-	} else {
-		uint32_t ctrl = (((bt->brp        - 1) << 24) |
-				 ((bt->sjw        - 1) << 22) |
-				 ((bt->phase_seg1 - 1) << 19) |
-				 ((bt->phase_seg2 - 1) << 16) |
-				 ((bt->prop_seg   - 1) <<  0));
+		bcr = RCAR_CAN_BCR_TSEG1(bt->phase_seg1 + bt->prop_seg - 1) |
+			RCAR_CAN_BCR_BPR(bt->brp - 1) |
+			RCAR_CAN_BCR_SJW(bt->sjw - 1) |
+			RCAR_CAN_BCR_TSEG2(bt->phase_seg2 - 1);
 
-		printf("0x%08x", ctrl);
+		printf("0x%08x", bcr << 8);
 	}
 }
 
@@ -270,44 +248,6 @@ static void printf_btr_mcp251xfd(struct can_bittiming *bt, bool hdr)
 	}
 }
 
-static void printf_btr_ti_hecc(struct can_bittiming *bt, bool hdr)
-{
-	if (hdr) {
-		printf("%10s", "CANBTC");
-	} else {
-		uint32_t can_btc;
-
-		can_btc = (bt->phase_seg2 - 1) & 0x7;
-		can_btc |= ((bt->phase_seg1 + bt->prop_seg - 1)
-			    & 0xF) << 3;
-		can_btc |= ((bt->sjw - 1) & 0x3) << 8;
-		can_btc |= ((bt->brp - 1) & 0xFF) << 16;
-
-		printf("0x%08x", can_btc);
-	}
-}
-
-#define RCAR_CAN_BCR_TSEG1(x)	(((x) & 0x0f) << 20)
-#define RCAR_CAN_BCR_BPR(x)	(((x) & 0x3ff) << 8)
-#define RCAR_CAN_BCR_SJW(x)	(((x) & 0x3) << 4)
-#define RCAR_CAN_BCR_TSEG2(x)	((x) & 0x07)
-
-static void printf_btr_rcar_can(struct can_bittiming *bt, bool hdr)
-{
-	if (hdr) {
-		printf("%10s", "CiBCR");
-	} else {
-		uint32_t bcr;
-
-		bcr = RCAR_CAN_BCR_TSEG1(bt->phase_seg1 + bt->prop_seg - 1) |
-			RCAR_CAN_BCR_BPR(bt->brp - 1) |
-			RCAR_CAN_BCR_SJW(bt->sjw - 1) |
-			RCAR_CAN_BCR_TSEG2(bt->phase_seg2 - 1);
-
-		printf("0x%08x", bcr << 8);
-	}
-}
-
 static void printf_btr_bxcan(struct can_bittiming *bt, bool hdr)
 {
 	if (hdr) {
@@ -321,6 +261,20 @@ static void printf_btr_bxcan(struct can_bittiming *bt, bool hdr)
 			(((bt->sjw -1) & 0x3) << 24);
 
 		printf("0x%08x", btr);
+	}
+}
+
+static void printf_btr_at91(struct can_bittiming *bt, bool hdr)
+{
+	if (hdr) {
+		printf("%10s", "CAN_BR");
+	} else {
+		uint32_t br = ((bt->phase_seg2 - 1) |
+			       ((bt->phase_seg1 - 1) << 4) |
+			       ((bt->prop_seg - 1) << 8) |
+			       ((bt->sjw - 1) << 12) |
+			       ((bt->brp - 1) << 16));
+		printf("0x%08x", br);
 	}
 }
 
@@ -342,6 +296,21 @@ static void printf_btr_c_can(struct can_bittiming *bt, bool hdr)
 	}
 }
 
+static void printf_btr_flexcan(struct can_bittiming *bt, bool hdr)
+{
+	if (hdr) {
+		printf("%10s", "CAN_CTRL");
+	} else {
+		uint32_t ctrl = (((bt->brp        - 1) << 24) |
+				 ((bt->sjw        - 1) << 22) |
+				 ((bt->phase_seg1 - 1) << 19) |
+				 ((bt->phase_seg2 - 1) << 16) |
+				 ((bt->prop_seg   - 1) <<  0));
+
+		printf("0x%08x", ctrl);
+	}
+}
+
 static void printf_btr_mcan(struct can_bittiming *bt, bool hdr)
 {
 	if (hdr) {
@@ -359,82 +328,108 @@ static void printf_btr_mcan(struct can_bittiming *bt, bool hdr)
 	}
 }
 
+static void printf_btr_sja1000(struct can_bittiming *bt, bool hdr)
+{
+	uint8_t btr0, btr1;
+
+	if (hdr) {
+		printf("%9s", "BTR0 BTR1");
+	} else {
+		btr0 = ((bt->brp - 1) & 0x3f) | (((bt->sjw - 1) & 0x3) << 6);
+		btr1 = ((bt->prop_seg + bt->phase_seg1 - 1) & 0xf) |
+			(((bt->phase_seg2 - 1) & 0x7) << 4);
+		printf("0x%02x 0x%02x", btr0, btr1);
+	}
+}
+
+static void printf_btr_ti_hecc(struct can_bittiming *bt, bool hdr)
+{
+	if (hdr) {
+		printf("%10s", "CANBTC");
+	} else {
+		uint32_t can_btc;
+
+		can_btc = (bt->phase_seg2 - 1) & 0x7;
+		can_btc |= ((bt->phase_seg1 + bt->prop_seg - 1)
+			    & 0xF) << 3;
+		can_btc |= ((bt->sjw - 1) & 0x3) << 8;
+		can_btc |= ((bt->brp - 1) & 0xFF) << 16;
+
+		printf("0x%08x", can_btc);
+	}
+}
+
 static const struct calc_bittiming_const can_calc_consts[] = {
 	{
 		.bittiming_const = {
-			.name = "sja1000",
-			.tseg1_min = 1,
-			.tseg1_max = 16,
-			.tseg2_min = 1,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 1,
-			.brp_max = 64,
-			.brp_inc = 1,
-		},
-		.ref_clk = {
-			{ .clk = 8000000, },
-		},
-		.printf_btr = printf_btr_sja1000,
-	}, {
-		.bittiming_const = {
-			.name = "mscan",
+			.name = "rcar_can",
 			.tseg1_min = 4,
 			.tseg1_max = 16,
 			.tseg2_min = 2,
 			.tseg2_max = 8,
 			.sjw_max = 4,
 			.brp_min = 1,
-			.brp_max = 64,
+			.brp_max = 1024,
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			{ .clk = 32000000, },
-			{ .clk = 33000000, },
-			{ .clk = 33300000, },
-			{ .clk = 33333333, },
-			{ .clk = 66660000, .name = "mpc5121", },
-			{ .clk = 66666666, .name = "mpc5121" },
+			{ .clk = 65000000, },
 		},
+		.printf_btr = printf_btr_rcar_can,
 	}, {
 		.bittiming_const = {
-			.name = "at91",
-			.tseg1_min = 4,
-			.tseg1_max = 16,
+			.name = "rcar_canfd",
+			.tseg1_min = 2,
+			.tseg1_max = 128,
 			.tseg2_min = 2,
-			.tseg2_max = 8,
-			.sjw_max = 4,
-			.brp_min = 2,
-			.brp_max = 128,
+			.tseg2_max = 32,
+			.sjw_max = 32,
+			.brp_min = 1,
+			.brp_max = 1024,
 			.brp_inc = 1,
 		},
-		.ref_clk = {
-			{ .clk = 99532800, .name = "ronetix PM9263", },
-			{ .clk = 100000000, },
-		},
-		.printf_btr = printf_btr_at91,
-	}, {
-		.bittiming_const = {
-			.name = "flexcan",
-			.tseg1_min = 4,
+		.data_bittiming_const = {
+			.name = "rcar_canfd",
+			.tseg1_min = 2,
 			.tseg1_max = 16,
 			.tseg2_min = 2,
 			.tseg2_max = 8,
-			.sjw_max = 4,
+			.sjw_max = 8,
 			.brp_min = 1,
 			.brp_max = 256,
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			{ .clk = 24000000, .name = "mx28" },
-			{ .clk = 30000000, .name = "mx6" },
-			{ .clk = 49875000, },
-			{ .clk = 66000000, },
-			{ .clk = 66500000, },
-			{ .clk = 66666666, },
-			{ .clk = 83368421, .name = "vybrid" },
+			{ .clk = 20000000, .name = "CIA recommendation"},
+			{ .clk = 40000000, .name = "CIA recommendation"},
 		},
-		.printf_btr = printf_btr_flexcan,
+	}, {
+		.bittiming_const = {
+			.name = "rcar_canfd (CC)",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 1024,
+			.brp_inc = 1,
+		},
+	}, {	/* -------- SPI -------- */
+		.bittiming_const = {
+			.name = "hi311x",
+			.tseg1_min = 2,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk =  24000000, },
+		},
 	}, {
 		.bittiming_const = {
 			.name = "mcp251x",
@@ -466,33 +461,28 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			.brp_max = 256,
 			.brp_inc = 1,
 		},
-		.ref_clk = {
-			{ .clk = 20000000, },
-			{ .clk = 40000000, },
-		},
-		.printf_btr = printf_btr_mcp251xfd,
-	}, {
-		.bittiming_const = {
-			.name = "ti_hecc",
+		.data_bittiming_const = {
+			.name = "mcp251xfd",
 			.tseg1_min = 1,
-			.tseg1_max = 16,
+			.tseg1_max = 32,
 			.tseg2_min = 1,
-			.tseg2_max = 8,
-			.sjw_max = 4,
+			.tseg2_max = 16,
+			.sjw_max = 16,
 			.brp_min = 1,
 			.brp_max = 256,
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			{ .clk = 13000000, },
+			{ .clk = 20000000, .name = "CIA recommendation"},
+			{ .clk = 40000000, .name = "CIA recommendation"},
 		},
-		.printf_btr = printf_btr_ti_hecc,
-	}, {
+		.printf_btr = printf_btr_mcp251xfd,
+	}, {	/* -------- USB -------- */
 		.bittiming_const = {
-			.name = "rcar_can",
-			.tseg1_min = 4,
+			.name = "usb_8dev",
+			.tseg1_min = 1,
 			.tseg1_max = 16,
-			.tseg2_min = 2,
+			.tseg2_min = 1,
 			.tseg2_max = 8,
 			.sjw_max = 4,
 			.brp_min = 1,
@@ -500,12 +490,55 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			{ .clk = 65000000, },
-		},
-		.printf_btr = printf_btr_rcar_can,
+			{ .clk = 32000000, },
+		}
 	}, {
 		.bittiming_const = {
-			.name = "bxcan",
+			.name = "ems_usb",
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 8000000, },
+		},
+	}, {
+
+#define ESD_USB2_TSEG1_MIN 1
+#define ESD_USB2_TSEG1_MAX 16
+#define ESD_USB2_TSEG2_MIN 1
+#define ESD_USB2_TSEG2_MAX 8
+#define ESD_USB2_SJW_MAX 4
+#define ESD_USB2_BRP_MIN 1
+#define ESD_USB2_BRP_MAX 1024
+#define ESD_USB2_BRP_INC 1
+
+#define ESD_USB2_CAN_CLOCK 60000000
+#define ESD_USBM_CAN_CLOCK 36000000
+
+		.bittiming_const = {
+			.name = "esd_usb2",
+			.tseg1_min = ESD_USB2_TSEG1_MIN,
+			.tseg1_max = ESD_USB2_TSEG1_MAX,
+			.tseg2_min = ESD_USB2_TSEG2_MIN,
+			.tseg2_max = ESD_USB2_TSEG2_MAX,
+			.sjw_max = ESD_USB2_SJW_MAX,
+			.brp_min = ESD_USB2_BRP_MIN,
+			.brp_max = ESD_USB2_BRP_MAX,
+			.brp_inc = ESD_USB2_BRP_INC,
+		},
+		.ref_clk = {
+			{ .clk = ESD_USB2_CAN_CLOCK, .name = "CAN-USB/2", },
+			{ .clk = ESD_USBM_CAN_CLOCK, .name = "CAN-USB/Micro", },
+		},
+	}, {	/* gs_usb */
+		.bittiming_const = {
+			.name = "bxcan",	// stm32f072
 			.tseg1_min = 1,
 			.tseg1_max = 16,
 			.tseg2_min = 1,
@@ -519,6 +552,199 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			{ .clk = 48000000, },
 		},
 		.printf_btr = printf_btr_bxcan,
+	}, {	/* gs_usb */
+		.bittiming_const = {
+			.name = "CANtact Pro",	// LPC65616
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 1024,
+			.brp_inc = 1,
+		},
+		.data_bittiming_const = {
+			.name = "CANtact Pro",	// LPC65616
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 1024,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 24000000, .name = "CANtact Pro (original)", },
+			{ .clk = 40000000, .name = "CIA recommendation"},
+		},
+	}, {
+
+#define KVASER_USB_TSEG1_MIN 1
+#define KVASER_USB_TSEG1_MAX 16
+#define KVASER_USB_TSEG2_MIN 1
+#define KVASER_USB_TSEG2_MAX 8
+#define KVASER_USB_SJW_MAX 4
+#define KVASER_USB_BRP_MIN 1
+#define KVASER_USB_BRP_MAX 64
+#define KVASER_USB_BRP_INC 1
+
+		.bittiming_const = {
+			.name = "kvaser_usb",
+			.tseg1_min = KVASER_USB_TSEG1_MIN,
+			.tseg1_max = KVASER_USB_TSEG1_MAX,
+			.tseg2_min = KVASER_USB_TSEG2_MIN,
+			.tseg2_max = KVASER_USB_TSEG2_MAX,
+			.sjw_max = KVASER_USB_SJW_MAX,
+			.brp_min = KVASER_USB_BRP_MIN,
+			.brp_max = KVASER_USB_BRP_MAX,
+			.brp_inc = KVASER_USB_BRP_INC,
+		},
+		.ref_clk = {
+			{ .clk = 8000000, },
+		},
+	}, {
+		.bittiming_const = {
+			.name = "kvaser_usb_kcan",
+			.tseg1_min = 1,
+			.tseg1_max = 255,
+			.tseg2_min = 1,
+			.tseg2_max = 32,
+			.sjw_max = 16,
+			.brp_min = 1,
+			.brp_max = 8192,
+			.brp_inc = 1,
+		},
+		.data_bittiming_const = {
+			.name = "kvaser_usb_kcan",
+			.tseg1_min = 1,
+			.tseg1_max = 255,
+			.tseg2_min = 1,
+			.tseg2_max = 32,
+			.sjw_max = 16,
+			.brp_min = 1,
+			.brp_max = 8192,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 80000000, },
+		},
+	}, {
+		.bittiming_const = {
+			.name = "kvaser_usb_flex",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 24000000, },
+		},
+	}, {
+		.bittiming_const = {
+			.name = "pcan_usb_pro",
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 1024,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 56000000, },
+		},
+	}, {
+
+#define PUCAN_TSLOW_BRP_BITS 10
+#define PUCAN_TSLOW_TSGEG1_BITS 8
+#define PUCAN_TSLOW_TSGEG2_BITS 7
+#define PUCAN_TSLOW_SJW_BITS 7
+
+#define PUCAN_TFAST_BRP_BITS 10
+#define PUCAN_TFAST_TSGEG1_BITS 5
+#define PUCAN_TFAST_TSGEG2_BITS 4
+#define PUCAN_TFAST_SJW_BITS 4
+
+		.bittiming_const = {
+			.name = "pcan_usb_fd",
+			.tseg1_min = 1,
+			.tseg1_max = (1 << PUCAN_TSLOW_TSGEG1_BITS),
+			.tseg2_min = 1,
+			.tseg2_max = (1 << PUCAN_TSLOW_TSGEG2_BITS),
+			.sjw_max = (1 << PUCAN_TSLOW_SJW_BITS),
+			.brp_min = 1,
+			.brp_max = (1 << PUCAN_TSLOW_BRP_BITS),
+			.brp_inc = 1,
+		},
+		.data_bittiming_const = {
+			.name = "pcan_usb_fd",
+			.tseg1_min = 1,
+			.tseg1_max = (1 << PUCAN_TFAST_TSGEG1_BITS),
+			.tseg2_min = 1,
+			.tseg2_max = (1 << PUCAN_TFAST_TSGEG2_BITS),
+			.sjw_max = (1 << PUCAN_TFAST_SJW_BITS),
+			.brp_min = 1,
+			.brp_max = (1 << PUCAN_TFAST_BRP_BITS),
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 80000000, },
+		},
+	}, {
+		.bittiming_const = {
+			.name = "softing",
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 32,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 8000000, },
+			{ .clk = 16000000, },
+		},
+	}, {
+		.bittiming_const = {
+			.name = "at91",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 2,
+			.brp_max = 128,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 99532800, .name = "ronetix PM9263", },
+			{ .clk = 100000000, },
+		},
+		.printf_btr = printf_btr_at91,
+	}, {
+		.bittiming_const = {
+			.name = "cc770",
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 8000000 },
+		}
 	}, {
 		.bittiming_const = {
 			.name = "c_can",
@@ -537,6 +763,194 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 		.printf_btr = printf_btr_c_can,
 	}, {
 		.bittiming_const = {
+			.name = "flexcan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 24000000, .name = "mx28" },
+			{ .clk = 30000000, .name = "mx6" },
+			{ .clk = 49875000, },
+			{ .clk = 66000000, },
+			{ .clk = 66500000, .name = "mx25"},
+			{ .clk = 66666666, },
+			{ .clk = 83368421, .name = "vybrid" },
+		},
+		.printf_btr = printf_btr_flexcan,
+	}, {
+		.bittiming_const = {
+			.name = "flexcan-fd",
+			.tseg1_min = 2,
+			.tseg1_max = 96,
+			.tseg2_min = 2,
+			.tseg2_max = 32,
+			.sjw_max = 16,
+			.brp_min = 1,
+			.brp_max = 1024,
+			.brp_inc = 1,
+		},
+		.data_bittiming_const = {
+			.name = "flexcan-fd",
+			.tseg1_min = 2,
+			.tseg1_max = 39,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 1024,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 20000000, .name = "CIA recommendation"},
+			{ .clk = 40000000, .name = "CIA recommendation"},
+		},
+	}, {
+
+#define GRCAN_CONF_PS1_MIN 1
+#define GRCAN_CONF_PS1_MAX 15
+#define GRCAN_CONF_PS2_MIN 2
+#define GRCAN_CONF_PS2_MAX 8
+#define GRCAN_CONF_RSJ_MAX 4
+#define GRCAN_CONF_SCALER_MIN 0
+#define GRCAN_CONF_SCALER_MAX 255
+#define GRCAN_CONF_SCALER_INC 1
+
+		.bittiming_const = {
+			.name = "grcan",
+			.tseg1_min = GRCAN_CONF_PS1_MIN + 1,
+			.tseg1_max = GRCAN_CONF_PS1_MAX + 1,
+			.tseg2_min = GRCAN_CONF_PS2_MIN,
+			.tseg2_max = GRCAN_CONF_PS2_MAX,
+			.sjw_max = GRCAN_CONF_RSJ_MAX,
+			.brp_min = GRCAN_CONF_SCALER_MIN + 1,
+			.brp_max = GRCAN_CONF_SCALER_MAX + 1,
+			.brp_inc = GRCAN_CONF_SCALER_INC,
+		},
+	}, {
+		.bittiming_const = {
+			.name = "ifi_canfd",
+			.tseg1_min = 1,
+			.tseg1_max = 256,
+			.tseg2_min = 2,
+			.tseg2_max = 256,
+			.sjw_max = 128,
+			.brp_min = 2,
+			.brp_max = 512,
+			.brp_inc = 1,
+		},
+		.data_bittiming_const = {
+			.name = "ifi_canfd",
+			.tseg1_min = 1,
+			.tseg1_max = 256,
+			.tseg2_min = 2,
+			.tseg2_max = 256,
+			.sjw_max = 128,
+			.brp_min = 2,
+			.brp_max = 512,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 20000000, .name = "CIA recommendation"},
+			{ .clk = 40000000, .name = "CIA recommendation"},
+		},
+	}, {
+		.bittiming_const = {
+			.name = "janz-ican3",
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 8000000, },
+		},
+	}, {
+		.bittiming_const = {
+			.name = "kvaser_pciefd",
+			.tseg1_min = 1,
+			.tseg1_max = 512,
+			.tseg2_min = 1,
+			.tseg2_max = 32,
+			.sjw_max = 16,
+			.brp_min = 1,
+			.brp_max = 8192,
+			.brp_inc = 1,
+		},
+		.data_bittiming_const = {
+			.name = "kvaser_pciefd",
+			.tseg1_min = 1,
+			.tseg1_max = 512,
+			.tseg2_min = 1,
+			.tseg2_max = 32,
+			.sjw_max = 16,
+			.brp_min = 1,
+			.brp_max = 8192,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 20000000, .name = "CIA recommendation"},
+			{ .clk = 40000000, .name = "CIA recommendation"},
+		},
+	}, {
+		.bittiming_const = {
+			.name = "mscan",
+			.tseg1_min = 4,
+			.tseg1_max = 16,
+			.tseg2_min = 2,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 32000000, },
+			{ .clk = 33000000, },
+			{ .clk = 33300000, },
+			{ .clk = 33333333, },
+			{ .clk = 66660000, .name = "mpc5121", },
+			{ .clk = 66666666, .name = "mpc5121" },
+		},
+	}, {
+		.bittiming_const = {
+			.name = "mcan-v3.0",
+			.tseg1_min = 2,
+			.tseg1_max = 64,
+			.tseg2_min = 1,
+			.tseg2_max = 16,
+			.sjw_max = 16,
+			.brp_min = 1,
+			.brp_max = 1024,
+			.brp_inc = 1,
+		},
+		.data_bittiming_const = {
+			.name = "mcan-v3.0",
+			.tseg1_min = 2,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 32,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 20000000, .name = "CIA recommendation"},
+			{ .clk = 40000000, .name = "CIA recommendation"},
+		},
+		.printf_btr = printf_btr_mcan,
+	}, {
+		.bittiming_const = {
 			.name = "mcan-v3.1+",
 			.tseg1_min = 2,
 			.tseg1_max = 256,
@@ -547,10 +961,179 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			.brp_max = 512,
 			.brp_inc = 1,
 		},
+		.data_bittiming_const = {
+			.name = "mcan-v3.1+",
+			.tseg1_min = 1,
+			.tseg1_max = 32,
+			.tseg2_min = 1,
+			.tseg2_max = 16,
+			.sjw_max = 16,
+			.brp_min = 1,
+			.brp_max = 32,
+			.brp_inc = 1,
+		},
 		.ref_clk = {
-			{ .clk = 40000000, },
+			{ .clk = 20000000, .name = "CIA recommendation"},
+			{ .clk = 40000000, .name = "CIA recommendation"},
+			{ .clk = 24000000, .name = "stm32mp1 - ck_hse" },
+			{ .clk = 24573875, .name = "stm32mp1 - pll3_1" },
+			{ .clk = 74250000, .name = "stm32mp1 - pll4_r" },
+			{ .clk = 29700000, .name = "stm32mp1 - pll4_q" },
 		},
 		.printf_btr = printf_btr_mcan,
+	}, {
+
+#define PUCAN_TSLOW_BRP_BITS 10
+#define PUCAN_TSLOW_TSGEG1_BITS 8
+#define PUCAN_TSLOW_TSGEG2_BITS 7
+#define PUCAN_TSLOW_SJW_BITS 7
+
+#define PUCAN_TFAST_BRP_BITS 10
+#define PUCAN_TFAST_TSGEG1_BITS 5
+#define PUCAN_TFAST_TSGEG2_BITS 4
+#define PUCAN_TFAST_SJW_BITS 4
+
+		.bittiming_const = {
+			.name = "peak_canfd",
+			.tseg1_min = 1,
+			.tseg1_max = (1 << PUCAN_TSLOW_TSGEG1_BITS),
+			.tseg2_min = 1,
+			.tseg2_max = (1 << PUCAN_TSLOW_TSGEG2_BITS),
+			.sjw_max = (1 << PUCAN_TSLOW_SJW_BITS),
+			.brp_min = 1,
+			.brp_max = (1 << PUCAN_TSLOW_BRP_BITS),
+			.brp_inc = 1,
+		},
+		.data_bittiming_const = {
+			.name = "peak_canfd",
+			.tseg1_min = 1,
+			.tseg1_max = (1 << PUCAN_TFAST_TSGEG1_BITS),
+			.tseg2_min = 1,
+			.tseg2_max = (1 << PUCAN_TFAST_TSGEG2_BITS),
+			.sjw_max = (1 << PUCAN_TFAST_SJW_BITS),
+			.brp_min = 1,
+			.brp_max = (1 << PUCAN_TFAST_BRP_BITS),
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 20000000, },
+			{ .clk = 24000000, },
+			{ .clk = 30000000, },
+			{ .clk = 40000000, },
+			{ .clk = 60000000, },
+			{ .clk = 80000000, },
+		},
+	}, {
+		.bittiming_const = {
+			.name = "sja1000",
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 16000000 / 2, },
+			{ .clk = 24000000 / 2, .name = "f81601" },
+		},
+		.printf_btr = printf_btr_sja1000,
+	}, {
+		.bittiming_const = {
+			.name = "sun4i_can",
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 64,
+			.brp_inc = 1,
+		},
+	}, {
+		.bittiming_const = {
+			.name = "ti_hecc",
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 13000000, },
+		},
+		.printf_btr = printf_btr_ti_hecc,
+	}, {
+		.bittiming_const = {
+			.name = "xilinx_can",
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 4,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
+	}, {
+		.bittiming_const = {
+			.name = "xilinx_can_fd",
+			.tseg1_min = 1,
+			.tseg1_max = 64,
+			.tseg2_min = 1,
+			.tseg2_max = 16,
+			.sjw_max = 16,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
+		.data_bittiming_const = {
+			.name = "xilinx_can_fd",
+			.tseg1_min = 1,
+			.tseg1_max = 16,
+			.tseg2_min = 1,
+			.tseg2_max = 8,
+			.sjw_max = 8,
+			.brp_min = 1,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 20000000, .name = "CIA recommendation"},
+			{ .clk = 40000000, .name = "CIA recommendation"},
+		},
+	}, {
+		.bittiming_const = {
+			.name = "xilinx_can_fd2",
+			.tseg1_min = 1,
+			.tseg1_max = 256,
+			.tseg2_min = 1,
+			.tseg2_max = 128,
+			.sjw_max = 128,
+			.brp_min = 2,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
+		.data_bittiming_const = {
+			.name = "xilinx_can_fd2",
+			.tseg1_min = 1,
+			.tseg1_max = 32,
+			.tseg2_min = 1,
+			.tseg2_max = 16,
+			.sjw_max = 16,
+			.brp_min = 2,
+			.brp_max = 256,
+			.brp_inc = 1,
+		},
+		.ref_clk = {
+			{ .clk = 20000000, .name = "CIA recommendation"},
+			{ .clk = 40000000, .name = "CIA recommendation"},
+		},
 	},
 };
 
