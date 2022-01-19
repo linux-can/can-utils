@@ -140,6 +140,7 @@ struct calc_data {
 
 	const struct calc_ref_clk *opt_ref_clk;
 	const unsigned int *opt_bitrates;
+	const unsigned int *opt_data_bitrates;
 	const struct can_bittiming *opt_bt;
 
 	bool quiet;
@@ -168,7 +169,8 @@ static void print_usage(char *cmd)
 	       "Options:\n"
 	       "\t-q             don't print header line\n"
 	       "\t-l             list all support CAN controller names\n"
-	       "\t-b <bitrate>   bit-rate in bits/sec\n"
+	       "\t-b <bitrate>   arbitration bit-rate in bits/sec\n"
+	       "\t-d <bitrate>   data bit-rate in bits/sec\n"
 	       "\t-s <samp_pt>   sample-point in one-tenth of a percent\n"
 	       "\t               or 0 for CIA recommended sample points\n"
 	       "\t-c <clock>     real CAN system clock in Hz\n"
@@ -956,7 +958,9 @@ static void do_calc(struct calc_data *data)
 			else
 				data->ref_clks = btc->ref_clk;
 
-			if (data->opt_bitrates)
+			if (data->opt_data_bitrates)
+				data->bitrates = data->opt_data_bitrates;
+			else if (data->opt_bitrates)
 				data->bitrates = data->opt_bitrates;
 			else
 				data->bitrates = common_data_bitrates;
@@ -983,6 +987,10 @@ int main(int argc, char *argv[])
 		0,
 		0 /* sentinel */
 	};
+	unsigned int opt_data_bitrate[] = {
+		0,
+		0 /* sentinel */
+	};
 	struct calc_data data[1] = { };
 	bool list = false;
 	int opt;
@@ -999,7 +1007,7 @@ int main(int argc, char *argv[])
 		{ 0,		0,			0, 0 },
 	};
 
-	while ((opt = getopt_long(argc, argv, "b:c:lqs:?", long_options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "b:c:d:lqs:?", long_options, NULL)) != -1) {
 		switch (opt) {
 		case 'b':
 			opt_bitrate[0] = strtoul(optarg, NULL, 10);
@@ -1007,6 +1015,10 @@ int main(int argc, char *argv[])
 
 		case 'c':
 			opt_ref_clk->clk = strtoul(optarg, NULL, 10);
+			break;
+
+		case 'd':
+			opt_data_bitrate[0] = strtoul(optarg, NULL, 10);
 			break;
 
 		case 'l':
@@ -1090,6 +1102,8 @@ int main(int argc, char *argv[])
 		data->opt_ref_clk = opt_ref_clk;
 	if (opt_bitrate[0])
 		data->opt_bitrates = opt_bitrate;
+	if (opt_data_bitrate[0])
+		data->opt_data_bitrates = opt_data_bitrate;
 	if (opt_bt->prop_seg)
 		data->opt_bt = opt_bt;
 
