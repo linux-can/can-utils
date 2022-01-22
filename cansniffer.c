@@ -104,10 +104,10 @@ static struct snif {
 	long timeout;
 	struct timeval laststamp;
 	struct timeval currstamp;
-	struct can_frame last;
-	struct can_frame current;
-	struct can_frame marker;
-	struct can_frame notch;
+	struct canfd_frame last;
+	struct canfd_frame current;
+	struct canfd_frame marker;
+	struct canfd_frame notch;
 } sniftab[MAX_SLOTS];
 
 extern int optind, opterr, optopt;
@@ -117,6 +117,7 @@ static int running = 1;
 static int clearscreen = 1;
 static int print_eff;
 static int notch;
+static int max_dlen = CAN_MAX_DLEN;
 static long timeout = TIMEOUT;
 static long hold = HOLD;
 static long loop = LOOP;
@@ -545,7 +546,7 @@ int handle_keyb(void)
 
 	case '*' :
 		for (i = 0; i < idx; i++)
-			memset(&sniftab[i].notch.data, 0, 8);
+			memset(&sniftab[i].notch.data, 0, max_dlen);
 		break;
 
 	default:
@@ -562,7 +563,7 @@ int handle_frame(int fd, long currcms)
 	bool rx_changed = false;
 	bool run_qsort = false;
 	int nbytes, i, pos;
-	struct can_frame cf;
+	struct canfd_frame cf;
 
 	if ((nbytes = read(fd, &cf, sizeof(cf))) < 0) {
 		perror("raw read");
@@ -593,8 +594,8 @@ int handle_frame(int fd, long currcms)
 		run_qsort = true;
 	}
 	else {
-		if (cf.can_dlc == sniftab[pos].current.can_dlc)
-			for (i = 0; i < cf.can_dlc; i++) {
+		if (cf.len == sniftab[pos].current.len)
+			for (i = 0; i < cf.len; i++) {
 				if (cf.data[i] != sniftab[pos].current.data[i] ) {
 					rx_changed = true;
 					break;
@@ -613,7 +614,7 @@ int handle_frame(int fd, long currcms)
 		ioctl(fd, SIOCGSTAMP, &sniftab[pos].currstamp);
 
 		sniftab[pos].current = cf;
-		for (i = 0; i < 8; i++)
+		for (i = 0; i < max_dlen; i++)
 			sniftab[pos].marker.data[i] |= sniftab[pos].current.data[i] ^ sniftab[pos].last.data[i];
 
 		sniftab[pos].timeout = (timeout)?(currcms + timeout):0;
@@ -651,7 +652,7 @@ int handle_timeo(long currcms)
 
 	if (notch) {
 		for (i = 0; i < idx; i++) {
-			for (j = 0; j < 8; j++)
+			for (j = 0; j < max_dlen; j++)
 				sniftab[i].notch.data[j] |= sniftab[i].marker.data[j];
 		}
 		notch = 0;
@@ -670,7 +671,7 @@ int handle_timeo(long currcms)
 							do_clr(i, UPDATE);
 						}
 						else  if ((sniftab[i].hold) && (sniftab[i].hold < currcms)) {
-								memset(&sniftab[i].marker.data, 0, 8);
+								memset(&sniftab[i].marker.data, 0, max_dlen);
 								print_snifline(i);
 								sniftab[i].hold = 0; /* disable update by hold */
 							}
@@ -694,7 +695,7 @@ void print_snifline(int slot)
 {
 	long diffsec  = sniftab[slot].currstamp.tv_sec  - sniftab[slot].laststamp.tv_sec;
 	long diffusec = sniftab[slot].currstamp.tv_usec - sniftab[slot].laststamp.tv_usec;
-	int dlc_diff  = sniftab[slot].last.can_dlc - sniftab[slot].current.can_dlc;
+	int dlc_diff  = sniftab[slot].last.len - sniftab[slot].current.len;
 	canid_t cid = sniftab[slot].current.can_id;
 	int i,j;
 
@@ -715,7 +716,7 @@ void print_snifline(int slot)
 		printf("%02ld%03ld%s%03X%s", diffsec, diffusec/1000, ldl, cid & CAN_SFF_MASK, ldl);
 
 	if (binary) {
-		for (i = 0; i < sniftab[slot].current.can_dlc; i++) {
+		for (i = 0; i < sniftab[slot].current.len; i++) {
 			for (j=7; j >= 0; j--) {
 				if ((color) && (sniftab[slot].marker.data[i] & 1<<j) &&
 				    (!(sniftab[slot].notch.data[i] & 1<<j)))
@@ -734,7 +735,7 @@ void print_snifline(int slot)
 		}
 
 		/*
-		 * when the can_dlc decreased (dlc_diff > 0),
+		 * when the len decreased (dlc_diff > 0),
 		 * we need to blank the former data printout
 		 */
 		for (i = 0; i < dlc_diff; i++) {
@@ -744,16 +745,16 @@ void print_snifline(int slot)
 		}
 	}
 	else {
-		for (i = 0; i < sniftab[slot].current.can_dlc; i++)
+		for (i = 0; i < sniftab[slot].current.len; i++)
 			if ((color) && (sniftab[slot].marker.data[i] & ~sniftab[slot].notch.data[i]))
 				printf("%s%02X%s ", ATTCOLOR, sniftab[slot].current.data[i], ATTRESET);
 			else
 				printf("%02X ", sniftab[slot].current.data[i]);
 
-		if (sniftab[slot].current.can_dlc < 8)
-			printf("%*s", (8 - sniftab[slot].current.can_dlc) * 3, "");
+		if (sniftab[slot].current.len < max_dlen)
+			printf("%*s", (max_dlen - sniftab[slot].current.len) * 3, "");
 
-		for (i = 0; i<sniftab[slot].current.can_dlc; i++)
+		for (i = 0; i<sniftab[slot].current.len; i++)
 			if ((sniftab[slot].current.data[i] > 0x1F) &&
 			    (sniftab[slot].current.data[i] < 0x7F))
 				if ((color) && (sniftab[slot].marker.data[i] & ~sniftab[slot].notch.data[i]))
@@ -764,7 +765,7 @@ void print_snifline(int slot)
 				putchar('.');
 
 		/*
-		 * when the can_dlc decreased (dlc_diff > 0),
+		 * when the len decreased (dlc_diff > 0),
 		 * we need to blank the former data printout
 		 */
 		for (i = 0; i < dlc_diff; i++)
@@ -773,7 +774,7 @@ void print_snifline(int slot)
 
 	putchar('\n');
 
-	memset(&sniftab[slot].marker.data, 0, 8);
+	memset(&sniftab[slot].marker.data, 0, max_dlen);
 }
 
 int writesettings(char* name)
@@ -796,7 +797,7 @@ int writesettings(char* name)
 			perror("write");
 			return 1;
 		}
-		for (j = 0; j < 8 ; j++) {
+		for (j = 0; j < max_dlen ; j++) {
 			sprintf(buf, "%02X", sniftab[i].notch.data[j]);
 			if (write(fd, buf, 2) < 0) {
 				perror("write");
@@ -842,7 +843,7 @@ int readsettings(char* name)
 		else
 			do_clr(idx, ENABLE);
 
-		for (j = 7; j >= 0 ; j--) {
+		for (j = max_dlen - 1; j >= 0 ; j--) {
 			sniftab[idx].notch.data[j] =
 				(__u8) strtoul(&buf[2*j+12], (char **)NULL, 16) & 0xFF;
 			buf[2*j+12] = 0; /* cut off each time */
