@@ -69,8 +69,15 @@
 #include "terminal.h"
 
 #define SETFNAME "sniffset."
+#define SETFDFNAME "sniffset_fd."
+#define FNAME_MAX_LEN 40
+
 #define ANYDEV   "any"
 #define MAX_SLOTS 2048
+
+#define CANFD_OFF  0 /* set to OFF */
+#define CANFD_ON   1 /* set to ON */
+#define CANFD_AUTO 2 /* unspecified => check for first received frame */
 
 /* flags */
 
@@ -98,6 +105,9 @@
 #define LDL " | "	/* long delimiter */
 #define SDL "|"		/* short delimiter for binary on 80 chars terminal */
 
+#define CC_SEP '#' /* interface name separator for Classical CAN */
+#define FD_SEP '*' /* interface name separator for CAN FD */
+
 static struct snif {
 	int flags;
 	long hold;
@@ -121,10 +131,12 @@ static int max_dlen = CAN_MAX_DLEN;
 static long timeout = TIMEOUT;
 static long hold = HOLD;
 static long loop = LOOP;
+static long canfd_mode = CANFD_AUTO;
 static unsigned char binary;
 static unsigned char binary8;
 static unsigned char binary_gap;
 static unsigned char color;
+static unsigned char name_sep = CC_SEP;
 static char *interface;
 static char *vdl = LDL; /* variable delimiter */
 static char *ldl = LDL; /* long delimiter */
@@ -216,6 +228,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -8          (start with binary mode - for EFF on 80 chars)\n");
 	fprintf(stderr, "         -B          (start with binary mode with gap - exceeds 80 chars!)\n");
 	fprintf(stderr, "         -c          (color changes)\n");
+	fprintf(stderr, "         -f <mode>   (CAN FD mode: 0 = OFF, 1 = ON, 2 = auto detect, default: %d)\n", CANFD_AUTO);
 	fprintf(stderr, "         -t <time>   (timeout for ID display [x10ms] default: %d, 0 = OFF)\n", TIMEOUT);
 	fprintf(stderr, "         -h <time>   (hold marker on changes [x10ms] default: %d)\n", HOLD);
 	fprintf(stderr, "         -l <time>   (loop time (display) [x10ms] default: %d)\n", LOOP);
@@ -249,7 +262,7 @@ int main(int argc, char **argv)
 	for (i = 0; i < MAX_SLOTS ;i++) /* default: enable all slots */
 		do_set(i, ENABLE);
 
-	while ((opt = getopt(argc, argv, "r:t:h:l:qeb8Bc?")) != -1) {
+	while ((opt = getopt(argc, argv, "r:t:h:l:f:qeb8Bc?")) != -1) {
 		switch (opt) {
 		case 'r':
 			if (readsettings(optarg) < 0) {
@@ -268,6 +281,12 @@ int main(int argc, char **argv)
 
 		case 'l':
 			sscanf(optarg, "%ld", &loop);
+			break;
+
+		case 'f':
+			sscanf(optarg, "%ld", &canfd_mode);
+			if ((canfd_mode != CANFD_ON) && (canfd_mode != CANFD_OFF))
+				canfd_mode = CANFD_AUTO;
 			break;
 
 		case 'q':
@@ -342,6 +361,21 @@ int main(int argc, char **argv)
 			perror("if_nametoindex");
 			return 1;
 		}
+	}
+
+	/* enable CAN FD if not disabled by comand line option */
+	if (canfd_mode != CANFD_OFF) {
+		const int enable_canfd = 1;
+
+		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES,
+			       &enable_canfd, sizeof(enable_canfd))){
+			printf("error when enabling CAN FD support\n");
+			return 1;
+		}
+
+		/* might be changed in CANFD_AUTO mode */
+		max_dlen = CANFD_MAX_DLEN;
+		name_sep = FD_SEP;
 	}
 
 	ret = bind(s, (struct sockaddr *)&addr, sizeof(addr));
@@ -565,15 +599,36 @@ int handle_frame(int fd, long currcms)
 	int nbytes, i, pos;
 	struct canfd_frame cf;
 
-	if ((nbytes = read(fd, &cf, sizeof(cf))) < 0) {
+	nbytes = read(fd, &cf, sizeof(cf));
+	if (nbytes < 0) {
 		perror("raw read");
 		return 0; /* quit */
 	}
 
-	if (nbytes != CAN_MTU) {
+	if ((nbytes != CAN_MTU) && (nbytes != CANFD_MTU)) {
 		printf("received strange frame data length %d!\n", nbytes);
 		return 0; /* quit */
 	}
+
+	/* CAN FD auto mode: switch based on first reception */
+	if (canfd_mode == CANFD_AUTO) {
+		if (nbytes == CAN_MTU) {
+			canfd_mode = CANFD_OFF;
+			/* change back auto defaults */
+			max_dlen = CAN_MAX_DLEN;
+			name_sep = CC_SEP;
+		} else {
+			canfd_mode = CANFD_ON;
+		}
+	}
+
+	/* filter for Classical CAN */
+	if ((canfd_mode == CANFD_OFF) && (nbytes == CANFD_MTU))
+		return 1; /* skip handling */
+
+	/* filter for CAN FD */
+	if ((canfd_mode == CANFD_ON) && (nbytes == CAN_MTU))
+		return 1; /* skip handling */
 
 	if (!print_eff && (cf.can_id & CAN_EFF_FLAG)) {
 		print_eff = 1;
@@ -640,11 +695,11 @@ int handle_timeo(long currcms)
 
 	if (clearscreen) {
 		if (print_eff)
-			printf("%s%sXX|ms%s-- ID --%sdata ...     < %s # l=%ld h=%ld t=%ld slots=%d >",
-			       CLR_SCREEN, CSR_HOME, vdl, vdl, interface, loop, hold, timeout, idx);
+			printf("%s%sXX|ms%s-- ID --%sdata ...     < %s %c l=%ld h=%ld t=%ld slots=%d >",
+			       CLR_SCREEN, CSR_HOME, vdl, vdl, interface, name_sep, loop, hold, timeout, idx);
 		else
-			printf("%s%sXX|ms%sID %sdata ...     < %s # l=%ld h=%ld t=%ld slots=%d >",
-			       CLR_SCREEN, CSR_HOME, ldl, ldl, interface, loop, hold, timeout, idx);
+			printf("%s%sXX|ms%sID %sdata ...     < %s %c l=%ld h=%ld t=%ld slots=%d >",
+			       CLR_SCREEN, CSR_HOME, ldl, ldl, interface, name_sep, loop, hold, timeout, idx);
 
 		force_redraw = 1;
 		clearscreen = 0;
@@ -743,8 +798,7 @@ void print_snifline(int slot)
 			if (binary_gap)
 				putchar(' ');
 		}
-	}
-	else {
+	} else {
 		for (i = 0; i < sniftab[slot].current.len; i++)
 			if ((color) && (sniftab[slot].marker.data[i] & ~sniftab[slot].notch.data[i]))
 				printf("%s%02X%s ", ATTCOLOR, sniftab[slot].current.data[i], ATTRESET);
@@ -780,11 +834,20 @@ void print_snifline(int slot)
 int writesettings(char* name)
 {
 	int fd;
-	char fname[30] = SETFNAME;
+	char fname[FNAME_MAX_LEN + 1];
 	int i,j;
 	char buf[13]= {0};
 
-	strncat(fname, name, 29 - strlen(fname));
+	if (canfd_mode == CANFD_OFF)
+		strcpy(fname, SETFNAME);
+	else if (canfd_mode == CANFD_ON)
+		strcpy(fname, SETFDFNAME);
+	else {
+		printf("writesettings failed due to unspecified CAN FD mode\n");
+		return 1;
+	}
+
+	strncat(fname, name, FNAME_MAX_LEN - strlen(fname));
 	fd = open(fname, O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 	if (fd <= 0) {
 		printf("unable to write setting file '%s'!\n", fname);
@@ -808,7 +871,8 @@ int writesettings(char* name)
 			perror("write");
 			return 1;
 		}
-		/* 12 + 16 + 1 = 29 bytes per entry */
+		/* Classical CAN: 12 + 16  + 1 = 29  bytes per entry */
+		/* CAN FD:        12 + 128 + 1 = 141 bytes per entry */
 	}
 	close(fd);
 	return 0;
@@ -817,12 +881,24 @@ int writesettings(char* name)
 int readsettings(char* name)
 {
 	int fd;
-	char fname[30] = SETFNAME;
-	char buf[30] = {0};
+	char fname[FNAME_MAX_LEN + 1];
+	char buf[142] = {0};
+	int entrylen;
 	int j;
 	bool done = false;
 
-	strncat(fname, name, 29 - strlen(fname));
+	if (canfd_mode == CANFD_OFF) {
+		entrylen = 29;
+		strcpy(fname, SETFNAME);
+	} else if (canfd_mode == CANFD_ON) {
+		entrylen = 141;
+		strcpy(fname, SETFDFNAME);
+	} else {
+		printf("readsettings failed due to unspecified CAN FD mode\n");
+		return -1;
+	}
+
+	strncat(fname, name, FNAME_MAX_LEN - strlen(fname));
 	fd = open(fname, O_RDONLY);
 
 	if (fd <= 0) {
@@ -830,7 +906,7 @@ int readsettings(char* name)
 	}
 	idx = 0;
 	while (!done) {
-		if (read(fd, &buf, 29) != 29) {
+		if (read(fd, &buf, entrylen) != entrylen) {
 			done = true;
 			continue;
 		}
