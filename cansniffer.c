@@ -126,6 +126,7 @@ static int idx;
 static int running = 1;
 static int clearscreen = 1;
 static int print_eff;
+static int print_ascii = 1;
 static int notch;
 static int max_dlen = CAN_MAX_DLEN;
 static long timeout = TIMEOUT;
@@ -179,6 +180,7 @@ void print_usage(char *prg)
 		" 8<ENTER>        - toggle binary / HEX-ASCII output (small for EFF on 80 chars)\n"
 		" B<ENTER>        - toggle binary with gap / HEX-ASCII output (exceeds 80 chars!)\n"
 		" c<ENTER>        - toggle color mode\n"
+		" @<ENTER>        - toggle ASCII output (disabled for CAN FD by default)\n"
 		" <SPACE><ENTER>  - force a clear screen\n"
 		" #<ENTER>        - notch currently marked/changed bits (can be used repeatedly)\n"
 		" *<ENTER>        - clear notched marked\n"
@@ -376,6 +378,7 @@ int main(int argc, char **argv)
 		/* might be changed in CANFD_AUTO mode */
 		max_dlen = CANFD_MAX_DLEN;
 		name_sep = FD_SEP;
+		print_ascii = 0; /* don't print ASCII for CAN FD by default */
 	}
 
 	ret = bind(s, (struct sockaddr *)&addr, sizeof(addr));
@@ -537,6 +540,11 @@ int handle_keyb(void)
 		running = 0;
 		break;
 
+	case '@' :
+		/* toggle ASCII output */
+		print_ascii ^= 1;
+		break;
+
 	case 'B' :
 		binary_gap = 1;
 		switchvdl(LDL);
@@ -614,9 +622,10 @@ int handle_frame(int fd, long currcms)
 	if (canfd_mode == CANFD_AUTO) {
 		if (nbytes == CAN_MTU) {
 			canfd_mode = CANFD_OFF;
-			/* change back auto defaults */
+			/* change back auto defaults for Classical CAN */
 			max_dlen = CAN_MAX_DLEN;
 			name_sep = CC_SEP;
+			print_ascii = 1;
 		} else {
 			canfd_mode = CANFD_ON;
 		}
@@ -798,32 +807,44 @@ void print_snifline(int slot)
 			if (binary_gap)
 				putchar(' ');
 		}
-	} else {
+
+	} else { /* not binary -> hex data and ASCII output */
+
 		for (i = 0; i < sniftab[slot].current.len; i++)
 			if ((color) && (sniftab[slot].marker.data[i] & ~sniftab[slot].notch.data[i]))
 				printf("%s%02X%s ", ATTCOLOR, sniftab[slot].current.data[i], ATTRESET);
 			else
 				printf("%02X ", sniftab[slot].current.data[i]);
 
-		if (sniftab[slot].current.len < max_dlen)
-			printf("%*s", (max_dlen - sniftab[slot].current.len) * 3, "");
+		if (print_ascii) {
+			/* jump to common start for ASCII output */
+			if (sniftab[slot].current.len < max_dlen)
+				printf("%*s", (max_dlen - sniftab[slot].current.len) * 3, "");
 
-		for (i = 0; i<sniftab[slot].current.len; i++)
-			if ((sniftab[slot].current.data[i] > 0x1F) &&
-			    (sniftab[slot].current.data[i] < 0x7F))
-				if ((color) && (sniftab[slot].marker.data[i] & ~sniftab[slot].notch.data[i]))
-					printf("%s%c%s", ATTCOLOR, sniftab[slot].current.data[i], ATTRESET);
+			for (i = 0; i < sniftab[slot].current.len; i++)
+				if ((sniftab[slot].current.data[i] > 0x1F) &&
+				    (sniftab[slot].current.data[i] < 0x7F))
+					if ((color) && (sniftab[slot].marker.data[i] & ~sniftab[slot].notch.data[i]))
+						printf("%s%c%s", ATTCOLOR, sniftab[slot].current.data[i], ATTRESET);
+					else
+						putchar(sniftab[slot].current.data[i]);
 				else
-					putchar(sniftab[slot].current.data[i]);
-			else
-				putchar('.');
+					putchar('.');
 
-		/*
-		 * when the len decreased (dlc_diff > 0),
-		 * we need to blank the former data printout
-		 */
-		for (i = 0; i < dlc_diff; i++)
-			putchar(' ');
+			/*
+			 * when the len decreased (dlc_diff > 0),
+			 * we need to blank the former data printout
+			 */
+			for (i = 0; i < dlc_diff; i++)
+				putchar(' ');
+		} else {
+			/*
+			 * when the len decreased (dlc_diff > 0),
+			 * we need to blank the former data printout
+			 */
+			for (i = 0; i < dlc_diff; i++)
+				printf("   ");
+		}
 	}
 
 	putchar('\n');
