@@ -132,7 +132,7 @@ void print_snifline(int slot);
 int handle_keyb(void);
 int handle_frame(int fd, long currcms);
 int handle_timeo(long currcms);
-void writesettings(char* name);
+int writesettings(char* name);
 int readsettings(char* name);
 int sniftab_index(canid_t id);
 
@@ -489,11 +489,13 @@ int handle_keyb(void)
 		break;
 
 	case 'w' :
-		writesettings(&cmd[1]);
+		if (writesettings(&cmd[1]))
+			return 0;
 		break;
 
 	case 'r' :
-		readsettings(&cmd[1]); /* don't care about success */
+		if (readsettings(&cmd[1]) < 0)
+			return 0;
 		break;
 
 	case 'q' :
@@ -774,7 +776,7 @@ void print_snifline(int slot)
 	memset(&sniftab[slot].marker.data, 0, 8);
 }
 
-void writesettings(char* name)
+int writesettings(char* name)
 {
 	int fd;
 	char fname[30] = SETFNAME;
@@ -785,23 +787,30 @@ void writesettings(char* name)
 	fd = open(fname, O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 	if (fd <= 0) {
 		printf("unable to write setting file '%s'!\n", fname);
-		return;
+		return 1;
 	}
 
 	for (i = 0; i < idx ;i++) {
 		sprintf(buf, "<%08X>%c.", sniftab[i].current.can_id, (is_set(i, ENABLE))?'1':'0');
-		if (write(fd, buf, 12) < 0)
+		if (write(fd, buf, 12) < 0) {
 			perror("write");
+			return 1;
+		}
 		for (j = 0; j < 8 ; j++) {
 			sprintf(buf, "%02X", sniftab[i].notch.data[j]);
-			if (write(fd, buf, 2) < 0)
+			if (write(fd, buf, 2) < 0) {
 				perror("write");
+				return 1;
+			}
 		}
-		if (write(fd, "\n", 1) < 0)
+		if (write(fd, "\n", 1) < 0) {
 			perror("write");
+			return 1;
+		}
 		/* 12 + 16 + 1 = 29 bytes per entry */
 	}
 	close(fd);
+	return 0;
 }
 
 int readsettings(char* name)
