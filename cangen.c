@@ -504,7 +504,7 @@ resend:
 			}
 			if (polltimeout) {
 				/* wait for the write socket (with timeout) */
-				if (poll(&fds, 1, polltimeout) < 0) {
+				if (poll(&fds, 1, polltimeout) <= 0) {
 					perror("poll");
 					return 1;
 				}
