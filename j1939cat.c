@@ -368,10 +368,12 @@ static int j1939cat_send_loop(struct j1939cat_priv *priv, int out_fd, char *buf,
 			int ret;
 
 			ret = poll(&fds, 1, priv->polltimeout);
-			if (ret == -EINTR)
-				continue;
-			if (ret < 0)
-				return -errno;
+			if (ret == -1) {
+				if (errno == -EINTR)
+					continue;
+				else
+					return -errno;
+			}
 			if (!ret)
 				return -ETIME;
 			if (!(fds.revents & events)) {
@@ -572,10 +574,12 @@ static int j1939cat_recv(struct j1939cat_priv *priv)
 			int ret;
 
 			ret = poll(&fds, 1, priv->polltimeout);
-			if (ret == -EINTR)
-				continue;
-			if (ret < 0)
-				return -errno;
+			if (ret == -1) {
+				if (errno == -EINTR)
+					continue;
+				else
+					return -errno;
+			}
 			if (!ret)
 				continue;
 			if (!(fds.revents & events)) {
