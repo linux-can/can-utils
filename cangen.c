@@ -503,8 +503,11 @@ resend:
 				return 1;
 			}
 			if (polltimeout) {
+				int ret;
+
 				/* wait for the write socket (with timeout) */
-				if (poll(&fds, 1, polltimeout) < 0) {
+				ret = poll(&fds, 1, polltimeout);
+				if (ret == 0 || (ret == -1 && errno != -EINTR)) {
 					perror("poll");
 					return 1;
 				}

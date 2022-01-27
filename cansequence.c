@@ -216,7 +216,7 @@ static void do_send()
 				}
 
 				err = poll(fds, 1, 1000);
-				if (err == -1 && errno != -EINTR) {
+				if (err == 0 || (err == -1 && errno != -EINTR)) {
 					perror("poll()");
 					exit(EXIT_FAILURE);
 				}
