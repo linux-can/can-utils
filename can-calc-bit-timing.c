@@ -1140,11 +1140,14 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 static const unsigned int common_bitrates[] = {
 	1000000,
 	800000,
+	666666,
 	500000,
 	250000,
 	125000,
 	100000,
+	83333,
 	50000,
+	33333,
 	20000,
 	10000,
 	0
