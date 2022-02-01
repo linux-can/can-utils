@@ -125,7 +125,7 @@ void print_uds_message(int service, int nrc)
 	case 0x3D: service_name = "WriteMemoryByAddress"; break;
 	case 0x3E: service_name = "TesterPresent"; break;
 	case 0x83: service_name = "AccessTimingParameter"; break;
-	case 0x84: service_name = "SecuredDataTransmision"; break;
+	case 0x84: service_name = "SecuredDataTransmission"; break;
 	case 0x85: service_name = "ControlDTCSetting"; break;
 	case 0x86: service_name = "ResponseOnEvent"; break;
 	case 0x87: service_name = "LinkControl"; break;
