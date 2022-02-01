@@ -36,7 +36,7 @@ static const char help_msg[] =
 	" -s[=LEN]	Initial send of LEN bytes dummy data\n"
 	" -r		Receive (and print) data\n"
 	" -e		Echo incoming packets back\n"
-	"		This atually receives packets\n"
+	"		This actually receives packets\n"
 	" -c		Issue connect()\n"
 	" -p=PRIO	Set priority to PRIO\n"
 	" -P		Promiscuous mode. Allow to receive all packets\n"

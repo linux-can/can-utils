@@ -67,7 +67,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -s <speed>  (set CAN speed 0..8)\n");
 	fprintf(stderr, "         -b <btr>    (set bit time register value)\n");
 	fprintf(stderr, "         -d          (only detach line discipline)\n");
-	fprintf(stderr, "         -w          (attach - wait for keypess - detach)\n");
+	fprintf(stderr, "         -w          (attach - wait for keypress - detach)\n");
 	fprintf(stderr, "         -n <name>   (assign created netdevice name)\n");
 	fprintf(stderr, "\n"
 			"    <speed>          Bitrate\n"
