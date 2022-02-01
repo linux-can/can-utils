@@ -365,7 +365,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* enable CAN FD if not disabled by comand line option */
+	/* enable CAN FD if not disabled by command line option */
 	if (canfd_mode != CANFD_OFF) {
 		const int enable_canfd = 1;
 
