@@ -318,6 +318,24 @@ static void mcp251xfd_dump_reg_osc(const struct mcp251xfd_priv *priv, u32 val, u
 	__dump_bit(val, MCP251XFD_REG_OSC, PLLEN, "PLL Enable");
 }
 
+static void mcp251xfd_dump_reg_iocon(const struct mcp251xfd_priv *priv, u32 val, u16 addr)
+{
+	pr_info("IOCON: iocon(0x%03x)=0x%08x\n", addr, val);
+
+	__dump_bit(val, MCP251XFD_REG_IOCON, INTOD, "Interrupt pins Open Drain Mode (0: Push/Pull Output, 1: Open Drain Output)");
+	__dump_bit(val, MCP251XFD_REG_IOCON, SOF, "Start-Of-Frame signal (0: Clock on CLKO pin, 1: SOF signal on CLKO pin)");
+	__dump_bit(val, MCP251XFD_REG_IOCON, TXCANOD, "TXCAN Open Drain Mode (0: Push/Pull Output, 1: Open Drain Output)");
+	__dump_bit(val, MCP251XFD_REG_IOCON, PM1, "GPIO Pin Mode (0: Interrupt Pin INT1 (RXIF), 1: Pin is used as GPIO1)");
+	__dump_bit(val, MCP251XFD_REG_IOCON, PM0, "GPIO Pin Mode (0: Interrupt Pin INT0 (TXIF), 1: Pin is used as GPIO0)");
+	__dump_bit(val, MCP251XFD_REG_IOCON, GPIO1, "GPIO1 Status");
+	__dump_bit(val, MCP251XFD_REG_IOCON, GPIO0, "GPIO0 Status");
+	__dump_bit(val, MCP251XFD_REG_IOCON, LAT1, "GPIO1 Latch");
+	__dump_bit(val, MCP251XFD_REG_IOCON, LAT0, "GPIO0 Latch");
+	__dump_bit(val, MCP251XFD_REG_IOCON, XSTBYEN, "Enable Transceiver Standby Pin Control");
+	__dump_bit(val, MCP251XFD_REG_IOCON, TRIS1, "GPIO1 Data Direction (0: Output Pin, 1: Input Pin)");
+	__dump_bit(val, MCP251XFD_REG_IOCON, TRIS0, "GPIO0 Data Direction (0: Output Pin, 1: Input Pin)");
+}
+
 static void mcp251xfd_dump_reg_tefcon(const struct mcp251xfd_priv *priv, u32 val, u16 addr)
 {
 	pr_info("TEFCON: tefcon(0x%03x)=0x%08x\n", addr, val);
@@ -425,6 +443,7 @@ mcp251xfd_dump_regs(const struct mcp251xfd_priv *priv,
 	__dump_call(regs, bdiag0);
 	__dump_call(regs, bdiag1);
 	__dump_call(regs_mcp251xfd, osc);
+	__dump_call(regs_mcp251xfd, iocon);
 	pr_info("-------------------- TEF --------------------\n");
 	__dump_call(regs, tefcon);
 	__dump_call(regs, tefsta);
