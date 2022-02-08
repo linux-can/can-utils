@@ -71,6 +71,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -t <time ns>  (frame transmit time (N_As) in nanosecs)\n");
 	fprintf(stderr, "         -f <time ns>  (ignore FC and force local tx stmin value in nanosecs)\n");
 	fprintf(stderr, "         -D <len>      (send a fixed PDU with len bytes - no STDIN data)\n");
+	fprintf(stderr, "         -l <num>      (send num PDUs - use 'i' for infinite loop)\n");
+	fprintf(stderr, "         -g <usecs>    (wait given usecs before sending a PDU)\n");
 	fprintf(stderr, "         -b            (block until the PDU transmission is completed)\n");
 	fprintf(stderr, "         -S            (SF broadcast mode for functional addressing)\n");
 	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags>  (link layer options for CAN FD)\n");
@@ -87,6 +89,8 @@ int main(int argc, char **argv)
     static struct can_isotp_ll_options llopts;
     int opt;
     extern int optind, opterr, optopt;
+    unsigned int loops = 1; /* one (== no) loop by default */
+    useconds_t usecs = 0; /* wait before sending the PDU */
     __u32 force_tx_stmin = 0;
     unsigned char buf[BUFSIZE];
     int buflen = 0;
@@ -95,7 +99,7 @@ int main(int argc, char **argv)
 
     addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-    while ((opt = getopt(argc, argv, "s:d:x:p:P:t:f:D:bSL:?")) != -1) {
+    while ((opt = getopt(argc, argv, "s:d:x:p:P:t:f:D:l:g:bSL:?")) != -1) {
 	    switch (opt) {
 	    case 's':
 		    addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
@@ -178,6 +182,22 @@ int main(int argc, char **argv)
 		    }
 		    break;
 
+	    case 'l':
+		    if (optarg[0] == 'i') {
+			    loops = 0; /* infinite loop */
+		    } else {
+			    loops = strtoul(optarg, NULL, 10);
+			    if (!loops) {
+				    fprintf(stderr, "Invalid argument for option -l!\n");
+				    return 1;
+			    }
+		    }
+		    break;
+
+	    case 'g':
+		    usecs = strtoul(optarg, NULL, 10);
+		    break;
+
 	    case 'b':
 		    opts.flags |= CAN_ISOTP_WAIT_TX_DONE;
 		    break;
@@ -256,6 +276,9 @@ int main(int argc, char **argv)
 		    buf[buflen] = ((buflen % 0xFF) + 1) & 0xFF;
     }
 
+loop:
+    if (usecs)
+	    usleep(usecs);
 
     retval = write(s, buf, buflen);
     if (retval < 0) {
@@ -265,6 +288,13 @@ int main(int argc, char **argv)
 
     if (retval != buflen)
 	    fprintf(stderr, "wrote only %d from %d byte\n", retval, buflen);
+
+    if (loops) {
+	    if (--loops)
+		    goto loop;
+    } else {
+	    goto loop;
+    }
 
     /* 
      * due to a Kernel internal wait queue the PDU is sent completely
