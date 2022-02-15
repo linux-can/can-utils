@@ -134,7 +134,7 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -a          (enable additional ASCII output)\n");
 	fprintf(stderr, "         -S          (swap byte order in printed CAN data[] - marked with '%c' )\n", SWAP_DELIMITER);
 	fprintf(stderr, "         -s <level>  (silent mode - %d: off (default) %d: animation %d: silent)\n", SILENT_OFF, SILENT_ANI, SILENT_ON);
-	fprintf(stderr, "         -l          (log CAN-frames into file. Sets '-s %d' by default)\n", SILENT_ON);
+	fprintf(stderr, "         -l <fname>  (log CAN-frames into file. Sets '-s %d' by default)\n", SILENT_ON);
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "         -n <count>  (terminate after reception of <count> CAN frames)\n");
 	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
@@ -314,6 +314,7 @@ int main(int argc, char **argv)
 	struct timeval tv, last_tv;
 	int timeout_ms = -1; /* default to no timeout */
 	FILE *logfile = NULL;
+	const char *log_filename = NULL;
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -321,8 +322,8 @@ int main(int argc, char **argv)
 
 	last_tv.tv_sec = 0;
 	last_tv.tv_usec = 0;
-
-	while ((opt = getopt(argc, argv, "t:HciaSs:lDdxLn:r:he8T:?")) != -1) {
+	
+	while ((opt = getopt(argc, argv, "t:HciaSs:l::DdxLn:r:he8T:?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -376,6 +377,7 @@ int main(int argc, char **argv)
 
 		case 'l':
 			log = 1;
+			log_filename = optarg;
 			break;
 
 		case 'D':
@@ -662,13 +664,23 @@ int main(int argc, char **argv)
 
 		localtime_r(&currtime, &now);
 
-		sprintf(fname, "candump-%04d-%02d-%02d_%02d%02d%02d.log",
-			now.tm_year + 1900,
-			now.tm_mon + 1,
-			now.tm_mday,
-			now.tm_hour,
-			now.tm_min,
-			now.tm_sec);
+		if (!log_filename) {
+			sprintf(fname, "candump-%04d-%02d-%02d_%02d%02d%02d.log",
+				now.tm_year + 1900,
+				now.tm_mon + 1,
+				now.tm_mday,
+				now.tm_hour,
+				now.tm_min,
+				now.tm_sec);
+		} else {
+			int len = strlen(fname);
+			if (len > sizeof(fname) - 1) {
+				fprintf(stderr, "fname of -l argument must not exceed %d characters\n", sizeof(fname) - 1);
+				return 1;
+			}
+			memcpy(fname, log_filename, len);
+			fname[len] = 0;
+		}
 
 		if (silent != SILENT_ON)
 			fprintf(stderr, "Warning: Console output active while logging!\n");
