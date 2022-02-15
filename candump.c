@@ -135,6 +135,7 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -S          (swap byte order in printed CAN data[] - marked with '%c' )\n", SWAP_DELIMITER);
 	fprintf(stderr, "         -s <level>  (silent mode - %d: off (default) %d: animation %d: silent)\n", SILENT_OFF, SILENT_ANI, SILENT_ON);
 	fprintf(stderr, "         -l          (log CAN-frames into file. Sets '-s %d' by default)\n", SILENT_ON);
+	fprintf(stderr, "         -f <fname>  (log CAN-frames into file <fname>. Sets '-s %d' by default)\n", SILENT_ON);
 	fprintf(stderr, "         -L          (use log file format on stdout)\n");
 	fprintf(stderr, "         -n <count>  (terminate after reception of <count> CAN frames)\n");
 	fprintf(stderr, "         -r <size>   (set socket receive buffer to <size>)\n");
@@ -314,6 +315,7 @@ int main(int argc, char **argv)
 	struct timeval tv, last_tv;
 	int timeout_ms = -1; /* default to no timeout */
 	FILE *logfile = NULL;
+	char *logname = NULL;
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -322,7 +324,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "t:HciaSs:lDdxLn:r:he8T:?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:HciaSs:lDdxLf:n:r:he8T:?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -392,6 +394,11 @@ int main(int argc, char **argv)
 
 		case 'L':
 			logfrmt = 1;
+			break;
+
+		case 'f':
+			logname = optarg;
+			log = 1;
 			break;
 
 		case 'n':
@@ -651,31 +658,35 @@ int main(int argc, char **argv)
 	}
 
 	if (log) {
-		time_t currtime;
-		struct tm now;
-		char fname[83]; /* suggested by -Wformat-overflow= */
+		if (!logname) {
+			time_t currtime;
+			struct tm now;
+			char fname[83]; /* suggested by -Wformat-overflow= */
 
-		if (time(&currtime) == (time_t)-1) {
-			perror("time");
-			return 1;
+			if (time(&currtime) == (time_t)-1) {
+				perror("time");
+				return 1;
+			}
+
+			localtime_r(&currtime, &now);
+
+			sprintf(fname, "candump-%04d-%02d-%02d_%02d%02d%02d.log",
+				now.tm_year + 1900,
+				now.tm_mon + 1,
+				now.tm_mday,
+				now.tm_hour,
+				now.tm_min,
+				now.tm_sec);
+
+			logname = fname;
 		}
-
-		localtime_r(&currtime, &now);
-
-		sprintf(fname, "candump-%04d-%02d-%02d_%02d%02d%02d.log",
-			now.tm_year + 1900,
-			now.tm_mon + 1,
-			now.tm_mday,
-			now.tm_hour,
-			now.tm_min,
-			now.tm_sec);
 
 		if (silent != SILENT_ON)
 			fprintf(stderr, "Warning: Console output active while logging!\n");
 
-		fprintf(stderr, "Enabling Logfile '%s'\n", fname);
+		fprintf(stderr, "Enabling Logfile '%s'\n", logname);
 
-		logfile = fopen(fname, "w");
+		logfile = fopen(logname, "w");
 		if (!logfile) {
 			perror("logfile");
 			return 1;
