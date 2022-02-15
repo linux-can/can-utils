@@ -672,14 +672,7 @@ int main(int argc, char **argv)
 				now.tm_hour,
 				now.tm_min,
 				now.tm_sec);
-		} else {
-			int len = strlen(log_filename);
-			if (len > sizeof(fname) - 1) {
-				fprintf(stderr, "fname of -l argument must not exceed %lu characters\n", sizeof(fname) - 1);
-				return 1;
-			}
-			memcpy(fname, log_filename, len);
-			fname[len] = 0;
+			log_filename = fname;
 		}
 
 		if (silent != SILENT_ON)
@@ -687,7 +680,7 @@ int main(int argc, char **argv)
 
 		fprintf(stderr, "Enabling Logfile '%s'\n", fname);
 
-		logfile = fopen(fname, "w");
+		logfile = fopen(log_filename, "w");
 		if (!logfile) {
 			perror("logfile");
 			return 1;
