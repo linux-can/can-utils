@@ -673,9 +673,9 @@ int main(int argc, char **argv)
 				now.tm_min,
 				now.tm_sec);
 		} else {
-			int len = strlen(fname);
+			int len = strlen(log_filename);
 			if (len > sizeof(fname) - 1) {
-				fprintf(stderr, "fname of -l argument must not exceed %d characters\n", sizeof(fname) - 1);
+				fprintf(stderr, "fname of -l argument must not exceed %lu characters\n", sizeof(fname) - 1);
 				return 1;
 			}
 			memcpy(fname, log_filename, len);
