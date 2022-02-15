@@ -322,7 +322,7 @@ int main(int argc, char **argv)
 
 	last_tv.tv_sec = 0;
 	last_tv.tv_usec = 0;
-	
+
 	while ((opt = getopt(argc, argv, "t:HciaSs:l::DdxLn:r:he8T:?")) != -1) {
 		switch (opt) {
 		case 't':
