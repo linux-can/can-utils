@@ -143,6 +143,8 @@ struct calc_bittiming_const {
 struct alg {
 	int (*calc_bittiming)(struct net_device *dev, struct can_bittiming *bt,
 			      const struct can_bittiming_const *btc);
+	int (*fixup_bittiming)(struct net_device *dev, struct can_bittiming *bt,
+			       const struct can_bittiming_const *btc);
 	const char *name;
 };
 
@@ -1472,17 +1474,6 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
 #undef can_calc_bittiming
 #undef can_update_spt
 
-static const struct alg alg_list[] = {
-	/* 1st will be default */
-	{
-		.calc_bittiming = can_calc_bittiming_v4_8,
-		.name = "v4.8",
-	}, {
-		.calc_bittiming = can_calc_bittiming_v3_18,
-		.name = "v3.18",
-	},
-};
-
 static int can_fixup_bittiming(struct net_device *dev, struct can_bittiming *bt,
 			       const struct can_bittiming_const *btc)
 {
@@ -1522,6 +1513,19 @@ static int can_fixup_bittiming(struct net_device *dev, struct can_bittiming *bt,
 
 	return 0;
 }
+
+static const struct alg alg_list[] = {
+	/* 1st will be default */
+	{
+		.calc_bittiming = can_calc_bittiming_v4_8,
+		.fixup_bittiming = can_fixup_bittiming,
+		.name = "v4.8",
+	}, {
+		.calc_bittiming = can_calc_bittiming_v3_18,
+		.fixup_bittiming = can_fixup_bittiming,
+		.name = "v3.18",
+	},
+};
 
 static __u32 get_cia_sample_point(__u32 bitrate)
 {
@@ -1575,7 +1579,7 @@ static void print_bittiming_one(const struct alg *alg,
 	if (ref_bt) {
 		bt = *ref_bt;
 
-		if (can_fixup_bittiming(&dev, &bt, bittiming_const)) {
+		if (alg->fixup_bittiming(&dev, &bt, bittiming_const)) {
 			printf("%8d ***parameters exceed controller's range***\n", bitrate_nominal);
 			return;
 		}
