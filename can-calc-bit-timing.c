@@ -1137,6 +1137,8 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 		.ref_clk = {
 			{ .clk = 20000000, .name = "CIA recommendation" },
 			{ .clk = 40000000, .name = "CIA recommendation" },
+			{ .clk = 79999999, .name = "Versal ACAP" },
+			{ .clk = 80000000, .name = "Versal ACAP" },
 		},
 	},
 };
