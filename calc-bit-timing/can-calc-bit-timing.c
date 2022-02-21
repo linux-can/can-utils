@@ -140,15 +140,15 @@ struct calc_bittiming_const {
 	const void (*printf_data_btr)(struct can_bittiming *bt, bool hdr);
 };
 
-struct can_calc_bittiming {
-	int (*alg)(struct net_device *dev, struct can_bittiming *bt,
-		   const struct can_bittiming_const *btc);
+struct alg {
+	int (*calc_bittiming)(struct net_device *dev, struct can_bittiming *bt,
+			      const struct can_bittiming_const *btc);
 	const char *name;
 };
 
 struct calc_data {
 	const struct can_bittiming_const *bittiming_const;
-	const struct can_calc_bittiming *calc_bittiming;
+	const struct alg *alg;
 	const void (*printf_btr)(struct can_bittiming *bt, bool hdr);
 	const char *name;
 
@@ -1472,13 +1472,13 @@ static int can_calc_bittiming(struct net_device *dev, struct can_bittiming *bt,
 #undef can_calc_bittiming
 #undef can_update_spt
 
-static const struct can_calc_bittiming calc_bittiming_list[] = {
+static const struct alg alg_list[] = {
 	/* 1st will be default */
 	{
-		.alg = can_calc_bittiming_v4_8,
+		.calc_bittiming = can_calc_bittiming_v4_8,
 		.name = "v4.8",
 	}, {
-		.alg = can_calc_bittiming_v3_18,
+		.calc_bittiming = can_calc_bittiming_v3_18,
 		.name = "v3.18",
 	},
 };
@@ -1537,7 +1537,7 @@ static __u32 get_cia_sample_point(__u32 bitrate)
 	return sampl_pt;
 }
 
-static void print_bittiming_one(const struct can_calc_bittiming *calc_bittiming,
+static void print_bittiming_one(const struct alg *alg,
 				const struct can_bittiming_const *bittiming_const,
 				const struct can_bittiming *ref_bt,
 				const struct calc_ref_clk *ref_clk,
@@ -1566,7 +1566,7 @@ static void print_bittiming_one(const struct can_calc_bittiming *calc_bittiming,
 		       ref_clk->name ? "(" : "",
 		       ref_clk->name ? ref_clk->name : "",
 		       ref_clk->name ? ") " : "",
-		       calc_bittiming->name);
+		       alg->name);
 
 		printf_btr(&bt, true);
 		printf("\n");
@@ -1580,7 +1580,7 @@ static void print_bittiming_one(const struct can_calc_bittiming *calc_bittiming,
 			return;
 		}
 	} else {
-		if (calc_bittiming->alg(&dev, &bt, bittiming_const)) {
+		if (alg->calc_bittiming(&dev, &bt, bittiming_const)) {
 			printf("%8d ***bitrate not possible***\n", bitrate_nominal);
 			return;
 		}
@@ -1645,7 +1645,7 @@ static void print_bittiming(const struct calc_data *data)
 			else
 				sample_point = get_cia_sample_point(*bitrates);
 
-			print_bittiming_one(data->calc_bittiming,
+			print_bittiming_one(data->alg,
 					    data->bittiming_const,
 					    data->opt_bt,
 					    ref_clks,
@@ -1667,8 +1667,8 @@ static void do_list_calc_bittiming_list(void)
 {
 	unsigned int i;
 
-	for (i = 0; i < ARRAY_SIZE(calc_bittiming_list); i++)
-		printf("    %s\n", calc_bittiming_list[i].name);
+	for (i = 0; i < ARRAY_SIZE(alg_list); i++)
+		printf("    %s\n", alg_list[i].name);
 }
 
 static void do_list(void)
@@ -1765,7 +1765,7 @@ int main(int argc, char *argv[])
 	};
 	struct calc_data data[] = {
 		{
-			.calc_bittiming = calc_bittiming_list,
+			.alg = alg_list,
 		}
 	};
 	const char *opt_alg_name = NULL;
@@ -1890,9 +1890,9 @@ int main(int argc, char *argv[])
 		bool alg_found = false;
 		unsigned int i;
 
-		for (i = 0; i < ARRAY_SIZE(calc_bittiming_list); i++) {
-			if (!strcmp(opt_alg_name, calc_bittiming_list[i].name)) {
-				data->calc_bittiming = &calc_bittiming_list[i];
+		for (i = 0; i < ARRAY_SIZE(alg_list); i++) {
+			if (!strcmp(opt_alg_name, alg_list[i].name)) {
+				data->alg = &alg_list[i];
 				alg_found = true;
 			}
 		}
