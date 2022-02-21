@@ -1194,55 +1194,17 @@ static const unsigned int common_data_bitrates[] = {
 
 #define can_update_sample_point can_update_sample_point_v4_8
 #define can_calc_bittiming can_calc_bittiming_v4_8
+#define can_fixup_bittiming can_fixup_bittiming_v4_8
 #include "can-calc-bit-timing-v4_8.c"
 #undef can_update_sample_point
 #undef can_calc_bittiming
-
-static int can_fixup_bittiming(struct net_device *dev, struct can_bittiming *bt,
-			       const struct can_bittiming_const *btc)
-{
-	struct can_priv *priv = netdev_priv(dev);
-	unsigned int tseg1, alltseg;
-	u64 brp64, v64;
-
-	tseg1 = bt->prop_seg + bt->phase_seg1;
-	if (!bt->sjw)
-		bt->sjw = 1;
-	if (bt->sjw > btc->sjw_max ||
-	    tseg1 < btc->tseg1_min || tseg1 > btc->tseg1_max ||
-	    bt->phase_seg2 < btc->tseg2_min || bt->phase_seg2 > btc->tseg2_max)
-		return -ERANGE;
-
-	if (!bt->brp) {
-		brp64 = (u64)priv->clock.freq * (u64)bt->tq;
-		if (btc->brp_inc > 1)
-			do_div(brp64, btc->brp_inc);
-		brp64 += 500000000UL - 1;
-		do_div(brp64, 1000000000UL); /* the practicable BRP */
-		if (btc->brp_inc > 1)
-			brp64 *= btc->brp_inc;
-		bt->brp = brp64;
-	}
-
-	v64 = bt->brp * 1000 * 1000 * 1000;
-	do_div(v64, priv->clock.freq);
-	bt->tq = v64;
-
-	if (bt->brp < btc->brp_min || bt->brp > btc->brp_max)
-		return -EINVAL;
-
-	alltseg = CAN_CALC_SYNC_SEG + bt->prop_seg + bt->phase_seg1 + bt->phase_seg2;
-	bt->bitrate = priv->clock.freq / (bt->brp * alltseg);
-	bt->sample_point = ((CAN_CALC_SYNC_SEG + tseg1) * 1000) / alltseg;
-
-	return 0;
-}
+#undef can_fixup_bittiming
 
 static const struct alg alg_list[] = {
 	/* 1st will be default */
 	{
 		.calc_bittiming = can_calc_bittiming_v4_8,
-		.fixup_bittiming = can_fixup_bittiming,
+		.fixup_bittiming = can_fixup_bittiming_v4_8,
 		.name = "v4.8",
 	}, {
 		.calc_bittiming = can_calc_bittiming_v3_18,
