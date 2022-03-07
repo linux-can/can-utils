@@ -708,6 +708,12 @@ int main(int argc, char **argv)
 			continue;
 		}
 
+		/* handle timeout */
+		if (!num_events && timeout_ms >= 0) {
+			running = 0;
+			continue;
+		}
+
 		for (i = 0; i < num_events; i++) {  /* check waiting CAN RAW sockets */
 			struct if_info* obj = events_pending[i].data.ptr;
 			int idx;
