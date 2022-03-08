@@ -400,8 +400,8 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			{ .clk = 20000000, .name = "CIA recommendation"},
-			{ .clk = 40000000, .name = "CIA recommendation"},
+			{ .clk = 20000000, .name = "CIA recommendation" },
+			{ .clk = 40000000, .name = "CIA recommendation" },
 		},
 	}, {
 		.bittiming_const = {
@@ -473,8 +473,8 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			{ .clk = 20000000, .name = "CIA recommendation"},
-			{ .clk = 40000000, .name = "CIA recommendation"},
+			{ .clk = 20000000, .name = "CIA recommendation" },
+			{ .clk = 40000000, .name = "CIA recommendation" },
 		},
 		.printf_btr = printf_btr_mcp251xfd,
 	}, {	/* -------- USB -------- */
@@ -577,7 +577,7 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 		},
 		.ref_clk = {
 			{ .clk = 24000000, .name = "CANtact Pro (original)", },
-			{ .clk = 40000000, .name = "CIA recommendation"},
+			{ .clk = 40000000, .name = "CIA recommendation" },
 		},
 	}, {
 
@@ -778,7 +778,7 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			{ .clk = 30000000, .name = "mx6" },
 			{ .clk = 49875000, },
 			{ .clk = 66000000, },
-			{ .clk = 66500000, .name = "mx25"},
+			{ .clk = 66500000, .name = "mx25" },
 			{ .clk = 66666666, },
 			{ .clk = 83368421, .name = "vybrid" },
 		},
@@ -807,8 +807,8 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			{ .clk = 20000000, .name = "CIA recommendation"},
-			{ .clk = 40000000, .name = "CIA recommendation"},
+			{ .clk = 20000000, .name = "CIA recommendation" },
+			{ .clk = 40000000, .name = "CIA recommendation" },
 		},
 	}, {
 
@@ -856,8 +856,8 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			{ .clk = 20000000, .name = "CIA recommendation"},
-			{ .clk = 40000000, .name = "CIA recommendation"},
+			{ .clk = 20000000, .name = "CIA recommendation" },
+			{ .clk = 40000000, .name = "CIA recommendation" },
 		},
 	}, {
 		.bittiming_const = {
@@ -898,8 +898,8 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			{ .clk = 20000000, .name = "CIA recommendation"},
-			{ .clk = 40000000, .name = "CIA recommendation"},
+			{ .clk = 20000000, .name = "CIA recommendation" },
+			{ .clk = 40000000, .name = "CIA recommendation" },
 		},
 	}, {
 		.bittiming_const = {
@@ -945,8 +945,8 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			{ .clk = 20000000, .name = "CIA recommendation"},
-			{ .clk = 40000000, .name = "CIA recommendation"},
+			{ .clk = 20000000, .name = "CIA recommendation" },
+			{ .clk = 40000000, .name = "CIA recommendation" },
 		},
 		.printf_btr = printf_btr_mcan,
 	}, {
@@ -973,8 +973,8 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			{ .clk = 20000000, .name = "CIA recommendation"},
-			{ .clk = 40000000, .name = "CIA recommendation"},
+			{ .clk = 20000000, .name = "CIA recommendation" },
+			{ .clk = 40000000, .name = "CIA recommendation" },
 			{ .clk = 24000000, .name = "stm32mp1 - ck_hse" },
 			{ .clk = 24573875, .name = "stm32mp1 - pll3_1" },
 			{ .clk = 74250000, .name = "stm32mp1 - pll4_r" },
@@ -1104,8 +1104,8 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			{ .clk = 20000000, .name = "CIA recommendation"},
-			{ .clk = 40000000, .name = "CIA recommendation"},
+			{ .clk = 20000000, .name = "CIA recommendation" },
+			{ .clk = 40000000, .name = "CIA recommendation" },
 		},
 	}, {
 		.bittiming_const = {
@@ -1131,8 +1131,8 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
-			{ .clk = 20000000, .name = "CIA recommendation"},
-			{ .clk = 40000000, .name = "CIA recommendation"},
+			{ .clk = 20000000, .name = "CIA recommendation" },
+			{ .clk = 40000000, .name = "CIA recommendation" },
 		},
 	},
 };
