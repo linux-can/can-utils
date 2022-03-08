@@ -62,6 +62,14 @@ mcp251xfd_dump_SOURCES = \
 
 EXTRA_DIST += \
 	mcp251xfd/99-devcoredump.rules \
+	mcp251xfd/data/devcoredump-canfd-v5.15.dump \
+	mcp251xfd/data/devcoredump-canfd.dump \
+	mcp251xfd/data/devcoredump-classic-can-v5.15.dump \
+	mcp251xfd/data/devcoredump-classic-can.dump \
+	mcp251xfd/data/registers-canfd-v5.15.dump \
+	mcp251xfd/data/registers-canfd.dump \
+	mcp251xfd/data/registers-classic-can-v5.15.dump \
+	mcp251xfd/data/registers-classic-can.dump \
 	mcp251xfd/devcoredump \
 	mcp251xfd/mcp251xfd-gen-testdata.sh
 
