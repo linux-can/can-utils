@@ -57,7 +57,7 @@
 #include <linux/can/isotp.h>
 
 #define NO_CAN_ID 0xFFFFFFFFU
-#define BUFSIZE 5000 /* size > 4095 to check socket API internal checks */
+#define BUFSIZE 67000 /* size > 66000 to check socket API internal checks */
 
 void print_usage(char *prg)
 {
