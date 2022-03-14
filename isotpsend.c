@@ -57,7 +57,8 @@
 #include <linux/can/isotp.h>
 
 #define NO_CAN_ID 0xFFFFFFFFU
-#define BUFSIZE 5000 /* size > 4095 to check socket API internal checks */
+#define BUFSIZE 67000 /* size > 66000 kernel buf to test socket API internal checks */
+#define ZERO_STRING "ZERO"
 
 void print_usage(char *prg)
 {
@@ -68,7 +69,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -x <addr>[:<rxaddr>]  (extended addressing / opt. separate rxaddr)\n");
 	fprintf(stderr, "         -p [tx]:[rx]  (set and enable tx/rx padding bytes)\n");
 	fprintf(stderr, "         -P <mode>     (check rx padding for (l)ength (c)ontent (a)ll)\n");
-	fprintf(stderr, "         -t <time ns>  (frame transmit time (N_As) in nanosecs)\n");
+	fprintf(stderr, "         -t <time ns>  (frame transmit time (N_As) in nanosecs) (*)\n");
 	fprintf(stderr, "         -f <time ns>  (ignore FC and force local tx stmin value in nanosecs)\n");
 	fprintf(stderr, "         -D <len>      (send a fixed PDU with len bytes - no STDIN data)\n");
 	fprintf(stderr, "         -l <num>      (send num PDUs - use 'i' for infinite loop)\n");
@@ -78,6 +79,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags>  (link layer options for CAN FD)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "The pdu data is expected on STDIN in space separated ASCII hex values.\n");
+	fprintf(stderr, "(*) = Use '-t %s' to set N_As to zero for Linux version 5.18+\n", ZERO_STRING);
 	fprintf(stderr, "\n");
 }
 
@@ -102,13 +104,13 @@ int main(int argc, char **argv)
     while ((opt = getopt(argc, argv, "s:d:x:p:P:t:f:D:l:g:bSL:?")) != -1) {
 	    switch (opt) {
 	    case 's':
-		    addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
+		    addr.can_addr.tp.tx_id = strtoul(optarg, NULL, 16);
 		    if (strlen(optarg) > 7)
 			    addr.can_addr.tp.tx_id |= CAN_EFF_FLAG;
 		    break;
 
 	    case 'd':
-		    addr.can_addr.tp.rx_id = strtoul(optarg, (char **)NULL, 16);
+		    addr.can_addr.tp.rx_id = strtoul(optarg, NULL, 16);
 		    if (strlen(optarg) > 7)
 			    addr.can_addr.tp.rx_id |= CAN_EFF_FLAG;
 		    break;
@@ -166,16 +168,19 @@ int main(int argc, char **argv)
 		    break;
 
 	    case 't':
-		    opts.frame_txtime = strtoul(optarg, (char **)NULL, 10);
+		    if (!strncmp(optarg, ZERO_STRING, strlen(ZERO_STRING)))
+			    opts.frame_txtime = CAN_ISOTP_FRAME_TXTIME_ZERO;
+		    else
+			    opts.frame_txtime = strtoul(optarg, NULL, 10);
 		    break;
 
 	    case 'f':
 		    opts.flags |= CAN_ISOTP_FORCE_TXSTMIN;
-		    force_tx_stmin = strtoul(optarg, (char **)NULL, 10);
+		    force_tx_stmin = strtoul(optarg, NULL, 10);
 		    break;
 
 	    case 'D':
-		    datalen = strtoul(optarg, (char **)NULL, 10);
+		    datalen = strtoul(optarg, NULL, 10);
 		    if (!datalen || datalen >= BUFSIZE) {
 			    print_usage(basename(argv[0]));
 			    exit(0);

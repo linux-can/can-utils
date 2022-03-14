@@ -774,7 +774,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 'u':
-			uid = strtoul(optarg, (char **)NULL, 16);
+			uid = strtoul(optarg, NULL, 16);
 			break;
 
 		case 'l':

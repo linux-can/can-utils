@@ -931,7 +931,7 @@ int readsettings(char* name)
 			done = true;
 			continue;
 		}
-		unsigned long id = strtoul(&buf[1], (char **)NULL, 16);
+		unsigned long id = strtoul(&buf[1], NULL, 16);
 
 		sniftab[idx].current.can_id = id;
 
@@ -942,7 +942,7 @@ int readsettings(char* name)
 
 		for (j = max_dlen - 1; j >= 0 ; j--) {
 			sniftab[idx].notch.data[j] =
-				(__u8) strtoul(&buf[2*j+12], (char **)NULL, 16) & 0xFF;
+				(__u8) strtoul(&buf[2*j+12], NULL, 16) & 0xFF;
 			buf[2*j+12] = 0; /* cut off each time */
 		}
 

@@ -57,7 +57,7 @@
 #include <linux/can/isotp.h>
 
 #define NO_CAN_ID 0xFFFFFFFFU
-#define BUFSIZE 5000 /* size > 4095 to check socket API internal checks */
+#define BUFSIZE 67000 /* size > 66000 to check socket API internal checks */
 
 void print_usage(char *prg)
 {
@@ -99,13 +99,13 @@ int main(int argc, char **argv)
     while ((opt = getopt(argc, argv, "s:d:x:p:P:b:m:w:f:lL:?")) != -1) {
 	    switch (opt) {
 	    case 's':
-		    addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
+		    addr.can_addr.tp.tx_id = strtoul(optarg, NULL, 16);
 		    if (strlen(optarg) > 7)
 			    addr.can_addr.tp.tx_id |= CAN_EFF_FLAG;
 		    break;
 
 	    case 'd':
-		    addr.can_addr.tp.rx_id = strtoul(optarg, (char **)NULL, 16);
+		    addr.can_addr.tp.rx_id = strtoul(optarg, NULL, 16);
 		    if (strlen(optarg) > 7)
 			    addr.can_addr.tp.rx_id |= CAN_EFF_FLAG;
 		    break;
@@ -163,20 +163,20 @@ int main(int argc, char **argv)
 		    break;
 
 	    case 'b':
-		    fcopts.bs = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+		    fcopts.bs = strtoul(optarg, NULL, 16) & 0xFF;
 		    break;
 
 	    case 'm':
-		    fcopts.stmin = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+		    fcopts.stmin = strtoul(optarg, NULL, 16) & 0xFF;
 		    break;
 
 	    case 'w':
-		    fcopts.wftmax = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+		    fcopts.wftmax = strtoul(optarg, NULL, 16) & 0xFF;
 		    break;
 
 	    case 'f':
 		    opts.flags |= CAN_ISOTP_FORCE_RXSTMIN;
-		    force_rx_stmin = strtoul(optarg, (char **)NULL, 10);
+		    force_rx_stmin = strtoul(optarg, NULL, 10);
 		    break;
 
 	    case 'l':

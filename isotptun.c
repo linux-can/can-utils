@@ -154,13 +154,13 @@ int main(int argc, char **argv)
 	while ((opt = getopt(argc, argv, "s:d:n:x:p:P:t:b:m:whL:vD?")) != -1) {
 		switch (opt) {
 		case 's':
-			addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
+			addr.can_addr.tp.tx_id = strtoul(optarg, NULL, 16);
 			if (strlen(optarg) > 7)
 				addr.can_addr.tp.tx_id |= CAN_EFF_FLAG;
 			break;
 
 		case 'd':
-			addr.can_addr.tp.rx_id = strtoul(optarg, (char **)NULL, 16);
+			addr.can_addr.tp.rx_id = strtoul(optarg, NULL, 16);
 			if (strlen(optarg) > 7)
 				addr.can_addr.tp.rx_id |= CAN_EFF_FLAG;
 			break;
@@ -228,19 +228,19 @@ int main(int argc, char **argv)
 			break;
 
 		case 't':
-			opts.frame_txtime = strtoul(optarg, (char **)NULL, 10);
+			opts.frame_txtime = strtoul(optarg, NULL, 10);
 			break;
 
 		case 'b':
-			fcopts.bs = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+			fcopts.bs = strtoul(optarg, NULL, 16) & 0xFF;
 			break;
 
 		case 'm':
-			fcopts.stmin = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+			fcopts.stmin = strtoul(optarg, NULL, 16) & 0xFF;
 			break;
 
 		case 'w':
-			fcopts.wftmax = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+			fcopts.wftmax = strtoul(optarg, NULL, 16) & 0xFF;
 			break;
 
 		case 'h':
