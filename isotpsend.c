@@ -104,13 +104,13 @@ int main(int argc, char **argv)
     while ((opt = getopt(argc, argv, "s:d:x:p:P:t:f:D:l:g:bSL:?")) != -1) {
 	    switch (opt) {
 	    case 's':
-		    addr.can_addr.tp.tx_id = strtoul(optarg, (char **)NULL, 16);
+		    addr.can_addr.tp.tx_id = strtoul(optarg, NULL, 16);
 		    if (strlen(optarg) > 7)
 			    addr.can_addr.tp.tx_id |= CAN_EFF_FLAG;
 		    break;
 
 	    case 'd':
-		    addr.can_addr.tp.rx_id = strtoul(optarg, (char **)NULL, 16);
+		    addr.can_addr.tp.rx_id = strtoul(optarg, NULL, 16);
 		    if (strlen(optarg) > 7)
 			    addr.can_addr.tp.rx_id |= CAN_EFF_FLAG;
 		    break;
@@ -171,16 +171,16 @@ int main(int argc, char **argv)
 		    if (!strncmp(optarg, ZERO_STRING, strlen(ZERO_STRING)))
 			    opts.frame_txtime = CAN_ISOTP_FRAME_TXTIME_ZERO;
 		    else
-			    opts.frame_txtime = strtoul(optarg, (char **)NULL, 10);
+			    opts.frame_txtime = strtoul(optarg, NULL, 10);
 		    break;
 
 	    case 'f':
 		    opts.flags |= CAN_ISOTP_FORCE_TXSTMIN;
-		    force_tx_stmin = strtoul(optarg, (char **)NULL, 10);
+		    force_tx_stmin = strtoul(optarg, NULL, 10);
 		    break;
 
 	    case 'D':
-		    datalen = strtoul(optarg, (char **)NULL, 10);
+		    datalen = strtoul(optarg, NULL, 10);
 		    if (!datalen || datalen >= BUFSIZE) {
 			    print_usage(basename(argv[0]));
 			    exit(0);

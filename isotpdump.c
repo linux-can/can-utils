@@ -225,13 +225,13 @@ int main(int argc, char **argv)
 	while ((opt = getopt(argc, argv, "s:d:ax:X:ct:u?")) != -1) {
 		switch (opt) {
 		case 's':
-			src = strtoul(optarg, (char **)NULL, 16);
+			src = strtoul(optarg, NULL, 16);
 			if (strlen(optarg) > 7)
 				src |= CAN_EFF_FLAG;
 			break;
 
 		case 'd':
-			dst = strtoul(optarg, (char **)NULL, 16);
+			dst = strtoul(optarg, NULL, 16);
 			if (strlen(optarg) > 7)
 				dst |= CAN_EFF_FLAG;
 			break;
@@ -249,7 +249,7 @@ int main(int argc, char **argv)
 			if (!strncmp(optarg, "any", 3))
 				extany = 1;
 			else
-				extaddr = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+				extaddr = strtoul(optarg, NULL, 16) & 0xFF;
 			break;
 
 		case 'X':
@@ -257,7 +257,7 @@ int main(int argc, char **argv)
 			if (!strncmp(optarg, "any", 3))
 				rx_extany = 1;
 			else
-				rx_extaddr = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+				rx_extaddr = strtoul(optarg, NULL, 16) & 0xFF;
 			break;
 
 		case 't':

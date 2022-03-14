@@ -200,25 +200,25 @@ int main(int argc, char **argv)
 	while ((opt = getopt(argc, argv, "s:d:x:X:h:ct:f:L:?")) != -1) {
 		switch (opt) {
 		case 's':
-			src = strtoul(optarg, (char **)NULL, 16);
+			src = strtoul(optarg, NULL, 16);
 			if (strlen(optarg) > 7)
 				src |= CAN_EFF_FLAG;
 			break;
 
 		case 'd':
-			dst = strtoul(optarg, (char **)NULL, 16);
+			dst = strtoul(optarg, NULL, 16);
 			if (strlen(optarg) > 7)
 				dst |= CAN_EFF_FLAG;
 			break;
 
 		case 'x':
 			opts.flags |= CAN_ISOTP_EXTEND_ADDR;
-			opts.ext_address = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+			opts.ext_address = strtoul(optarg, NULL, 16) & 0xFF;
 			break;
 
 		case 'X':
 			opts.flags |= CAN_ISOTP_RX_EXT_ADDR;
-			opts.rx_ext_address = strtoul(optarg, (char **)NULL, 16) & 0xFF;
+			opts.rx_ext_address = strtoul(optarg, NULL, 16) & 0xFF;
 			break;
 
 		case 'f':
