@@ -163,6 +163,7 @@ struct calc_data {
 	const struct can_bittiming *opt_bt;
 
 	bool quiet;
+	bool fd_mode;
 };
 
 static inline void *netdev_priv(const struct net_device *dev)
@@ -1543,7 +1544,8 @@ static void print_bittiming_one(const struct can_calc_bittiming *calc_bittiming,
 				unsigned int bitrate_nominal,
 				unsigned int sample_point_nominal,
 				void (*printf_btr)(struct can_bittiming *bt, bool hdr),
-				bool quiet)
+				bool quiet,
+				bool fd_mode)
 {
 	struct net_device dev = {
 		.priv.clock.freq = ref_clk->clk,
@@ -1555,9 +1557,10 @@ static void print_bittiming_one(const struct can_calc_bittiming *calc_bittiming,
 	unsigned int bitrate_error, sample_point_error;
 
 	if (!quiet) {
-		printf("Bit timing parameters for %s with %.6f MHz ref clock %s%s%susing algo '%s'\n"
+		printf("%sBit timing parameters for %s with %.6f MHz ref clock %s%s%susing algo '%s'\n"
 		       " nominal                                  real  Bitrt    nom   real  SampP\n"
 		       " Bitrate TQ[ns] PrS PhS1 PhS2 SJW BRP  Bitrate  Error  SampP  SampP  Error   ",
+		       fd_mode ? "Data " : "",
 		       bittiming_const->name,
 		       ref_clk->clk / 1000000.0,
 		       ref_clk->name ? "(" : "",
@@ -1649,7 +1652,8 @@ static void print_bittiming(const struct calc_data *data)
 					    *bitrates,
 					    sample_point,
 					    printf_btr,
-					    quiet);
+					    quiet,
+					    data->fd_mode);
 			bitrates++;
 			quiet = true;
 		}
@@ -1706,6 +1710,8 @@ static void do_calc(struct calc_data *data)
 			else
 				data->bitrates = common_bitrates;
 
+			data->fd_mode = false;
+
 			print_bittiming(data);
 		}
 
@@ -1728,6 +1734,8 @@ static void do_calc(struct calc_data *data)
 				data->bitrates = data->opt_bitrates;
 			else
 				data->bitrates = common_data_bitrates;
+
+			data->fd_mode = true;
 
 			print_bittiming(data);
 		}
