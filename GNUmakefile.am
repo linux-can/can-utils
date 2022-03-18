@@ -39,6 +39,9 @@ libcan_la_SOURCES = \
 libj1939_la_SOURCES = \
 	libj1939.c
 
+can_calc_bit_timing_SOURCES = \
+	calc-bit-timing/can-calc-bit-timing.c
+
 mcp251xfd_dump_SOURCES = \
 	mcp251xfd/mcp251xfd-dev-coredump.c \
 	mcp251xfd/mcp251xfd-dump-userspace.h \
