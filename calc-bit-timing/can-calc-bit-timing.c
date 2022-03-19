@@ -1186,9 +1186,11 @@ static const unsigned int common_data_bitrates[] = {
 
 #define can_update_spt can_update_spt_v3_18
 #define can_calc_bittiming can_calc_bittiming_v3_18
+#define can_fixup_bittiming can_fixup_bittiming_v3_18
 #include "can-calc-bit-timing-v3_18.c"
 #undef can_update_spt
 #undef can_calc_bittiming
+#undef can_fixup_bittiming
 
 #define can_update_sample_point can_update_sample_point_v4_8
 #define can_calc_bittiming can_calc_bittiming_v4_8
@@ -1244,7 +1246,7 @@ static const struct alg alg_list[] = {
 		.name = "v4.8",
 	}, {
 		.calc_bittiming = can_calc_bittiming_v3_18,
-		.fixup_bittiming = can_fixup_bittiming,
+		.fixup_bittiming = can_fixup_bittiming_v3_18,
 		.name = "v3.18",
 	}, {
 		.calc_bittiming = can_calc_bittiming_v2_6_31,
