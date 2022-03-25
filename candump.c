@@ -442,6 +442,12 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
+	/* "-f -"  is equal to "-L" (print logfile format on stdout) */
+	if (log && logname && strcmp("-", logname) == 0) {
+		log = 0; /* no logging into a file */
+		logfrmt = 1; /* print logformat output to stdout */
+	}
+
 	if (silent == SILENT_INI) {
 		if (log) {
 			fprintf(stderr, "Disabled standard output while logging.\n");
