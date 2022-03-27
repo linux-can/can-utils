@@ -465,6 +465,12 @@ int main(int argc, char **argv)
 		if (frame.len < maxdlen)
 			memset(&frame.data[frame.len], 0, maxdlen - frame.len);
 
+		if ((ts.tv_sec || ts.tv_nsec) &&
+		    burst_sent_count >= burst_count) {
+			if (nanosleep(&ts, NULL))
+				return 1;
+		}
+
 		if (verbose) {
 			printf("  %s  ", argv[optind]);
 
@@ -502,14 +508,9 @@ resend:
 			return 1;
 		}
 
-		burst_sent_count++;
-		if ((ts.tv_sec || ts.tv_nsec) &&
-		    burst_sent_count >= burst_count)
-			if (nanosleep(&ts, NULL))
-				return 1;
-
 		if (burst_sent_count >= burst_count)
 			burst_sent_count = 0;
+		burst_sent_count++;
 
 		if (id_mode == MODE_INCREMENT)
 			frame.can_id++;
