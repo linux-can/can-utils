@@ -69,11 +69,11 @@
 #define DEFAULT_GAP 200 /* ms */
 #define DEFAULT_BURST_COUNT 1
 
-#define MODE_RANDOM	0
-#define MODE_INCREMENT	1
-#define MODE_FIX	2
-#define MODE_RANDOM_EVEN	3
-#define MODE_RANDOM_ODD	4
+#define MODE_RANDOM 0
+#define MODE_INCREMENT 1
+#define MODE_FIX 2
+#define MODE_RANDOM_EVEN 3
+#define MODE_RANDOM_ODD 4
 
 extern int optind, opterr, optopt;
 
