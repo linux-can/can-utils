@@ -80,6 +80,68 @@ extern int optind, opterr, optopt;
 static volatile int running = 1;
 static unsigned long long enobufs_count;
 
+#define NSEC_PER_SEC 1000000000LL
+
+static struct timespec timespec_normalise(struct timespec ts)
+{
+	while (ts.tv_nsec >= NSEC_PER_SEC) {
+		++(ts.tv_sec);
+		ts.tv_nsec -= NSEC_PER_SEC;
+	}
+
+	while (ts.tv_nsec <= -NSEC_PER_SEC) {
+		--(ts.tv_sec);
+		ts.tv_nsec += NSEC_PER_SEC;
+	}
+
+	if (ts.tv_nsec < 0) {
+		/*
+		 * Negative nanoseconds isn't valid according to
+		 * POSIX. Decrement tv_sec and roll tv_nsec over.
+		 */
+
+		--(ts.tv_sec);
+		ts.tv_nsec = (NSEC_PER_SEC + ts.tv_nsec);
+	}
+
+	return ts;
+}
+
+static struct timespec timespec_add(struct timespec ts1, struct timespec ts2)
+{
+	/*
+	 * Normalize inputs to prevent tv_nsec rollover if
+	 * whole-second values are packed in it.
+	 */
+	ts1 = timespec_normalise(ts1);
+	ts2 = timespec_normalise(ts2);
+
+	ts1.tv_sec += ts2.tv_sec;
+	ts1.tv_nsec += ts2.tv_nsec;
+
+	return timespec_normalise(ts1);
+}
+
+struct timespec double_to_timespec(double s)
+{
+	struct timespec ts = {
+		.tv_sec  = s,
+		.tv_nsec = (s - (long)(s)) * NSEC_PER_SEC,
+	};
+
+	return timespec_normalise(ts);
+}
+
+static struct timespec ns_to_timespec(int64_t ns)
+{
+	struct timespec ts = {
+		.tv_sec  = ns / NSEC_PER_SEC,
+		.tv_nsec = ns % NSEC_PER_SEC,
+	};
+
+	return timespec_normalise(ts);
+}
+
 static void print_usage(char *prg)
 {
 	fprintf(stderr, "%s - CAN frames generator.\n\n", prg);
