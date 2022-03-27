@@ -292,7 +292,6 @@ int main(int argc, char **argv)
 		default:
 			print_usage(basename(argv[0]));
 			return 1;
-			break;
 		}
 	}
 
