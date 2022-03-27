@@ -336,14 +336,14 @@ int main(int argc, char **argv)
 	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
 
 	if (loopback_disable) {
-		int loopback = 0;
+		const int loopback = 0;
 
 		setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK,
 			   &loopback, sizeof(loopback));
 	}
 
 	if (canfd) {
-		int enable_canfd = 1;
+		const int enable_canfd = 1;
 
 		/* check if the frame fits into the CAN netdevice */
 		if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {
