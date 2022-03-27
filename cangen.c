@@ -496,8 +496,9 @@ resend:
 					return 1;
 				}
 				goto resend;
-			} else
+			} else {
 				enobufs_count++;
+			}
 
 		} else if (nbytes < mtu) {
 			fprintf(stderr, "write: incomplete CAN frame\n");
