@@ -200,11 +200,19 @@ static void sigterm(int signo)
 
 static int do_send_one(int fd, void *buf, size_t len, int timeout)
 {
+	struct iovec iov = {
+		.iov_base = buf,
+		.iov_len = len,
+	};
+	struct msghdr msg = {
+		.msg_iov = &iov,
+		.msg_iovlen = 1,
+	};
 	ssize_t nbytes;
 	int ret;
 
  resend:
-	nbytes = write(fd, buf, len);
+	nbytes = sendmsg(fd, &msg, 0);
 	if (nbytes < 0) {
 		ret = -errno;
 		if (ret != -ENOBUFS) {
