@@ -329,10 +329,12 @@ int main(int argc, char **argv)
 	}
 	addr.can_ifindex = ifr.ifr_ifindex;
 
-	/* disable default receive filter on this RAW socket */
-	/* This is obsolete as we do not read from the socket at all, but for */
-	/* this reason we can remove the receive list in the Kernel to save a */
-	/* little (really a very little!) CPU usage.                          */
+	/*
+	 * disable default receive filter on this RAW socket
+	 * This is obsolete as we do not read from the socket at all, but for
+	 * this reason we can remove the receive list in the Kernel to save a
+	 * little (really a very little!) CPU usage.
+	 */
 	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
 
 	if (loopback_disable) {
