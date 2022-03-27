@@ -182,12 +182,8 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	while ((opt = getopt(argc, argv, "ig:ebEfmI:L:D:xp:n:c:vR8h?")) != -1) {
+	while ((opt = getopt(argc, argv, "g:efbER8mI:L:D:p:n:ixc:vh?")) != -1) {
 		switch (opt) {
-
-		case 'i':
-			ignore_enobufs = 1;
-			break;
 
 		case 'g':
 			gap = strtod(optarg, NULL);
@@ -209,6 +205,14 @@ int main(int argc, char **argv)
 		case 'E':
 			esi = 1; /* error state indicator implies CAN FD */
 			canfd = 1;
+			break;
+
+		case 'R':
+			rtr_frame = 1;
+			break;
+
+		case '8':
+			len8_dlc = 1;
 			break;
 
 		case 'm':
@@ -256,26 +260,6 @@ int main(int argc, char **argv)
 			}
 			break;
 
-		case 'c':
-			burst_count = strtoul(optarg, NULL, 10);
-			break;
-
-		case 'v':
-			verbose++;
-			break;
-
-		case 'x':
-			loopback_disable = 1;
-			break;
-
-		case 'R':
-			rtr_frame = 1;
-			break;
-
-		case '8':
-			len8_dlc = 1;
-			break;
-
 		case 'p':
 			polltimeout = strtoul(optarg, NULL, 10);
 			break;
@@ -286,6 +270,22 @@ int main(int argc, char **argv)
 				print_usage(basename(argv[0]));
 				return 1;
 			}
+			break;
+
+		case 'i':
+			ignore_enobufs = 1;
+			break;
+
+		case 'x':
+			loopback_disable = 1;
+			break;
+
+		case 'c':
+			burst_count = strtoul(optarg, NULL, 10);
+			break;
+
+		case 'v':
+			verbose++;
 			break;
 
 		case '?':
