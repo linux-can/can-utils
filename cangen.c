@@ -539,7 +539,7 @@ resend:
 			incdata++;
 
 			for (i = 0; i < 8; i++)
-				frame.data[i] = (incdata >> i * 8) & 0xFFULL;
+				frame.data[i] = incdata >> i * 8;
 		}
 
 		if (mix) {
