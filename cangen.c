@@ -314,7 +314,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
+	s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+	if (s < 0) {
 		perror("socket");
 		return 1;
 	}
