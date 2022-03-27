@@ -100,7 +100,7 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -n <count>    (terminate after <count> CAN frames - default infinite)\n");
 	fprintf(stderr, "         -i            (ignore -ENOBUFS return values on write() syscalls)\n");
 	fprintf(stderr, "         -x            (disable local loopback of generated CAN frames)\n");
-	fprintf(stderr, "         -c <count>    (number of messages to send in burst, default 1)\n");
+	fprintf(stderr, "         -c <count>    (number of messages to send in burst, default %u)\n", DEFAULT_BURST_COUNT);
 	fprintf(stderr, "         -v            (increment verbose level for printing sent CAN frames)\n\n");
 	fprintf(stderr, "Generation modes:\n");
 	fprintf(stderr, " 'r'     => random values (default)\n");
