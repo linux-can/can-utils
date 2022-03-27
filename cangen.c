@@ -249,7 +249,7 @@ int main(int argc, char **argv)
 			} else {
 				data_mode = MODE_FIX;
 				if (hexstring2data(optarg, fixdata, CANFD_MAX_DLEN)) {
-					printf ("wrong fix data definition\n");
+					printf("wrong fix data definition\n");
 					return 1;
 				}
 			}
@@ -357,7 +357,7 @@ int main(int argc, char **argv)
 		}
 
 		/* interface is ok - try to switch the socket into CAN FD mode */
-		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd, sizeof(enable_canfd))){
+		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd, sizeof(enable_canfd))) {
 			printf("error when enabling CAN FD support\n");
 			return 1;
 		}
@@ -394,7 +394,7 @@ int main(int argc, char **argv)
 		if (count && (--count == 0))
 			running = 0;
 
-		if (canfd){
+		if (canfd) {
 			mtu = CANFD_MTU;
 			maxdlen = CANFD_MAX_DLEN;
 			if (brs)
@@ -423,7 +423,6 @@ int main(int argc, char **argv)
 			frame.can_id |= CAN_RTR_FLAG;
 
 		if (dlc_mode == MODE_RANDOM) {
-
 			if (canfd)
 				frame.len = can_fd_dlc2len(random() & 0xF);
 			else {
@@ -445,7 +444,6 @@ int main(int argc, char **argv)
 			frame.len = 1; /* min dlc value for incr. data */
 
 		if (data_mode == MODE_RANDOM) {
-
 			rnd = random();
 			memcpy(&frame.data[0], &rnd, 4);
 			rnd = random();
@@ -467,11 +465,10 @@ int main(int argc, char **argv)
 			memset(&frame.data[frame.len], 0, maxdlen - frame.len);
 
 		if (verbose) {
-
 			printf("  %s  ", argv[optind]);
 
 			if (verbose > 1)
-				fprint_long_canframe(stdout, &frame, "\n", (verbose > 2)?1:0, maxdlen);
+				fprint_long_canframe(stdout, &frame, "\n", (verbose > 2) ? 1 : 0, maxdlen);
 			else
 				fprint_canframe(stdout, &frame, "\n", 1, maxdlen);
 		}
@@ -518,7 +515,6 @@ resend:
 			frame.can_id++;
 
 		if (dlc_mode == MODE_INCREMENT) {
-
 			incdlc++;
 			incdlc %= CAN_MAX_RAW_DLC + 1;
 
@@ -539,22 +535,21 @@ resend:
 		}
 
 		if (data_mode == MODE_INCREMENT) {
-
 			incdata++;
 
-			for (i=0; i<8 ;i++)
-				frame.data[i] = (incdata >> i*8) & 0xFFULL;
+			for (i = 0; i < 8; i++)
+				frame.data[i] = (incdata >> i * 8) & 0xFFULL;
 		}
 
 		if (mix) {
 			i = random();
-			extended = i&1;
-			canfd = i&2;
+			extended = i & 1;
+			canfd = i & 2;
 			if (canfd) {
-				brs = i&4;
-				esi = i&8;
+				brs = i & 4;
+				esi = i & 8;
 			}
-			rtr_frame = ((i&24) == 24); /* reduce RTR frames to 1/4 */
+			rtr_frame = ((i & 24) == 24); /* reduce RTR frames to 1/4 */
 		}
 	}
 
