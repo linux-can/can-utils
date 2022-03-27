@@ -321,13 +321,11 @@ int main(int argc, char **argv)
 	}
 
 	addr.can_family = AF_CAN;
-
-	strcpy(ifr.ifr_name, argv[optind]);
-	if (ioctl(s, SIOCGIFINDEX, &ifr) < 0) {
-		perror("SIOCGIFINDEX");
+	addr.can_ifindex = if_nametoindex(argv[optind]);
+	if (!addr.can_ifindex) {
+		perror("if_nametoindex");
 		return 1;
 	}
-	addr.can_ifindex = ifr.ifr_ifindex;
 
 	/*
 	 * disable default receive filter on this RAW socket
