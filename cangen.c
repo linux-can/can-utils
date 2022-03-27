@@ -85,36 +85,23 @@ void print_usage(char *prg)
 	fprintf(stderr, "%s - CAN frames generator.\n\n", prg);
 	fprintf(stderr, "Usage: %s [options] <CAN interface>\n", prg);
 	fprintf(stderr, "Options:\n");
-	fprintf(stderr, "         -g <ms>       (gap in milli seconds "
-		"- default: %d ms)\n", DEFAULT_GAP);
-	fprintf(stderr, "         -e            (generate extended frame mode "
-		"(EFF) CAN frames)\n");
+	fprintf(stderr, "         -g <ms>       (gap in milli seconds - default: %d ms)\n", DEFAULT_GAP);
+	fprintf(stderr, "         -e            (generate extended frame mode (EFF) CAN frames)\n");
 	fprintf(stderr, "         -f            (generate CAN FD CAN frames)\n");
-	fprintf(stderr, "         -b            (generate CAN FD CAN frames"
-		" with bitrate switch (BRS))\n");
-	fprintf(stderr, "         -E            (generate CAN FD CAN frames"
-		" with error state (ESI))\n");
+	fprintf(stderr, "         -b            (generate CAN FD CAN frames with bitrate switch (BRS))\n");
+	fprintf(stderr, "         -E            (generate CAN FD CAN frames with error state (ESI))\n");
 	fprintf(stderr, "         -R            (generate RTR frames)\n");
 	fprintf(stderr, "         -8            (allow DLC values greater then 8 for Classic CAN frames)\n");
 	fprintf(stderr, "         -m            (mix -e -f -b -E -R frames)\n");
-	fprintf(stderr, "         -I <mode>     (CAN ID"
-		" generation mode - see below)\n");
-	fprintf(stderr, "         -L <mode>     (CAN data length code (dlc)"
-		" generation mode - see below)\n");
-	fprintf(stderr, "         -D <mode>     (CAN data (payload)"
-		" generation mode - see below)\n");
-	fprintf(stderr, "         -p <timeout>  (poll on -ENOBUFS to write frames"
-		" with <timeout> ms)\n");
-	fprintf(stderr, "         -n <count>    (terminate after <count> CAN frames "
-		"- default infinite)\n");
-	fprintf(stderr, "         -i            (ignore -ENOBUFS return values on"
-		" write() syscalls)\n");
-	fprintf(stderr, "         -x            (disable local loopback of "
-		"generated CAN frames)\n");
-	fprintf(stderr, "         -c <count>    (number of messages to send in burst, "
-		"default 1)\n");
-	fprintf(stderr, "         -v            (increment verbose level for "
-		"printing sent CAN frames)\n\n");
+	fprintf(stderr, "         -I <mode>     (CAN ID generation mode - see below)\n");
+	fprintf(stderr, "         -L <mode>     (CAN data length code (dlc) generation mode - see below)\n");
+	fprintf(stderr, "         -D <mode>     (CAN data (payload) generation mode - see below)\n");
+	fprintf(stderr, "         -p <timeout>  (poll on -ENOBUFS to write frames with <timeout> ms)\n");
+	fprintf(stderr, "         -n <count>    (terminate after <count> CAN frames - default infinite)\n");
+	fprintf(stderr, "         -i            (ignore -ENOBUFS return values on write() syscalls)\n");
+	fprintf(stderr, "         -x            (disable local loopback of generated CAN frames)\n");
+	fprintf(stderr, "         -c <count>    (number of messages to send in burst, default 1)\n");
+	fprintf(stderr, "         -v            (increment verbose level for printing sent CAN frames)\n\n");
 	fprintf(stderr, "Generation modes:\n");
 	fprintf(stderr, " 'r'     => random values (default)\n");
 	fprintf(stderr, " 'e'     => random values, even ID\n");
@@ -122,8 +109,7 @@ void print_usage(char *prg)
 	fprintf(stderr, " 'i'     => increment values\n");
 	fprintf(stderr, " <value> => fixed value (in hexadecimal for -I and -D)\n\n");
 	fprintf(stderr, "The gap value (in milliseconds) may have decimal places, e.g. '-g 4.73'\n");
-	fprintf(stderr, "When incrementing the CAN data the data length code "
-		"minimum is set to 1.\n");
+	fprintf(stderr, "When incrementing the CAN data the data length code minimum is set to 1.\n");
 	fprintf(stderr, "CAN IDs and data content are given and expected in hexadecimal values.\n\n");
 	fprintf(stderr, "Examples:\n");
 	fprintf(stderr, "%s vcan0 -g 4 -I 42A -L 1 -D i -v -v\n", prg);
@@ -320,8 +306,7 @@ int main(int argc, char **argv)
 
 	/* recognize obviously missing commandline option */
 	if (id_mode == MODE_FIX && frame.can_id > 0x7FF && !extended) {
-		printf("The given CAN-ID is greater than 0x7FF and "
-		       "the '-e' option is not set.\n");
+		printf("The given CAN-ID is greater than 0x7FF and the '-e' option is not set.\n");
 		return 1;
 	}
 
