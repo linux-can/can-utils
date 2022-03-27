@@ -172,6 +172,7 @@ int main(int argc, char **argv)
 
 	struct timespec ts;
 	struct timeval now;
+	int ret;
 
 	/* set seed value for pseudo random numbers */
 	gettimeofday(&now, NULL);
@@ -485,8 +486,6 @@ resend:
 				return 1;
 			}
 			if (polltimeout) {
-				int ret;
-
 				/* wait for the write socket (with timeout) */
 				ret = poll(&fds, 1, polltimeout);
 				if (ret == 0 || (ret == -1 && errno != -EINTR)) {
