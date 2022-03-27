@@ -148,6 +148,7 @@ static void print_usage(char *prg)
 	fprintf(stderr, "Usage: %s [options] <CAN interface>\n", prg);
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "         -g <ms>       (gap in milli seconds - default: %d ms)\n", DEFAULT_GAP);
+	fprintf(stderr, "         -a            (use absolute time for gap)");
 	fprintf(stderr, "         -e            (generate extended frame mode (EFF) CAN frames)\n");
 	fprintf(stderr, "         -f            (generate CAN FD CAN frames)\n");
 	fprintf(stderr, "         -b            (generate CAN FD CAN frames with bitrate switch (BRS))\n");
@@ -232,8 +233,9 @@ int main(int argc, char **argv)
 	int i;
 	struct ifreq ifr;
 
-	struct timespec ts;
+	struct timespec ts, ts_gap;
 	struct timeval now;
+	int clock_nanosleep_flags = 0;
 	int ret;
 
 	/* set seed value for pseudo random numbers */
@@ -244,11 +246,15 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	while ((opt = getopt(argc, argv, "g:efbER8mI:L:D:p:n:ixc:vh?")) != -1) {
+	while ((opt = getopt(argc, argv, "g:aefbER8mI:L:D:p:n:ixc:vh?")) != -1) {
 		switch (opt) {
 
 		case 'g':
 			gap = strtod(optarg, NULL);
+			break;
+
+		case 'a':
+			clock_nanosleep_flags = TIMER_ABSTIME;
 			break;
 
 		case 'e':
@@ -363,8 +369,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	ts.tv_sec = gap / 1000;
-	ts.tv_nsec = (long)(((long long)(gap * 1000000)) % 1000000000LL);
+	ts_gap = double_to_timespec(gap / 1000);
 
 	/* recognize obviously missing commandline option */
 	if (id_mode == MODE_FIX && frame.can_id > 0x7FF && !extended) {
@@ -451,6 +456,16 @@ int main(int argc, char **argv)
 		fds.events = POLLOUT;
 	}
 
+	if (clock_nanosleep_flags == TIMER_ABSTIME) {
+		ret = clock_gettime(CLOCK_MONOTONIC, &ts);
+		if (ret) {
+			perror("clock_gettime");
+			return 1;
+		}
+	} else {
+		ts = ts_gap;
+	}
+
 	while (running) {
 		frame.flags = 0;
 
@@ -529,8 +544,14 @@ int main(int argc, char **argv)
 
 		if ((ts.tv_sec || ts.tv_nsec) &&
 		    burst_sent_count >= burst_count) {
-			if (nanosleep(&ts, NULL))
+			if (clock_nanosleep_flags == TIMER_ABSTIME)
+				ts = timespec_add(ts, ts_gap);
+
+			ret = clock_nanosleep(CLOCK_MONOTONIC, clock_nanosleep_flags, &ts, NULL);
+			if (ret != 0 && ret != EINTR) {
+				perror("clock_nanosleep");
 				return 1;
+			}
 		}
 
 		if (verbose) {
