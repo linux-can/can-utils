@@ -80,7 +80,7 @@ extern int optind, opterr, optopt;
 static volatile int running = 1;
 static unsigned long long enobufs_count;
 
-void print_usage(char *prg)
+static void print_usage(char *prg)
 {
 	fprintf(stderr, "%s - CAN frames generator.\n\n", prg);
 	fprintf(stderr, "Usage: %s [options] <CAN interface>\n", prg);
@@ -128,7 +128,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "\t(my favourite default :)\n\n");
 }
 
-void sigterm(int signo)
+static void sigterm(int signo)
 {
 	running = 0;
 }
