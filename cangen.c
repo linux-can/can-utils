@@ -47,6 +47,7 @@
 #include <libgen.h>
 #include <poll.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,6 +80,7 @@ extern int optind, opterr, optopt;
 
 static volatile int running = 1;
 static unsigned long long enobufs_count;
+static bool ignore_enobufs;
 
 #define NSEC_PER_SEC 1000000000LL
 
@@ -196,12 +198,54 @@ static void sigterm(int signo)
 	running = 0;
 }
 
+static int do_send_one(int fd, void *buf, size_t len, int timeout)
+{
+	ssize_t nbytes;
+	int ret;
+
+ resend:
+	nbytes = write(fd, buf, len);
+	if (nbytes < 0) {
+		ret = -errno;
+		if (ret != -ENOBUFS) {
+			perror("write");
+			return ret;
+		}
+		if (!ignore_enobufs && !timeout) {
+			perror("write");
+			return ret;
+		}
+		if (timeout) {
+			struct pollfd fds = {
+				.fd = fd,
+				.events = POLLOUT,
+			};
+
+			/* wait for the write socket (with timeout) */
+			ret = poll(&fds, 1, timeout);
+			if (ret == 0 || (ret == -1 && errno != EINTR)) {
+				ret = -errno;
+				perror("poll");
+				return ret;
+			}
+			goto resend;
+		} else {
+			enobufs_count++;
+		}
+
+	} else if (nbytes < (ssize_t)len) {
+		fprintf(stderr, "write: incomplete CAN frame\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
 	double gap = DEFAULT_GAP;
 	unsigned long burst_count = DEFAULT_BURST_COUNT;
 	unsigned long polltimeout = 0;
-	unsigned char ignore_enobufs = 0;
 	unsigned char extended = 0;
 	unsigned char canfd = 0;
 	unsigned char brs = 0;
@@ -224,12 +268,10 @@ int main(int argc, char **argv)
 
 	int opt;
 	int s; /* socket */
-	struct pollfd fds;
 
 	struct sockaddr_can addr = { 0 };
 	static struct canfd_frame frame;
 	struct can_frame *ccf = (struct can_frame *)&frame;
-	int nbytes;
 	int i;
 	struct ifreq ifr;
 
@@ -341,7 +383,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 'i':
-			ignore_enobufs = 1;
+			ignore_enobufs = true;
 			break;
 
 		case 'x':
@@ -451,11 +493,6 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (polltimeout) {
-		fds.fd = s;
-		fds.events = POLLOUT;
-	}
-
 	if (clock_nanosleep_flags == TIMER_ABSTIME) {
 		ret = clock_gettime(CLOCK_MONOTONIC, &ts);
 		if (ret) {
@@ -563,33 +600,9 @@ int main(int argc, char **argv)
 				fprint_canframe(stdout, &frame, "\n", 1, maxdlen);
 		}
 
-resend:
-		nbytes = write(s, &frame, mtu);
-		if (nbytes < 0) {
-			if (errno != ENOBUFS) {
-				perror("write");
-				return 1;
-			}
-			if (!ignore_enobufs && !polltimeout) {
-				perror("write");
-				return 1;
-			}
-			if (polltimeout) {
-				/* wait for the write socket (with timeout) */
-				ret = poll(&fds, 1, polltimeout);
-				if (ret == 0 || (ret == -1 && errno != -EINTR)) {
-					perror("poll");
-					return 1;
-				}
-				goto resend;
-			} else {
-				enobufs_count++;
-			}
-
-		} else if (nbytes < mtu) {
-			fprintf(stderr, "write: incomplete CAN frame\n");
+		ret = do_send_one(s, &frame, mtu, polltimeout);
+		if (ret)
 			return 1;
-		}
 
 		if (burst_sent_count >= burst_count)
 			burst_sent_count = 0;
