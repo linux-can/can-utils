@@ -117,9 +117,9 @@ static void print_compare(
 	print_frame(rec_id, rec_data, rec_dlc, 0);
 }
 
-static void compare_frame(const struct can_frame *exp, const struct can_frame *rec, int inc)
+static int compare_frame(const struct can_frame *exp, const struct can_frame *rec, int inc)
 {
-	int i;
+	int i, err = 0;
 	const canid_t expected_can_id = inc ? can_id_pong : can_id_ping;
 
 	if (rec->can_id != expected_can_id) {
@@ -127,11 +127,13 @@ static void compare_frame(const struct can_frame *exp, const struct can_frame *r
 		print_compare(expected_can_id, exp->data, exp->can_dlc,
 		              rec->can_id, rec->data, rec->can_dlc, inc);
 		running = 0;
+		err = -1;
 	} else if (rec->can_dlc != exp->can_dlc) {
 		printf("Message length mismatch!\n");
 		print_compare(expected_can_id, exp->data, exp->can_dlc,
 		              rec->can_id, rec->data, rec->can_dlc, inc);
 		running = 0;
+		err = -1;
 	} else {
 		for (i = 0; i < rec->can_dlc; i++) {
 			if (rec->data[i] != (uint8_t)(exp->data[i] + inc)) {
@@ -139,9 +141,11 @@ static void compare_frame(const struct can_frame *exp, const struct can_frame *r
 				print_compare(expected_can_id, exp->data, exp->can_dlc,
 				              rec->can_id, rec->data, rec->can_dlc, inc);
 				running = 0;
+				err = -1;
 			}
 		}
 	}
+	return err;
 }
 
 static void millisleep(int msecs)
@@ -260,6 +264,7 @@ static int can_echo_dut(void)
 {
 	unsigned int frame_count = 0;
 	struct can_frame frame;
+	int err = 0;
 
 	while (running) {
 		if (recv_frame(&frame))
@@ -271,7 +276,7 @@ static int can_echo_dut(void)
 			print_frame(frame.can_id, frame.data, frame.can_dlc, 0);
 		}
 
-		check_frame(&frame);
+		err = check_frame(&frame);
 		inc_frame(&frame);
 		if (send_frame(&frame))
 			return -1;
@@ -286,7 +291,7 @@ static int can_echo_dut(void)
 		}
 	}
 
-	return 0;
+	return err;
 }
 
 static int can_echo_gen(void)
@@ -346,7 +351,7 @@ static int can_echo_gen(void)
 
 			/* own frame */
 			if (rx_frame.can_id == can_id_ping) {
-				compare_frame(&tx_frames[recv_tx_pos], &rx_frame, 0);
+				err = compare_frame(&tx_frames[recv_tx_pos], &rx_frame, 0);
 				recv_tx[recv_tx_pos] = 1;
 				recv_tx_pos++;
 				if (recv_tx_pos == inflight_count)
@@ -360,7 +365,7 @@ static int can_echo_gen(void)
 				running = 0;
 			}
 			/* compare with expected */
-			compare_frame(&tx_frames[recv_rx_pos], &rx_frame, 1);
+			err = compare_frame(&tx_frames[recv_rx_pos], &rx_frame, 1);
 			recv_rx_pos++;
 			if (recv_rx_pos == inflight_count)
 				recv_rx_pos = 0;
