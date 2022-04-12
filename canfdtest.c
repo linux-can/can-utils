@@ -264,6 +264,7 @@ static int can_echo_dut(void)
 {
 	unsigned int frame_count = 0;
 	struct can_frame frame;
+	int err = 0;
 
 	while (running) {
 		if (recv_frame(&frame))
@@ -275,7 +276,7 @@ static int can_echo_dut(void)
 			print_frame(frame.can_id, frame.data, frame.can_dlc, 0);
 		}
 
-		check_frame(&frame);
+		err = check_frame(&frame);
 		inc_frame(&frame);
 		if (send_frame(&frame))
 			return -1;
@@ -290,7 +291,7 @@ static int can_echo_dut(void)
 		}
 	}
 
-	return 0;
+	return err;
 }
 
 static int can_echo_gen(void)
