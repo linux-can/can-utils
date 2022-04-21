@@ -163,7 +163,7 @@ int main(int argc, char **argv)
 	int s; /* socket */
 	struct pollfd fds;
 
-	struct sockaddr_can addr;
+	struct sockaddr_can addr = { 0 };
 	static struct canfd_frame frame;
 	struct can_frame *ccf = (struct can_frame *)&frame;
 	int nbytes;
