@@ -324,7 +324,7 @@ int main(int argc, char **argv)
 
 	progname = basename(argv[0]);
 
-	while ((opt = getopt(argc, argv, "t:HciaSs:lDdxLf:n:r:he8T:?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:HciaSs:lf:Ln:r:Dde8xT:h?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
