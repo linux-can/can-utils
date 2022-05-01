@@ -131,8 +131,10 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 	static struct timeval tv; /* current frame timestamp */
 	static struct timeval read_tv; /* frame timestamp from ASC file */
 	struct canfd_frame cf;
+	struct can_frame *ccf = (struct can_frame *)&cf; /* for len8_dlc */
 	char rtr;
 	int dlc = 0;
+	int len = 0;
 	int data[8];
 	char tmp1[BUFLEN];
 	char dir[3]; /* 'Rx' or 'Tx' plus terminating zero */
@@ -164,7 +166,7 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 
 	if (base == 'h') { /* check for CAN frames with hexadecimal values */
 
-		items = sscanf(buf, "%lu.%lu %d %s %2s %c %d %x %x %x %x %x %x %x %x",
+		items = sscanf(buf, "%lu.%lu %d %s %2s %c %x %x %x %x %x %x %x %x %x",
 			       &read_tv.tv_sec, &read_tv.tv_usec, &interface,
 			       tmp1, dir, &rtr, &dlc,
 			       &data[0], &data[1], &data[2], &data[3],
@@ -173,7 +175,17 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 		if (items < 7 ) /* make sure we've read the dlc */
 			return;
 
-		if ((items == dlc + 7 ) || /* data frame */
+		/* dlc is one character hex value 0..F */
+		if (dlc > CAN_MAX_RAW_DLC)
+			return;
+
+		/* retrieve real data length */
+		if (dlc > CAN_MAX_DLC)
+			len = CAN_MAX_DLEN;
+		else
+			len = dlc;
+
+		if ((items == len + 7 ) || /* data frame */
 		    ((items == 6) && (rtr == 'r')) || /* RTR without DLC */
 		    ((items == 7) && (rtr == 'r'))) { /* RTR with DLC */
 			found = 1;
@@ -182,7 +194,7 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 
 	} else { /* check for CAN frames with decimal values */
 
-		items = sscanf(buf, "%lu.%lu %d %s %2s %c %d %d %d %d %d %d %d %d %d",
+		items = sscanf(buf, "%lu.%lu %d %s %2s %c %x %d %d %d %d %d %d %d %d",
 			       &read_tv.tv_sec, &read_tv.tv_usec, &interface,
 			       tmp1, dir, &rtr, &dlc,
 			       &data[0], &data[1], &data[2], &data[3],
@@ -191,7 +203,17 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 		if (items < 7 ) /* make sure we've read the dlc */
 			return;
 
-		if ((items == dlc + 7 ) || /* data frame */
+		/* dlc is one character hex value 0..F */
+		if (dlc > CAN_MAX_RAW_DLC)
+			return;
+
+		/* retrieve real data length */
+		if (dlc > CAN_MAX_DLC)
+			len = CAN_MAX_DLEN;
+		else
+			len = dlc;
+
+		if ((items == len + 7 ) || /* data frame */
 		    ((items == 6) && (rtr == 'r')) || /* RTR without DLC */
 		    ((items == 7) && (rtr == 'r'))) { /* RTR with DLC */
 			found = 1;
@@ -201,8 +223,9 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 
 	if (found) {
 
+		/* dlc > 8 => len == CAN_MAX_DLEN => fill len8_dlc value */
 		if (dlc > CAN_MAX_DLC)
-			return;
+			ccf->len8_dlc = dlc;
 
 		if (strlen(dir) != 2) /* "Rx" or "Tx" */
 			return;
@@ -212,11 +235,11 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 		else
 			extra_info = " T\n";
 
-		cf.len = dlc;
+		cf.len = len;
 		if (rtr == 'r')
 			cf.can_id |= CAN_RTR_FLAG;
 		else
-			for (i = 0; i < dlc; i++)
+			for (i = 0; i < len; i++)
 				cf.data[i] = data[i] & 0xFFU;
 
 		calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);

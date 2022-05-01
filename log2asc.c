@@ -71,11 +71,13 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -r  (suppress dlc for RTR frames - pre v8.5 tools)\n");
 }
 
-void can_asc(struct canfd_frame *cf, int devno, int nortrdlc, char *extra_info, FILE *outfile)
+void can_asc(struct canfd_frame *cfd, int devno, int nortrdlc, char *extra_info, FILE *outfile)
 {
 	int i;
 	char id[10];
 	char *dir = "Rx";
+	int dlc;
+	struct can_frame *cf = (struct can_frame *)cfd; /* for len8_dlc */
 
 	fprintf(outfile, "%-2d ", devno); /* channel number left aligned */
 
@@ -94,13 +96,20 @@ void can_asc(struct canfd_frame *cf, int devno, int nortrdlc, char *extra_info, 
 
 		fprintf(outfile, "%-15s %s   ", id, dir);
 
+		if (cf->len == CAN_MAX_DLC &&
+		    cf->len8_dlc > CAN_MAX_DLC &&
+		    cf->len8_dlc <= CAN_MAX_RAW_DLC)
+			dlc = cf->len8_dlc;
+		else
+			dlc = cf->len;
+
 		if (cf->can_id & CAN_RTR_FLAG) {
 			if (nortrdlc)
 				fprintf(outfile, "r"); /* RTR frame */
 			else
-				fprintf(outfile, "r %d", cf->len); /* RTR frame */
+				fprintf(outfile, "r %X", dlc); /* RTR frame */
 		} else {
-			fprintf(outfile, "d %d", cf->len); /* data frame */
+			fprintf(outfile, "d %X", dlc); /* data frame */
 
 			for (i = 0; i < cf->len; i++) {
 				fprintf(outfile, " %02X", cf->data[i]);
