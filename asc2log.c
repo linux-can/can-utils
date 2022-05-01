@@ -170,6 +170,9 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 			       &data[0], &data[1], &data[2], &data[3],
 			       &data[4], &data[5], &data[6], &data[7]);
 
+		if (items < 7 ) /* make sure we've read the dlc */
+			return;
+
 		if ((items == dlc + 7 ) || /* data frame */
 		    ((items == 6) && (rtr == 'r')) || /* RTR without DLC */
 		    ((items == 7) && (rtr == 'r'))) { /* RTR with DLC */
@@ -184,6 +187,9 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 			       tmp1, dir, &rtr, &dlc,
 			       &data[0], &data[1], &data[2], &data[3],
 			       &data[4], &data[5], &data[6], &data[7]);
+
+		if (items < 7 ) /* make sure we've read the dlc */
+			return;
 
 		if ((items == dlc + 7 ) || /* data frame */
 		    ((items == 6) && (rtr == 'r')) || /* RTR without DLC */
