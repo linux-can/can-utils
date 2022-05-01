@@ -139,6 +139,25 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 	char *extra_info;
 	int i, items, found;
 
+	/* check for ErrorFrames */
+	if (sscanf(buf, "%lu.%lu %d %s",
+		   &read_tv.tv_sec, &read_tv.tv_usec,
+		   &interface, tmp1) == 4) {
+
+		if (!strncmp(tmp1, "ErrorFrame", strlen("ErrorFrame"))) {
+
+			memset(&cf, 0, sizeof(cf));
+			/* do not know more than 'Error' */
+			cf.can_id = (CAN_ERR_FLAG | CAN_ERR_BUSERROR);
+			cf.len = CAN_ERR_DLC;
+
+			calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
+			prframe(outfile, &tv, interface, &cf, CAN_MAX_DLEN, "\n");
+			fflush(outfile);
+			return;
+		}
+	}
+
 	/* 0.002367 1 390x Rx d 8 17 00 14 00 C0 00 08 00 */
 
 	found = 0; /* found valid CAN frame ? */
@@ -197,25 +216,6 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 		calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
 		prframe(outfile, &tv, interface, &cf, CAN_MAX_DLEN, extra_info);
 		fflush(outfile);
-		return;
-	}
-
-	/* check for ErrorFrames */
-	if (sscanf(buf, "%lu.%lu %d %s",
-		   &read_tv.tv_sec, &read_tv.tv_usec,
-		   &interface, tmp1) == 4) {
-
-		if (!strncmp(tmp1, "ErrorFrame", strlen("ErrorFrame"))) {
-
-			memset(&cf, 0, sizeof(cf));
-			/* do not know more than 'Error' */
-			cf.can_id = (CAN_ERR_FLAG | CAN_ERR_BUSERROR);
-			cf.len = CAN_ERR_DLC;
-
-			calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-			prframe(outfile, &tv, interface, &cf, CAN_MAX_DLEN, "\n");
-			fflush(outfile);
-		}
 	}
 }
 
