@@ -139,7 +139,7 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 	char tmp1[BUFLEN];
 	char dir[3]; /* 'Rx' or 'Tx' plus terminating zero */
 	char *extra_info;
-	int i, items, found;
+	int i, items;
 
 	/* check for ErrorFrames */
 	if (sscanf(buf, "%lu.%lu %d %s",
@@ -162,66 +162,42 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 
 	/* 0.002367 1 390x Rx d 8 17 00 14 00 C0 00 08 00 */
 
-	found = 0; /* found valid CAN frame ? */
-
-	if (base == 'h') { /* check for CAN frames with hexadecimal values */
-
+	/* check for CAN frames with (hexa)decimal values */
+	if (base == 'h')
 		items = sscanf(buf, "%lu.%lu %d %s %2s %c %x %x %x %x %x %x %x %x %x",
 			       &read_tv.tv_sec, &read_tv.tv_usec, &interface,
 			       tmp1, dir, &rtr, &dlc,
 			       &data[0], &data[1], &data[2], &data[3],
 			       &data[4], &data[5], &data[6], &data[7]);
-
-		if (items < 7 ) /* make sure we've read the dlc */
-			return;
-
-		/* dlc is one character hex value 0..F */
-		if (dlc > CAN_MAX_RAW_DLC)
-			return;
-
-		/* retrieve real data length */
-		if (dlc > CAN_MAX_DLC)
-			len = CAN_MAX_DLEN;
-		else
-			len = dlc;
-
-		if ((items == len + 7 ) || /* data frame */
-		    ((items == 6) && (rtr == 'r')) || /* RTR without DLC */
-		    ((items == 7) && (rtr == 'r'))) { /* RTR with DLC */
-			found = 1;
-			get_can_id(&cf, tmp1, 16);
-		}
-
-	} else { /* check for CAN frames with decimal values */
-
+	else
 		items = sscanf(buf, "%lu.%lu %d %s %2s %c %x %d %d %d %d %d %d %d %d",
 			       &read_tv.tv_sec, &read_tv.tv_usec, &interface,
 			       tmp1, dir, &rtr, &dlc,
 			       &data[0], &data[1], &data[2], &data[3],
 			       &data[4], &data[5], &data[6], &data[7]);
 
-		if (items < 7 ) /* make sure we've read the dlc */
-			return;
+	if (items < 7 ) /* make sure we've read the dlc */
+		return;
 
-		/* dlc is one character hex value 0..F */
-		if (dlc > CAN_MAX_RAW_DLC)
-			return;
+	/* dlc is one character hex value 0..F */
+	if (dlc > CAN_MAX_RAW_DLC)
+		return;
 
-		/* retrieve real data length */
-		if (dlc > CAN_MAX_DLC)
-			len = CAN_MAX_DLEN;
+	/* retrieve real data length */
+	if (dlc > CAN_MAX_DLC)
+		len = CAN_MAX_DLEN;
+	else
+		len = dlc;
+
+	if ((items == len + 7 ) || /* data frame */
+	    ((items == 6) && (rtr == 'r')) || /* RTR without DLC */
+	    ((items == 7) && (rtr == 'r'))) { /* RTR with DLC */
+
+		/* check for CAN ID with (hexa)decimal value */
+		if (base == 'h')
+			get_can_id(&cf, tmp1, 16);
 		else
-			len = dlc;
-
-		if ((items == len + 7 ) || /* data frame */
-		    ((items == 6) && (rtr == 'r')) || /* RTR without DLC */
-		    ((items == 7) && (rtr == 'r'))) { /* RTR with DLC */
-			found = 1;
 			get_can_id(&cf, tmp1, 10);
-		}
-	}
-
-	if (found) {
 
 		/* dlc > 8 => len == CAN_MAX_DLEN => fill len8_dlc value */
 		if (dlc > CAN_MAX_DLC)
