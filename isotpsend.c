@@ -75,7 +75,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -l <num>      (send num PDUs - use 'i' for infinite loop)\n");
 	fprintf(stderr, "         -g <usecs>    (wait given usecs before sending a PDU)\n");
 	fprintf(stderr, "         -b            (block until the PDU transmission is completed)\n");
-	fprintf(stderr, "         -S            (SF broadcast mode for functional addressing)\n");
+	fprintf(stderr, "         -S            (SF broadcast mode - for functional addressing)\n");
+	fprintf(stderr, "         -C            (CF broadcast mode - no wait for flow controls)\n");
 	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags>  (link layer options for CAN FD)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "The pdu data is expected on STDIN in space separated ASCII hex values.\n");
@@ -101,7 +102,7 @@ int main(int argc, char **argv)
 
     addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-    while ((opt = getopt(argc, argv, "s:d:x:p:P:t:f:D:l:g:bSL:?")) != -1) {
+    while ((opt = getopt(argc, argv, "s:d:x:p:P:t:f:D:l:g:bSCL:?")) != -1) {
 	    switch (opt) {
 	    case 's':
 		    addr.can_addr.tp.tx_id = strtoul(optarg, NULL, 16);
@@ -211,6 +212,10 @@ int main(int argc, char **argv)
 		    opts.flags |= CAN_ISOTP_SF_BROADCAST;
 		    break;
 
+	    case 'C':
+		    opts.flags |= CAN_ISOTP_CF_BROADCAST;
+		    break;
+
 	    case 'L':
 		    if (sscanf(optarg, "%hhu:%hhu:%hhu",
 			       &llopts.mtu,
@@ -235,20 +240,27 @@ int main(int argc, char **argv)
 	    }
     }
 
+#define BC_FLAGS (CAN_ISOTP_SF_BROADCAST | CAN_ISOTP_CF_BROADCAST)
+
     if ((argc - optind != 1) ||
 	(addr.can_addr.tp.tx_id == NO_CAN_ID) ||
+	((opts.flags & BC_FLAGS) == BC_FLAGS) ||
 	((addr.can_addr.tp.rx_id == NO_CAN_ID) &&
-	 (!(opts.flags & CAN_ISOTP_SF_BROADCAST)))) {
+	 (!(opts.flags & BC_FLAGS)))) {
 	    print_usage(basename(argv[0]));
 	    exit(1);
     }
-  
+
     if ((s = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP)) < 0) {
 	perror("socket");
 	exit(1);
     }
 
-    setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
+    if (setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts)) < 0) {
+	perror("sockopt");
+	exit(1);
+    }
+
 
     if (llopts.tx_dl) {
 	if (setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &llopts, sizeof(llopts)) < 0) {
