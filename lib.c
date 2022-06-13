@@ -159,7 +159,7 @@ int parse_canframe(char *cs, struct canfd_frame *cf) {
 	int i, idx, dlen, len;
 	int maxdlen = CAN_MAX_DLEN;
 	int ret = CAN_MTU;
-	unsigned char tmp;
+	canid_t tmp;
 
 	len = strlen(cs);
 	//printf("'%s' len %d\n", cs, len);
