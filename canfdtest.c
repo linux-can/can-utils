@@ -55,6 +55,7 @@ static int inflight_count = CAN_MSG_COUNT;
 static canid_t can_id_ping = CAN_MSG_ID_PING;
 static canid_t can_id_pong = CAN_MSG_ID_PONG;
 static int has_pong_id = 0;
+static int is_can_fd = 0;
 
 static void print_usage(char *prg)
 {
@@ -63,6 +64,7 @@ static void print_usage(char *prg)
 		"Usage: %s [options] <can-interface>\n"
 		"\n"
 		"Options:\n"
+		"         -d       (use CAN FD frames instead of classic CAN)\n"
 		"         -f COUNT (number of frames in flight, default: %d)\n"
 		"         -g       (generate messages)\n"
 		"         -i ID    (CAN ID to use for frames to DUT (ping), default %x)\n"
@@ -117,29 +119,29 @@ static void print_compare(
 	print_frame(rec_id, rec_data, rec_dlc, 0);
 }
 
-static int compare_frame(const struct can_frame *exp, const struct can_frame *rec, int inc)
+static int compare_frame(const struct canfd_frame *exp, const struct canfd_frame *rec, int inc)
 {
 	int i, err = 0;
 	const canid_t expected_can_id = inc ? can_id_pong : can_id_ping;
 
 	if (rec->can_id != expected_can_id) {
 		printf("Message ID mismatch!\n");
-		print_compare(expected_can_id, exp->data, exp->can_dlc,
-		              rec->can_id, rec->data, rec->can_dlc, inc);
+		print_compare(expected_can_id, exp->data, exp->len,
+		              rec->can_id, rec->data, rec->len, inc);
 		running = 0;
 		err = -1;
-	} else if (rec->can_dlc != exp->can_dlc) {
+	} else if (rec->len != exp->len) {
 		printf("Message length mismatch!\n");
-		print_compare(expected_can_id, exp->data, exp->can_dlc,
-		              rec->can_id, rec->data, rec->can_dlc, inc);
+		print_compare(expected_can_id, exp->data, exp->len,
+		              rec->can_id, rec->data, rec->len, inc);
 		running = 0;
 		err = -1;
 	} else {
-		for (i = 0; i < rec->can_dlc; i++) {
+		for (i = 0; i < rec->len; i++) {
 			if (rec->data[i] != (uint8_t)(exp->data[i] + inc)) {
 				printf("Databyte %x mismatch!\n", i);
-				print_compare(expected_can_id, exp->data, exp->can_dlc,
-				              rec->can_id, rec->data, rec->can_dlc, inc);
+				print_compare(expected_can_id, exp->data, exp->len,
+				              rec->can_id, rec->data, rec->len, inc);
 				running = 0;
 				err = -1;
 			}
@@ -182,29 +184,38 @@ static void signal_handler(int signo)
 	exit_sig = signo;
 }
 
-static int recv_frame(struct can_frame *frame)
+static int recv_frame(struct canfd_frame *frame)
 {
-	int ret;
+	ssize_t ret, len;
 
-	ret = recv(sockfd, frame, sizeof(*frame), 0);
-	if (ret != sizeof(*frame)) {
+	if (is_can_fd)
+		len = sizeof(struct canfd_frame);
+	else
+		len = sizeof(struct can_frame);
+
+	ret = recv(sockfd, frame, len, 0);
+	if (ret != len) {
 		if (ret < 0)
 			perror("recv failed");
 		else
-			fprintf(stderr, "recv returned %d", ret);
+			fprintf(stderr, "recv returned %zd", ret);
 		return -1;
 	}
 	return 0;
 }
 
-static int send_frame(struct can_frame *frame)
+static int send_frame(struct canfd_frame *frame)
 {
-	int ret;
+	ssize_t ret, len;
 
-	while ((ret = send(sockfd, frame, sizeof(*frame), 0))
-	       != sizeof(*frame)) {
+	if (is_can_fd)
+		len = sizeof(struct canfd_frame);
+	else
+		len = sizeof(struct can_frame);
+
+	while ((ret = send(sockfd, frame, len, 0)) != len) {
 		if (ret >= 0) {
-			fprintf(stderr, "send returned %d", ret);
+			fprintf(stderr, "send returned %zd", ret);
 			return -1;
 		}
 		if (errno != ENOBUFS) {
@@ -219,7 +230,7 @@ static int send_frame(struct can_frame *frame)
 	return 0;
 }
 
-static int check_frame(const struct can_frame *frame)
+static int check_frame(const struct canfd_frame *frame)
 {
 	int err = 0;
 	int i;
@@ -229,15 +240,15 @@ static int check_frame(const struct can_frame *frame)
 		err = -1;
 	}
 
-	if (frame->can_dlc != CAN_MSG_LEN) {
-		printf("Unexpected Message length %d!\n", frame->can_dlc);
+	if (frame->len != CAN_MSG_LEN) {
+		printf("Unexpected Message length %d!\n", frame->len);
 		err = -1;
 	}
 
-	for (i = 1; i < frame->can_dlc; i++) {
+	for (i = 1; i < frame->len; i++) {
 		if (frame->data[i] != (uint8_t)(frame->data[i-1] + 1)) {
 			printf("Frame inconsistent!\n");
-			print_frame(frame->can_id, frame->data, frame->can_dlc, 0);
+			print_frame(frame->can_id, frame->data, frame->len, 0);
 			err = -1;
 			goto out;
 		}
@@ -247,7 +258,7 @@ static int check_frame(const struct can_frame *frame)
 	return err;
 }
 
-static void inc_frame(struct can_frame *frame)
+static void inc_frame(struct canfd_frame *frame)
 {
 	int i;
 
@@ -256,14 +267,14 @@ static void inc_frame(struct can_frame *frame)
 	else
 		frame->can_id++;
 
-	for (i = 0; i < frame->can_dlc; i++)
+	for (i = 0; i < frame->len; i++)
 		frame->data[i]++;
 }
 
 static int can_echo_dut(void)
 {
 	unsigned int frame_count = 0;
-	struct can_frame frame;
+	struct canfd_frame frame;
 	int err = 0;
 
 	while (running) {
@@ -273,7 +284,7 @@ static int can_echo_dut(void)
 		if (verbose == 1) {
 			echo_progress(frame.data[0]);
 		} else if (verbose > 1) {
-			print_frame(frame.can_id, frame.data, frame.can_dlc, 0);
+			print_frame(frame.can_id, frame.data, frame.len, 0);
 		}
 
 		err = check_frame(&frame);
@@ -296,9 +307,9 @@ static int can_echo_dut(void)
 
 static int can_echo_gen(void)
 {
-	struct can_frame *tx_frames;
+	struct canfd_frame *tx_frames;
 	int *recv_tx;
-	struct can_frame rx_frame;
+	struct canfd_frame rx_frame;
 	unsigned char counter = 0;
 	int send_pos = 0, recv_rx_pos = 0, recv_tx_pos = 0, unprocessed = 0, loops = 0;
 	int err = 0;
@@ -317,7 +328,7 @@ static int can_echo_gen(void)
 	while (running) {
 		if (unprocessed < inflight_count) {
 			/* still send messages */
-			tx_frames[send_pos].can_dlc = CAN_MSG_LEN;
+			tx_frames[send_pos].len = CAN_MSG_LEN;
 			tx_frames[send_pos].can_id = can_id_ping;
 			recv_tx[send_pos] = 0;
 
@@ -347,7 +358,7 @@ static int can_echo_gen(void)
 			}
 
 			if (verbose > 1)
-				print_frame(rx_frame.can_id, rx_frame.data, rx_frame.can_dlc, 0);
+				print_frame(rx_frame.can_id, rx_frame.data, rx_frame.len, 0);
 
 			/* own frame */
 			if (rx_frame.can_id == can_id_ping) {
@@ -361,7 +372,7 @@ static int can_echo_gen(void)
 
 			if (!recv_tx[recv_rx_pos]) {
 				printf("RX before TX!\n");
-				print_frame(rx_frame.can_id, rx_frame.data, rx_frame.can_dlc, 0);
+				print_frame(rx_frame.can_id, rx_frame.data, rx_frame.len, 0);
 				running = 0;
 			}
 			/* compare with expected */
@@ -395,15 +406,19 @@ int main(int argc, char *argv[])
 	int family = PF_CAN, type = SOCK_RAW, proto = CAN_RAW;
 	int echo_gen = 0;
 	int opt, err;
-	int recv_own_msgs = 1;
+	int enable_socket_option = 1;
 	int filter = 0;
 
 	signal(SIGTERM, signal_handler);
 	signal(SIGHUP, signal_handler);
 	signal(SIGINT, signal_handler);
 
-	while ((opt = getopt(argc, argv, "f:gi:l:o:vx?")) != -1) {
+	while ((opt = getopt(argc, argv, "df:gi:l:o:vx?")) != -1) {
 		switch (opt) {
+		case 'd':
+			is_can_fd = 1;
+			break;
+
 		case 'f':
 			inflight_count = atoi(optarg);
 			break;
@@ -454,8 +469,16 @@ int main(int argc, char *argv[])
 
 	if (echo_gen) {
 		if (setsockopt(sockfd, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS,
-			   &recv_own_msgs, sizeof(recv_own_msgs)) == -1) {
-			perror("setsockopt");
+			   &enable_socket_option, sizeof(enable_socket_option)) == -1) {
+			perror("setsockopt CAN_RAW_RECV_OWN_MSGS");
+			return 1;
+		}
+	}
+
+	if (is_can_fd) {
+		if (setsockopt(sockfd, SOL_CAN_RAW, CAN_RAW_FD_FRAMES,
+			   &enable_socket_option, sizeof(enable_socket_option)) == -1) {
+			perror("setsockopt CAN_RAW_FD_FRAMES");
 			return 1;
 		}
 	}
