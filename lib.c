@@ -568,10 +568,20 @@ static int snprintf_error_data(char *buf, size_t len, uint8_t err,
 
 	for (i = 0; i < arr_len; i++) {
 		if (err & (1 << i)) {
-			if (count)
-				n += snprintf(buf + n, len - n, ",");
-			n += snprintf(buf + n, len - n, "%s", arr[i]);
-			count++;
+			int tmp_n = 0;
+			if (count){
+				/* Fix for potential buffer overflow https://lgtm.com/rules/1505913226124/ */
+				tmp_n = snprintf(buf + n, len - n, ",");
+				if (tmp_n < 0 || tmp_n >= len - n){
+					return n;
+				}
+				n += tmp_n;
+			}
+			tmp_n = snprintf(buf + n, len - n, "%s", arr[i]);
+			if (tmp_n < 0 || tmp_n >= len - n){
+				return n;
+			}
+			n += tmp_n;
 		}
 	}
 
@@ -644,9 +654,20 @@ void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *c
 	for (i = 0; i < (int)ARRAY_SIZE(error_classes); i++) {
 		mask = 1 << i;
 		if (class & mask) {
-			if (classes)
-				n += snprintf(buf + n, len - n, "%s", sep);
-			n += snprintf(buf + n, len - n, "%s", error_classes[i]);
+			int tmp_n = 0;
+			if (classes){
+				/* Fix for potential buffer overflow https://lgtm.com/rules/1505913226124/ */
+				tmp_n = snprintf(buf + n, len - n, "%s", sep);
+				if (tmp_n < 0 || tmp_n >= len - n){
+					return;
+				}
+				n += tmp_n;
+			}
+			tmp_n = snprintf(buf + n, len - n, "%s", error_classes[i]);
+			if (tmp_n < 0 || tmp_n >= len - n){
+				return;
+			}
+			n += tmp_n;
 			if (mask == CAN_ERR_LOSTARB)
 				n += snprintf_error_lostarb(buf + n, len - n,
 							   cf);
