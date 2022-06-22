@@ -56,6 +56,7 @@ static canid_t can_id_ping = CAN_MSG_ID_PING;
 static canid_t can_id_pong = CAN_MSG_ID_PONG;
 static int has_pong_id = 0;
 static int is_can_fd = 0;
+static int bit_rate_switch = 0;
 
 static void print_usage(char *prg)
 {
@@ -64,6 +65,7 @@ static void print_usage(char *prg)
 		"Usage: %s [options] <can-interface>\n"
 		"\n"
 		"Options:\n"
+		"         -b       (enable CAN FD Bit Rate Switch)\n"
 		"         -d       (use CAN FD frames instead of classic CAN)\n"
 		"         -f COUNT (number of frames in flight, default: %d)\n"
 		"         -g       (generate messages)\n"
@@ -212,6 +214,9 @@ static int send_frame(struct canfd_frame *frame)
 		len = sizeof(struct canfd_frame);
 	else
 		len = sizeof(struct can_frame);
+
+	if (bit_rate_switch)
+		frame->flags |= CANFD_BRS;
 
 	while ((ret = send(sockfd, frame, len, 0)) != len) {
 		if (ret >= 0) {
@@ -413,8 +418,12 @@ int main(int argc, char *argv[])
 	signal(SIGHUP, signal_handler);
 	signal(SIGINT, signal_handler);
 
-	while ((opt = getopt(argc, argv, "df:gi:l:o:vx?")) != -1) {
+	while ((opt = getopt(argc, argv, "bdf:gi:l:o:vx?")) != -1) {
 		switch (opt) {
+		case 'b':
+			bit_rate_switch = 1;
+			break;
+
 		case 'd':
 			is_can_fd = 1;
 			break;
@@ -453,6 +462,12 @@ int main(int argc, char *argv[])
 			print_usage(basename(argv[0]));
 			break;
 		}
+	}
+
+	/* BRS can be enabled only if CAN FD is enabled */
+	if (bit_rate_switch && !is_can_fd) {
+		printf("Bit rate switch (-b) needs CAN FD (-d) to be enabled\n");
+		return 1;
 	}
 
 	if ((argc - optind) != 1)
