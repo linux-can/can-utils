@@ -57,6 +57,7 @@ static canid_t can_id_pong = CAN_MSG_ID_PONG;
 static int has_pong_id = 0;
 static int is_can_fd = 0;
 static int bit_rate_switch = 0;
+static int msg_len = CAN_MSG_LEN;
 
 static void print_usage(char *prg)
 {
@@ -72,6 +73,7 @@ static void print_usage(char *prg)
 		"         -i ID    (CAN ID to use for frames to DUT (ping), default %x)\n"
 		"         -l COUNT (test loop count)\n"
 		"         -o ID    (CAN ID to use for frames to host (pong), default %x)\n"
+		"         -s SIZE  (frame payload size in bytes)\n"
 		"         -v       (low verbosity)\n"
 		"         -vv      (high verbosity)\n"
 		"         -x       (ignore other frames on bus)\n"
@@ -245,7 +247,7 @@ static int check_frame(const struct canfd_frame *frame)
 		err = -1;
 	}
 
-	if (frame->len != CAN_MSG_LEN) {
+	if (frame->len != msg_len) {
 		printf("Unexpected Message length %d!\n", frame->len);
 		err = -1;
 	}
@@ -333,11 +335,11 @@ static int can_echo_gen(void)
 	while (running) {
 		if (unprocessed < inflight_count) {
 			/* still send messages */
-			tx_frames[send_pos].len = CAN_MSG_LEN;
+			tx_frames[send_pos].len = msg_len;
 			tx_frames[send_pos].can_id = can_id_ping;
 			recv_tx[send_pos] = 0;
 
-			for (i = 0; i < CAN_MSG_LEN; i++)
+			for (i = 0; i < msg_len; i++)
 				tx_frames[send_pos].data[i] = counter + i;
 			if (send_frame(&tx_frames[send_pos])) {
 				err = -1;
@@ -418,7 +420,7 @@ int main(int argc, char *argv[])
 	signal(SIGHUP, signal_handler);
 	signal(SIGINT, signal_handler);
 
-	while ((opt = getopt(argc, argv, "bdf:gi:l:o:vx?")) != -1) {
+	while ((opt = getopt(argc, argv, "bdf:gi:l:o:s:vx?")) != -1) {
 		switch (opt) {
 		case 'b':
 			bit_rate_switch = 1;
@@ -449,6 +451,10 @@ int main(int argc, char *argv[])
 			has_pong_id = 1;
 			break;
 
+		case 's':
+			msg_len = atoi(optarg);
+			break;
+
 		case 'v':
 			verbose++;
 			break;
@@ -468,6 +474,23 @@ int main(int argc, char *argv[])
 	if (bit_rate_switch && !is_can_fd) {
 		printf("Bit rate switch (-b) needs CAN FD (-d) to be enabled\n");
 		return 1;
+	}
+
+	/* Make sure the message length is valid */
+	if (msg_len <= 0) {
+		printf("Message length must > 0\n");
+		return 1;
+	}
+	if (is_can_fd) {
+		if (msg_len > CANFD_MAX_DLEN) {
+			printf("Message length must be <= %d bytes for CAN FD\n", CANFD_MAX_DLEN);
+			return 1;
+		}
+	} else {
+		if (msg_len > CAN_MAX_DLEN) {
+			printf("Message length must be <= %d bytes for CAN 2.0B\n", CAN_MAX_DLEN);
+			return 1;
+		}
 	}
 
 	if ((argc - optind) != 1)
