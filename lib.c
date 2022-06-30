@@ -572,13 +572,13 @@ static int snprintf_error_data(char *buf, size_t len, uint8_t err,
 			if (count){
 				/* Fix for potential buffer overflow https://lgtm.com/rules/1505913226124/ */
 				tmp_n = snprintf(buf + n, len - n, ",");
-				if (tmp_n < 0 || tmp_n >= len - n){
+				if (tmp_n < 0 || (size_t)tmp_n >= len - n){
 					return n;
 				}
 				n += tmp_n;
 			}
 			tmp_n = snprintf(buf + n, len - n, "%s", arr[i]);
-			if (tmp_n < 0 || tmp_n >= len - n){
+			if (tmp_n < 0 || (size_t)tmp_n >= len - n){
 				return n;
 			}
 			n += tmp_n;
@@ -658,13 +658,13 @@ void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *c
 			if (classes){
 				/* Fix for potential buffer overflow https://lgtm.com/rules/1505913226124/ */
 				tmp_n = snprintf(buf + n, len - n, "%s", sep);
-				if (tmp_n < 0 || tmp_n >= len - n){
+				if (tmp_n < 0 || (size_t)tmp_n >= len - n){
 					return;
 				}
 				n += tmp_n;
 			}
 			tmp_n = snprintf(buf + n, len - n, "%s", error_classes[i]);
-			if (tmp_n < 0 || tmp_n >= len - n){
+			if (tmp_n < 0 || (size_t)tmp_n >= len - n){
 				return;
 			}
 			n += tmp_n;
