@@ -141,10 +141,18 @@ struct calc_bittiming_const {
 };
 
 struct alg {
-	int (*calc_bittiming)(struct net_device *dev, struct can_bittiming *bt,
-			      const struct can_bittiming_const *btc);
-	int (*fixup_bittiming)(struct net_device *dev, struct can_bittiming *bt,
-			       const struct can_bittiming_const *btc);
+	union {
+		int (*calc_bittiming)(struct net_device *dev, struct can_bittiming *bt,
+				      const struct can_bittiming_const *btc);
+		int (*calc_bittiming_const)(const struct net_device *dev, struct can_bittiming *bt,
+					    const struct can_bittiming_const *btc);
+	};
+	union {
+		int (*fixup_bittiming)(struct net_device *dev, struct can_bittiming *bt,
+				       const struct can_bittiming_const *btc);
+		int (*fixup_bittiming_const)(const struct net_device *dev, struct can_bittiming *bt,
+					     const struct can_bittiming_const *btc);
+	};
 	const char *name;
 };
 
@@ -1177,6 +1185,7 @@ static const unsigned int common_data_bitrates[] = {
 #define CAN_CALC_SYNC_SEG 1
 #define CAN_SYNC_SEG 1
 #define CAN_KBPS 1000
+#define KILO 1000UL
 
 #define can_update_spt can_update_spt_v2_6_31
 #define can_calc_bittiming can_calc_bittiming_v2_6_31
@@ -1210,9 +1219,21 @@ static const unsigned int common_data_bitrates[] = {
 #undef can_calc_bittiming
 #undef can_fixup_bittiming
 
+#define can_update_sample_point can_update_sample_point_v5_19
+#define can_calc_bittiming can_calc_bittiming_v5_19
+#define can_fixup_bittiming can_fixup_bittiming_v5_19
+#include "can-calc-bit-timing-v5_19.c"
+#undef can_update_sample_point
+#undef can_calc_bittiming
+#undef can_fixup_bittiming
+
 static const struct alg alg_list[] = {
 	/* 1st will be default */
 	{
+		.calc_bittiming_const = can_calc_bittiming_v5_19,
+		.fixup_bittiming_const = can_fixup_bittiming_v5_19,
+		.name = "v5.19",
+	}, {
 		.calc_bittiming = can_calc_bittiming_v5_16,
 		.fixup_bittiming = can_fixup_bittiming_v5_16,
 		.name = "v5.16",
