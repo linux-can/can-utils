@@ -445,6 +445,7 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 		.ref_clk = {
 			/* The mcp251x uses half of the external OSC clock as the base clock */
 			{ .clk =  8000000 / 2, .name = "8 MHz OSC" },
+			{ .clk = 12000000 / 2, .name = "12 MHz OSC" },
 			{ .clk = 16000000 / 2, .name = "16 MHz OSC" },
 			{ .clk = 20000000 / 2, .name = "20 MHz OSC" },
 		},
