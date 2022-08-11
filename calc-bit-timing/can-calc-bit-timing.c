@@ -89,6 +89,7 @@ struct calc_data {
 	const struct can_bittiming *opt_bt;
 
 	bool quiet;
+	bool verbose;
 	bool fd_mode;
 };
 
@@ -98,6 +99,7 @@ static void print_usage(char *cmd)
 	printf("Usage: %s [options] [<CAN-contoller-name>]\n"
 	       "Options:\n"
 	       "\t-q             don't print header line\n"
+	       "\t-v             verbose output, print bit timing const\n"
 	       "\t-l             list all support CAN controller names\n"
 	       "\t-b <bitrate>   arbitration bit-rate in bits/sec\n"
 	       "\t-d <bitrate>   data bit-rate in bits/sec\n"
@@ -1198,6 +1200,7 @@ static void print_bittiming_one(const struct alg *alg,
 				unsigned int sample_point_nominal,
 				void (*printf_btr)(struct can_bittiming *bt, bool hdr),
 				bool quiet,
+				bool verbose,
 				bool fd_mode)
 {
 	struct net_device dev = {
@@ -1210,9 +1213,7 @@ static void print_bittiming_one(const struct alg *alg,
 	unsigned int bitrate_error, sample_point_error;
 
 	if (!quiet) {
-		printf("%sBit timing parameters for %s with %.6f MHz ref clock %s%s%susing algo '%s'\n"
-		       " nominal                                  real  Bitrt    nom   real  SampP\n"
-		       " Bitrate TQ[ns] PrS PhS1 PhS2 SJW BRP  Bitrate  Error  SampP  SampP  Error   ",
+		printf("%sBit timing parameters for %s with %.6f MHz ref clock %s%s%susing algo '%s'\n",
 		       fd_mode ? "Data " : "",
 		       bittiming_const->name,
 		       ref_clk->clk / 1000000.0,
@@ -1220,6 +1221,21 @@ static void print_bittiming_one(const struct alg *alg,
 		       ref_clk->name ? ref_clk->name : "",
 		       ref_clk->name ? ") " : "",
 		       alg->name);
+		if (verbose) {
+			printf("                    _----+--------------=> TSeg1: %u … %4u\n"
+			       "                   /    /     _---------=> TSeg2: %u … %4u\n"
+			       "                  |    |     /    _-----=> SJW:   %u … %4u\n"
+			       "                  |    |    |    /    _-=> BRP:   %u … %4u (inc: %u)\n"
+			       "                  |    |    |   |    /\n",
+			       bittiming_const->tseg1_min, bittiming_const->tseg1_max,
+			       bittiming_const->tseg2_min, bittiming_const->tseg2_max,
+			       1, bittiming_const->sjw_max,
+			       bittiming_const->brp_min, bittiming_const->brp_max, bittiming_const->brp_inc);
+			printf(" nominal          |    |    |   |   |     real  Bitrt    nom   real   SampP\n");
+		} else {
+			printf(" nominal                                  real  Bitrt    nom   real   SampP\n");
+		}
+		printf(" Bitrate TQ[ns] PrS PhS1 PhS2 SJW BRP  Bitrate  Error  SampP  SampP   Error  ");
 
 		printf_btr(&bt, true);
 		printf("\n");
@@ -1283,6 +1299,7 @@ static void print_bittiming(const struct calc_data *data)
 		void (*printf_btr)(struct can_bittiming *bt, bool hdr);
 		unsigned int const *bitrates = data->bitrates;
 		bool quiet = data->quiet;
+		bool verbose = data->verbose;
 
 		if (data->printf_btr)
 			printf_btr = data->printf_btr;
@@ -1306,6 +1323,7 @@ static void print_bittiming(const struct calc_data *data)
 					    sample_point,
 					    printf_btr,
 					    quiet,
+					    verbose,
 					    data->fd_mode);
 			bitrates++;
 			quiet = true;
@@ -1438,7 +1456,7 @@ int main(int argc, char *argv[])
 		{ 0,		0,			0, 0 },
 	};
 
-	while ((opt = getopt_long(argc, argv, "b:c:d:lqs:?", long_options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "b:c:d:lqs:v?", long_options, NULL)) != -1) {
 		switch (opt) {
 		case 'b':
 			opt_bitrate[0] = strtoul(optarg, NULL, 10);
@@ -1462,6 +1480,10 @@ int main(int argc, char *argv[])
 
 		case 's':
 			data->sample_point = strtoul(optarg, NULL, 10);
+			break;
+
+		case 'v':
+			data->verbose = true;
 			break;
 
 		case '?':
