@@ -5,6 +5,8 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/include \
 	$(linux_CFLAGS)
 
+EXTRA_DIST =
+
 # link every app against libcan, it's static so it wouldn't hurt
 LDADD = \
 	libcan.la
@@ -38,6 +40,16 @@ libcan_la_SOURCES = \
 
 libj1939_la_SOURCES = \
 	libj1939.c
+
+can_calc_bit_timing_SOURCES = \
+	calc-bit-timing/can-calc-bit-timing.c
+
+EXTRA_DIST += \
+	calc-bit-timing/can-calc-bit-timing-v2_6_31.c \
+	calc-bit-timing/can-calc-bit-timing-v3_18.c \
+	calc-bit-timing/can-calc-bit-timing-v4_8.c \
+	calc-bit-timing/can-calc-bit-timing-v5_16.c \
+	calc-bit-timing/can-calc-bit-timing-v5_19.c
 
 mcp251xfd_dump_SOURCES = \
 	mcp251xfd/mcp251xfd-dev-coredump.c \
@@ -87,7 +99,7 @@ j1939spy_LDADD = libj1939.la
 j1939sr_LDADD = libj1939.la
 testj1939_LDADD = libj1939.la
 
-EXTRA_DIST = \
+EXTRA_DIST += \
 	.travis.yml \
 	Android.mk \
 	README.md \

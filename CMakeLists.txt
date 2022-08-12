@@ -62,6 +62,10 @@ set(PROGRAMS
     slcanpty
 )
 
+add_executable(can-calc-bit-timing
+    calc-bit-timing/can-calc-bit-timing.c
+)
+
 add_executable(mcp251xfd-dump
     mcp251xfd/mcp251xfd-dev-coredump.c
     mcp251xfd/mcp251xfd-dump.c
