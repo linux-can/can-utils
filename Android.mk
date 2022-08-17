@@ -181,7 +181,7 @@ include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
 
-LOCAL_SRC_FILES := can-calc-bit-timing.c
+LOCAL_SRC_FILES := calc-bit-timing/can-calc-bit-timing.c
 LOCAL_MODULE := can-calc-bit-timing
 LOCAL_MODULE_TAGS := optional
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/include/
