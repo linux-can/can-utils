@@ -46,7 +46,6 @@ set(PROGRAMS_J1939
 set(PROGRAMS
     ${PROGRAMS_CANLIB}
     bcmserver
-    can-calc-bit-timing
     canfdtest
     cangw
     cansniffer
