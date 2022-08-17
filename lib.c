@@ -582,6 +582,7 @@ static int snprintf_error_data(char *buf, size_t len, uint8_t err,
 				return n;
 			}
 			n += tmp_n;
+			count++;
 		}
 	}
 
