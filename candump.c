@@ -303,7 +303,9 @@ int main(int argc, char **argv)
 	int join_filter;
 	char *ptr, *nptr;
 	struct sockaddr_can addr;
-	char ctrlmsg[CMSG_SPACE(sizeof(struct timeval) + 3 * sizeof(struct timespec) + sizeof(__u32))];
+	char ctrlmsg[CMSG_SPACE(sizeof(struct timeval)) +
+		     CMSG_SPACE(3 * sizeof(struct timespec)) +
+		     CMSG_SPACE(sizeof(__u32))];
 	struct iovec iov;
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
