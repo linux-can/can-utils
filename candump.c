@@ -303,7 +303,9 @@ int main(int argc, char **argv)
 	int join_filter;
 	char *ptr, *nptr;
 	struct sockaddr_can addr;
-	char ctrlmsg[CMSG_SPACE(sizeof(struct timeval) + 3 * sizeof(struct timespec) + sizeof(__u32))];
+	char ctrlmsg[CMSG_SPACE(sizeof(struct timeval)) +
+		     CMSG_SPACE(3 * sizeof(struct timespec)) +
+		     CMSG_SPACE(sizeof(__u32))];
 	struct iovec iov;
 	struct msghdr msg;
 	struct cmsghdr *cmsg;
@@ -783,11 +785,11 @@ int main(int argc, char **argv)
 				__u32 frames = obj->dropcnt - obj->last_dropcnt;
 
 				if (silent != SILENT_ON)
-					printf("DROPCOUNT: dropped %d CAN frame%s on '%s' socket (total drops %d)\n",
+					printf("DROPCOUNT: dropped %u CAN frame%s on '%s' socket (total drops %u)\n",
 					       frames, (frames > 1)?"s":"", devname[idx], obj->dropcnt);
 
 				if (log)
-					fprintf(logfile, "DROPCOUNT: dropped %d CAN frame%s on '%s' socket (total drops %d)\n",
+					fprintf(logfile, "DROPCOUNT: dropped %u CAN frame%s on '%s' socket (total drops %u)\n",
 						frames, (frames > 1)?"s":"", devname[idx], obj->dropcnt);
 
 				obj->last_dropcnt = obj->dropcnt;
