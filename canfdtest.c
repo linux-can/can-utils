@@ -58,6 +58,7 @@ static int has_pong_id = 0;
 static int is_can_fd = 0;
 static int bit_rate_switch = 0;
 static int msg_len = CAN_MSG_LEN;
+static int is_extended_frame_format = 0;
 
 static void print_usage(char *prg)
 {
@@ -68,6 +69,7 @@ static void print_usage(char *prg)
 		"Options:\n"
 		"         -b       (enable CAN FD Bit Rate Switch)\n"
 		"         -d       (use CAN FD frames instead of classic CAN)\n"
+		"         -e       (use 29-bit extended frame format instead of classic 11-bit one)\n"
 		"         -f COUNT (number of frames in flight, default: %d)\n"
 		"         -g       (generate messages)\n"
 		"         -i ID    (CAN ID to use for frames to DUT (ping), default %x)\n"
@@ -420,7 +422,7 @@ int main(int argc, char *argv[])
 	signal(SIGHUP, signal_handler);
 	signal(SIGINT, signal_handler);
 
-	while ((opt = getopt(argc, argv, "bdf:gi:l:o:s:vx?")) != -1) {
+	while ((opt = getopt(argc, argv, "bdef:gi:l:o:s:vx?")) != -1) {
 		switch (opt) {
 		case 'b':
 			bit_rate_switch = 1;
@@ -428,6 +430,10 @@ int main(int argc, char *argv[])
 
 		case 'd':
 			is_can_fd = 1;
+			break;
+
+		case 'e':
+			is_extended_frame_format = 1;
 			break;
 
 		case 'f':
@@ -439,7 +445,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'i':
-			can_id_ping = strtoul(optarg, NULL, 16) & CAN_SFF_MASK;
+			can_id_ping = strtoul(optarg, NULL, 16);
 			break;
 
 		case 'l':
@@ -447,7 +453,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'o':
-			can_id_pong = strtoul(optarg, NULL, 16) & CAN_SFF_MASK;
+			can_id_pong = strtoul(optarg, NULL, 16);
 			has_pong_id = 1;
 			break;
 
@@ -491,6 +497,16 @@ int main(int argc, char *argv[])
 			printf("Message length must be <= %d bytes for CAN 2.0B\n", CAN_MAX_DLEN);
 			return 1;
 		}
+	}
+
+	if (is_extended_frame_format) {
+		can_id_ping &= CAN_EFF_MASK;
+		can_id_ping |= CAN_EFF_FLAG;
+		can_id_pong &= CAN_EFF_MASK;
+		can_id_pong |= CAN_EFF_FLAG;
+	} else {
+		can_id_ping &= CAN_SFF_MASK;
+		can_id_pong &= CAN_SFF_MASK;
 	}
 
 	if ((argc - optind) != 1)
