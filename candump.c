@@ -317,7 +317,8 @@ int main(int argc, char **argv)
 	struct timeval tv, last_tv;
 	int timeout_ms = -1; /* default to no timeout */
 	FILE *logfile = NULL;
-	char *logname = NULL;
+	char fname[83]; /* suggested by -Wformat-overflow= */
+	const char *logname = NULL;
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -669,7 +670,6 @@ int main(int argc, char **argv)
 		if (!logname) {
 			time_t currtime;
 			struct tm now;
-			char fname[83]; /* suggested by -Wformat-overflow= */
 
 			if (time(&currtime) == (time_t)-1) {
 				perror("time");
@@ -678,7 +678,7 @@ int main(int argc, char **argv)
 
 			localtime_r(&currtime, &now);
 
-			sprintf(fname, "candump-%04d-%02d-%02d_%02d%02d%02d.log",
+			snprintf(fname, sizeof(fname), "candump-%04d-%02d-%02d_%02d%02d%02d.log",
 				now.tm_year + 1900,
 				now.tm_mon + 1,
 				now.tm_mday,
