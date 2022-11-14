@@ -46,6 +46,7 @@ MAKEFLAGS := -k
 CFLAGS := -O2 -Wall -Wno-parentheses
 
 CPPFLAGS += \
+	-I. \
 	-Iinclude \
 	-DAF_CAN=PF_CAN \
 	-DPF_CAN=29 \

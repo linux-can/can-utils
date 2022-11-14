@@ -145,9 +145,7 @@ int idx2dindex(int ifidx, int socket)
 
 	strcpy(devname[i], ifr.ifr_name);
 
-#ifdef DEBUG
-	printf("new index %d (%s)\n", i, devname[i]);
-#endif
+	pr_debug("new index %d (%s)\n", i, devname[i]);
 
 	return i;
 }
@@ -310,11 +308,9 @@ int main(int argc, char **argv)
 
 	for (i=0; i<currmax; i++) {
 
-#ifdef DEBUG
-		printf("open %d '%s' m%08X v%08X i%d e%d.\n",
-		       i, argv[optind+i], mask[i], value[i],
-		       inv_filter[i], err_mask[i]);
-#endif
+		pr_debug("open %d '%s' m%08X v%08X i%d e%d.\n",
+		      i, argv[optind+i], mask[i], value[i],
+		      inv_filter[i], err_mask[i]);
 
 		if ((s[i] = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
 			perror("socket");

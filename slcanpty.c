@@ -49,8 +49,6 @@
 #define SLC_MTU (sizeof("T1111222281122334455667788EA5F\r")+1)
 #define DEVICE_NAME_PTMX "/dev/ptmx"
 
-#define DEBUG
-
 /* read data from pty, send CAN frames to CAN socket and answer commands */
 int pty2can(int pty, int socket, struct can_filter *fi,
 	    int *is_open, int *tstamp)
@@ -106,14 +104,12 @@ rx_restart:
 	cmd = buf[0];
 	buf[nbytes] = 0;
 
-#ifdef DEBUG
 	for (tmp = 0; tmp < nbytes; tmp++)
 		if (buf[tmp] == '\r')
-			putchar('@');
+			pr_debug("@");
 		else
-			putchar(buf[tmp]);
-	printf("\n");
-#endif
+			pr_debug("%c", buf[tmp]);
+	pr_debug("\n");
 
 	/* check for filter configuration commands */
 	if (cmd == 'm' || cmd == 'M') {

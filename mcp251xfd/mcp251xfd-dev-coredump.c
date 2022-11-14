@@ -17,17 +17,9 @@
 
 #include <linux/kernel.h>
 
+#include "lib.h"
 #include "mcp251xfd.h"
 #include "mcp251xfd-dump-userspace.h"
-
-#define pr_err(fmt, args...)    fprintf(stderr, fmt, ##args)
-#define pr_no(fmt, args...)     while (0) { fprintf(stdout, fmt, ##args); }
-
-#ifdef DEBUG
-#define pr_debug(fmt, args...) pr_err(fmt, ##args)
-#else
-#define pr_debug(fmt, args...) pr_no(fmt, ##args)
-#endif
 
 
 struct mcp251xfd_dump_iter {

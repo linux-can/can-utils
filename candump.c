@@ -216,9 +216,7 @@ static int idx2dindex(int ifidx, int socket)
 
 	strcpy(devname[i], ifr.ifr_name);
 
-#ifdef DEBUG
-	printf("new index %d (%s)\n", i, devname[i]);
-#endif
+	pr_debug("new index %d (%s)\n", i, devname[i]);
 
 	return i;
 }
@@ -477,9 +475,7 @@ int main(int argc, char **argv)
 		ptr = argv[optind+i];
 		nptr = strchr(ptr, ',');
 
-#ifdef DEBUG
-		printf("open %d '%s'.\n", i, ptr);
-#endif
+		pr_debug("open %d '%s'.\n", i, ptr);
 
 		obj->s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
 		if (obj->s < 0) {
@@ -513,9 +509,7 @@ int main(int argc, char **argv)
 		memset(&ifr.ifr_name, 0, sizeof(ifr.ifr_name));
 		strncpy(ifr.ifr_name, ptr, nbytes);
 
-#ifdef DEBUG
-		printf("using interface name '%s'.\n", ifr.ifr_name);
-#endif
+		pr_debug("using interface name '%s'.\n", ifr.ifr_name);
 
 		if (strcmp(ANYDEV, ifr.ifr_name) != 0) {
 			if (ioctl(obj->s, SIOCGIFINDEX, &ifr) < 0) {
@@ -605,9 +599,7 @@ int main(int argc, char **argv)
 			/* try SO_RCVBUFFORCE first, if we run with CAP_NET_ADMIN */
 			if (setsockopt(obj->s, SOL_SOCKET, SO_RCVBUFFORCE,
 				       &rcvbuf_size, sizeof(rcvbuf_size)) < 0) {
-#ifdef DEBUG
-				printf("SO_RCVBUFFORCE failed so try SO_RCVBUF ...\n");
-#endif
+				pr_debug("SO_RCVBUFFORCE failed so try SO_RCVBUF ...\n");
 				if (setsockopt(obj->s, SOL_SOCKET, SO_RCVBUF,
 					       &rcvbuf_size, sizeof(rcvbuf_size)) < 0) {
 					perror("setsockopt SO_RCVBUF");
