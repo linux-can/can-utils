@@ -33,6 +33,7 @@ set(PROGRAMS_CANLIB
     cansequence
     log2asc
     log2long
+    slcanpty
 )
 
 set(PROGRAMS_J1939
@@ -58,7 +59,6 @@ set(PROGRAMS
     isotptun
     slcan_attach
     slcand
-    slcanpty
 )
 
 add_executable(can-calc-bit-timing
