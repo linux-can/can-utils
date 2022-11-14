@@ -108,6 +108,7 @@ struct if_info { /* bundled information per open socket */
 };
 static struct if_info sock_info[MAXSOCK];
 
+static char *progname;
 static char devname[MAXIFNAMES][IFNAMSIZ+1];
 static int dindex[MAXIFNAMES];
 static int max_devname_len; /* to prevent frazzled device name output */
@@ -121,11 +122,11 @@ extern int optind, opterr, optopt;
 
 static volatile int running = 1;
 
-static void print_usage(char *prg)
+static void print_usage(void)
 {
-	fprintf(stderr, "%s - dump CAN bus traffic.\n", prg);
-	fprintf(stderr, "\nUsage: %s [options] <CAN interface>+\n", prg);
-	fprintf(stderr, "  (use CTRL-C to terminate %s)\n\n", prg);
+	fprintf(stderr, "%s - dump CAN bus traffic.\n", progname);
+	fprintf(stderr, "\nUsage: %s [options] <CAN interface>+\n", progname);
+	fprintf(stderr, "  (use CTRL-C to terminate %s)\n\n", progname);
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "         -t <type>   (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
 	fprintf(stderr, "         -H          (read hardware timestamps instead of system timestamps)\n");
@@ -159,12 +160,12 @@ static void print_usage(char *prg)
 	fprintf(stderr, "Without any given filter all data frames are received ('0:0' default filter).\n");
 	fprintf(stderr, "\nUse interface name '%s' to receive from all CAN interfaces.\n", ANYDEV);
 	fprintf(stderr, "\nExamples:\n");
-	fprintf(stderr, "%s -c -c -ta can0,123:7FF,400:700,#000000FF can2,400~7F0 can3 can8\n\n", prg);
-	fprintf(stderr, "%s -l any,0~0,#FFFFFFFF\n         (log only error frames but no(!) data frames)\n", prg);
-	fprintf(stderr, "%s -l any,0:0,#FFFFFFFF\n         (log error frames and also all data frames)\n", prg);
-	fprintf(stderr, "%s vcan2,12345678:DFFFFFFF\n         (match only for extended CAN ID 12345678)\n", prg);
-	fprintf(stderr, "%s vcan2,123:7FF\n         (matches CAN ID 123 - including EFF and RTR frames)\n", prg);
-	fprintf(stderr, "%s vcan2,123:C00007FF\n         (matches CAN ID 123 - only SFF and non-RTR frames)\n", prg);
+	fprintf(stderr, "%s -c -c -ta can0,123:7FF,400:700,#000000FF can2,400~7F0 can3 can8\n\n", progname);
+	fprintf(stderr, "%s -l any,0~0,#FFFFFFFF\n         (log only error frames but no(!) data frames)\n", progname);
+	fprintf(stderr, "%s -l any,0:0,#FFFFFFFF\n         (log error frames and also all data frames)\n", progname);
+	fprintf(stderr, "%s vcan2,12345678:DFFFFFFF\n         (match only for extended CAN ID 12345678)\n", progname);
+	fprintf(stderr, "%s vcan2,123:7FF\n         (matches CAN ID 123 - including EFF and RTR frames)\n", progname);
+	fprintf(stderr, "%s vcan2,123:C00007FF\n         (matches CAN ID 123 - only SFF and non-RTR frames)\n", progname);
 	fprintf(stderr, "\n");
 }
 
@@ -325,6 +326,8 @@ int main(int argc, char **argv)
 	last_tv.tv_sec = 0;
 	last_tv.tv_usec = 0;
 
+	progname = basename(argv[0]);
+
 	while ((opt = getopt(argc, argv, "t:HciaSs:lDdxLf:n:r:he8T:?")) != -1) {
 		switch (opt) {
 		case 't':
@@ -333,7 +336,7 @@ int main(int argc, char **argv)
 			if ((timestamp != 'a') && (timestamp != 'A') &&
 			    (timestamp != 'd') && (timestamp != 'z')) {
 				fprintf(stderr, "%s: unknown timestamp mode '%c' - ignored\n",
-					basename(argv[0]), optarg[0]);
+					progname, optarg[0]);
 				timestamp = 0;
 			}
 			if ((logtimestamp != 'a') && (logtimestamp != 'z')) {
@@ -372,7 +375,7 @@ int main(int argc, char **argv)
 		case 's':
 			silent = atoi(optarg);
 			if (silent > SILENT_ON) {
-				print_usage(basename(argv[0]));
+				print_usage();
 				exit(1);
 			}
 			break;
@@ -405,7 +408,7 @@ int main(int argc, char **argv)
 		case 'n':
 			count = atoi(optarg);
 			if (count < 1) {
-				print_usage(basename(argv[0]));
+				print_usage();
 				exit(1);
 			}
 			break;
@@ -413,7 +416,7 @@ int main(int argc, char **argv)
 		case 'r':
 			rcvbuf_size = atoi(optarg);
 			if (rcvbuf_size < 1) {
-				print_usage(basename(argv[0]));
+				print_usage();
 				exit(1);
 			}
 			break;
@@ -422,19 +425,19 @@ int main(int argc, char **argv)
 			errno = 0;
 			timeout_ms = strtol(optarg, NULL, 0);
 			if (errno != 0) {
-				print_usage(basename(argv[0]));
+				print_usage();
 				exit(1);
 			}
 			break;
 		default:
-			print_usage(basename(argv[0]));
+			print_usage();
 			exit(1);
 			break;
 		}
 	}
 
 	if (optind == argc) {
-		print_usage(basename(argv[0]));
+		print_usage();
 		exit(0);
 	}
 
