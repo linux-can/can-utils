@@ -63,6 +63,7 @@
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include <linux/net_tstamp.h>
 
 #include "terminal.h"
 #include "lib.h"
@@ -72,10 +73,6 @@
 #define SO_TIMESTAMPING 37
 #endif
 
-/* from #include <linux/net_tstamp.h> - since Linux 2.6.30 */
-#define SOF_TIMESTAMPING_SOFTWARE (1 << 4)
-#define SOF_TIMESTAMPING_RX_SOFTWARE (1 << 3)
-#define SOF_TIMESTAMPING_RAW_HARDWARE (1 << 6)
 #define TIMESTAMPSZ 50 /* string 'absolute with date' requires max 49 bytes */
 
 #define MAXSOCK 16    /* max. number of CAN interfaces given on the cmdline */
