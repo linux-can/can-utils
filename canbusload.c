@@ -61,6 +61,7 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
+#include "lib.h"
 #include "terminal.h"
 #include "canframelen.h"
 
@@ -310,9 +311,7 @@ int main(int argc, char **argv)
 			return 1;
 		}
 
-#ifdef DEBUG
-		printf("open %d '%s'.\n", i, ptr);
-#endif
+		pr_debug("open %d '%s'.\n", i, ptr);
 
 		s[i] = socket(PF_CAN, SOCK_RAW, CAN_RAW);
 		if (s[i] < 0) {
@@ -358,10 +357,8 @@ int main(int argc, char **argv)
 		if (nbytes > max_bitrate_len)
 			max_bitrate_len = nbytes; /* for nice printing */
 
+		pr_debug("using interface name '%s'.\n", ifr.ifr_name);
 
-#ifdef DEBUG
-		printf("using interface name '%s'.\n", ifr.ifr_name);
-#endif
 		/* try to switch the socket into CAN FD mode */
 		const int canfd_on = 1;
 		setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));

@@ -680,7 +680,7 @@ void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *c
 		}
 	}
 
-	if (cf->data[6] || cf->data[7]) {
+	if (cf->can_id & CAN_ERR_CNT || cf->data[6] || cf->data[7]) {
 		n += snprintf(buf + n, len - n, "%s", sep);
 		n += snprintf(buf + n, len - n, "error-counter-tx-rx{{%d}{%d}}",
 			      cf->data[6], cf->data[7]);

@@ -46,6 +46,7 @@ MAKEFLAGS := -k
 CFLAGS := -O2 -Wall -Wno-parentheses
 
 CPPFLAGS += \
+	-I. \
 	-Iinclude \
 	-DAF_CAN=PF_CAN \
 	-DPF_CAN=29 \
@@ -119,6 +120,7 @@ canplayer.o:	lib.h
 cansend.o:	lib.h
 log2asc.o:	lib.h
 log2long.o:	lib.h
+slcanpty.o:	lib.h
 j1939acd.o:	libj1939.h
 j1939cat.o:	libj1939.h
 j1939spy.o:	libj1939.h
@@ -135,6 +137,7 @@ cansend:	cansend.o	lib.o
 cansequence:	cansequence.o	lib.o
 log2asc:	log2asc.o	lib.o
 log2long:	log2long.o	lib.o
+slcanpty:	slcanpty.o	lib.o
 j1939acd:	j1939acd.o	libj1939.o
 j1939cat:	j1939cat.o	libj1939.o
 j1939spy:	j1939spy.o	libj1939.o

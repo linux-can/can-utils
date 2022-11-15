@@ -47,6 +47,13 @@
 
 #include <stdio.h>
 
+#ifdef DEBUG
+#define pr_debug(fmt, args...) printf(fmt, ##args)
+#else
+__attribute__((format (printf, 1, 2)))
+static inline int pr_debug(const char* fmt, ...) {return 0;}
+#endif
+
 /* buffer sizes for CAN frame string representations */
 
 #define CL_ID (sizeof("12345678##1"))
