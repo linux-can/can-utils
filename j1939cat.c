@@ -509,7 +509,7 @@ static int j1939cat_send(struct j1939cat_priv *priv)
 {
 	unsigned int size = 0;
 	unsigned int i;
-	int ret;
+	int ret = 0;
 
 	if (priv->todo_filesize)
 		size = j1939cat_get_file_size(priv->infile);
