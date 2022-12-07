@@ -92,7 +92,7 @@ static void do_receive()
 	unsigned int sequence_wrap = 0;
 	uint32_t sequence_mask = 0xff;
 	uint32_t sequence_rx = 0;
-	uint32_t sequence_delta = 0;
+	uint8_t sequence_delta = 0;
 	uint32_t sequence = 0;
 	unsigned int overflow_old = 0;
 	can_err_mask_t err_mask = CAN_ERR_MASK;
@@ -143,7 +143,7 @@ static void do_receive()
 			sequence = sequence_rx;
 		}
 
-		sequence_delta = (sequence_rx - sequence) & sequence_mask;
+		sequence_delta = sequence_rx - (uint8_t)sequence;
 		if (sequence_delta) {
 			struct cmsghdr *cmsg;
 			uint32_t overflow = 0;
@@ -163,12 +163,16 @@ static void do_receive()
 			overflow_delta = overflow - overflow_old;
 
 			fprintf(stderr,
-				"sequence CNT: %6u, RX: %6u    expected: %3u    missing: %4u    skt overfl d: %4u a: %4u    delta: %3u    incident: %u\n",
-				sequence, sequence_rx,
-				sequence & sequence_mask, sequence_delta,
-				overflow_delta, overflow,
-				sequence_delta - overflow_delta,
-				drop_count);
+				"sequence CNT: 0x%07x  RX: 0x%02x  expected: 0x%02x  missing: %4u   skt overflow delta: %4u  absolute: %4u   hw - skt: %5d   incident: %4u %s%s\n",
+				sequence, sequence_rx,				/* CNT, RX */
+				sequence & sequence_mask, sequence_delta,	/* expected, missing */
+				overflow_delta, overflow,			/* skb overflow delta, absolute */
+				sequence_delta - overflow_delta,		/* hw - skb */
+				drop_count,					/* incident */
+				overflow_delta ? "[SOCKET]" : "",
+				overflow_delta != sequence_delta ?
+				((overflow_delta - sequence_delta > 0 && (overflow_delta - sequence_delta) & 0xff) ?
+				 "[HARDWARE]" : "[HARDWARE?]") : "");
 
 			if (drop_count == drop_until_quit)
 				exit(EXIT_FAILURE);
