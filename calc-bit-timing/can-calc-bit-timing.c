@@ -136,8 +136,8 @@ struct calc_bittiming_const {
 
 	const struct calc_ref_clk ref_clk[16];
 
-	const void (*printf_btr)(struct can_bittiming *bt, bool hdr);
-	const void (*printf_data_btr)(struct can_bittiming *bt, bool hdr);
+	void (*printf_btr)(struct can_bittiming *bt, bool hdr);
+	void (*printf_data_btr)(struct can_bittiming *bt, bool hdr);
 };
 
 struct alg {
@@ -159,7 +159,7 @@ struct alg {
 struct calc_data {
 	const struct can_bittiming_const *bittiming_const;
 	const struct alg *alg;
-	const void (*printf_btr)(struct can_bittiming *bt, bool hdr);
+	void (*printf_btr)(struct can_bittiming *bt, bool hdr);
 	const char *name;
 
 	const struct calc_ref_clk *ref_clks;
