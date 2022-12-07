@@ -69,52 +69,39 @@
 #define DEFAULT_GAP 200 /* ms */
 #define DEFAULT_BURST_COUNT 1
 
-#define MODE_RANDOM	0
-#define MODE_INCREMENT	1
-#define MODE_FIX	2
-#define MODE_RANDOM_EVEN	3
-#define MODE_RANDOM_ODD	4
+#define MODE_RANDOM 0
+#define MODE_INCREMENT 1
+#define MODE_FIX 2
+#define MODE_RANDOM_EVEN 3
+#define MODE_RANDOM_ODD 4
 
 extern int optind, opterr, optopt;
 
 static volatile int running = 1;
 static unsigned long long enobufs_count;
 
-void print_usage(char *prg)
+static void print_usage(char *prg)
 {
 	fprintf(stderr, "%s - CAN frames generator.\n\n", prg);
 	fprintf(stderr, "Usage: %s [options] <CAN interface>\n", prg);
 	fprintf(stderr, "Options:\n");
-	fprintf(stderr, "         -g <ms>       (gap in milli seconds "
-		"- default: %d ms)\n", DEFAULT_GAP);
-	fprintf(stderr, "         -e            (generate extended frame mode "
-		"(EFF) CAN frames)\n");
+	fprintf(stderr, "         -g <ms>       (gap in milli seconds - default: %d ms)\n", DEFAULT_GAP);
+	fprintf(stderr, "         -e            (generate extended frame mode (EFF) CAN frames)\n");
 	fprintf(stderr, "         -f            (generate CAN FD CAN frames)\n");
-	fprintf(stderr, "         -b            (generate CAN FD CAN frames"
-		" with bitrate switch (BRS))\n");
-	fprintf(stderr, "         -E            (generate CAN FD CAN frames"
-		" with error state (ESI))\n");
+	fprintf(stderr, "         -b            (generate CAN FD CAN frames with bitrate switch (BRS))\n");
+	fprintf(stderr, "         -E            (generate CAN FD CAN frames with error state (ESI))\n");
 	fprintf(stderr, "         -R            (generate RTR frames)\n");
 	fprintf(stderr, "         -8            (allow DLC values greater then 8 for Classic CAN frames)\n");
 	fprintf(stderr, "         -m            (mix -e -f -b -E -R frames)\n");
-	fprintf(stderr, "         -I <mode>     (CAN ID"
-		" generation mode - see below)\n");
-	fprintf(stderr, "         -L <mode>     (CAN data length code (dlc)"
-		" generation mode - see below)\n");
-	fprintf(stderr, "         -D <mode>     (CAN data (payload)"
-		" generation mode - see below)\n");
-	fprintf(stderr, "         -p <timeout>  (poll on -ENOBUFS to write frames"
-		" with <timeout> ms)\n");
-	fprintf(stderr, "         -n <count>    (terminate after <count> CAN frames "
-		"- default infinite)\n");
-	fprintf(stderr, "         -i            (ignore -ENOBUFS return values on"
-		" write() syscalls)\n");
-	fprintf(stderr, "         -x            (disable local loopback of "
-		"generated CAN frames)\n");
-	fprintf(stderr, "         -c <count>    (number of messages to send in burst, "
-		"default 1)\n");
-	fprintf(stderr, "         -v            (increment verbose level for "
-		"printing sent CAN frames)\n\n");
+	fprintf(stderr, "         -I <mode>     (CAN ID generation mode - see below)\n");
+	fprintf(stderr, "         -L <mode>     (CAN data length code (dlc) generation mode - see below)\n");
+	fprintf(stderr, "         -D <mode>     (CAN data (payload) generation mode - see below)\n");
+	fprintf(stderr, "         -p <timeout>  (poll on -ENOBUFS to write frames with <timeout> ms)\n");
+	fprintf(stderr, "         -n <count>    (terminate after <count> CAN frames - default infinite)\n");
+	fprintf(stderr, "         -i            (ignore -ENOBUFS return values on write() syscalls)\n");
+	fprintf(stderr, "         -x            (disable local loopback of generated CAN frames)\n");
+	fprintf(stderr, "         -c <count>    (number of messages to send in burst, default %u)\n", DEFAULT_BURST_COUNT);
+	fprintf(stderr, "         -v            (increment verbose level for printing sent CAN frames)\n\n");
 	fprintf(stderr, "Generation modes:\n");
 	fprintf(stderr, " 'r'     => random values (default)\n");
 	fprintf(stderr, " 'e'     => random values, even ID\n");
@@ -122,8 +109,7 @@ void print_usage(char *prg)
 	fprintf(stderr, " 'i'     => increment values\n");
 	fprintf(stderr, " <value> => fixed value (in hexadecimal for -I and -D)\n\n");
 	fprintf(stderr, "The gap value (in milliseconds) may have decimal places, e.g. '-g 4.73'\n");
-	fprintf(stderr, "When incrementing the CAN data the data length code "
-		"minimum is set to 1.\n");
+	fprintf(stderr, "When incrementing the CAN data the data length code minimum is set to 1.\n");
 	fprintf(stderr, "CAN IDs and data content are given and expected in hexadecimal values.\n\n");
 	fprintf(stderr, "Examples:\n");
 	fprintf(stderr, "%s vcan0 -g 4 -I 42A -L 1 -D i -v -v\n", prg);
@@ -142,7 +128,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "\t(my favourite default :)\n\n");
 }
 
-void sigterm(int signo)
+static void sigterm(int signo)
 {
 	running = 0;
 }
@@ -177,7 +163,7 @@ int main(int argc, char **argv)
 	int s; /* socket */
 	struct pollfd fds;
 
-	struct sockaddr_can addr;
+	struct sockaddr_can addr = { 0 };
 	static struct canfd_frame frame;
 	struct can_frame *ccf = (struct can_frame *)&frame;
 	int nbytes;
@@ -186,6 +172,7 @@ int main(int argc, char **argv)
 
 	struct timespec ts;
 	struct timeval now;
+	int ret;
 
 	/* set seed value for pseudo random numbers */
 	gettimeofday(&now, NULL);
@@ -195,12 +182,8 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	while ((opt = getopt(argc, argv, "ig:ebEfmI:L:D:xp:n:c:vR8h?")) != -1) {
+	while ((opt = getopt(argc, argv, "g:efbER8mI:L:D:p:n:ixc:vh?")) != -1) {
 		switch (opt) {
-
-		case 'i':
-			ignore_enobufs = 1;
-			break;
 
 		case 'g':
 			gap = strtod(optarg, NULL);
@@ -222,6 +205,14 @@ int main(int argc, char **argv)
 		case 'E':
 			esi = 1; /* error state indicator implies CAN FD */
 			canfd = 1;
+			break;
+
+		case 'R':
+			rtr_frame = 1;
+			break;
+
+		case '8':
+			len8_dlc = 1;
 			break;
 
 		case 'm':
@@ -263,30 +254,10 @@ int main(int argc, char **argv)
 			} else {
 				data_mode = MODE_FIX;
 				if (hexstring2data(optarg, fixdata, CANFD_MAX_DLEN)) {
-					printf ("wrong fix data definition\n");
+					printf("wrong fix data definition\n");
 					return 1;
 				}
 			}
-			break;
-
-		case 'c':
-			burst_count = strtoul(optarg, NULL, 10);
-			break;
-
-		case 'v':
-			verbose++;
-			break;
-
-		case 'x':
-			loopback_disable = 1;
-			break;
-
-		case 'R':
-			rtr_frame = 1;
-			break;
-
-		case '8':
-			len8_dlc = 1;
 			break;
 
 		case 'p':
@@ -301,12 +272,27 @@ int main(int argc, char **argv)
 			}
 			break;
 
+		case 'i':
+			ignore_enobufs = 1;
+			break;
+
+		case 'x':
+			loopback_disable = 1;
+			break;
+
+		case 'c':
+			burst_count = strtoul(optarg, NULL, 10);
+			break;
+
+		case 'v':
+			verbose++;
+			break;
+
 		case '?':
 		case 'h':
 		default:
 			print_usage(basename(argv[0]));
 			return 1;
-			break;
 		}
 	}
 
@@ -320,8 +306,7 @@ int main(int argc, char **argv)
 
 	/* recognize obviously missing commandline option */
 	if (id_mode == MODE_FIX && frame.can_id > 0x7FF && !extended) {
-		printf("The given CAN-ID is greater than 0x7FF and "
-		       "the '-e' option is not set.\n");
+		printf("The given CAN-ID is greater than 0x7FF and the '-e' option is not set.\n");
 		return 1;
 	}
 
@@ -330,35 +315,36 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
+	s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+	if (s < 0) {
 		perror("socket");
 		return 1;
 	}
 
 	addr.can_family = AF_CAN;
-
-	strcpy(ifr.ifr_name, argv[optind]);
-	if (ioctl(s, SIOCGIFINDEX, &ifr) < 0) {
-		perror("SIOCGIFINDEX");
+	addr.can_ifindex = if_nametoindex(argv[optind]);
+	if (!addr.can_ifindex) {
+		perror("if_nametoindex");
 		return 1;
 	}
-	addr.can_ifindex = ifr.ifr_ifindex;
 
-	/* disable default receive filter on this RAW socket */
-	/* This is obsolete as we do not read from the socket at all, but for */
-	/* this reason we can remove the receive list in the Kernel to save a */
-	/* little (really a very little!) CPU usage.                          */
+	/*
+	 * disable default receive filter on this RAW socket
+	 * This is obsolete as we do not read from the socket at all, but for
+	 * this reason we can remove the receive list in the Kernel to save a
+	 * little (really a very little!) CPU usage.
+	 */
 	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
 
 	if (loopback_disable) {
-		int loopback = 0;
+		const int loopback = 0;
 
 		setsockopt(s, SOL_CAN_RAW, CAN_RAW_LOOPBACK,
 			   &loopback, sizeof(loopback));
 	}
 
 	if (canfd) {
-		int enable_canfd = 1;
+		const int enable_canfd = 1;
 
 		/* check if the frame fits into the CAN netdevice */
 		if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {
@@ -372,7 +358,7 @@ int main(int argc, char **argv)
 		}
 
 		/* interface is ok - try to switch the socket into CAN FD mode */
-		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd, sizeof(enable_canfd))){
+		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd, sizeof(enable_canfd))) {
 			printf("error when enabling CAN FD support\n");
 			return 1;
 		}
@@ -409,7 +395,7 @@ int main(int argc, char **argv)
 		if (count && (--count == 0))
 			running = 0;
 
-		if (canfd){
+		if (canfd) {
 			mtu = CANFD_MTU;
 			maxdlen = CANFD_MAX_DLEN;
 			if (brs)
@@ -438,7 +424,6 @@ int main(int argc, char **argv)
 			frame.can_id |= CAN_RTR_FLAG;
 
 		if (dlc_mode == MODE_RANDOM) {
-
 			if (canfd)
 				frame.len = can_fd_dlc2len(random() & 0xF);
 			else {
@@ -460,7 +445,6 @@ int main(int argc, char **argv)
 			frame.len = 1; /* min dlc value for incr. data */
 
 		if (data_mode == MODE_RANDOM) {
-
 			rnd = random();
 			memcpy(&frame.data[0], &rnd, 4);
 			rnd = random();
@@ -482,11 +466,10 @@ int main(int argc, char **argv)
 			memset(&frame.data[frame.len], 0, maxdlen - frame.len);
 
 		if (verbose) {
-
 			printf("  %s  ", argv[optind]);
 
 			if (verbose > 1)
-				fprint_long_canframe(stdout, &frame, "\n", (verbose > 2)?1:0, maxdlen);
+				fprint_long_canframe(stdout, &frame, "\n", (verbose > 2) ? 1 : 0, maxdlen);
 			else
 				fprint_canframe(stdout, &frame, "\n", 1, maxdlen);
 		}
@@ -503,8 +486,6 @@ resend:
 				return 1;
 			}
 			if (polltimeout) {
-				int ret;
-
 				/* wait for the write socket (with timeout) */
 				ret = poll(&fds, 1, polltimeout);
 				if (ret == 0 || (ret == -1 && errno != -EINTR)) {
@@ -512,8 +493,9 @@ resend:
 					return 1;
 				}
 				goto resend;
-			} else
+			} else {
 				enobufs_count++;
+			}
 
 		} else if (nbytes < mtu) {
 			fprintf(stderr, "write: incomplete CAN frame\n");
@@ -521,7 +503,8 @@ resend:
 		}
 
 		burst_sent_count++;
-		if (gap && burst_sent_count >= burst_count) /* gap == 0 => performance test :-] */
+		if ((ts.tv_sec || ts.tv_nsec) &&
+		    burst_sent_count >= burst_count)
 			if (nanosleep(&ts, NULL))
 				return 1;
 
@@ -532,7 +515,6 @@ resend:
 			frame.can_id++;
 
 		if (dlc_mode == MODE_INCREMENT) {
-
 			incdlc++;
 			incdlc %= CAN_MAX_RAW_DLC + 1;
 
@@ -553,22 +535,21 @@ resend:
 		}
 
 		if (data_mode == MODE_INCREMENT) {
-
 			incdata++;
 
-			for (i=0; i<8 ;i++)
-				frame.data[i] = (incdata >> i*8) & 0xFFULL;
+			for (i = 0; i < 8; i++)
+				frame.data[i] = incdata >> i * 8;
 		}
 
 		if (mix) {
 			i = random();
-			extended = i&1;
-			canfd = i&2;
+			extended = i & 1;
+			canfd = i & 2;
 			if (canfd) {
-				brs = i&4;
-				esi = i&8;
+				brs = i & 4;
+				esi = i & 8;
 			}
-			rtr_frame = ((i&24) == 24); /* reduce RTR frames to 1/4 */
+			rtr_frame = ((i & 24) == 24); /* reduce RTR frames to 1/4 */
 		}
 	}
 
