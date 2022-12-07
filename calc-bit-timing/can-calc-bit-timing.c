@@ -136,8 +136,8 @@ struct calc_bittiming_const {
 
 	const struct calc_ref_clk ref_clk[16];
 
-	const void (*printf_btr)(struct can_bittiming *bt, bool hdr);
-	const void (*printf_data_btr)(struct can_bittiming *bt, bool hdr);
+	void (*printf_btr)(struct can_bittiming *bt, bool hdr);
+	void (*printf_data_btr)(struct can_bittiming *bt, bool hdr);
 };
 
 struct alg {
@@ -159,7 +159,7 @@ struct alg {
 struct calc_data {
 	const struct can_bittiming_const *bittiming_const;
 	const struct alg *alg;
-	const void (*printf_btr)(struct can_bittiming *bt, bool hdr);
+	void (*printf_btr)(struct can_bittiming *bt, bool hdr);
 	const char *name;
 
 	const struct calc_ref_clk *ref_clks;
@@ -1187,6 +1187,9 @@ static const unsigned int common_data_bitrates[] = {
 #define CAN_KBPS 1000
 #define KILO 1000UL
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-compare"
+
 #define can_update_spt can_update_spt_v2_6_31
 #define can_calc_bittiming can_calc_bittiming_v2_6_31
 #define can_fixup_bittiming can_fixup_bittiming_v2_6_31
@@ -1210,6 +1213,8 @@ static const unsigned int common_data_bitrates[] = {
 #undef can_update_sample_point
 #undef can_calc_bittiming
 #undef can_fixup_bittiming
+
+#pragma GCC diagnostic pop
 
 #define can_update_sample_point can_update_sample_point_v5_16
 #define can_calc_bittiming can_calc_bittiming_v5_16
