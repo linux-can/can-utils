@@ -521,7 +521,8 @@ resend:
 		}
 
 		burst_sent_count++;
-		if (gap && burst_sent_count >= burst_count) /* gap == 0 => performance test :-] */
+		if ((ts.tv_sec || ts.tv_nsec) &&
+		    burst_sent_count >= burst_count)
 			if (nanosleep(&ts, NULL))
 				return 1;
 
