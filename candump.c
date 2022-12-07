@@ -223,7 +223,6 @@ static inline void sprint_timestamp(const char timestamp, const struct timeval *
 				    struct timeval *const last_tv, char *ts_buffer)
 {
 	switch (timestamp) {
-
 	case 'a': /* absolute with timestamp */
 		sprintf(ts_buffer, "(%010lu.%06lu) ", tv->tv_sec, tv->tv_usec);
 		break;
@@ -521,7 +520,6 @@ int main(int argc, char **argv)
 			addr.can_ifindex = 0; /* any can interface */
 
 		if (nptr) {
-
 			/* found a ',' after the interface name => check for filters */
 
 			/* determine number of filters to alloc the filter space */
@@ -755,7 +753,6 @@ int main(int argc, char **argv)
 				if (cmsg->cmsg_type == SO_TIMESTAMP) {
 					memcpy(&tv, CMSG_DATA(cmsg), sizeof(tv));
 				} else if (cmsg->cmsg_type == SO_TIMESTAMPING) {
-
 					struct timespec *stamp = (struct timespec *)CMSG_DATA(cmsg);
 
 					/*
@@ -766,14 +763,14 @@ int main(int argc, char **argv)
 					 * linux/Documentation/networking/timestamping.txt
 					 */
 					tv.tv_sec = stamp[2].tv_sec;
-					tv.tv_usec = stamp[2].tv_nsec/1000;
-				} else if (cmsg->cmsg_type == SO_RXQ_OVFL)
+					tv.tv_usec = stamp[2].tv_nsec / 1000;
+				} else if (cmsg->cmsg_type == SO_RXQ_OVFL) {
 					memcpy(&obj->dropcnt, CMSG_DATA(cmsg), sizeof(__u32));
+				}
 			}
 
 			/* check for (unlikely) dropped frames on this specific socket */
 			if (obj->dropcnt != obj->last_dropcnt) {
-
 				__u32 frames = obj->dropcnt - obj->last_dropcnt;
 
 				if (silent != SILENT_ON)
@@ -811,7 +808,7 @@ int main(int argc, char **argv)
 					extra_info);
 			}
 
-			if ((logfrmt) && (silent == SILENT_OFF)){
+			if ((logfrmt) && (silent == SILENT_OFF)) {
 				char buf[CL_CFSZ]; /* max length */
 
 				/* print CAN frame in log file style to stdout */
@@ -824,7 +821,7 @@ int main(int argc, char **argv)
 				goto out_fflush; /* no other output to stdout */
 			}
 
-			if (silent != SILENT_OFF){
+			if (silent != SILENT_OFF) {
 				if (silent == SILENT_ANI) {
 					printf("%c\b", anichar[silentani %= MAXANI]);
 					silentani++;
@@ -838,7 +835,6 @@ int main(int argc, char **argv)
 			printf("%*s", max_devname_len, devname[idx]);
 
 			if (extra_msg_info) {
-
 				if (msg.msg_flags & MSG_DONTROUTE)
 					printf ("  TX %s", extra_m_info[frame.flags & 3]);
 				else
