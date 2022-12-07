@@ -232,7 +232,7 @@ static void mcp251xfd_dump_reg_intf(const struct mcp251xfd_priv *priv, u32 val, 
 #define __create_dump_fifo_bitmask(fifo, name, description) \
 static void mcp251xfd_dump_reg_##fifo(const struct mcp251xfd_priv *priv, u32 val, u16 addr) \
 { \
-	int i; \
+	size_t i; \
 \
 	pr_info(__stringify(name) ": " __stringify(fifo) "(0x%03x)=0x%08x\n", addr, val); \
 	pr_info(description ":\n"); \
@@ -244,7 +244,7 @@ static void mcp251xfd_dump_reg_##fifo(const struct mcp251xfd_priv *priv, u32 val
 	pr_info("\t\t"); \
 	for (i = 0; i < sizeof(val); i++) { \
 		if (val & BIT(i)) \
-			pr_cont("%d ", i); \
+			pr_cont("%zd ", i); \
 	} \
 \
 	pr_cont("\n"); \
