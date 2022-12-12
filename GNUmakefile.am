@@ -106,6 +106,7 @@ EXTRA_DIST += \
 	autogen.sh \
 	can-j1939-kickstart.md \
 	can-j1939.md \
+	can-tc-init-etf.sh \
 	mcp251xfd/99-devcoredump.rules \
 	mcp251xfd/devcoredump
 

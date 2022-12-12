@@ -2,6 +2,8 @@
 /*
  * cangen.c - CAN frames generator
  *
+ * Copyright (c) 2022 Pengutronix,
+ *		 Marc Kleine-Budde <kernel@pengutronix.de>
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research
  * All rights reserved.
  *
@@ -44,9 +46,12 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <getopt.h>
 #include <libgen.h>
+#include <limits.h>
 #include <poll.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,11 +68,13 @@
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include <linux/net_tstamp.h>
 
 #include "lib.h"
 
 #define DEFAULT_GAP 200 /* ms */
 #define DEFAULT_BURST_COUNT 1
+#define DEFAULT_SO_MARK_VAL 1
 
 #define MODE_RANDOM 0
 #define MODE_INCREMENT 1
@@ -79,6 +86,75 @@ extern int optind, opterr, optopt;
 
 static volatile int running = 1;
 static unsigned long long enobufs_count;
+static bool ignore_enobufs;
+static bool use_so_txtime;
+
+static int clockid = CLOCK_TAI;
+static int clock_nanosleep_flags;
+static struct timespec ts, ts_gap;
+static int so_mark_val = DEFAULT_SO_MARK_VAL;
+
+#define NSEC_PER_SEC 1000000000LL
+
+static struct timespec timespec_normalise(struct timespec ts)
+{
+	while (ts.tv_nsec >= NSEC_PER_SEC) {
+		++(ts.tv_sec);
+		ts.tv_nsec -= NSEC_PER_SEC;
+	}
+
+	while (ts.tv_nsec <= -NSEC_PER_SEC) {
+		--(ts.tv_sec);
+		ts.tv_nsec += NSEC_PER_SEC;
+	}
+
+	if (ts.tv_nsec < 0) {
+		/*
+		 * Negative nanoseconds isn't valid according to
+		 * POSIX. Decrement tv_sec and roll tv_nsec over.
+		 */
+
+		--(ts.tv_sec);
+		ts.tv_nsec = (NSEC_PER_SEC + ts.tv_nsec);
+	}
+
+	return ts;
+}
+
+static struct timespec timespec_add(struct timespec ts1, struct timespec ts2)
+{
+	/*
+	 * Normalize inputs to prevent tv_nsec rollover if
+	 * whole-second values are packed in it.
+	 */
+	ts1 = timespec_normalise(ts1);
+	ts2 = timespec_normalise(ts2);
+
+	ts1.tv_sec += ts2.tv_sec;
+	ts1.tv_nsec += ts2.tv_nsec;
+
+	return timespec_normalise(ts1);
+}
+
+struct timespec double_to_timespec(double s)
+{
+	struct timespec ts = {
+		.tv_sec  = s,
+		.tv_nsec = (s - (long)(s)) * NSEC_PER_SEC,
+	};
+
+	return timespec_normalise(ts);
+}
+
+static struct timespec ns_to_timespec(int64_t ns)
+{
+	struct timespec ts = {
+		.tv_sec  = ns / NSEC_PER_SEC,
+		.tv_nsec = ns % NSEC_PER_SEC,
+	};
+
+	return timespec_normalise(ts);
+}
 
 static void print_usage(char *prg)
 {
@@ -86,6 +162,10 @@ static void print_usage(char *prg)
 	fprintf(stderr, "Usage: %s [options] <CAN interface>\n", prg);
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "         -g <ms>       (gap in milli seconds - default: %d ms)\n", DEFAULT_GAP);
+	fprintf(stderr, "         -a            (use absolute time for gap)");
+	fprintf(stderr, "         -t            (use SO_TXTIME)");
+	fprintf(stderr, "         --start <ns>  (start time (UTC nanoseconds))");
+	fprintf(stderr, "         --mark <id>   (set SO_MARK to <id>, default %u)", DEFAULT_SO_MARK_VAL);
 	fprintf(stderr, "         -e            (generate extended frame mode (EFF) CAN frames)\n");
 	fprintf(stderr, "         -f            (generate CAN FD CAN frames)\n");
 	fprintf(stderr, "         -b            (generate CAN FD CAN frames with bitrate switch (BRS))\n");
@@ -133,12 +213,196 @@ static void sigterm(int signo)
 	running = 0;
 }
 
+static int setsockopt_txtime(int fd)
+{
+	const struct sock_txtime so_txtime_val = {
+		.clockid = clockid,
+		.flags = SOF_TXTIME_REPORT_ERRORS,
+	};
+	struct sock_txtime so_txtime_val_read;
+	int so_mark_val_read;
+	socklen_t vallen;
+	int ret;
+
+	/* SO_TXTIME */
+
+	ret = setsockopt(fd, SOL_SOCKET, SO_TXTIME,
+			 &so_txtime_val, sizeof(so_txtime_val));
+	if (ret) {
+		int err = errno;
+
+		perror("setsockopt() SO_TXTIME");
+		if (err == EPERM)
+			fprintf(stderr, "Run with CAP_NET_ADMIN or as root.\n");
+
+		return -err;
+	};
+
+	vallen = sizeof(so_txtime_val_read);
+	ret = getsockopt(fd, SOL_SOCKET, SO_TXTIME,
+			 &so_txtime_val_read, &vallen);
+	if (ret) {
+		perror("getsockopt() SO_TXTIME");
+		return -errno;
+	};
+
+	if (vallen != sizeof(so_txtime_val) ||
+	    memcmp(&so_txtime_val, &so_txtime_val_read, vallen)) {
+		perror("getsockopt() SO_TXTIME: mismatch");
+		return -EINVAL;
+	}
+
+	/* SO_MARK */
+
+	ret = setsockopt(fd, SOL_SOCKET, SO_MARK, &so_mark_val, sizeof(so_mark_val));
+	if (ret) {
+		int err = errno;
+
+		perror("setsockopt() SO_MARK");
+		if (err == EPERM)
+			fprintf(stderr, "Run with CAP_NET_ADMIN or as root.\n");
+
+		return -err;
+	};
+
+	vallen = sizeof(so_mark_val_read);
+	ret = getsockopt(fd, SOL_SOCKET, SO_MARK,
+			 &so_mark_val_read, &vallen);
+	if (ret) {
+		perror("getsockopt() SO_MARK");
+		return -errno;
+	};
+
+	if (vallen != sizeof(so_mark_val) ||
+	    memcmp(&so_mark_val, &so_mark_val_read, vallen)) {
+		perror("getsockopt() SO_MARK: mismatch");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int do_send_one(int fd, void *buf, size_t len, int timeout)
+{
+	uint8_t control[CMSG_SPACE(sizeof(uint64_t))] = { 0 };
+	struct iovec iov = {
+		.iov_base = buf,
+		.iov_len = len,
+	};
+	struct msghdr msg = {
+		.msg_iov = &iov,
+		.msg_iovlen = 1,
+	};
+	ssize_t nbytes;
+	int ret;
+
+	if (use_so_txtime) {
+		struct cmsghdr *cm;
+		uint64_t tdeliver;
+
+		msg.msg_control = control;
+		msg.msg_controllen = sizeof(control);
+
+		tdeliver = ts.tv_sec * NSEC_PER_SEC + ts.tv_nsec;
+		ts = timespec_add(ts, ts_gap);
+
+		cm = CMSG_FIRSTHDR(&msg);
+		cm->cmsg_level = SOL_SOCKET;
+		cm->cmsg_type = SCM_TXTIME;
+		cm->cmsg_len = CMSG_LEN(sizeof(tdeliver));
+		memcpy(CMSG_DATA(cm), &tdeliver, sizeof(tdeliver));
+	}
+
+ resend:
+	nbytes = sendmsg(fd, &msg, 0);
+	if (nbytes < 0) {
+		ret = -errno;
+		if (ret != -ENOBUFS) {
+			perror("write");
+			return ret;
+		}
+		if (!ignore_enobufs && !timeout) {
+			perror("write");
+			return ret;
+		}
+		if (timeout) {
+			struct pollfd fds = {
+				.fd = fd,
+				.events = POLLOUT,
+			};
+
+			/* wait for the write socket (with timeout) */
+			ret = poll(&fds, 1, timeout);
+			if (ret == 0 || (ret == -1 && errno != EINTR)) {
+				ret = -errno;
+				perror("poll");
+				return ret;
+			}
+			goto resend;
+		} else {
+			enobufs_count++;
+		}
+
+	} else if (nbytes < (ssize_t)len) {
+		fprintf(stderr, "write: incomplete CAN frame\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int setup_time(void)
+{
+	int ret;
+
+	if (use_so_txtime) {
+		/* start time is defined */
+		if (ts.tv_sec || ts.tv_nsec)
+			return 0;
+
+		/* start time is now .... */
+		ret = clock_gettime(clockid, &ts);
+		if (ret) {
+			perror("clock_gettime");
+			return ret;
+		}
+
+		/* ... + gap */
+		ts = timespec_add(ts, ts_gap);
+
+		return 0;
+	}
+
+	if (ts.tv_sec || ts.tv_nsec) {
+		ret = clock_nanosleep(clockid, TIMER_ABSTIME, &ts, NULL);
+		if (ret != 0 && ret != EINTR) {
+			perror("clock_nanosleep");
+			return ret;
+		}
+	} else if (clock_nanosleep_flags == TIMER_ABSTIME) {
+		ret = clock_gettime(clockid, &ts);
+		if (ret)
+			perror("clock_gettime");
+
+		return ret;
+	}
+
+	if (clock_nanosleep_flags != TIMER_ABSTIME)
+		ts = ts_gap;
+
+	return 0;
+}
+
+enum {
+	OPT_MARK = UCHAR_MAX + 1,
+	OPT_START = UCHAR_MAX + 2,
+};
+
 int main(int argc, char **argv)
 {
 	double gap = DEFAULT_GAP;
 	unsigned long burst_count = DEFAULT_BURST_COUNT;
 	unsigned long polltimeout = 0;
-	unsigned char ignore_enobufs = 0;
 	unsigned char extended = 0;
 	unsigned char canfd = 0;
 	unsigned char brs = 0;
@@ -161,16 +425,13 @@ int main(int argc, char **argv)
 
 	int opt;
 	int s; /* socket */
-	struct pollfd fds;
 
 	struct sockaddr_can addr = { 0 };
 	static struct canfd_frame frame;
 	struct can_frame *ccf = (struct can_frame *)&frame;
-	int nbytes;
 	int i;
 	struct ifreq ifr;
 
-	struct timespec ts;
 	struct timeval now;
 	int ret;
 
@@ -182,13 +443,39 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	while ((opt = getopt(argc, argv, "g:efbER8mI:L:D:p:n:ixc:vh?")) != -1) {
+	const struct option long_options[] = {
+		{ "mark",	required_argument,	0, OPT_MARK, },
+		{ "start",	required_argument,	0, OPT_START, },
+		{ 0,		0,			0, 0 },
+	};
+
+	while ((opt = getopt_long(argc, argv, "g:atefbER8mI:L:D:p:n:ixc:vh?", long_options, NULL)) != -1) {
 		switch (opt) {
 
 		case 'g':
 			gap = strtod(optarg, NULL);
 			break;
 
+		case 'a':
+			clock_nanosleep_flags = TIMER_ABSTIME;
+			break;
+
+		case 't':
+			clock_nanosleep_flags = TIMER_ABSTIME;
+			use_so_txtime = true;
+			break;
+
+		case OPT_START: {
+			int64_t start_time_ns;
+
+			start_time_ns = strtoll(optarg, NULL, 0);
+			ts = ns_to_timespec(start_time_ns);
+
+			break;
+		}
+		case OPT_MARK:
+			so_mark_val = strtoul(optarg, NULL, 0);
+			break;
 		case 'e':
 			extended = 1;
 			break;
@@ -273,7 +560,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 'i':
-			ignore_enobufs = 1;
+			ignore_enobufs = true;
 			break;
 
 		case 'x':
@@ -301,8 +588,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	ts.tv_sec = gap / 1000;
-	ts.tv_nsec = (long)(((long long)(gap * 1000000)) % 1000000000LL);
+	ts_gap = double_to_timespec(gap / 1000);
 
 	/* recognize obviously missing commandline option */
 	if (id_mode == MODE_FIX && frame.can_id > 0x7FF && !extended) {
@@ -384,10 +670,15 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (polltimeout) {
-		fds.fd = s;
-		fds.events = POLLOUT;
+	if (use_so_txtime) {
+		ret = setsockopt_txtime(s);
+		if (ret)
+			return 1;
 	}
+
+	ret = setup_time();
+	if (ret)
+		return 1;
 
 	while (running) {
 		frame.flags = 0;
@@ -465,6 +756,19 @@ int main(int argc, char **argv)
 		if (frame.len < maxdlen)
 			memset(&frame.data[frame.len], 0, maxdlen - frame.len);
 
+		if (!use_so_txtime &&
+		    (ts.tv_sec || ts.tv_nsec) &&
+		    burst_sent_count >= burst_count) {
+			if (clock_nanosleep_flags == TIMER_ABSTIME)
+				ts = timespec_add(ts, ts_gap);
+
+			ret = clock_nanosleep(clockid, clock_nanosleep_flags, &ts, NULL);
+			if (ret != 0 && ret != EINTR) {
+				perror("clock_nanosleep");
+				return 1;
+			}
+		}
+
 		if (verbose) {
 			printf("  %s  ", argv[optind]);
 
@@ -474,42 +778,13 @@ int main(int argc, char **argv)
 				fprint_canframe(stdout, &frame, "\n", 1, maxdlen);
 		}
 
-resend:
-		nbytes = write(s, &frame, mtu);
-		if (nbytes < 0) {
-			if (errno != ENOBUFS) {
-				perror("write");
-				return 1;
-			}
-			if (!ignore_enobufs && !polltimeout) {
-				perror("write");
-				return 1;
-			}
-			if (polltimeout) {
-				/* wait for the write socket (with timeout) */
-				ret = poll(&fds, 1, polltimeout);
-				if (ret == 0 || (ret == -1 && errno != -EINTR)) {
-					perror("poll");
-					return 1;
-				}
-				goto resend;
-			} else {
-				enobufs_count++;
-			}
-
-		} else if (nbytes < mtu) {
-			fprintf(stderr, "write: incomplete CAN frame\n");
+		ret = do_send_one(s, &frame, mtu, polltimeout);
+		if (ret)
 			return 1;
-		}
-
-		burst_sent_count++;
-		if ((ts.tv_sec || ts.tv_nsec) &&
-		    burst_sent_count >= burst_count)
-			if (nanosleep(&ts, NULL))
-				return 1;
 
 		if (burst_sent_count >= burst_count)
 			burst_sent_count = 0;
+		burst_sent_count++;
 
 		if (id_mode == MODE_INCREMENT)
 			frame.can_id++;
