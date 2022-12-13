@@ -1,6 +1,16 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-2.0-only
 # Copyright (C) 2022 Pengutronix, Marc Kleine-Budde <kernel@pengutronix.de>
+#
+# This script requires a kernel compiled with the following options:
+#
+# CONFIG_NET_SCH_PRIO
+# CONFIG_NET_SCH_ETF
+# CONFIG_NET_CLS_BASIC
+# CONFIG_NET_CLS_FW
+# CONFIG_NET_EMATCH
+# CONFIG_NET_EMATCH_CANID
+#
 
 set -e
 
