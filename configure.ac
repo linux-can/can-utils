@@ -9,6 +9,9 @@ AC_CONFIG_AUX_DIR([config/autoconf])
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 
+# If possible, enable extensions to Posix
+AC_USE_SYSTEM_EXTENSIONS
+
 #AM_MAINTAINER_MODE
 
 CFLAGS="${CFLAGS} -Wall"
@@ -77,21 +80,25 @@ AC_CHECK_FUNCS([ \
 AC_SEARCH_LIBS([clock_nanosleep], [rt])
 
 AC_CHECK_DECL(SO_RXQ_OVFL,,
-    [AC_DEFINE([SO_RXQ_OVFL], [40], [SO_RXQ_OVFL])]
+    [AC_DEFINE([SO_RXQ_OVFL], [40], [SO_RXQ_OVFL])],
+    [[#include <linux/net.h>]]
 )
 AC_CHECK_DECL(PF_CAN,,
-    [AC_DEFINE([PF_CAN], [29], [PF_CAN])]
+    [AC_DEFINE([PF_CAN], [29], [PF_CAN])],
+    [[#include <net/if.h>]]
 )
 AC_CHECK_DECL(AF_CAN,,
-    [AC_DEFINE([AF_CAN], [PF_CAN], [AF_CAN])]
+    [AC_DEFINE([AF_CAN], [PF_CAN], [AF_CAN])],
+    [[#include <net/if.h>]]
 )
 AC_CHECK_DECL(N_SLCAN,,
-    [AC_DEFINE([N_SLCAN], [17], [N_SLCAN])]
+    [AC_DEFINE([N_SLCAN], [17], [N_SLCAN])],
+    [[#include <linux/tty.h>]]
 )
 AC_CHECK_DECL(SCM_TIMESTAMPING_OPT_STATS,,
-    [AC_DEFINE([SCM_TIMESTAMPING_OPT_STATS], [54], [SCM_TIMESTAMPING_OPT_STATS])]
+    [AC_DEFINE([SCM_TIMESTAMPING_OPT_STATS], [54], [SCM_TIMESTAMPING_OPT_STATS])],
+    [[#include <linux/net.h>]]
 )
-AC_DEFINE(_GNU_SOURCE)
 
 
 #
