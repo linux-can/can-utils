@@ -108,7 +108,6 @@ static struct if_info sock_info[MAXSOCK];
 static char *progname;
 static char devname[MAXIFNAMES][IFNAMSIZ+1];
 static int dindex[MAXIFNAMES];
-static int max_devname_len; /* to prevent frazzled device name output */
 static const int canfd_on = 1;
 
 #define MAXANI 4
@@ -208,9 +207,6 @@ static int idx2dindex(int ifidx, int socket)
 	ifr.ifr_ifindex = ifidx;
 	if (ioctl(socket, SIOCGIFNAME, &ifr) < 0)
 		perror("SIOCGIFNAME");
-
-	if (max_devname_len < (int)strlen(ifr.ifr_name))
-		max_devname_len = strlen(ifr.ifr_name);
 
 	strcpy(devname[i], ifr.ifr_name);
 
@@ -500,9 +496,6 @@ int main(int argc, char **argv)
 			fprintf(stderr, "name of CAN device '%s' is too long!\n", ptr);
 			return 1;
 		}
-
-		if (nbytes > max_devname_len)
-			max_devname_len = nbytes; /* for nice printing */
 
 		addr.can_family = AF_CAN;
 
@@ -806,9 +799,8 @@ int main(int argc, char **argv)
 
 				/* log CAN frame with absolute timestamp & device */
 				sprint_canframe(buf, &frame, 0, maxdlen);
-				fprintf(logfile, "%s%*s %s%s\n", ts_buf,
-					max_devname_len, devname[idx], buf,
-					extra_info);
+				fprintf(logfile, "%s%s %s%s\n", ts_buf,
+					devname[idx], buf, extra_info);
 			}
 
 			if ((logfrmt) && (silent == SILENT_OFF)){
@@ -818,9 +810,8 @@ int main(int argc, char **argv)
 				sprint_canframe(buf, &frame, 0, maxdlen);
 				print_timestamp(logtimestamp, &tv, &last_tv);
 
-				printf("%*s %s%s\n",
-					max_devname_len, devname[idx], buf,
-					extra_info);
+				printf("%s %s%s\n",
+				       devname[idx], buf, extra_info);
 				goto out_fflush; /* no other output to stdout */
 			}
 
@@ -835,7 +826,7 @@ int main(int argc, char **argv)
 			printf(" %s", (color > 2) ? col_on[idx % MAXCOL] : "");
 			print_timestamp(timestamp, &tv, &last_tv);
 			printf(" %s", (color && (color < 3)) ? col_on[idx % MAXCOL] : "");
-			printf("%*s", max_devname_len, devname[idx]);
+			printf("%*s", IFNAMSIZ, devname[idx]);
 
 			if (extra_msg_info) {
 
