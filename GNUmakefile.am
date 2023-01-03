@@ -60,6 +60,11 @@ mcp251xfd_dump_SOURCES = \
 	mcp251xfd/mcp251xfd-regmap.c \
 	mcp251xfd/mcp251xfd.h
 
+EXTRA_DIST += \
+	mcp251xfd/99-devcoredump.rules \
+	mcp251xfd/devcoredump \
+	mcp251xfd/mcp251xfd-gen-testdata.sh
+
 bin_PROGRAMS = \
 	asc2log \
 	bcmserver \
@@ -106,9 +111,7 @@ EXTRA_DIST += \
 	autogen.sh \
 	can-j1939-kickstart.md \
 	can-j1939.md \
-	can-tc-init-etf.sh \
-	mcp251xfd/99-devcoredump.rules \
-	mcp251xfd/devcoredump
+	can-tc-init-etf.sh
 
 MAINTAINERCLEANFILES = \
 	configure \
