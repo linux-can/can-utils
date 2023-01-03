@@ -2,7 +2,7 @@
 //
 // Microchip MCP251xFD Family CAN controller debug tool
 //
-// Copyright (c) 2020, 2022 Pengutronix,
+// Copyright (c) 2020, 2022, 2023 Pengutronix,
 //               Marc Kleine-Budde <kernel@pengutronix.de>
 //
 
@@ -27,13 +27,18 @@ do_mcp251xfd_regmap_read(struct mcp251xfd_priv *priv,
 	uint16_t reg;
 	uint32_t val;
 	unsigned int n = 0;
-	int err = 0;
+	int ret, err = 0;
 
 	reg_file = fopen(file_path, "r");
 	if (!reg_file)
 		return -errno;
 
-	while (fscanf(reg_file, "%hx: %x\n", &reg, &val) == 2) {
+	while ((ret = fscanf(reg_file, "%hx: %x\n", &reg, &val)) != EOF) {
+		if (ret != 2) {
+			fscanf(reg_file, "%*[^\n]\n");
+			continue;
+		}
+
 		if (reg >= ARRAY_SIZE(mem->buf)) {
 			err = -EINVAL;
 			goto out_close;
