@@ -12,14 +12,17 @@
 #include "mcp251xfd.h"
 #include "mcp251xfd-dump.h"
 
-#define MCP251XFD_TX_FIFO 1
-#define MCP251XFD_RX_FIFO(x) (MCP251XFD_TX_FIFO + 1 + (x))
+#define MCP251XFD_DUMP_UNKNOWN (-1U)
 
 struct mcp251xfd_mem {
 	char buf[0x1000];
 };
 
 struct mcp251xfd_ring {
+	enum mcp251xfd_dump_object_type	type;
+	const struct mcp251xfd_dump_regs_fifo *fifo;
+	void *ram;
+
 	unsigned int head;
 	unsigned int tail;
 
@@ -30,25 +33,14 @@ struct mcp251xfd_ring {
 	u8 obj_size;
 };
 
+#define MCP251XFD_RING_TEF 0
+
 struct mcp251xfd_priv {
 	struct regmap *map;
-
-	struct mcp251xfd_ring tef[1];
-	struct mcp251xfd_ring tx[1];
-	struct mcp251xfd_ring rx[1];
-
-	u8 rx_ring_num;
+	struct mcp251xfd_ring ring[32];
 };
 
-static inline u8 mcp251xfd_get_ring_head(const struct mcp251xfd_ring *ring)
-{
-	return ring->head & (ring->obj_num - 1);
-}
-
-static inline u8 mcp251xfd_get_ring_tail(const struct mcp251xfd_ring *ring)
-{
-	return ring->tail & (ring->obj_num - 1);
-}
+void mcp251xfd_dump_ring_init(struct mcp251xfd_ring *ring);
 
 void mcp251xfd_dump(struct mcp251xfd_priv *priv);
 int mcp251xfd_dev_coredump_read(struct mcp251xfd_priv *priv,
@@ -57,5 +49,7 @@ int mcp251xfd_dev_coredump_read(struct mcp251xfd_priv *priv,
 int mcp251xfd_regmap_read(struct mcp251xfd_priv *priv,
 			  struct mcp251xfd_mem *mem,
 			  const char *file_path);
+const char *
+get_object_type_str(enum mcp251xfd_dump_object_type object_type);
 
 #endif

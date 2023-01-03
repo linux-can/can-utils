@@ -45,6 +45,17 @@ int regmap_bulk_read(struct regmap *map, unsigned int reg,
 	return 0;
 }
 
+void mcp251xfd_dump_ring_init(struct mcp251xfd_ring *ring)
+{
+	memset(ring, 0x0, sizeof(*ring));
+
+	ring->type = MCP251XFD_DUMP_UNKNOWN;
+	ring->head = MCP251XFD_DUMP_UNKNOWN;
+	ring->tail = MCP251XFD_DUMP_UNKNOWN;
+	ring->nr = (uint8_t)MCP251XFD_DUMP_UNKNOWN;
+	ring->fifo_nr = (uint8_t)MCP251XFD_DUMP_UNKNOWN;
+}
+
 int main(int argc, char *argv[])
 {
 	struct mcp251xfd_mem mem = { };
@@ -55,6 +66,7 @@ int main(int argc, char *argv[])
 		.map = &map,
 	};
 	const char *file_path;
+	unsigned int i;
 	int opt, err;
 
 	struct option long_options[] = {
@@ -82,6 +94,9 @@ int main(int argc, char *argv[])
 		print_usage(basename(argv[0]));
 		exit(EXIT_FAILURE);
 	}
+
+	for (i = 0; i < ARRAY_SIZE(priv.ring); i++)
+		mcp251xfd_dump_ring_init(&priv.ring[i]);
 
 	err = mcp251xfd_dev_coredump_read(&priv, &mem, file_path);
 	if (err)

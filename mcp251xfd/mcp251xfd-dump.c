@@ -2,7 +2,7 @@
 //
 // Microchip MCP251xFD Family CAN controller debug tool
 //
-// Copyright (c) 2019, 2020, 2021 Pengutronix,
+// Copyright (c) 2019, 2020, 2021, 2022 Pengutronix,
 //               Marc Kleine-Budde <kernel@pengutronix.de>
 //
 
@@ -71,6 +71,18 @@ struct mcp251xfd_dump_regs_mcp251xfd {
 	u32 eccstat;
 	u32 devid;
 };
+
+static bool
+mcp251xfd_fifo_is_unused(const struct mcp251xfd_dump_regs_fifo *fifo)
+{
+	return fifo->con == 0x00600000 && fifo->sta == 0x00000000;
+}
+
+static bool
+mcp251xfd_fifo_is_rx(const struct mcp251xfd_dump_regs_fifo *fifo)
+{
+	return !(fifo->con & MCP251XFD_REG_FIFOCON_TXEN);
+}
 
 #define __dump_bit(val, prefix, bit, desc)	       \
 	pr_info("%16s   %s\t\t%s\n", __stringify(bit), \
@@ -426,6 +438,8 @@ mcp251xfd_dump_regs(const struct mcp251xfd_priv *priv,
 		    const struct mcp251xfd_dump_regs *regs,
 		    const struct mcp251xfd_dump_regs_mcp251xfd *regs_mcp251xfd)
 {
+	unsigned int i;
+
 	netdev_info(priv->ndev, "-------------------- register dump --------------------\n");
 	__dump_call(regs, con);
 	__dump_call(regs, nbtcfg);
@@ -444,29 +458,45 @@ mcp251xfd_dump_regs(const struct mcp251xfd_priv *priv,
 	__dump_call(regs, bdiag1);
 	__dump_call(regs_mcp251xfd, osc);
 	__dump_call(regs_mcp251xfd, iocon);
-	pr_info("-------------------- TEF --------------------\n");
-	__dump_call(regs, tefcon);
-	__dump_call(regs, tefsta);
-	__dump_call(regs, tefua);
-	pr_info("-------------------- TX_FIFO --------------------\n");
-	__dump_call_fifo(fifocon, fifo[MCP251XFD_TX_FIFO].con);
-	__dump_call_fifo(fifosta, fifo[MCP251XFD_TX_FIFO].sta);
-	__dump_call_fifo(fifoua, fifo[MCP251XFD_TX_FIFO].ua);
-	pr_info(" -------------------- RX_FIFO --------------------\n");
-	__dump_call_fifo(fifocon, fifo[MCP251XFD_RX_FIFO(0)].con);
-	__dump_call_fifo(fifosta, fifo[MCP251XFD_RX_FIFO(0)].sta);
-	__dump_call_fifo(fifoua, fifo[MCP251XFD_RX_FIFO(0)].ua);
-	netdev_info(priv->ndev, "------------------------- end -------------------------\n");
+
+	for (i = 0; i < ARRAY_SIZE(regs->fifo); i++) {
+		const struct mcp251xfd_dump_regs_fifo *fifo = &regs->fifo[i];
+
+		if (mcp251xfd_fifo_is_unused(fifo))
+			continue;
+
+		pr_info("----------------------- FIFO %2d - ", i);
+
+		if (i == 0) {
+			pr_info("TEF -----------------\n");
+
+			__dump_call(regs, tefcon);
+			__dump_call(regs, tefsta);
+			__dump_call(regs, tefua);
+		} else {
+			if (mcp251xfd_fifo_is_rx(fifo))
+				pr_info("RX ------------------\n");
+			else
+				pr_info("TX ------------------\n");
+
+			__dump_call_fifo(fifocon, fifo[i].con);
+			__dump_call_fifo(fifosta, fifo[i].sta);
+			__dump_call_fifo(fifoua, fifo[i].ua);
+		}
+	}
+	netdev_info(priv->ndev, "----------------------- end ---------------------------\n");
 }
 
 #undef __dump_call
 #undef __dump_call_fifo
 
-static u8 mcp251xfd_dump_get_fifo_size(const struct mcp251xfd_priv *priv, const struct mcp251xfd_dump_regs *regs, u32 fifo_con)
+static u8
+mcp251xfd_dump_get_fifo_size(const struct mcp251xfd_priv *priv,
+			     const struct mcp251xfd_dump_regs_fifo *regs_fifo)
 {
 	u8 obj_size;
 
-	obj_size = FIELD_GET(MCP251XFD_REG_FIFOCON_PLSIZE_MASK, fifo_con);
+	obj_size = FIELD_GET(MCP251XFD_REG_FIFOCON_PLSIZE_MASK, regs_fifo->con);
 	switch (obj_size) {
 	case MCP251XFD_REG_FIFOCON_PLSIZE_8:
 		return 8;
@@ -489,16 +519,91 @@ static u8 mcp251xfd_dump_get_fifo_size(const struct mcp251xfd_priv *priv, const 
 	return 0;
 }
 
-static u8 mcp251xfd_dump_get_fifo_obj_num(const struct mcp251xfd_priv *priv, const struct mcp251xfd_dump_regs *regs, u32 fifo_con)
+static u8
+mcp251xfd_dump_get_tef_obj_size(const struct mcp251xfd_priv *priv,
+				const struct mcp251xfd_dump_regs_fifo *fifo)
+{
+	return sizeof(struct mcp251xfd_hw_tef_obj);
+}
+
+static u8
+mcp251xfd_dump_get_rx_obj_size(const struct mcp251xfd_priv *priv,
+			       const struct mcp251xfd_dump_regs_fifo *fifo)
+{
+	return sizeof(struct mcp251xfd_hw_rx_obj_can) -
+		sizeof_field(struct mcp251xfd_hw_rx_obj_can, data) +
+		mcp251xfd_dump_get_fifo_size(priv, fifo);
+}
+
+static u8
+mcp251xfd_dump_get_tx_obj_size(const struct mcp251xfd_priv *priv,
+			       const struct mcp251xfd_dump_regs_fifo *fifo)
+{
+	return sizeof(struct mcp251xfd_hw_tx_obj_can) -
+		sizeof_field(struct mcp251xfd_hw_tx_obj_can, data) +
+		mcp251xfd_dump_get_fifo_size(priv, fifo);
+}
+
+static u8
+mcp251xfd_dump_get_fifo_obj_num(const struct mcp251xfd_priv *priv,
+				const struct mcp251xfd_dump_regs_fifo *fifo)
 {
 	u8 obj_num;
 
-	obj_num = FIELD_GET(MCP251XFD_REG_FIFOCON_FSIZE_MASK, fifo_con);
+	obj_num = FIELD_GET(MCP251XFD_REG_FIFOCON_FSIZE_MASK, fifo->con);
 
 	return obj_num + 1;
 }
 
-static void mcp251xfd_dump_ram_fifo_obj_data(const struct mcp251xfd_priv *priv, const u8 *data, u8 dlc)
+static u16
+mcp251xfd_dump_get_ring_obj_addr(const struct mcp251xfd_priv *priv,
+				 const struct mcp251xfd_ring *ring,
+				 u8 n)
+{
+	return ring->base + ring->obj_size * n;
+}
+
+static void *
+mcp251xfd_dump_get_ring_hw_obj(const struct mcp251xfd_priv *priv,
+			       const struct mcp251xfd_ring *ring,
+			       u8 n)
+{
+	return ring->ram + ring->obj_size * n;
+}
+
+static u8
+mcp251xfd_dump_get_ring_head(const struct mcp251xfd_priv *priv,
+			     const struct mcp251xfd_ring *ring)
+{
+	return ring->head & (ring->obj_num - 1);
+}
+
+static u8
+mcp251xfd_dump_get_ring_tail(const struct mcp251xfd_priv *priv,
+			     const struct mcp251xfd_ring *ring)
+{
+	return ring->tail & (ring->obj_num - 1);
+}
+
+static u8
+mcp251xfd_dump_get_chip_head(const struct mcp251xfd_priv *priv,
+			     const struct mcp251xfd_ring *ring)
+{
+	return FIELD_GET(MCP251XFD_REG_FIFOSTA_FIFOCI_MASK,
+			 ring->fifo->sta);
+}
+
+static u8
+mcp251xfd_dump_get_chip_tail(const struct mcp251xfd_priv *priv,
+			     const struct mcp251xfd_ring *ring)
+{
+	return (ring->fifo->ua -
+		(ring->base - MCP251XFD_RAM_START)) / ring->obj_size;
+}
+
+static void
+mcp251xfd_dump_ring_obj_data(const struct mcp251xfd_priv *priv,
+			     const u8 *data, u8 dlc)
 {
 	int i;
 	u8 len;
@@ -529,326 +634,228 @@ static void mcp251xfd_dump_ram_fifo_obj_data(const struct mcp251xfd_priv *priv, 
 		pr_cont("\n");
 }
 
-/* TEF */
-
-static u8
-mcp251xfd_dump_get_tef_obj_num(const struct mcp251xfd_priv *priv,
-			       const struct mcp251xfd_dump_regs *regs)
+static void
+mcp251xfd_dump_analyze_regs_and_ram(struct mcp251xfd_priv *priv,
+				    const struct mcp251xfd_dump_regs *regs,
+				    const struct mcp251xfd_dump_ram *ram)
 {
-	return mcp251xfd_dump_get_fifo_obj_num(priv, regs, regs->tef.con);
+	u16 base = MCP251XFD_RAM_START;
+	u8 ring_nr_rx = 0, ring_nr_tx = 0;
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(regs->fifo); i++) {
+		const struct mcp251xfd_dump_regs_fifo *fifo;
+		struct mcp251xfd_ring *ring = &priv->ring[i];
+
+		if (i == MCP251XFD_RING_TEF) {
+			/* FIFO 0 is the TXQ, but it's unused by the driver
+			 * put TEF here to make things easier.
+			 */
+			fifo = &regs->tef;
+
+			ring->type = MCP251XFD_DUMP_OBJECT_TYPE_TEF;
+
+			ring->nr = 0;
+			ring->obj_size = mcp251xfd_dump_get_tef_obj_size(priv, fifo);
+		} else {
+			fifo = &regs->fifo[i];
+
+			if (mcp251xfd_fifo_is_unused(fifo)) {
+				continue;
+			} else if (mcp251xfd_fifo_is_rx(fifo)) {
+				ring->type = MCP251XFD_DUMP_OBJECT_TYPE_RX;
+				ring->nr = ring_nr_rx++;
+				ring->obj_size = mcp251xfd_dump_get_rx_obj_size(priv, fifo);
+			} else {
+				ring->type = MCP251XFD_DUMP_OBJECT_TYPE_TX;
+				ring->nr = ring_nr_tx++;
+				ring->obj_size = mcp251xfd_dump_get_tx_obj_size(priv, fifo);
+			}
+		}
+
+		ring->fifo = fifo;
+		ring->ram = (void *)ram + (base - MCP251XFD_RAM_START);
+
+		ring->base = base;
+		ring->fifo_nr = i;
+		ring->obj_num = mcp251xfd_dump_get_fifo_obj_num(priv, fifo);
+
+		base = mcp251xfd_dump_get_ring_obj_addr(priv, ring, ring->obj_num);
+	}
+
+	printf("Found %u RX-FIFO%s, %u TX-FIFO%s\n\n",
+	       ring_nr_rx, ring_nr_rx > 1 ? "s" : "",
+	       ring_nr_tx, ring_nr_tx > 1 ? "s" : "");
 }
 
-static u8
-mcp251xfd_dump_get_tef_tail(const struct mcp251xfd_priv *priv,
-			    const struct mcp251xfd_dump_regs *regs)
+static const char *
+mcp251xfd_dump_ring_obj_one_fifo_flags_chip(const struct mcp251xfd_priv *priv,
+					    const struct mcp251xfd_ring *ring,
+					    const u8 n)
 {
-	return regs->tefua / sizeof(struct mcp251xfd_hw_tef_obj);
+	if (mcp251xfd_dump_get_chip_tail(priv, ring) != n)
+		return "";
+
+	if (ring->type == MCP251XFD_DUMP_OBJECT_TYPE_TX) {
+		if (!(ring->fifo->sta & MCP251XFD_REG_FIFOSTA_TFNRFNIF))
+			return "  chip-FIFO-full";
+		if (ring->fifo->sta & MCP251XFD_REG_FIFOSTA_TFERFFIF)
+			return "  chip-FIFO-empty";
+	} else {
+		if (ring->fifo->sta & MCP251XFD_REG_FIFOSTA_TFERFFIF)
+			return "  chip-FIFO-full";
+		if (!(ring->fifo->sta & MCP251XFD_REG_FIFOSTA_TFNRFNIF))
+			return "  chip-FIFO-empty";
+	}
+
+	return "";
 }
 
-static u16
-mcp251xfd_dump_get_tef_obj_rel_addr(const struct mcp251xfd_priv *priv,
-				    u8 n)
+static const char *
+mcp251xfd_dump_ring_obj_one_fifo_flags_ring(const struct mcp251xfd_priv *priv,
+					    const struct mcp251xfd_ring *ring,
+					    const u8 n)
 {
-	return sizeof(struct mcp251xfd_hw_tef_obj) * n;
+	if (ring->head == MCP251XFD_DUMP_UNKNOWN ||
+	    ring->tail == MCP251XFD_DUMP_UNKNOWN ||
+	    mcp251xfd_dump_get_ring_tail(priv, ring) != n ||
+	    mcp251xfd_dump_get_ring_head(priv, ring) != mcp251xfd_dump_get_ring_tail(priv, ring))
+		return "";
+
+	if (ring->head == ring->tail)
+		return "  ring-FIFO-empty";
+	else
+		return "  ring-FIFO-full";
+
+	return "";
 }
-
-static u16
-mcp251xfd_dump_get_tef_obj_addr(const struct mcp251xfd_priv *priv,
-				u8 n)
-{
-	return mcp251xfd_dump_get_tef_obj_rel_addr(priv, n) +
-		MCP251XFD_RAM_START;
-}
-
-/* TX */
-
-static u8
-mcp251xfd_dump_get_tx_obj_size(const struct mcp251xfd_priv *priv,
-			       const struct mcp251xfd_dump_regs *regs)
-{
-	return sizeof(struct mcp251xfd_hw_tx_obj_can) -
-		sizeof_field(struct mcp251xfd_hw_tx_obj_can, data) +
-		mcp251xfd_dump_get_fifo_size(priv, regs, regs->tx_fifo.con);
-}
-
-static u8
-mcp251xfd_dump_get_tx_obj_num(const struct mcp251xfd_priv *priv,
-			      const struct mcp251xfd_dump_regs *regs)
-{
-	return mcp251xfd_dump_get_fifo_obj_num(priv, regs, regs->tx_fifo.con);
-}
-
-static u16
-mcp251xfd_dump_get_tx_obj_rel_addr(const struct mcp251xfd_priv *priv,
-				   const struct mcp251xfd_dump_regs *regs,
-				   u8 n)
-{
-	return mcp251xfd_dump_get_tef_obj_rel_addr(priv, mcp251xfd_dump_get_tef_obj_num(priv, regs)) +
-		mcp251xfd_dump_get_tx_obj_size(priv, regs) * n;
-}
-
-static u16
-mcp251xfd_dump_get_tx_obj_addr(const struct mcp251xfd_priv *priv,
-			       const struct mcp251xfd_dump_regs *regs, u8 n)
-{
-	return mcp251xfd_dump_get_tx_obj_rel_addr(priv, regs, n) +
-		MCP251XFD_RAM_START;
-}
-
-static u8
-mcp251xfd_dump_get_tx_tail(const struct mcp251xfd_priv *priv,
-			   const struct mcp251xfd_dump_regs *regs)
-{
-	return (regs->fifo[MCP251XFD_TX_FIFO].ua -
-		mcp251xfd_dump_get_tx_obj_rel_addr(priv, regs, 0)) /
-		mcp251xfd_dump_get_tx_obj_size(priv, regs);
-}
-
-static u8
-mcp251xfd_dump_get_tx_head(const struct mcp251xfd_priv *priv,
-			   const struct mcp251xfd_dump_regs *regs)
-{
-	return FIELD_GET(MCP251XFD_REG_FIFOSTA_FIFOCI_MASK,
-			 regs->fifo[MCP251XFD_TX_FIFO].sta);
-}
-
-/* RX */
-
-static u8
-mcp251xfd_dump_get_rx_obj_size(const struct mcp251xfd_priv *priv,
-			       const struct mcp251xfd_dump_regs *regs)
-{
-	return sizeof(struct mcp251xfd_hw_rx_obj_can) -
-		sizeof_field(struct mcp251xfd_hw_rx_obj_can, data) +
-		mcp251xfd_dump_get_fifo_size(priv, regs, regs->rx_fifo.con);
-}
-
-static u8
-mcp251xfd_dump_get_rx_obj_num(const struct mcp251xfd_priv *priv,
-			      const struct mcp251xfd_dump_regs *regs)
-{
-	return mcp251xfd_dump_get_fifo_obj_num(priv, regs, regs->rx_fifo.con);
-}
-
-static u16
-mcp251xfd_dump_get_rx_obj_rel_addr(const struct mcp251xfd_priv *priv,
-				   const struct mcp251xfd_dump_regs *regs, u8 n)
-{
-	return mcp251xfd_dump_get_tx_obj_rel_addr(priv, regs, mcp251xfd_dump_get_tx_obj_num(priv, regs)) +
-		mcp251xfd_dump_get_rx_obj_size(priv, regs) * n;
-}
-
-static u16
-mcp251xfd_dump_get_rx_obj_addr(const struct mcp251xfd_priv *priv,
-			       const struct mcp251xfd_dump_regs *regs, u8 n)
-{
-	return mcp251xfd_dump_get_rx_obj_rel_addr(priv, regs, n) + MCP251XFD_RAM_START;
-}
-
-static u8
-mcp251xfd_dump_get_rx_tail(const struct mcp251xfd_priv *priv,
-			   const struct mcp251xfd_dump_regs *regs)
-{
-	return (regs->fifo[MCP251XFD_RX_FIFO(0)].ua -
-		mcp251xfd_dump_get_rx_obj_rel_addr(priv, regs, 0)) /
-		mcp251xfd_dump_get_rx_obj_size(priv, regs);
-}
-
-static u8
-mcp251xfd_dump_get_rx_head(const struct mcp251xfd_priv *priv,
-			   const struct mcp251xfd_dump_regs *regs)
-{
-	return FIELD_GET(MCP251XFD_REG_FIFOSTA_FIFOCI_MASK, regs->fifo[MCP251XFD_RX_FIFO(0)].sta);
-}
-
-/* dump TEF */
 
 static void
-mcp251xfd_dump_ram_tef_obj_one(const struct mcp251xfd_priv *priv,
-			       const struct mcp251xfd_dump_regs *regs,
-			       const struct mcp251xfd_ring *tef,
-			       const struct mcp251xfd_hw_tef_obj *hw_tef_obj,
-			       u8 n)
+mcp251xfd_dump_ring_obj_one(const struct mcp251xfd_priv *priv,
+			    const struct mcp251xfd_ring *ring,
+			    const void *hw_obj, const u8 n)
 {
-	pr_info("TEF Object: 0x%02x (0x%03x)%s%s%s%s%s\n",
-		n, mcp251xfd_dump_get_tef_obj_addr(priv, n),
-		mcp251xfd_get_ring_head(tef) == n ? "  priv-HEAD" : "",
-		mcp251xfd_dump_get_tef_tail(priv, regs) == n ? "  chip-TAIL" : "",
-		mcp251xfd_get_ring_tail(tef) == n ? "  priv-TAIL" : "",
-		(mcp251xfd_dump_get_tef_tail(priv, regs) == n ?
-		 ((regs->tef.sta & MCP251XFD_REG_TEFSTA_TEFFIF) ? "  chip-FIFO-full" :
-		  !(regs->tef.sta & MCP251XFD_REG_TEFSTA_TEFNEIF) ? "  chip-FIFO-empty" : "") :
-		 ("")),
-		(mcp251xfd_get_ring_head(tef) == mcp251xfd_get_ring_tail(tef) &&
-		 mcp251xfd_get_ring_tail(tef) == n ?
-		 (priv->tef->head == priv->tef->tail ? "  priv-FIFO-empty" : "  priv-FIFO-full") :
-		 ("")));
+	const struct mcp251xfd_hw_tef_obj *hw_tef_obj = hw_obj;
+	const struct mcp251xfd_hw_rx_obj_canfd *hw_rx_obj = hw_obj;
+	const struct mcp251xfd_hw_tx_obj_canfd *hw_tx_obj = hw_obj;
+
+	pr_info("%s-%d Object: "
+		"0x%02x (0x%03x)"
+		"%s%s%s%s%s%s"
+		"\n",
+		get_object_type_str(ring->type), ring->nr,
+		n, mcp251xfd_dump_get_ring_obj_addr(priv, ring, n),
+
+		ring->type != MCP251XFD_DUMP_OBJECT_TYPE_TEF && mcp251xfd_dump_get_chip_head(priv, ring) == n ? "  chip-HEAD" : "",
+		ring->head != MCP251XFD_DUMP_UNKNOWN && mcp251xfd_dump_get_ring_head(priv, ring) == n ? "  ring-HEAD" : "",
+		mcp251xfd_dump_get_chip_tail(priv, ring) == n ? "  chip-TAIL" : "",
+		ring->tail != MCP251XFD_DUMP_UNKNOWN && mcp251xfd_dump_get_ring_tail(priv, ring) == n ? "  ring-TAIL" : "",
+		mcp251xfd_dump_ring_obj_one_fifo_flags_chip(priv, ring, n),
+		mcp251xfd_dump_ring_obj_one_fifo_flags_ring(priv, ring, n)
+		);
 	pr_info("%16s = 0x%08x\n", "id", hw_tef_obj->id);
 	pr_info("%16s = 0x%08x\n", "flags", hw_tef_obj->flags);
-	pr_info("%16s = 0x%08x\n", "ts", hw_tef_obj->ts);
-	__dump_mask(hw_tef_obj->flags, MCP251XFD_OBJ_FLAGS, SEQ, "0x%06lx", "Sequence");
-	pr_info("\n");
-}
 
-static void
-mcp251xfd_dump_ram_tef_obj(const struct mcp251xfd_priv *priv,
-			   const struct mcp251xfd_dump_regs *regs,
-			   const struct mcp251xfd_dump_ram *ram,
-			   const struct mcp251xfd_ring *tef)
-{
-	int i;
+	if (ring->type == MCP251XFD_DUMP_OBJECT_TYPE_TEF ||
+	    ring->type == MCP251XFD_DUMP_OBJECT_TYPE_RX)
+		pr_info("%16s = 0x%08x\n", "ts", hw_tef_obj->ts);
 
-	pr_info("\nTEF Overview:\n");
-	pr_info("%16s =        0x%02x    0x%08x\n", "head (p)",
-		mcp251xfd_get_ring_head(tef),
-		tef->head);
-	pr_info("%16s = 0x%02x   0x%02x    0x%08x\n", "tail (c/p)",
-		mcp251xfd_dump_get_tef_tail(priv, regs),
-		mcp251xfd_get_ring_tail(tef),
-		tef->tail);
-	pr_info("\n");
-
-	for (i = 0; i < mcp251xfd_dump_get_tef_obj_num(priv, regs); i++) {
-		const struct mcp251xfd_hw_tef_obj *hw_tef_obj;
-		u16 hw_tef_obj_rel_addr;
-
-		hw_tef_obj_rel_addr = mcp251xfd_dump_get_tef_obj_rel_addr(priv, i);
-
-		hw_tef_obj = (const struct mcp251xfd_hw_tef_obj *)&ram->ram[hw_tef_obj_rel_addr];
-		mcp251xfd_dump_ram_tef_obj_one(priv, regs, tef, hw_tef_obj, i);
+	if (ring->type == MCP251XFD_DUMP_OBJECT_TYPE_TEF) {
+		__dump_mask(hw_tef_obj->flags, MCP251XFD_OBJ_FLAGS, SEQ, "0x%06lx", "Sequence");
+	} else if (ring->type == MCP251XFD_DUMP_OBJECT_TYPE_TX) {
+		__dump_mask(hw_tx_obj->flags, MCP251XFD_OBJ_FLAGS, SEQ_MCP2517FD, "0x%06lx", "Sequence (MCP2517)");
+		__dump_mask(hw_tx_obj->flags, MCP251XFD_OBJ_FLAGS, SEQ_MCP2518FD, "0x%06lx", "Sequence (MCP2518)");
 	}
-}
 
-/* dump TX */
+	if (ring->type == MCP251XFD_DUMP_OBJECT_TYPE_RX ||
+	    ring->type == MCP251XFD_DUMP_OBJECT_TYPE_TX) {
+		const u8* data;
+		u8 dlc;
 
-static void
-mcp251xfd_dump_ram_tx_obj_one(const struct mcp251xfd_priv *priv,
-			      const struct mcp251xfd_dump_regs *regs,
-			      const struct mcp251xfd_ring *tx,
-			      const struct mcp251xfd_hw_tx_obj_canfd *hw_tx_obj,
-			      u8 n)
-{
-	pr_info("TX Object: 0x%02x (0x%03x)%s%s%s%s%s%s\n",
-		n, mcp251xfd_dump_get_tx_obj_addr(priv, regs, n),
-		mcp251xfd_dump_get_tx_head(priv, regs) == n ? "  chip-HEAD" : "",
-		mcp251xfd_get_ring_head(tx) == n ? "  priv-HEAD" : "",
-		mcp251xfd_dump_get_tx_tail(priv, regs) == n ? "  chip-TAIL" : "",
-		mcp251xfd_get_ring_tail(tx) == n ? "  priv-TAIL" : "",
-		mcp251xfd_dump_get_tx_tail(priv, regs) == n ?
-		(!(regs->tx_fifo.sta & MCP251XFD_REG_FIFOSTA_TFNRFNIF) ? "  chip-FIFO-full" :
-		 (regs->tx_fifo.sta & MCP251XFD_REG_FIFOSTA_TFERFFIF) ? "  chip-FIFO-empty" : "") :
-		(""),
-		(mcp251xfd_get_ring_head(tx) == mcp251xfd_get_ring_tail(tx) &&
-		 mcp251xfd_get_ring_tail(tx) == n ?
-		 (tx->head == tx->tail ? "  priv-FIFO-empty" : "  priv-FIFO-full") :
-		 ("")));
-	pr_info("%16s = 0x%08x\n", "id", hw_tx_obj->id);
-	pr_info("%16s = 0x%08x\n", "flags", hw_tx_obj->flags);
-	__dump_mask(hw_tx_obj->flags, MCP251XFD_OBJ_FLAGS, SEQ_MCP2517FD, "0x%06lx", "Sequence (MCP2517)");
-	__dump_mask(hw_tx_obj->flags, MCP251XFD_OBJ_FLAGS, SEQ_MCP2518FD, "0x%06lx", "Sequence (MCP2518)");
-	mcp251xfd_dump_ram_fifo_obj_data(priv,
-					 hw_tx_obj->data,
-					 FIELD_GET(MCP251XFD_OBJ_FLAGS_DLC, hw_tx_obj->flags));
-	pr_info("\n");
-}
+		if (ring->type == MCP251XFD_DUMP_OBJECT_TYPE_RX)
+			data = hw_rx_obj->data;
+		else
+			data = hw_tx_obj->data;
 
-static void
-mcp251xfd_dump_ram_tx_obj(const struct mcp251xfd_priv *priv,
-			  const struct mcp251xfd_dump_regs *regs,
-			  const struct mcp251xfd_dump_ram *ram,
-			  const struct mcp251xfd_ring *tx)
-{
-	int i;
-
-	pr_info("\nTX Overview:\n");
-	pr_info("%16s = 0x%02x    0x%02x    0x%08x\n", "head (c/p)",
-		mcp251xfd_dump_get_tx_head(priv, regs),
-		mcp251xfd_get_ring_head(tx),
-		tx->head);
-	pr_info("%16s = 0x%02x    0x%02x    0x%08x\n", "tail (c/p)",
-		mcp251xfd_dump_get_tx_tail(priv, regs),
-		mcp251xfd_get_ring_tail(tx),
-		tx->tail);
-	pr_info("\n");
-
-	for (i = 0; i < mcp251xfd_dump_get_tx_obj_num(priv, regs); i++) {
-		const struct mcp251xfd_hw_tx_obj_canfd *hw_tx_obj;
-		u16 hw_tx_obj_rel_addr;
-
-		hw_tx_obj_rel_addr = mcp251xfd_dump_get_tx_obj_rel_addr(priv, regs, i);
-
-		hw_tx_obj = (const struct mcp251xfd_hw_tx_obj_canfd *)&ram->ram[hw_tx_obj_rel_addr];
-		mcp251xfd_dump_ram_tx_obj_one(priv, regs, tx, hw_tx_obj, i);
+		dlc = FIELD_GET(MCP251XFD_OBJ_FLAGS_DLC, hw_rx_obj->flags);
+		mcp251xfd_dump_ring_obj_data(priv, data, dlc);
 	}
-}
 
-/* dump RX */
-
-static void
-mcp251xfd_dump_ram_rx_obj_one(const struct mcp251xfd_priv *priv,
-			      const struct mcp251xfd_dump_regs *regs,
-			      const struct mcp251xfd_ring *rx,
-			      const struct mcp251xfd_hw_rx_obj_canfd *hw_rx_obj,
-			      u8 n)
-{
-	pr_info("RX Object: 0x%02x (0x%03x)%s%s%s%s%s%s\n",
-		n, mcp251xfd_dump_get_rx_obj_addr(priv, regs, n),
-		mcp251xfd_dump_get_rx_head(priv, regs) == n ? "  chip-HEAD" : "",
-		mcp251xfd_get_ring_head(rx) == n ? "  priv-HEAD" : "",
-		mcp251xfd_dump_get_rx_tail(priv, regs) == n ? "  chip-TAIL" : "",
-		mcp251xfd_get_ring_tail(rx) == n ? "  priv-TAIL" : "",
-		mcp251xfd_dump_get_rx_tail(priv, regs) == n ?
-		((regs->rx_fifo.sta & MCP251XFD_REG_FIFOSTA_TFERFFIF) ? "  chip-FIFO-full" :
-		 !(regs->rx_fifo.sta & MCP251XFD_REG_FIFOSTA_TFNRFNIF) ? "  chip-FIFO-empty" : "") :
-		(""),
-		(mcp251xfd_get_ring_head(rx) == mcp251xfd_get_ring_tail(rx) &&
-		 mcp251xfd_get_ring_tail(rx) == n ?
-		 (priv->rx->head == priv->rx->tail ? "  priv-FIFO-empty" : "  priv-FIFO-full") :
-		 ("")));
-	pr_info("%16s = 0x%08x\n", "id", hw_rx_obj->id);
-	pr_info("%16s = 0x%08x\n", "flags", hw_rx_obj->flags);
-	pr_info("%16s = 0x%08x\n", "ts", hw_rx_obj->ts);
-	mcp251xfd_dump_ram_fifo_obj_data(priv, hw_rx_obj->data, FIELD_GET(MCP251XFD_OBJ_FLAGS_DLC, hw_rx_obj->flags));
 	pr_info("\n");
 }
 
 static void
-mcp251xfd_dump_ram_rx_obj(const struct mcp251xfd_priv *priv,
-			  const struct mcp251xfd_dump_regs *regs,
-			  const struct mcp251xfd_dump_ram *ram,
-			  const struct mcp251xfd_ring *rx)
+mcp251xfd_dump_ring(const struct mcp251xfd_priv *priv,
+		    const struct mcp251xfd_ring *ring,
+		    const struct mcp251xfd_dump_regs *regs)
 {
 	int i;
 
-	pr_info("\nRX Overview:\n");
-	pr_info("%16s = 0x%02x    0x%02x    0x%08x\n", "head (c/p)",
-		mcp251xfd_dump_get_rx_head(priv, regs),
-		mcp251xfd_get_ring_head(rx), rx->head);
-	pr_info("%16s = 0x%02x    0x%02x    0x%08x\n", "tail (c/p)",
-		mcp251xfd_dump_get_rx_tail(priv, regs),
-		mcp251xfd_get_ring_tail(rx), rx->tail);
+	pr_info("\n%s-%d FIFO %d Overview:\n",
+		get_object_type_str(ring->type), ring->nr, ring->fifo_nr);
+
+	if (ring->type == MCP251XFD_DUMP_OBJECT_TYPE_TEF) {
+		if (ring->head == MCP251XFD_DUMP_UNKNOWN)
+			pr_info("%16s\n", "head ( / )");
+		else
+			pr_info("%16s =         0x%02x    0x%08x\n", "head ( /r)",
+				mcp251xfd_dump_get_ring_head(priv, ring),
+				ring->head);
+	} else {
+		if (ring->head == MCP251XFD_DUMP_UNKNOWN)
+			pr_info("%16s = 0x%02x\n", "head (c/ )",
+			mcp251xfd_dump_get_chip_head(priv, ring));
+		else
+			pr_info("%16s = 0x%02x    0x%02x    0x%08x\n", "head (c/r)",
+			mcp251xfd_dump_get_chip_head(priv, ring),
+			mcp251xfd_dump_get_ring_head(priv, ring),
+			ring->head);
+	}
+
+	if (ring->tail == MCP251XFD_DUMP_UNKNOWN)
+		pr_info("%16s = 0x%02x\n", "tail (c/ )",
+			mcp251xfd_dump_get_chip_tail(priv, ring));
+	else
+		pr_info("%16s = 0x%02x    0x%02x    0x%08x\n", "tail (c/r)",
+			mcp251xfd_dump_get_chip_tail(priv, ring),
+			mcp251xfd_dump_get_ring_tail(priv, ring),
+			ring->tail);
+
 	pr_info("\n");
 
-	for (i = 0; i < mcp251xfd_dump_get_rx_obj_num(priv, regs); i++) {
-		const struct mcp251xfd_hw_rx_obj_canfd *hw_rx_obj;
-		u16 hw_rx_obj_rel_addr;
+	for (i = 0; i < ring->obj_num; i++) {
+		void *hw_obj;
 
-		hw_rx_obj_rel_addr = mcp251xfd_dump_get_rx_obj_rel_addr(priv, regs, i);
-		hw_rx_obj = (const struct mcp251xfd_hw_rx_obj_canfd *)&ram->ram[hw_rx_obj_rel_addr];
-
-		mcp251xfd_dump_ram_rx_obj_one(priv, regs, rx, hw_rx_obj, i);
+		hw_obj = mcp251xfd_dump_get_ring_hw_obj(priv, ring, i);
+		mcp251xfd_dump_ring_obj_one(priv, ring, hw_obj, i);
 	}
 }
 
 #undef __dump_mask
 #undef __dump_bit
 
-static void mcp251xfd_dump_ram(const struct mcp251xfd_priv *priv, const struct mcp251xfd_dump_regs *regs, const struct mcp251xfd_dump_ram *ram)
+static void
+mcp251xfd_dump_ram(const struct mcp251xfd_priv *priv,
+		   const struct mcp251xfd_dump_regs *regs,
+		   const struct mcp251xfd_dump_ram *ram)
 {
+	unsigned int i;
+
 	netdev_info(priv->ndev, "----------------------- RAM dump ----------------------\n");
-	mcp251xfd_dump_ram_tef_obj(priv, regs, ram, priv->tef);
-	mcp251xfd_dump_ram_tx_obj(priv, regs, ram, priv->tx);
-	mcp251xfd_dump_ram_rx_obj(priv, regs, ram, priv->rx);
+
+	for (i = 0; i < ARRAY_SIZE(regs->fifo); i++) {
+		const struct mcp251xfd_ring *ring = &priv->ring[i];
+
+		switch (ring->type) {
+		case MCP251XFD_DUMP_OBJECT_TYPE_TEF:
+		case MCP251XFD_DUMP_OBJECT_TYPE_RX:
+		case MCP251XFD_DUMP_OBJECT_TYPE_TX:
+			mcp251xfd_dump_ring(priv, ring, regs);
+		default:
+			break;
+		}
+	}
+
 	netdev_info(priv->ndev, "------------------------- end -------------------------\n");
 }
 
@@ -877,6 +884,7 @@ void mcp251xfd_dump(struct mcp251xfd_priv *priv)
 	if (err)
 		return;
 
+	mcp251xfd_dump_analyze_regs_and_ram(priv, &regs, &ram);
 	mcp251xfd_dump_regs(priv, &regs, &regs_mcp251xfd);
 	mcp251xfd_dump_ram(priv, &regs, &ram);
 }

@@ -21,7 +21,6 @@
 #include "mcp251xfd.h"
 #include "mcp251xfd-dump-userspace.h"
 
-
 struct mcp251xfd_dump_iter {
 	const void *start;
 	const struct mcp251xfd_dump_object_header *hdr;
@@ -29,20 +28,20 @@ struct mcp251xfd_dump_iter {
 	const void *object_end;
 };
 
-static __attribute__((__unused__)) const char *
+const char *
 get_object_type_str(enum mcp251xfd_dump_object_type object_type)
 {
 	switch (object_type) {
 	case MCP251XFD_DUMP_OBJECT_TYPE_REG:
-		return "reg";
+		return "REG";
 	case MCP251XFD_DUMP_OBJECT_TYPE_TEF:
-		return "tef";
+		return "TEF";
 	case MCP251XFD_DUMP_OBJECT_TYPE_RX:
-		return "rx";
+		return "RX";
 	case MCP251XFD_DUMP_OBJECT_TYPE_TX:
-		return "tx";
+		return "TX";
 	case MCP251XFD_DUMP_OBJECT_TYPE_END:
-		return "end";
+		return "END";
 	default:
 		return "<unknown>";
 	}
@@ -86,7 +85,7 @@ do_dev_coredump_read_reg(const struct mcp251xfd_priv *priv,
 		reg = le32toh(object->reg);
 		val = le32toh(object->val);
 
-		pr_debug("%s: object=0x%04zx reg=0x%04x - val=0x%08x\n",
+		pr_debug("%s: offset=0x%04zx reg=0x%04x - val=0x%08x\n",
 			 __func__,
 			 (void *)object - iter->start,
 			 reg, val);
@@ -116,7 +115,7 @@ do_dev_coredump_read_ring(const struct mcp251xfd_priv *priv,
 		key = le32toh(object->reg);
 		val = le32toh(object->val);
 
-		pr_debug("%s: reg=0x%04zx key=0x%02x: %8s - val=0x%08x\n",
+		pr_debug("%s: offset=0x%04zx key=0x%02x: %8s - val=0x%08x\n",
 			 __func__,
 			 (void *)object - iter->start,
 			 key, get_ring_key_str(key), val);
@@ -144,7 +143,7 @@ do_dev_coredump_read_ring(const struct mcp251xfd_priv *priv,
 			ring->obj_size = val;
 			break;
 		default:
-			return -EINVAL;
+			continue;
 		}
 	}
 
@@ -167,6 +166,7 @@ do_dev_coredump_read(struct mcp251xfd_priv *priv,
 	       le32toh(iter->hdr->magic) == MCP251XFD_DUMP_MAGIC) {
 		const struct mcp251xfd_dump_object_header *hdr = iter->hdr;
 		enum mcp251xfd_dump_object_type object_type;
+		struct mcp251xfd_ring ring;
 		size_t object_offset, object_len;
 		int err;
 
@@ -180,6 +180,8 @@ do_dev_coredump_read(struct mcp251xfd_priv *priv,
 		iter->object_start = iter->start + object_offset;
 		iter->object_end = iter->object_start + object_len;
 
+		mcp251xfd_dump_ring_init(&ring);
+
 		pr_debug("%s: hdr=0x%04zx type=0x%08x: %8s - offset=0x%04zx len=0x%04zx end=0x%04zx\n",
 			 __func__,
 			 (void *)iter->hdr - iter->start,
@@ -191,13 +193,17 @@ do_dev_coredump_read(struct mcp251xfd_priv *priv,
 			err = do_dev_coredump_read_reg(priv, iter, mem);
 			break;
 		case MCP251XFD_DUMP_OBJECT_TYPE_TEF:
-			err = do_dev_coredump_read_ring(priv, iter, priv->tef);
-			break;
 		case MCP251XFD_DUMP_OBJECT_TYPE_RX:
-			err = do_dev_coredump_read_ring(priv, iter, priv->rx);
-			break;
 		case MCP251XFD_DUMP_OBJECT_TYPE_TX:
-			err = do_dev_coredump_read_ring(priv, iter, priv->tx);
+			err = do_dev_coredump_read_ring(priv, iter, &ring);
+			if (err)
+				return err;
+
+			if (ring.fifo_nr >= ARRAY_SIZE(priv->ring))
+				return -EINVAL;
+
+			priv->ring[ring.fifo_nr] = ring;
+
 			break;
 		case MCP251XFD_DUMP_OBJECT_TYPE_END:
 			return 0;
