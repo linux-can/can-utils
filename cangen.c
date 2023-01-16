@@ -596,23 +596,23 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (strlen(argv[optind]) >= IFNAMSIZ) {
-		printf("Name of CAN device '%s' is too long!\n\n", argv[optind]);
-		return 1;
-	}
-
 	s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
 	if (s < 0) {
 		perror("socket");
 		return 1;
 	}
 
-	addr.can_family = AF_CAN;
-	addr.can_ifindex = if_nametoindex(argv[optind]);
-	if (!addr.can_ifindex) {
+	strncpy(ifr.ifr_name, argv[optind], IFNAMSIZ - 1);
+	ifr.ifr_name[IFNAMSIZ - 1] = '\0';
+	ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
+	if (!ifr.ifr_ifindex) {
 		perror("if_nametoindex");
 		return 1;
 	}
+
+	memset(&addr, 0, sizeof(addr));
+	addr.can_family = AF_CAN;
+	addr.can_ifindex = ifr.ifr_ifindex;
 
 	/*
 	 * disable default receive filter on this RAW socket
