@@ -99,6 +99,18 @@ AC_CHECK_DECL(SCM_TIMESTAMPING_OPT_STATS,,
     [AC_DEFINE([SCM_TIMESTAMPING_OPT_STATS], [54], [SCM_TIMESTAMPING_OPT_STATS])],
     [[#include <linux/net.h>]]
 )
+AC_CHECK_DECL(CLOCK_TAI,,
+    [AC_DEFINE([CLOCK_TAI], [11], [CLOCK_TAI])],
+    [[#include <time.h>]]
+)
+AC_CHECK_DECL(SO_TXTIME,,
+    [AC_DEFINE([SO_TXTIME], [61], [SO_TXTIME])],
+    [[#include <sys/socket.h>]]
+)
+AC_CHECK_DECL(SCM_TXTIME,,
+    [AC_DEFINE([SCM_TXTIME], [SO_TXTIME], [SCM_TXTIME])],
+    [[#include <sys/socket.h>]]
+)
 
 
 #
