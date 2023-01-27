@@ -81,6 +81,12 @@
 #define MODE_FIX 2
 #define MODE_RANDOM_EVEN 3
 #define MODE_RANDOM_ODD 4
+#define MODE_RANDOM_FIX 5
+
+#define NIBBLE_H 1
+#define NIBBLE_L 2
+
+#define CHAR_RANDOM 'x'
 
 extern int optind, opterr, optopt;
 
@@ -187,7 +193,8 @@ static void print_usage(char *prg)
 	fprintf(stderr, " 'e'     => random values, even ID\n");
 	fprintf(stderr, " 'o'     => random values, odd ID\n");
 	fprintf(stderr, " 'i'     => increment values\n");
-	fprintf(stderr, " <value> => fixed value (in hexadecimal for -I and -D)\n\n");
+	fprintf(stderr, " <value> => fixed value (in hexadecimal for -I and -D)\n");
+	fprintf(stderr, "         => nibbles written as '%c' are randomized (only -D)\n\n", CHAR_RANDOM);
 	fprintf(stderr, "The gap value (in milliseconds) may have decimal places, e.g. '-g 4.73'\n");
 	fprintf(stderr, "When incrementing the CAN data the data length code minimum is set to 1.\n");
 	fprintf(stderr, "CAN IDs and data content are given and expected in hexadecimal values.\n\n");
@@ -198,6 +205,8 @@ static void print_usage(char *prg)
 	fprintf(stderr, "\t(generate EFF frames, incr. length)\n");
 	fprintf(stderr, "%s vcan0 -D 11223344DEADBEEF -L 8\n", prg);
 	fprintf(stderr, "\t(fixed CAN data payload and length)\n");
+	fprintf(stderr, "%s vcan0 -D 11%c%c3344DEADBEEF -L 8\n", prg, CHAR_RANDOM, CHAR_RANDOM);
+	fprintf(stderr, "\t(fixed CAN data payload where 2. byte is randomized, fixed length)\n");
 	fprintf(stderr, "%s vcan0 -I 555 -D CCCCCCCCCCCCCCCC -L 8 -g 3.75\n", prg);
 	fprintf(stderr, "\t(generate a fix busload without bit-stuffing effects)\n");
 	fprintf(stderr, "%s vcan0 -g 0 -i -x\n", prg);
@@ -398,6 +407,32 @@ enum {
 	OPT_START = UCHAR_MAX + 2,
 };
 
+/*
+ * Search for CHAR_RANDOM in dataoptarg, save its position, replace it with 0.
+ * Return 1 if at least one CHAR_RANDOM found.
+ */
+static int parse_dataoptarg(char *dataoptarg, unsigned char *rand_position)
+{
+	int mode_format_selected = MODE_FIX;
+	int arglen = strlen(dataoptarg);
+
+	/* Mark nibbles with * as fuzzable */
+	for (int i = 0; i < CANFD_MAX_DLEN && i < arglen / 2; i++) {
+		if (optarg[2 * i] == CHAR_RANDOM) {
+			optarg[2 * i] = '0';
+			rand_position[i] += NIBBLE_H;
+			mode_format_selected = MODE_RANDOM_FIX;
+		}
+		if (optarg[2 * i + 1] == CHAR_RANDOM) {
+			optarg[2 * i + 1] = '0';
+			rand_position[i] += NIBBLE_L;
+			mode_format_selected = MODE_RANDOM_FIX;
+		}
+	}
+
+	return mode_format_selected;
+}
+
 int main(int argc, char **argv)
 {
 	double gap = DEFAULT_GAP;
@@ -422,6 +457,7 @@ int main(int argc, char **argv)
 	int incdlc = 0;
 	unsigned long rnd;
 	unsigned char fixdata[CANFD_MAX_DLEN];
+	unsigned char rand_position[CANFD_MAX_DLEN] = {0};
 
 	int opt;
 	int s; /* socket */
@@ -539,7 +575,8 @@ int main(int argc, char **argv)
 			} else if (optarg[0] == 'i') {
 				data_mode = MODE_INCREMENT;
 			} else {
-				data_mode = MODE_FIX;
+				data_mode = parse_dataoptarg(optarg, rand_position);
+
 				if (hexstring2data(optarg, fixdata, CANFD_MAX_DLEN)) {
 					printf("wrong fix data definition\n");
 					return 1;
@@ -748,6 +785,20 @@ int main(int argc, char **argv)
 				memcpy(&frame.data[8], &frame.data[0], 8);
 				memcpy(&frame.data[16], &frame.data[0], 16);
 				memcpy(&frame.data[32], &frame.data[0], 32);
+			}
+		}
+
+		if (data_mode == MODE_RANDOM_FIX) {
+			memcpy(frame.data, fixdata, CANFD_MAX_DLEN);
+
+			for (int i = 0; i < frame.len; i++) {
+				if (rand_position[i] == (NIBBLE_H | NIBBLE_L)) {
+					frame.data[i] = random();
+				} else if (rand_position[i] == NIBBLE_H) {
+					frame.data[i] = (frame.data[i] & 0x0f) | (random() & 0xf0);
+				} else if (rand_position[i] == NIBBLE_L) {
+					frame.data[i] = (frame.data[i] & 0xf0) | (random() & 0x0f);
+				}
 			}
 		}
 
