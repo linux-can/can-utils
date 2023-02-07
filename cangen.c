@@ -168,10 +168,10 @@ static void print_usage(char *prg)
 	fprintf(stderr, "Usage: %s [options] <CAN interface>\n", prg);
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "         -g <ms>       (gap in milli seconds - default: %d ms)\n", DEFAULT_GAP);
-	fprintf(stderr, "         -a            (use absolute time for gap)");
-	fprintf(stderr, "         -t            (use SO_TXTIME)");
-	fprintf(stderr, "         --start <ns>  (start time (UTC nanoseconds))");
-	fprintf(stderr, "         --mark <id>   (set SO_MARK to <id>, default %u)", DEFAULT_SO_MARK_VAL);
+	fprintf(stderr, "         -a            (use absolute time for gap)\n");
+	fprintf(stderr, "         -t            (use SO_TXTIME)\n");
+	fprintf(stderr, "         --start <ns>  (start time (UTC nanoseconds))\n");
+	fprintf(stderr, "         --mark <id>   (set SO_MARK to <id>, default %u)\n", DEFAULT_SO_MARK_VAL);
 	fprintf(stderr, "         -e            (generate extended frame mode (EFF) CAN frames)\n");
 	fprintf(stderr, "         -f            (generate CAN FD CAN frames)\n");
 	fprintf(stderr, "         -b            (generate CAN FD CAN frames with bitrate switch (BRS))\n");
