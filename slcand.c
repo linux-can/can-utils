@@ -246,7 +246,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'b':
 			btr = optarg;
-			if (strlen(btr) > 6)
+			if (strlen(btr) > 8)
 				print_usage(argv[0]);
 			break;
 		case 'F':
