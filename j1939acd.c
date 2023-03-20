@@ -110,7 +110,7 @@ static struct {
 	uint64_t name;
 	uint8_t current_sa;
 	uint8_t last_sa;
-	int sig_term;
+	volatile sig_atomic_t signal_num;
 	int sig_alrm;
 	int sig_usr1;
 	int state;
@@ -337,7 +337,7 @@ static void sighandler(int sig, siginfo_t *info, void *vp)
 	switch (sig) {
 	case SIGINT:
 	case SIGTERM:
-		s.sig_term = 1;
+		s.signal_num = sig;
 		break;
 	case SIGALRM:
 		s.sig_alrm = 1;
@@ -531,7 +531,7 @@ int main(int argc, char *argv[])
 	install_signal(SIGUSR1);
 	install_signal(SIGUSR2);
 
-	while (!s.sig_term) {
+	while (!s.signal_num) {
 		if (s.sig_usr1) {
 			s.sig_usr1 = 0;
 			dump_status();
@@ -648,6 +648,9 @@ done:
 		fprintf(stderr, "- shutdown\n");
 	claim_address(sock, s.name, J1939_IDLE_ADDR);
 	save_cache();
+
+	if (s.signal_num)
+		return 128 + s.signal_num;
+
 	return 0;
 }
-
