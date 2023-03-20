@@ -91,6 +91,7 @@
 extern int optind, opterr, optopt;
 
 static volatile int running = 1;
+static volatile sig_atomic_t signal_num;
 static unsigned long long enobufs_count;
 static bool ignore_enobufs;
 static bool use_so_txtime;
@@ -220,6 +221,7 @@ static void print_usage(char *prg)
 static void sigterm(int signo)
 {
 	running = 0;
+	signal_num = signo;
 }
 
 static int setsockopt_txtime(int fd)
@@ -886,6 +888,9 @@ int main(int argc, char **argv)
 		       enobufs_count);
 
 	close(s);
+
+	if (signal_num)
+		return 128 + signal_num;
 
 	return 0;
 }
