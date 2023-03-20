@@ -33,6 +33,7 @@ extern int optind, opterr, optopt;
 
 static int s = -1;
 static bool running = true;
+static volatile sig_atomic_t signal_num;
 static bool infinite = true;
 static unsigned int drop_until_quit;
 static unsigned int drop_count;
@@ -73,6 +74,7 @@ static void print_usage(char *prg)
 static void sig_handler(int signo)
 {
 	running = false;
+	signal_num = signo;
 }
 
 
@@ -366,6 +368,9 @@ int main(int argc, char **argv)
 		do_receive();
 	else
 		do_send();
+
+	if (signal_num)
+		return 128 + signal_num;
 
 	exit(EXIT_SUCCESS);
 }
