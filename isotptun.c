@@ -79,6 +79,7 @@
 #define BUF_LEN (MAX_PDU_LENGTH + 1)
 
 static volatile int running = 1;
+static volatile sig_atomic_t signal_num;
 
 static void fake_syslog(int priority, const char *format, ...)
 {
@@ -130,6 +131,7 @@ void print_usage(char *prg)
 void sigterm(int signo)
 {
 	running = 0;
+	signal_num = signo;
 }
 
 int main(int argc, char **argv)
@@ -403,5 +405,9 @@ int main(int argc, char **argv)
 
 	close(s);
 	close(t);
+
+	if (signal_num)
+		return 128 + signal_num;
+
 	return EXIT_SUCCESS;
 }
