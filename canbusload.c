@@ -82,6 +82,8 @@ static struct {
 	unsigned int recv_bits_dbitrate;
 } stat[MAXSOCK+1];
 
+static volatile int running = 1;
+static volatile sig_atomic_t signal_num;
 static int  max_devname_len; /* to prevent frazzled device name output */ 
 static int  max_bitrate_len;
 static int  currmax;
@@ -124,7 +126,8 @@ void print_usage(char *prg)
 
 void sigterm(int signo)
 {
-	exit(0);
+	running = 0;
+	signal_num = signo;
 }
 
 void printstats(int signo)
@@ -382,7 +385,7 @@ int main(int argc, char **argv)
 	if (redraw)
 		printf("%s", CLR_SCREEN);
 
-	while (1) {
+	while (running) {
 
 		FD_ZERO(&rdfs);
 		for (i=0; i<currmax; i++)
@@ -424,6 +427,9 @@ int main(int argc, char **argv)
 
 	for (i=0; i<currmax; i++)
 		close(s[i]);
+
+	if (signal_num)
+		return 128 + signal_num;
 
 	return 0;
 }
