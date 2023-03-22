@@ -118,6 +118,7 @@ static const char extra_m_info[4][4] = { "- -", "B -", "- E", "B E" };
 extern int optind, opterr, optopt;
 
 static volatile int running = 1;
+static volatile sig_atomic_t signal_num;
 
 static void print_usage(void)
 {
@@ -169,6 +170,7 @@ static void print_usage(void)
 static void sigterm(int signo)
 {
 	running = 0;
+	signal_num = signo;
 }
 
 static int idx2dindex(int ifidx, int socket)
@@ -860,6 +862,9 @@ int main(int argc, char **argv)
 
 	if (log)
 		fclose(logfile);
+
+	if (signal_num)
+		return 128 + signal_num;
 
 	return 0;
 }

@@ -584,10 +584,8 @@ int main(int argc, char *argv[])
 
 	close(sockfd);
 
-	if (exit_sig) {
-		signal(exit_sig, SIG_DFL);
-		kill(getpid(), exit_sig);
-	}
+	if (exit_sig)
+		return 128 + exit_sig;
 
 	return err;
 }

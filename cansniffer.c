@@ -124,6 +124,7 @@ extern int optind, opterr, optopt;
 
 static int idx;
 static int running = 1;
+static volatile sig_atomic_t signal_num;
 static int clearscreen = 1;
 static int print_eff;
 static int print_ascii = 1;
@@ -243,6 +244,7 @@ void print_usage(char *prg)
 void sigterm(int signo)
 {
 	running = 0;
+	signal_num = signo;
 }
 
 int main(int argc, char **argv)
@@ -428,6 +430,10 @@ int main(int argc, char **argv)
 	printf("%s", CSR_SHOW); /* show cursor */
 
 	close(s);
+
+	if (signal_num)
+		return 128 + signal_num;
+
 	return ret;
 }
 

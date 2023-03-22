@@ -84,6 +84,7 @@ static int  max_devname_len;
 extern int optind, opterr, optopt;
 
 static volatile int running = 1;
+static volatile sig_atomic_t signal_num;
 
 void print_usage(char *prg)
 {
@@ -164,7 +165,8 @@ void childdied(int i)
  */
 void shutdown_gra(int i)
 {
-	exit(0);
+	running = 0;
+	signal_num = i;
 }
 
 
@@ -433,5 +435,9 @@ int main(int argc, char **argv)
 		close(s[i]);
 
 	close(accsocket);
+
+	if (signal_num)
+		return 128 + signal_num;
+
 	return 0;
 }

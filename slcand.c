@@ -93,7 +93,7 @@ void print_usage(char *prg)
 }
 
 static int slcand_running;
-static int exit_code;
+static volatile sig_atomic_t exit_code;
 static char ttypath[TTYPATH_LENGTH];
 
 static void child_handler(int signum)
@@ -104,16 +104,12 @@ static void child_handler(int signum)
 		/* exit parent */
 		exit(EXIT_SUCCESS);
 		break;
+	case SIGINT:
+	case SIGTERM:
 	case SIGALRM:
 	case SIGCHLD:
 		syslogger(LOG_NOTICE, "received signal %i on %s", signum, ttypath);
-		exit_code = EXIT_FAILURE;
-		slcand_running = 0;
-		break;
-	case SIGINT:
-	case SIGTERM:
-		syslogger(LOG_NOTICE, "received signal %i on %s", signum, ttypath);
-		exit_code = EXIT_SUCCESS;
+		exit_code = 128 + signum;
 		slcand_running = 0;
 		break;
 	}
