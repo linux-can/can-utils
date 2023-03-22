@@ -488,7 +488,7 @@ include $(BUILD_EXECUTABLE)
 
 include $(CLEAR_VARS)
 
-LOCAL_SRC_FILES := slcanpty.c
+LOCAL_SRC_FILES := lib.c slcanpty.c
 LOCAL_MODULE := slcanpty
 LOCAL_MODULE_TAGS := optional
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/include/
