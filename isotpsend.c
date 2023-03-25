@@ -42,6 +42,7 @@
  *
  */
 
+#include <fcntl.h>
 #include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,10 +79,30 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -S            (SF broadcast mode - for functional addressing)\n");
 	fprintf(stderr, "         -C            (CF broadcast mode - no wait for flow controls)\n");
 	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags>  (link layer options for CAN FD)\n");
+	fprintf(stderr, "         -i <filename> (Read PDU data from binary file instead of STDIN)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "The pdu data is expected on STDIN in space separated ASCII hex values.\n");
 	fprintf(stderr, "(*) = Use '-t %s' to set N_As to zero for Linux version 5.18+\n", ZERO_STRING);
 	fprintf(stderr, "\n");
+}
+
+ssize_t read_binary_file(void *buffer, const size_t siz_buffer, const char *filename)
+{
+	int fd = -1;
+	ssize_t num_read = -1;
+
+	if( buffer == NULL  ||  siz_buffer < 1  ||  filename == NULL ) {
+		return 0;
+	}
+
+	if( (fd = open(filename, O_RDONLY)) == -1 ) {
+		return 0;
+	}
+
+	num_read = read(fd, buffer, siz_buffer);
+	close(fd);
+
+	return num_read > 0  ?  num_read : 0;
 }
 
 int main(int argc, char **argv)
@@ -102,7 +123,7 @@ int main(int argc, char **argv)
 
     addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-    while ((opt = getopt(argc, argv, "s:d:x:p:P:t:f:D:l:g:bSCL:?")) != -1) {
+    while ((opt = getopt(argc, argv, "s:d:x:p:P:t:f:D:l:g:bSCL:i:?")) != -1) {
 	    switch (opt) {
 	    case 's':
 		    addr.can_addr.tp.tx_id = strtoul(optarg, NULL, 16);
@@ -227,6 +248,10 @@ int main(int argc, char **argv)
 		    }
 		    break;
 
+		case 'i':
+			buflen = read_binary_file(&buf[0], sizeof(buf), optarg);
+			break;
+
 	    case '?':
 		    print_usage(basename(argv[0]));
 		    exit(0);
@@ -285,6 +310,7 @@ int main(int argc, char **argv)
 	exit(1);
     }
 
+	if( buflen < 1 ) {
     if (!datalen) {
 	    while (buflen < BUFSIZE && scanf("%hhx", &buf[buflen]) == 1)
 		    buflen++;
@@ -292,6 +318,7 @@ int main(int argc, char **argv)
 	    for (buflen = 0; buflen < datalen; buflen++)
 		    buf[buflen] = ((buflen % 0xFF) + 1) & 0xFF;
     }
+	}
 
 loop:
     if (usecs)
@@ -313,7 +340,7 @@ loop:
 	    goto loop;
     }
 
-    /* 
+    /*
      * due to a Kernel internal wait queue the PDU is sent completely
      * before close() returns.
      */
