@@ -17,7 +17,7 @@ subsystem (aka SocketCAN):
 * cansniffer : display CAN data content differences
 
 #### CAN access via IP sockets
-* canlogserver : log CAN frames from a remote/local host
+* canlogserver : log CAN frames and serves them
 * bcmserver : interactive BCM configuration (remote/local)
 * [socketcand](https://github.com/linux-can/socketcand) : use RAW/BCM/ISO-TP sockets via TCP/IP sockets
 * [cannelloni](https://github.com/mguentner/cannelloni) : UDP/SCTP based SocketCAN tunnel

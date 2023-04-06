@@ -88,6 +88,7 @@ static volatile sig_atomic_t signal_num;
 
 void print_usage(char *prg)
 {
+	fprintf(stderr, "%s - log CAN frames and serves them.\n", prg);
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>+\n", prg);
 	fprintf(stderr, "  (use CTRL-C to terminate %s)\n\n", prg);
 	fprintf(stderr, "Options:\n");
@@ -102,7 +103,11 @@ void print_usage(char *prg)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "When using more than one CAN interface the options\n");
 	fprintf(stderr, "m/v/i/e have comma separated values e.g. '-m 0,7FF,0'\n");
-	fprintf(stderr, "\nUse interface name '%s' to receive from all CAN interfaces.\n\n", ANYDEV);
+	fprintf(stderr, "\nUse interface name '%s' to receive from all CAN interfaces.\n", ANYDEV);
+	fprintf(stderr, "\n");
+	fprintf(stderr, "After running canlogserver, connect to it via TCP to get logged data.\n");
+	fprintf(stderr, "e.g. with 'nc localhost %d'\n", DEFPORT);
+	fprintf(stderr, "\n");
 }
 
 int idx2dindex(int ifidx, int socket)
