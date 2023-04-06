@@ -306,6 +306,15 @@ int main(int argc, char **argv)
 			perror("accept");
 			exit(1);
 		}
+		else if ((errno == EINTR) && !running) {
+			close(socki);
+			if (signal_num) {
+				return 128 + signal_num;
+			}
+			else {
+				return 1;
+			}
+		}
 	}
 
 	for (i=0; i<currmax; i++) {
