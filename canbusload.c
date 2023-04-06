@@ -325,6 +325,7 @@ int main(int argc, char **argv)
 		nptr = strchr(ptr, '@');
 
 		if (!nptr) {
+			fprintf(stderr, "Specify CAN interfaces in the form <CAN interface>@<bitrate>, e.g. can0@500000\n");
 			print_usage(prg);
 			return 1;
 		}
