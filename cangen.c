@@ -792,9 +792,11 @@ int main(int argc, char **argv)
 		}
 
 		if (data_mode == MODE_RANDOM_FIX) {
+			int i;
+			
 			memcpy(frame.data, fixdata, CANFD_MAX_DLEN);
 
-			for (int i = 0; i < frame.len; i++) {
+			for (i = 0; i < frame.len; i++) {
 				if (rand_position[i] == (NIBBLE_H | NIBBLE_L)) {
 					frame.data[i] = random();
 				} else if (rand_position[i] == NIBBLE_H) {
