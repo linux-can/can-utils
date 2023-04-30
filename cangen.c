@@ -417,9 +417,10 @@ static int parse_dataoptarg(char *dataoptarg, unsigned char *rand_position)
 {
 	int mode_format_selected = MODE_FIX;
 	int arglen = strlen(dataoptarg);
+	int i;
 
 	/* Mark nibbles with * as fuzzable */
-	for (int i = 0; i < CANFD_MAX_DLEN && i < arglen / 2; i++) {
+	for (i = 0; i < CANFD_MAX_DLEN && i < arglen / 2; i++) {
 		if (optarg[2 * i] == CHAR_RANDOM) {
 			optarg[2 * i] = '0';
 			rand_position[i] += NIBBLE_H;
