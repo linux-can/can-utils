@@ -45,6 +45,8 @@ MAKEFLAGS := -k
 
 CFLAGS := -O2 -Wall -Wno-parentheses
 
+HAVE_FORK := $(shell ./check_cc.sh "$(CC)" fork_test.c)
+
 CPPFLAGS += \
 	-I. \
 	-Iinclude \
@@ -66,9 +68,13 @@ PROGRAMS_ISOTP := \
 	isotpperf \
 	isotprecv \
 	isotpsend \
-	isotpserver \
 	isotpsniffer \
 	isotptun
+
+ifeq ($(HAVE_FORK),1)
+PROGRAMS_ISOTP += \
+	isotpserver
+endif
 
 PROGRAMS_J1939 := \
 	j1939acd \
@@ -87,14 +93,12 @@ PROGRAMS := \
 	$(PROGRAMS_J1939) \
 	$(PROGRAMS_SLCAN) \
 	asc2log \
-	bcmserver \
 	can-calc-bit-timing \
 	canbusload \
 	candump \
 	canfdtest \
 	cangen \
 	cansequence \
-	canlogserver \
 	canplayer \
 	cansend \
 	cansniffer \
@@ -102,6 +106,12 @@ PROGRAMS := \
 	log2long \
 	mcp251xfd-dump \
 	slcanpty
+
+ifeq ($(HAVE_FORK),1)
+PROGRAMS += \
+	canlogserver \
+	bcmserver
+endif
 
 all: $(PROGRAMS)
 

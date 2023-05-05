@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.3)
 
 project(can-utils LANGUAGES C)
 
+include (CheckFunctionExists)
 include (CheckSymbolExists)
 include (GNUInstallDirs)
 
@@ -25,12 +26,13 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSCM_TXTIME=SO_TXTIME")
 include_directories (.)
 include_directories (./include)
 
+check_function_exists(fork HAVE_FORK)
+
 set(PROGRAMS_CANLIB
     asc2log
     canbusload
     candump
     cangen
-    canlogserver
     canplayer
     cansend
     cansequence
@@ -38,6 +40,10 @@ set(PROGRAMS_CANLIB
     log2long
     slcanpty
 )
+
+if(HAVE_FORK)
+    list(APPEND PROGRAMS_CANLIB canlogserver)
+endif()
 
 set(PROGRAMS_J1939
     j1939acd
@@ -49,7 +55,6 @@ set(PROGRAMS_J1939
 
 set(PROGRAMS
     ${PROGRAMS_CANLIB}
-    bcmserver
     canfdtest
     cangw
     cansniffer
@@ -57,12 +62,16 @@ set(PROGRAMS
     isotpperf
     isotprecv
     isotpsend
-    isotpserver
     isotpsniffer
     isotptun
     slcan_attach
     slcand
 )
+
+if(HAVE_FORK)
+    list(APPEND PROGRAMS bcmserver)
+    list(APPEND PROGRAMS isotpserver)
+endif()
 
 add_executable(can-calc-bit-timing
     calc-bit-timing/can-calc-bit-timing.c

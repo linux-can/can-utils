@@ -75,14 +75,12 @@ EXTRA_DIST += \
 
 bin_PROGRAMS = \
 	asc2log \
-	bcmserver \
 	can-calc-bit-timing \
 	canbusload \
 	candump \
 	canfdtest \
 	cangen \
 	cangw \
-	canlogserver \
 	canplayer \
 	cansend \
 	cansequence \
@@ -91,7 +89,6 @@ bin_PROGRAMS = \
 	isotpperf \
 	isotprecv \
 	isotpsend \
-	isotpserver \
 	isotpsniffer \
 	isotptun \
 	j1939acd \
@@ -105,6 +102,13 @@ bin_PROGRAMS = \
 	slcand \
 	slcanpty \
 	testj1939
+
+if HAVE_FORK
+bin_PROGRAMS += \
+	bcmserver \
+	canlogserver \
+	isotpserver
+endif
 
 j1939acd_LDADD = libj1939.la
 j1939cat_LDADD = libj1939.la
