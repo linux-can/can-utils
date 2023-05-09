@@ -680,8 +680,8 @@ int main(int argc, char **argv)
 			return 1;
 		}
 
-		if (ifr.ifr_mtu != CANFD_MTU) {
-			printf("CAN interface is not CAN FD capable - sorry.\n");
+		if (ifr.ifr_mtu != CANFD_MTU && ifr.ifr_mtu != CANXL_MTU) {
+			printf("CAN interface is only Classical CAN capable - sorry.\n");
 			return 1;
 		}
 
