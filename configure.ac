@@ -76,6 +76,8 @@ AC_CHECK_FUNCS([ \
 	strtoul \
 ])
 
+AM_CONDITIONAL(HAVE_FORK, test "$ac_cv_func_fork_works" = "yes")
+
 # glibc versions before 2.17 needs to link with -lrt for clock_nanosleep
 AC_SEARCH_LIBS([clock_nanosleep], [rt])
 
