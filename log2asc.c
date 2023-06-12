@@ -190,6 +190,7 @@ int main(int argc, char **argv)
 	FILE *infile = stdin;
 	FILE *outfile = stdout;
 	static int maxdev, devno, i, crlf, fdfmt, nortrdlc, d4, opt, mtu;
+	int print_banner = 1;
 
 	while ((opt = getopt(argc, argv, "I:O:4nfr?")) != -1) {
 		switch (opt) {
@@ -272,7 +273,8 @@ int main(int argc, char **argv)
 			}
 		}
 
-		if (!start_tv.tv_sec) { /* print banner */
+		if (print_banner) { /* print banner */
+			print_banner = 0;
 			start_tv = tv;
 			fprintf(outfile, "date %s", ctime(&start_tv.tv_sec));
 			fprintf(outfile, "base hex  timestamps absolute%s",
