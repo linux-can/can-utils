@@ -299,7 +299,9 @@ int main(int argc, char **argv)
 	int currmax, numfilter;
 	int join_filter;
 	char *ptr, *nptr;
-	struct sockaddr_can addr;
+	struct sockaddr_can addr = {
+		.can_family = AF_CAN,
+	};
 	char ctrlmsg[CMSG_SPACE(sizeof(struct timeval)) +
 		     CMSG_SPACE(3 * sizeof(struct timespec)) +
 		     CMSG_SPACE(sizeof(__u32))];
@@ -504,8 +506,6 @@ int main(int argc, char **argv)
 
 		if (nbytes > max_devname_len)
 			max_devname_len = nbytes; /* for nice printing */
-
-		addr.can_family = AF_CAN;
 
 		memset(&ifr.ifr_name, 0, sizeof(ifr.ifr_name));
 		strncpy(ifr.ifr_name, ptr, nbytes);
