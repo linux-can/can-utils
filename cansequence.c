@@ -249,9 +249,10 @@ int main(int argc, char **argv)
 		.sa_handler = sig_handler,
 	};
 	struct ifreq ifr;
-	struct sockaddr_can addr;
+	struct sockaddr_can addr = {
+		.can_family = AF_CAN,
+	};
 	char *interface = "can0";
-	int family = PF_CAN, type = SOCK_RAW, proto = CAN_RAW;
 	int extended = 0;
 	int receive = 0;
 	int opt;
@@ -336,16 +337,14 @@ int main(int argc, char **argv)
 	frame.can_id = filter->can_id;
 	filter->can_mask |= CAN_EFF_FLAG;
 
-	printf("interface = %s, family = %d, type = %d, proto = %d\n",
-	       interface, family, type, proto);
+	printf("interface = %s\n", interface);
 
-	s = socket(family, type, proto);
+	s = socket(AF_CAN, SOCK_RAW, CAN_RAW);
 	if (s < 0) {
 		perror("socket()");
 		exit(EXIT_FAILURE);
 	}
 
-	addr.can_family = family;
 	strncpy(ifr.ifr_name, interface, sizeof(ifr.ifr_name));
 	if (ioctl(s, SIOCGIFINDEX, &ifr)) {
 		perror("ioctl()");
