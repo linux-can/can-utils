@@ -28,6 +28,7 @@
 #include <linux/can/raw.h>
 
 #define CAN_ID_DEFAULT	(2)
+#define ANYDEV "any"	/* name of interface to receive from any CAN interface */
 
 extern int optind, opterr, optopt;
 
@@ -248,7 +249,6 @@ int main(int argc, char **argv)
 	struct sigaction act = {
 		.sa_handler = sig_handler,
 	};
-	struct ifreq ifr;
 	struct sockaddr_can addr = {
 		.can_family = AF_CAN,
 	};
@@ -345,12 +345,13 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	strncpy(ifr.ifr_name, interface, sizeof(ifr.ifr_name));
-	if (ioctl(s, SIOCGIFINDEX, &ifr)) {
-		perror("ioctl()");
-		exit(EXIT_FAILURE);
+	if (strcmp(ANYDEV, interface)) {
+		addr.can_ifindex = if_nametoindex(interface);
+		if (!addr.can_ifindex) {
+			perror("if_nametoindex");
+			exit(EXIT_FAILURE);
+		}
 	}
-	addr.can_ifindex = ifr.ifr_ifindex;
 
 	/* first don't recv. any msgs */
 	if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0)) {
