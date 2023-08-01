@@ -195,12 +195,18 @@ struct alg {
 				      const struct can_bittiming_const *btc);
 		int (*calc_bittiming_const)(const struct net_device *dev, struct can_bittiming *bt,
 					    const struct can_bittiming_const *btc);
+		int (*calc_bittiming_extack)(const struct net_device *dev, struct can_bittiming *bt,
+					     const struct can_bittiming_const *btc, struct netlink_ext_ack *extack);
 	};
 	union {
 		int (*fixup_bittiming)(struct net_device *dev, struct can_bittiming *bt,
 				       const struct can_bittiming_const *btc);
 		int (*fixup_bittiming_const)(const struct net_device *dev, struct can_bittiming *bt,
 					     const struct can_bittiming_const *btc);
+		int (*fixup_bittiming_extack)(const struct net_device *dev, struct can_bittiming *bt,
+					      const struct can_bittiming_const *btc,
+					      struct netlink_ext_ack *extack);
+
 	};
 	const char *name;
 };
@@ -1281,9 +1287,21 @@ static const unsigned int common_data_bitrates[] = {
 #undef can_calc_bittiming
 #undef can_fixup_bittiming
 
+#define can_update_sample_point can_update_sample_point_v6_3
+#define can_calc_bittiming can_calc_bittiming_v6_3
+#define can_fixup_bittiming can_fixup_bittiming_v6_3
+#include "can-calc-bit-timing-v6_3.c"
+#undef can_update_sample_point
+#undef can_calc_bittiming
+#undef can_fixup_bittiming
+
 static const struct alg alg_list[] = {
 	/* 1st will be default */
 	{
+		.calc_bittiming_extack = can_calc_bittiming_v6_3,
+		.fixup_bittiming_extack = can_fixup_bittiming_v6_3,
+		.name = "v6.3",
+	}, {
 		.calc_bittiming_const = can_calc_bittiming_v5_19,
 		.fixup_bittiming_const = can_fixup_bittiming_v5_19,
 		.name = "v5.19",
