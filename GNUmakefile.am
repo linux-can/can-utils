@@ -42,7 +42,8 @@ libj1939_la_SOURCES = \
 	libj1939.c
 
 can_calc_bit_timing_SOURCES = \
-	calc-bit-timing/can-calc-bit-timing.c
+	calc-bit-timing/can-calc-bit-timing.c \
+	calc-bit-timing/compat.h
 
 EXTRA_DIST += \
 	calc-bit-timing/can-calc-bit-timing-v2_6_31.c \

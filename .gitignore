@@ -4,6 +4,8 @@
 *.la
 .deps
 .libs
+.ccls-cache
+compile_commands.json
 
 configure
 libtool
