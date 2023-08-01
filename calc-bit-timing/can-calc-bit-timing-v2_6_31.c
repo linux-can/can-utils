@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 
+#include "compat.h"
+
 /*
  * imported from  v2.6.31-rc1~330^2~376
  *
