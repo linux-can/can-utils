@@ -43,6 +43,12 @@ enum {
 
 /* imported from kernel */
 
+/* define in-kernel-types */
+typedef __u64 u64;
+typedef __u32 u32;
+
+#define NSEC_PER_SEC	1000000000L
+
 /**
  * abs - return absolute value of an argument
  * @x: the value.  If it is unsigned type, it is converted to signed type first.
@@ -102,6 +108,48 @@ enum {
 	__rem;							\
 })
 
+
+/**
+ * DIV_U64_ROUND_CLOSEST - unsigned 64bit divide with 32bit divisor rounded to nearest integer
+ * @dividend: unsigned 64bit dividend
+ * @divisor: unsigned 32bit divisor
+ *
+ * Divide unsigned 64bit dividend by unsigned 32bit divisor
+ * and round to closest integer.
+ *
+ * Return: dividend / divisor rounded to nearest integer
+ */
+#define DIV_U64_ROUND_CLOSEST(dividend, divisor)	\
+	({ u32 _tmp = (divisor); div_u64((u64)(dividend) + _tmp / 2, _tmp); })
+
+/**
+ * div_u64_rem - unsigned 64bit divide with 32bit divisor with remainder
+ * @dividend: unsigned 64bit dividend
+ * @divisor: unsigned 32bit divisor
+ * @remainder: pointer to unsigned 32bit remainder
+ *
+ * Return: sets ``*remainder``, then returns dividend / divisor
+ *
+ * This is commonly provided by 32bit archs to provide an optimized 64bit
+ * divide.
+ */
+static inline u64 div_u64_rem(u64 dividend, u32 divisor, u32 *remainder)
+{
+	*remainder = dividend % divisor;
+	return dividend / divisor;
+}
+
+static inline u64 div_u64(u64 dividend, u32 divisor)
+{
+	u32 remainder;
+	return div_u64_rem(dividend, divisor, &remainder);
+}
+
+static inline u64 mul_u32_u32(u32 a, u32 b)
+{
+	return (u64)a * b;
+}
+
 /* */
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -109,10 +157,7 @@ enum {
 /* we don't want to see these prints */
 #define netdev_err(dev, format, arg...) do { } while (0)
 #define netdev_warn(dev, format, arg...) do { } while (0)
-
-/* define in-kernel-types */
-typedef __u64 u64;
-typedef __u32 u32;
+#define NL_SET_ERR_MSG_FMT(dev, format, arg...) do { } while (0)
 
 struct calc_ref_clk {
 	__u32 clk;	/* CAN system clock frequency in Hz */
@@ -128,6 +173,10 @@ struct can_priv {
 
 struct net_device {
 	struct can_priv	priv;
+};
+
+struct netlink_ext_ack {
+	u32 __dummy;
 };
 
 struct calc_bittiming_const {
