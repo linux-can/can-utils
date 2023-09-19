@@ -108,6 +108,7 @@ static void print_usage(char *cmd)
 	       "\n"
 	       "Or supply low level bit timing parameters to decode them:\n"
 	       "\n"
+	       "\t--tq           Time quantum in ns\n"
 	       "\t--prop-seg     Propagation segment in TQs\n"
 	       "\t--phase-seg1   Phase buffer segment 1 in TQs\n"
 	       "\t--phase-seg2   Phase buffer segment 2 in TQs\n"
