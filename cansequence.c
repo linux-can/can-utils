@@ -347,7 +347,7 @@ int main(int argc, char **argv)
 	if (strcmp(ANYDEV, interface)) {
 		addr.can_ifindex = if_nametoindex(interface);
 		if (!addr.can_ifindex) {
-			perror("if_nametoindex");
+			perror("if_nametoindex()");
 			exit(EXIT_FAILURE);
 		}
 	}
