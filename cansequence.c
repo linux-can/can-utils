@@ -125,7 +125,7 @@ static void do_receive()
 
 		nbytes = recvmsg(s, &msg, 0);
 		if (nbytes < 0) {
-			perror("read()");
+			perror("recvmsg()");
 			exit(EXIT_FAILURE);
 		}
 
