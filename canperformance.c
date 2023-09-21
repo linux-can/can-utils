@@ -1630,7 +1630,6 @@
      int expected_frame_count = 0;
      int frames_received = 0;
      uint8_t *file_buffer = NULL;
-     long bytes_written = 0;
 
      /* Variables for progress bar */
      int progress_bar_width = 50;
@@ -1850,7 +1849,6 @@
              if (bytes_to_write > 0) {
                  memcpy(file_buffer + offset, frame.data,
                         bytes_to_write);
-                 bytes_written += bytes_to_write;
              }
 
              frames_received++;
