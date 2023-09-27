@@ -68,25 +68,25 @@
 #define MAXSOCK 16    /* max. number of CAN interfaces given on the cmdline */
 
 #define PERCENTRES 5 /* resolution in percent for bargraph */
-#define NUMBAR (100/PERCENTRES) /* number of bargraph elements */
+#define NUMBAR (100 / PERCENTRES) /* number of bargraph elements */
 
 extern int optind, opterr, optopt;
 
 static struct {
-	char devname[IFNAMSIZ+1];
+	char devname[IFNAMSIZ + 1];
 	unsigned int bitrate;
 	unsigned int dbitrate;
 	unsigned int recv_frames;
 	unsigned int recv_bits_total;
 	unsigned int recv_bits_payload;
 	unsigned int recv_bits_dbitrate;
-} stat[MAXSOCK+1];
+} stat[MAXSOCK + 1];
 
 static volatile int running = 1;
 static volatile sig_atomic_t signal_num;
-static int  max_devname_len; /* to prevent frazzled device name output */ 
-static int  max_bitrate_len;
-static int  currmax;
+static int max_devname_len; /* to prevent frazzled device name output */
+static int max_bitrate_len;
+static int currmax;
 static unsigned char redraw;
 static unsigned char timestamp;
 static unsigned char color;
@@ -180,18 +180,17 @@ void printstats(int signo)
 		}
 	}
 
-	for (i=0; i<currmax; i++) {
-
+	for (i = 0; i < currmax; i++) {
 		if (color) {
-			if (i%2)
+			if (i % 2)
 				printf("%s", FGRED);
 			else
 				printf("%s", FGBLUE);
 		}
 
 		if (stat[i].bitrate)
-			percent = ((stat[i].recv_bits_total-stat[i].recv_bits_dbitrate) * 100) / stat[i].bitrate
-				+ (stat[i].recv_bits_dbitrate * 100) / stat[i].dbitrate;
+			percent = ((stat[i].recv_bits_total - stat[i].recv_bits_dbitrate) * 100) / stat[i].bitrate +
+				(stat[i].recv_bits_dbitrate * 100) / stat[i].dbitrate;
 		else
 			percent = 0;
 
@@ -211,20 +210,21 @@ void printstats(int signo)
 			if (percent > 100)
 				percent = 100;
 
-			for (j=0; j < NUMBAR; j++){
-				if (j < percent/PERCENTRES)
+			for (j = 0; j < NUMBAR; j++) {
+				if (j < percent / PERCENTRES)
 					printf("X");
 				else
 					printf(".");
 			}
-	    
+
 			printf("|");
 		}
-	
+
 		if (color)
 			printf("%s", ATTRESET);
 
-		printf("\n");
+		if (!redraw || (i < currmax - 1))
+			printf("\n");
 
 		stat[i].recv_frames = 0;
 		stat[i].recv_bits_total = 0;
@@ -232,7 +232,9 @@ void printstats(int signo)
 		stat[i].recv_bits_payload = 0;
 	}
 
-	printf("\n");
+	if (!redraw)
+		printf("\n");
+
 	fflush(stdout);
 
 	alarm(1);
@@ -296,7 +298,7 @@ int main(int argc, char **argv)
 		print_usage(prg);
 		exit(0);
 	}
-	
+
 	currmax = argc - optind; /* find real number of CAN devices */
 
 	if (currmax > MAXSOCK) {
@@ -304,12 +306,11 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	for (i=0; i < currmax; i++) {
-
-		ptr = argv[optind+i];
+	for (i = 0; i < currmax; i++) {
+		ptr = argv[optind + i];
 
 		nbytes = strlen(ptr);
-		if (nbytes >= (int)(IFNAMSIZ+sizeof("@1000000")+1)) {
+		if (nbytes >= (int)(IFNAMSIZ + sizeof("@1000000") + 1)) {
 			printf("name of CAN device '%s' is too long!\n", ptr);
 			return 1;
 		}
@@ -357,7 +358,7 @@ int main(int argc, char **argv)
 			return 1;
 		}
 
-		nbytes = strlen(nptr+1);
+		nbytes = strlen(nptr + 1);
 		if (nbytes > max_bitrate_len)
 			max_bitrate_len = nbytes; /* for nice printing */
 
@@ -387,23 +388,21 @@ int main(int argc, char **argv)
 		printf("%s", CLR_SCREEN);
 
 	while (running) {
-
 		FD_ZERO(&rdfs);
-		for (i=0; i<currmax; i++)
+		for (i = 0; i < currmax; i++)
 			FD_SET(s[i], &rdfs);
 
 		savesigmask = sigmask;
 
-		if (pselect(s[currmax-1]+1, &rdfs, NULL, NULL, NULL, &sigmask) < 0) {
+		if (pselect(s[currmax - 1] + 1, &rdfs, NULL, NULL, NULL, &sigmask) < 0) {
 			//perror("pselect");
 			sigmask = savesigmask;
 			continue;
 		}
 
-		for (i=0; i<currmax; i++) {  /* check all CAN RAW sockets */
+		for (i = 0; i < currmax; i++) { /* check all CAN RAW sockets */
 
 			if (FD_ISSET(s[i], &rdfs)) {
-
 				nbytes = read(s[i], &frame, sizeof(frame));
 
 				if (nbytes < 0) {
@@ -426,7 +425,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	for (i=0; i<currmax; i++)
+	for (i = 0; i < currmax; i++)
 		close(s[i]);
 
 	if (signal_num)
