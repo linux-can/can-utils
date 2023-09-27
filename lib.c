@@ -499,6 +499,7 @@ static const char *error_classes[] = {
 	"bus-off",
 	"bus-error",
 	"restarted-after-bus-off",
+	"error-counter-tx-rx",
 };
 
 static const char *controller_problems[] = {
@@ -636,6 +637,19 @@ static int snprintf_error_prot(char *buf, size_t len, const struct canfd_frame *
 	return n;
 }
 
+static int snprintf_error_cnt(char *buf, size_t len, const struct canfd_frame *cf)
+{
+	int n = 0;
+
+	if (len <= 0)
+		return 0;
+
+	n += snprintf(buf + n, len - n, "{{%d}{%d}}",
+		      cf->data[6], cf->data[7]);
+
+	return n;
+}
+
 void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *cf,
                   const char* sep)
 {
@@ -679,13 +693,14 @@ void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *c
 				n += snprintf_error_ctrl(buf + n, len - n, cf);
 			if (mask == CAN_ERR_PROT)
 				n += snprintf_error_prot(buf + n, len - n, cf);
+			if (mask == CAN_ERR_CNT)
+				n += snprintf_error_cnt(buf + n, len - n, cf);
 			classes++;
 		}
 	}
 
-	if (cf->can_id & CAN_ERR_CNT || cf->data[6] || cf->data[7]) {
-		n += snprintf(buf + n, len - n, "%s", sep);
-		n += snprintf(buf + n, len - n, "error-counter-tx-rx{{%d}{%d}}",
-			      cf->data[6], cf->data[7]);
+	if (!(cf->can_id & CAN_ERR_CNT) && (cf->data[6] || cf->data[7])) {
+		n += snprintf(buf + n, len - n, "%serror-counter-tx-rx", sep);
+		n += snprintf_error_cnt(buf + n, len - n, cf);
 	}
 }
