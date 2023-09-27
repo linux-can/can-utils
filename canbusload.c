@@ -223,7 +223,8 @@ void printstats(int signo)
 		if (color)
 			printf("%s", ATTRESET);
 
-		printf("\n");
+		if (!redraw || (i < currmax - 1))
+			printf("\n");
 
 		stat[i].recv_frames = 0;
 		stat[i].recv_bits_total = 0;
@@ -231,7 +232,9 @@ void printstats(int signo)
 		stat[i].recv_bits_payload = 0;
 	}
 
-	printf("\n");
+	if (!redraw)
+		printf("\n");
+
 	fflush(stdout);
 
 	alarm(1);
