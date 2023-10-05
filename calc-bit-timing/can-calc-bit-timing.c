@@ -650,6 +650,7 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			.brp_inc = 1,
 		},
 		.ref_clk = {
+			{ .clk = 66000000, .name = "sama5d3", },
 			{ .clk = 99532800, .name = "ronetix PM9263", },
 			{ .clk = 100000000, },
 		},
