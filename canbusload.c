@@ -251,7 +251,6 @@ int main(int argc, char **argv)
 	struct canfd_frame frame;
 	int nbytes, i;
 	struct ifreq ifr;
-	sigset_t sigmask, savesigmask;
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -392,11 +391,8 @@ int main(int argc, char **argv)
 		for (i = 0; i < currmax; i++)
 			FD_SET(s[i], &rdfs);
 
-		savesigmask = sigmask;
-
-		if (pselect(s[currmax - 1] + 1, &rdfs, NULL, NULL, NULL, &sigmask) < 0) {
+		if (select(s[currmax - 1] + 1, &rdfs, NULL, NULL, NULL) < 0) {
 			//perror("pselect");
-			sigmask = savesigmask;
 			continue;
 		}
 
