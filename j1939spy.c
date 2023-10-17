@@ -33,7 +33,6 @@ static const char help_msg[] =
 	"j1939spy: An SAE J1939 spy utility" "\n"
 	"Usage: j1939spy [OPTION...] [[IFACE:][NAME|SA][,PGN]]" "\n"
 	"Options:\n"
-	"  -v, --verbose		Increase verbosity" "\n"
 	"  -P, --promisc		Run in promiscuous mode" "\n"
 	"			(= receive traffic not for this ECU)" "\n"
 	"  -b, --block=SIZE	Use a receive buffer of SIZE (default 1024)" "\n"
@@ -43,8 +42,6 @@ static const char help_msg[] =
 #ifdef _GNU_SOURCE
 static struct option long_opts[] = {
 	{ "help", no_argument, NULL, '?', },
-	{ "verbose", no_argument, NULL, 'v', },
-
 	{ "promisc", no_argument, NULL, 'P', },
 	{ "block", required_argument, NULL, 'b', },
 	{ "time", optional_argument, NULL, 't', },
@@ -60,7 +57,6 @@ static const char optstring[] = "vPb:t::?";
  * static variables
  */
 static struct {
-	int verbose;
 	struct sockaddr_can addr;
 	int promisc;
 	int time;
@@ -108,9 +104,6 @@ int main(int argc, char **argv)
 	/* argument parsing */
 	while ((opt = getopt_long(argc, argv, optstring, long_opts, NULL)) != -1)
 		switch (opt) {
-		case 'v':
-			++s.verbose;
-			break;
 		case 'b':
 			s.pkt_len = strtoul(optarg, 0, 0);
 			break;
@@ -207,8 +200,6 @@ int main(int argc, char **argv)
 	msg.msg_control = &ctrlmsg;
 
 	memset(&tref, 0, sizeof(tref));
-	if (s.verbose)
-		err(0, "listening");
 	while (1) {
 		/* these settings may be modified by recvmsg() */
 		iov.iov_len = s.pkt_len;
