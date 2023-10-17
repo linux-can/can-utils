@@ -185,8 +185,8 @@ int main(int argc, char **argv)
 			err(1, "setsockopt timestamp");
 	}
 	ret = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &s.pkt_len, sizeof(s.pkt_len));
-		if (ret < 0)
-			err(1, "setsockopt rcvbuf %u", s.pkt_len);
+	if (ret < 0)
+		err(1, "setsockopt rcvbuf %u", s.pkt_len);
 
 	/* bind(): to default, only ifindex is used. */
 	memset(&src, 0, sizeof(src));
@@ -267,7 +267,7 @@ int main(int argc, char **argv)
 				tdut = ttmp;
 				goto abs_time;
 			} else if ('a' == s.time) {
-				abs_time:
+abs_time:
 				printf("(%lu.%04lu)", tdut.tv_sec, tdut.tv_usec / 100);
 			} else if ('A' == s.time) {
 				struct tm tm;
@@ -288,7 +288,7 @@ int main(int argc, char **argv)
 		printf("!%u ", priority);
 
 		printf("[%i%s]", len, (msg.msg_flags & MSG_TRUNC) ? "..." : "");
-		for (j = 0; j < len; ) {
+		for (j = 0; j < len;) {
 			unsigned int end = j + 4;
 			if (end > len)
 				end = len;
@@ -302,4 +302,3 @@ int main(int argc, char **argv)
 	free(buf);
 	return 0;
 }
-
