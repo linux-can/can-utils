@@ -33,7 +33,6 @@ static const char help_msg[] =
 	"j1939spy: An SAE J1939 spy utility" "\n"
 	"Usage: j1939spy [OPTION...] [[IFACE:][NAME|SA][,PGN]]" "\n"
 	"Options:\n"
-	"  -v, --verbose		Increase verbosity" "\n"
 	"  -P, --promisc		Run in promiscuous mode" "\n"
 	"			(= receive traffic not for this ECU)" "\n"
 	"  -b, --block=SIZE	Use a receive buffer of SIZE (default 1024)" "\n"
@@ -43,8 +42,6 @@ static const char help_msg[] =
 #ifdef _GNU_SOURCE
 static struct option long_opts[] = {
 	{ "help", no_argument, NULL, '?', },
-	{ "verbose", no_argument, NULL, 'v', },
-
 	{ "promisc", no_argument, NULL, 'P', },
 	{ "block", required_argument, NULL, 'b', },
 	{ "time", optional_argument, NULL, 't', },
@@ -60,7 +57,6 @@ static const char optstring[] = "vPb:t::?";
  * static variables
  */
 static struct {
-	int verbose;
 	struct sockaddr_can addr;
 	int promisc;
 	int time;
@@ -108,9 +104,6 @@ int main(int argc, char **argv)
 	/* argument parsing */
 	while ((opt = getopt_long(argc, argv, optstring, long_opts, NULL)) != -1)
 		switch (opt) {
-		case 'v':
-			++s.verbose;
-			break;
 		case 'b':
 			s.pkt_len = strtoul(optarg, 0, 0);
 			break;
@@ -185,8 +178,8 @@ int main(int argc, char **argv)
 			err(1, "setsockopt timestamp");
 	}
 	ret = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &s.pkt_len, sizeof(s.pkt_len));
-		if (ret < 0)
-			err(1, "setsockopt rcvbuf %u", s.pkt_len);
+	if (ret < 0)
+		err(1, "setsockopt rcvbuf %u", s.pkt_len);
 
 	/* bind(): to default, only ifindex is used. */
 	memset(&src, 0, sizeof(src));
@@ -207,8 +200,6 @@ int main(int argc, char **argv)
 	msg.msg_control = &ctrlmsg;
 
 	memset(&tref, 0, sizeof(tref));
-	if (s.verbose)
-		err(0, "listening");
 	while (1) {
 		/* these settings may be modified by recvmsg() */
 		iov.iov_len = s.pkt_len;
@@ -267,7 +258,7 @@ int main(int argc, char **argv)
 				tdut = ttmp;
 				goto abs_time;
 			} else if ('a' == s.time) {
-				abs_time:
+abs_time:
 				printf("(%lu.%04lu)", tdut.tv_sec, tdut.tv_usec / 100);
 			} else if ('A' == s.time) {
 				struct tm tm;
@@ -288,7 +279,7 @@ int main(int argc, char **argv)
 		printf("!%u ", priority);
 
 		printf("[%i%s]", len, (msg.msg_flags & MSG_TRUNC) ? "..." : "");
-		for (j = 0; j < len; ) {
+		for (j = 0; j < len;) {
 			unsigned int end = j + 4;
 			if (end > len)
 				end = len;
@@ -302,4 +293,3 @@ int main(int argc, char **argv)
 	free(buf);
 	return 0;
 }
-
