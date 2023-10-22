@@ -156,7 +156,7 @@ int idx2dindex(int ifidx, int socket)
 	return i;
 }
 
-/* 
+/*
  * This is a Signalhandler. When we get a signal, that a child
  * terminated, we wait for it, so the zombie will disappear.
  */
@@ -321,7 +321,9 @@ int main(int argc, char **argv)
 
 		if ((s[i] = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
 			perror("socket");
-			return 1;
+			while (--i > 0)
+				close(s[i]);
+			goto close_accsocket;
 		}
 
 		if (mask[i] || value[i]) {
@@ -377,17 +379,32 @@ int main(int argc, char **argv)
 
 	while (running) {
 
-		FD_ZERO(&rdfs);
-		for (i=0; i<currmax; i++)
-			FD_SET(s[i], &rdfs);
+		int maxfd = accsocket;
 
-		if ((ret = select(s[currmax-1]+1, &rdfs, NULL, NULL, NULL)) < 0) {
+		FD_ZERO(&rdfs);
+		FD_SET(accsocket, &rdfs);
+		for (i=0; i<currmax; i++) {
+			maxfd = s[i] > maxfd ? s[i] : maxfd;
+			FD_SET(s[i], &rdfs);
+		}
+
+		if ((ret = select(maxfd + 1, &rdfs, NULL, NULL, NULL)) < 0) {
 			//perror("select");
 			running = 0;
 			continue;
 		}
 
 		for (i=0; i<currmax; i++) {  /* check all CAN RAW sockets */
+			if (FD_ISSET(accsocket, &rdfs)) {
+				char unused[64];
+
+				nbytes = recv(accsocket, unused, sizeof(unused), 0);
+				if (nbytes <= 0) {
+					if (nbytes < 0)
+						perror("accsocket read");
+					goto close_can;
+				}
+			}
 
 			if (FD_ISSET(s[i], &rdfs)) {
 
@@ -397,7 +414,7 @@ int main(int argc, char **argv)
 				if ((nbytes = recvfrom(s[i], &frame, CANFD_MTU, 0,
 						       (struct sockaddr*)&addr, &len)) < 0) {
 					perror("read");
-					return 1;
+					goto close_can;
 				}
 
 				if ((size_t)nbytes == CAN_MTU)
@@ -406,7 +423,7 @@ int main(int argc, char **argv)
 					maxdlen = CANFD_MAX_DLEN;
 				else {
 					fprintf(stderr, "read: incomplete CAN frame\n");
-					return 1;
+					goto close_can;
 				}
 
 				if (ioctl(s[i], SIOCGSTAMP, &tv) < 0)
@@ -417,14 +434,14 @@ int main(int argc, char **argv)
 
 				sprintf(temp, "(%lu.%06lu) %*s ",
 					tv.tv_sec, tv.tv_usec, max_devname_len, devname[idx]);
-				sprint_canframe(temp+strlen(temp), &frame, 0, maxdlen); 
+				sprint_canframe(temp+strlen(temp), &frame, 0, maxdlen);
 				strcat(temp, "\n");
 
 				if (write(accsocket, temp, strlen(temp)) < 0) {
 					perror("writeaccsock");
-					return 1;
+					goto close_can;
 				}
-		    
+
 #if 0
 				/* print CAN frame in log file style to stdout */
 				printf("(%lu.%06lu) ", tv.tv_sec, tv.tv_usec);
@@ -436,9 +453,11 @@ int main(int argc, char **argv)
 		}
 	}
 
+close_can:
 	for (i=0; i<currmax; i++)
 		close(s[i]);
 
+close_accsocket:
 	close(accsocket);
 
 	if (signal_num)
