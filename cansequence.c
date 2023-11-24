@@ -182,7 +182,7 @@ static void do_receive()
 			sequence = sequence_rx;
 			overflow_old = overflow;
 		} else 	if (verbose > 1) {
-			printf("sequence CNT: %6u, RX: %6u\n", sequence, sequence_rx);
+			printf("sequence CNT: 0x%07x  RX: 0x%02x\n", sequence, sequence_rx);
 		}
 
 		sequence++;
