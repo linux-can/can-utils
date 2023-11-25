@@ -58,27 +58,33 @@
 
 static void print_usage(char *prg)
 {
-	fprintf(stderr, "%s - send CAN-frames via CAN_RAW sockets.\n", prg);
-	fprintf(stderr, "\nUsage: %s <device> <can_frame>.\n", prg);
-	fprintf(stderr, "\n<can_frame>:\n");
-	fprintf(stderr, " <can_id>#{data}          for Classical CAN 2.0 data frames\n");
-	fprintf(stderr, " <can_id>#R{len}          for Classical CAN 2.0 data frames\n");
-	fprintf(stderr, " <can_id>#{data}_{dlc}    for Classical CAN 2.0 data frames\n");
-	fprintf(stderr, " <can_id>#R{len}_{dlc}    for Classical CAN 2.0 data frames\n");
-	fprintf(stderr, " <can_id>##<flags>{data}  for CAN FD frames\n\n");
-	fprintf(stderr, "<can_id>:\n"
-	        " 3 (SFF) or 8 (EFF) hex chars\n");
-	fprintf(stderr, "{data}:\n"
-	        " 0..8 (0..64 CAN FD) ASCII hex-values (optionally separated by '.')\n");
-	fprintf(stderr, "{len}:\n"
-		 " an optional 0..8 value as RTR frames can contain a valid dlc field\n");
-	fprintf(stderr, "_{dlc}:\n"
-		 " an optional 9..F data length code value when payload length is 8\n");
-	fprintf(stderr, "<flags>:\n"
-	        " a single ASCII Hex value (0 .. F) which defines canfd_frame.flags\n\n");
-	fprintf(stderr, "Examples:\n");
-	fprintf(stderr, "  5A1#11.2233.44556677.88 / 123#DEADBEEF / 5AA# / 123##1 / 213##311223344 /\n"
-		 "  1F334455#1122334455667788_B / 123#R / 00000123#R3 / 333#R8_E\n\n");
+	fprintf(stderr,
+		"%s - send CAN-frames via CAN_RAW sockets.\n"
+		"\n"
+		"Usage: %s <device> <can_frame>.\n"
+		"\n"
+		"<can_frame>:\n"
+		" <can_id>#{data}          for Classical CAN 2.0 data frames\n"
+		" <can_id>#R{len}          for Classical CAN 2.0 data frames\n"
+		" <can_id>#{data}_{dlc}    for Classical CAN 2.0 data frames\n"
+		" <can_id>#R{len}_{dlc}    for Classical CAN 2.0 data frames\n"
+		" <can_id>##<flags>{data}  for CAN FD frames\n\n"
+		"<can_id>:\n"
+		" 3 (SFF) or 8 (EFF) hex chars\n"
+		"{data}:\n"
+		" 0..8 (0..64 CAN FD) ASCII hex-values (optionally separated by '.')\n"
+		"{len}:\n"
+		" an optional 0..8 value as RTR frames can contain a valid dlc field\n"
+		"_{dlc}:\n"
+		" an optional 9..F data length code value when payload length is 8\n"
+		"<flags>:\n"
+		" a single ASCII Hex value (0 .. F) which defines canfd_frame.flags\n"
+		"\n"
+		"Examples:\n"
+		"  5A1#11.2233.44556677.88 / 123#DEADBEEF / 5AA# / 123##1 / 213##311223344 /\n"
+		"  1F334455#1122334455667788_B / 123#R / 00000123#R3 / 333#R8_E\n"
+		"\n",
+		prg, prg);
 }
 
 int main(int argc, char **argv)
