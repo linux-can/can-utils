@@ -259,6 +259,7 @@ int main(int argc, char **argv)
 	int txidx; /* sendto() interface index */
 	int eof, txmtu, i, j;
 	char *fret;
+	unsigned long long sec, usec;
 
 	while ((opt = getopt(argc, argv, "I:l:tin:g:s:xv?")) != -1) {
 		switch (opt) {
@@ -416,10 +417,12 @@ int main(int argc, char **argv)
 
 		eof = 0;
 
-		if (sscanf(buf, "(%lu.%lu) %s %s", &log_tv.tv_sec, &log_tv.tv_usec, device, ascframe) != 4) {
+		if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec, device, ascframe) != 4) {
 			fprintf(stderr, "incorrect line format in logfile\n");
 			return 1;
 		}
+		log_tv.tv_sec = sec;
+		log_tv.tv_usec = usec;
 
 		/*
 		 * ensure the fractions of seconds are 6 decimal places long to catch
@@ -507,10 +510,12 @@ int main(int argc, char **argv)
 					break;
 				}
 
-				if (sscanf(buf, "(%lu.%lu) %s %s", &log_tv.tv_sec, &log_tv.tv_usec, device, ascframe) != 4) {
+				if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec, device, ascframe) != 4) {
 					fprintf(stderr, "incorrect line format in logfile\n");
 					return 1;
 				}
+				log_tv.tv_sec = sec;
+				log_tv.tv_usec = usec;
 
 				/*
 				 * ensure the fractions of seconds are 6 decimal places long to catch

@@ -191,6 +191,7 @@ int main(int argc, char **argv)
 	FILE *outfile = stdout;
 	static int maxdev, devno, i, crlf, fdfmt, nortrdlc, d4, opt, mtu;
 	int print_banner = 1;
+	unsigned long long sec, usec;
 
 	while ((opt = getopt(argc, argv, "I:O:4nfr?")) != -1) {
 		switch (opt) {
@@ -260,18 +261,20 @@ int main(int argc, char **argv)
 		if (buf[0] != '(')
 			continue;
 
-		if (sscanf(buf, "(%lu.%lu) %s %s %s", &tv.tv_sec, &tv.tv_usec,
+		if (sscanf(buf, "(%llu.%llu) %s %s %s", &sec, &usec,
 			   device, ascframe, extra_info) != 5) {
 
 			/* do not evaluate the extra info */
 			extra_info[0] = 0;
 
-			if (sscanf(buf, "(%lu.%lu) %s %s", &tv.tv_sec, &tv.tv_usec,
+			if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec,
 				   device, ascframe) != 4) {
 				fprintf(stderr, "incorrect line format in logfile\n");
 				return 1;
 			}
 		}
+		tv.tv_sec = sec;
+		tv.tv_usec = usec;
 
 		if (print_banner) { /* print banner */
 			print_banner = 0;
@@ -307,9 +310,9 @@ int main(int argc, char **argv)
 				tv.tv_sec = tv.tv_usec = 0;
 
 			if (d4)
-				fprintf(outfile, "%4lu.%04lu ", tv.tv_sec, tv.tv_usec/100);
+				fprintf(outfile, "%4llu.%04llu ", (unsigned long long)tv.tv_sec, (unsigned long long)tv.tv_usec/100);
 			else
-				fprintf(outfile, "%4lu.%06lu ", tv.tv_sec, tv.tv_usec);
+				fprintf(outfile, "%4llu.%06llu ", (unsigned long long)tv.tv_sec, (unsigned long long)tv.tv_usec);
 
 			if ((mtu == CAN_MTU) && (fdfmt == 0))
 				can_asc(&cf, devno, nortrdlc, extra_info, outfile);

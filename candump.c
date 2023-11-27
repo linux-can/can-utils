@@ -226,7 +226,7 @@ static inline void sprint_timestamp(const char timestamp, const struct timeval *
 {
 	switch (timestamp) {
 	case 'a': /* absolute with timestamp */
-		sprintf(ts_buffer, "(%010lu.%06lu) ", tv->tv_sec, tv->tv_usec);
+		sprintf(ts_buffer, "(%010llu.%06llu) ", (unsigned long long)tv->tv_sec, (unsigned long long)tv->tv_usec);
 		break;
 
 	case 'A': /* absolute with date */
@@ -236,7 +236,7 @@ static inline void sprint_timestamp(const char timestamp, const struct timeval *
 
 		tm = *localtime(&tv->tv_sec);
 		strftime(timestring, 24, "%Y-%m-%d %H:%M:%S", &tm);
-		sprintf(ts_buffer, "(%s.%06lu) ", timestring, tv->tv_usec);
+		sprintf(ts_buffer, "(%s.%06llu) ", timestring, (unsigned long long)tv->tv_usec);
 	}
 	break;
 
@@ -253,7 +253,7 @@ static inline void sprint_timestamp(const char timestamp, const struct timeval *
 			diff.tv_sec--, diff.tv_usec += 1000000;
 		if (diff.tv_sec < 0)
 			diff.tv_sec = diff.tv_usec = 0;
-		sprintf(ts_buffer, "(%03lu.%06lu) ", diff.tv_sec, diff.tv_usec);
+		sprintf(ts_buffer, "(%03llu.%06llu) ", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_usec);
 
 		if (timestamp == 'd')
 			*last_tv = *tv; /* update for delta calculation */
