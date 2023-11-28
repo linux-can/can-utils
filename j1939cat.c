@@ -148,8 +148,8 @@ static void j1939cat_print_timestamp(struct j1939cat_priv *priv, const char *nam
 	if (!(cur->tv_sec | cur->tv_nsec))
 		return;
 
-	fprintf(stderr, "  %s: %lu s %lu us (seq=%03u, send=%07u)",
-			name, cur->tv_sec, cur->tv_nsec / 1000,
+	fprintf(stderr, "  %s: %llu s %llu us (seq=%03u, send=%07u)",
+			name, (unsigned long long)cur->tv_sec, (unsigned long long)cur->tv_nsec / 1000,
 			stats->tskey, stats->send);
 
 	fprintf(stderr, "\n");

@@ -259,14 +259,14 @@ int main(int argc, char **argv)
 				goto abs_time;
 			} else if ('a' == s.time) {
 abs_time:
-				printf("(%lu.%04lu)", tdut.tv_sec, tdut.tv_usec / 100);
+				printf("(%llu.%04llu)", (unsigned long long)tdut.tv_sec, (unsigned long long)tdut.tv_usec / 100);
 			} else if ('A' == s.time) {
 				struct tm tm;
 				tm = *localtime(&tdut.tv_sec);
-				printf("(%04u%02u%02uT%02u%02u%02u.%04lu)",
+				printf("(%04u%02u%02uT%02u%02u%02u.%04llu)",
 					tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 					tm.tm_hour, tm.tm_min, tm.tm_sec,
-					tdut.tv_usec/100);
+					(unsigned long long)tdut.tv_usec/100);
 			}
 		}
 		printf(" %s ", libj1939_addr2str(&src));

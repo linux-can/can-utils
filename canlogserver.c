@@ -415,8 +415,8 @@ int main(int argc, char **argv)
 
 				idx = idx2dindex(addr.can_ifindex, s[i]);
 
-				sprintf(temp, "(%lu.%06lu) %*s ",
-					tv.tv_sec, tv.tv_usec, max_devname_len, devname[idx]);
+				sprintf(temp, "(%llu.%06llu) %*s ",
+					(unsigned long long)tv.tv_sec, (unsigned long long)tv.tv_usec, max_devname_len, devname[idx]);
 				sprint_canframe(temp+strlen(temp), &frame, 0, maxdlen); 
 				strcat(temp, "\n");
 

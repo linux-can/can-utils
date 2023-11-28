@@ -73,7 +73,7 @@ void print_usage(char *prg)
 
 void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, unsigned int max_dlen, char *extra_info) {
 
-	fprintf(file, "(%lu.%06lu) ", tv->tv_sec, tv->tv_usec);
+	fprintf(file, "(%llu.%06llu) ", (unsigned long long)tv->tv_sec, (unsigned long long)tv->tv_usec);
 
 	if (dev > 0)
 		fprintf(file, "can%d ", dev-1);
@@ -141,11 +141,14 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 	char dir[3]; /* 'Rx' or 'Tx' plus terminating zero */
 	char *extra_info;
 	int i, items;
+	unsigned long long sec, usec;
 
 	/* check for ErrorFrames */
-	if (sscanf(buf, "%lu.%lu %d %s",
-		   &read_tv.tv_sec, &read_tv.tv_usec,
+	if (sscanf(buf, "%llu.%llu %d %s",
+		   &sec, &usec,
 		   &interface, tmp1) == 4) {
+		read_tv.tv_sec = sec;
+		read_tv.tv_usec = usec;
 
 		if (!strncmp(tmp1, "ErrorFrame", strlen("ErrorFrame"))) {
 
@@ -165,18 +168,20 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 
 	/* check for CAN frames with (hexa)decimal values */
 	if (base == 'h')
-		items = sscanf(buf, "%lu.%lu %d %s %2s %c %x %x %x %x %x %x %x %x %x",
-			       &read_tv.tv_sec, &read_tv.tv_usec, &interface,
+		items = sscanf(buf, "%llu.%llu %d %s %2s %c %x %x %x %x %x %x %x %x %x",
+			       &sec, &usec, &interface,
 			       tmp1, dir, &rtr, &dlc,
 			       &data[0], &data[1], &data[2], &data[3],
 			       &data[4], &data[5], &data[6], &data[7]);
 	else
-		items = sscanf(buf, "%lu.%lu %d %s %2s %c %x %d %d %d %d %d %d %d %d",
-			       &read_tv.tv_sec, &read_tv.tv_usec, &interface,
+		items = sscanf(buf, "%llu.%llu %d %s %2s %c %x %d %d %d %d %d %d %d %d",
+			       &sec, &usec, &interface,
 			       tmp1, dir, &rtr, &dlc,
 			       &data[0], &data[1], &data[2], &data[3],
 			       &data[4], &data[5], &data[6], &data[7]);
 
+	read_tv.tv_sec = sec;
+	read_tv.tv_usec = usec;
 	if (items < 7 ) /* make sure we've read the dlc */
 		return;
 
@@ -246,6 +251,7 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	char *extra_info;
 	char *ptr;
 	int i;
+	unsigned long long sec, usec;
 
 	/* The CANFD format is mainly in hex representation but <DataLength>
 	   and probably some content we skip anyway. Don't trust the docs! */
@@ -255,19 +261,21 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	   100000  214   223040 80000000 46500250 460a0250 20011736 20010205 */
 
 	/* check for valid line without symbolic name */
-	if (sscanf(buf, "%lu.%lu %*s %d %2s %s %hhx %hhx %x %d ",
-		   &read_tv.tv_sec, &read_tv.tv_usec, &interface,
+	if (sscanf(buf, "%llu.%llu %*s %d %2s %s %hhx %hhx %x %d ",
+		   &sec, &usec, &interface,
 		   dir, tmp1, &brs, &esi, &dlc, &dlen) != 9) {
 
 		/* check for valid line with a symbolic name */
-		if (sscanf(buf, "%lu.%lu %*s %d %2s %s %*s %hhx %hhx %x %d ",
-			   &read_tv.tv_sec, &read_tv.tv_usec, &interface,
+		if (sscanf(buf, "%llu.%llu %*s %d %2s %s %*s %hhx %hhx %x %d ",
+			   &sec, &usec, &interface,
 			   dir, tmp1, &brs, &esi, &dlc, &dlen) != 9) {
 
 			/* no valid CANFD format pattern */
 			return;
 		}
 	}
+	read_tv.tv_sec = sec;
+	read_tv.tv_usec = usec;
 
 	/* check for allowed (unsigned) value ranges */
 	if ((dlen > CANFD_MAX_DLEN) || (dlc > CANFD_MAX_DLC) ||
@@ -427,12 +435,12 @@ int main(int argc, char **argv)
 	FILE *infile = stdin;
 	FILE *outfile = stdout;
 	static int verbose;
-	static struct timeval tmp_tv; /* tmp frame timestamp from ASC file */
 	static struct timeval date_tv; /* date of the ASC file */
 	static int dplace; /* decimal place 4, 5 or 6 or uninitialized */
 	static char base; /* 'd'ec or 'h'ex */
 	static char timestamps; /* 'a'bsolute or 'r'elative */
 	int opt;
+	unsigned long long sec, usec;
 
 	while ((opt = getopt(argc, argv, "I:O:v?")) != -1) {
 		switch (opt) {
@@ -505,12 +513,12 @@ int main(int argc, char **argv)
 					gettimeofday(&date_tv, NULL);
 				}
 				if (verbose)
-					printf("date %lu => %s", date_tv.tv_sec, ctime(&date_tv.tv_sec));
+					printf("date %llu => %s", (unsigned long long)date_tv.tv_sec, ctime(&date_tv.tv_sec));
 				continue;
 			}
 
 			/* check for decimal places length in valid CAN frames */
-			if (sscanf(buf, "%lu.%s %s ", &tmp_tv.tv_sec, tmp2,
+			if (sscanf(buf, "%llu.%s %s ", &sec, tmp2,
 				   tmp1) != 3)
 				continue; /* dplace remains zero until first found CAN frame */
 
@@ -529,7 +537,7 @@ int main(int argc, char **argv)
 		/* so try to get CAN frames and ErrorFrames and convert them */
 
 		/* check classic CAN format or the CANFD tag which can take both types */
-		if (sscanf(buf, "%lu.%lu %s ", &tmp_tv.tv_sec,  &tmp_tv.tv_usec, tmp1) == 3){
+		if (sscanf(buf, "%llu.%llu %s ", &sec,  &usec, tmp1) == 3){
 			if (!strncmp(tmp1, "CANFD", 5))
 				eval_canfd(buf, &date_tv, timestamps, dplace, outfile);
 			else

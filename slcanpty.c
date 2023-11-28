@@ -363,8 +363,8 @@ int can2pty(int pty, int socket, int *tstamp)
 		if (ioctl(socket, SIOCGSTAMP, &tv) < 0)
 			perror("SIOCGSTAMP");
 
-		sprintf(&buf[ptr + 2*frame.can_dlc], "%04lX",
-			(tv.tv_sec%60)*1000 + tv.tv_usec/1000);
+		sprintf(&buf[ptr + 2*frame.can_dlc], "%04llX",
+			(unsigned long long)(tv.tv_sec%60)*1000 + tv.tv_usec/1000);
 	}
 
 	strcat(buf, "\r"); /* add terminating character */

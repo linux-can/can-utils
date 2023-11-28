@@ -403,9 +403,9 @@ int main(int argc, char **argv)
 
 				/* check devisor to be not zero */
 				if (diff_tv.tv_sec * 1000 + diff_tv.tv_usec / 1000){
-					printf("%lu.%06lus ", diff_tv.tv_sec, diff_tv.tv_usec);
+					printf("%llu.%06llus ", (unsigned long long)diff_tv.tv_sec, (unsigned long long)diff_tv.tv_usec);
 					printf("=> %lu byte/s", (fflen * 1000) /
-					       (diff_tv.tv_sec * 1000 + diff_tv.tv_usec / 1000));
+					       (unsigned long)(diff_tv.tv_sec * 1000 + diff_tv.tv_usec / 1000));
 				} else
 					printf("(no time available)     ");
 
