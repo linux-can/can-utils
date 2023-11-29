@@ -253,8 +253,8 @@ int main(int argc, char **argv)
 		.can_family = AF_CAN,
 	};
 	char *interface = "can0";
-	int extended = 0;
-	int receive = 0;
+	bool extended = false;
+	bool receive = false;
 	int opt;
 
 	sigaction(SIGINT, &act, NULL);
