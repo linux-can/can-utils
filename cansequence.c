@@ -37,6 +37,7 @@ static bool running = true;
 static volatile sig_atomic_t signal_num;
 static bool infinite = true;
 static bool canfd = false;
+static bool canfd_strict = false;
 static unsigned int drop_until_quit;
 static unsigned int drop_count;
 static bool use_poll = false;
@@ -66,6 +67,7 @@ static void print_usage(char *prg)
 		"Options:\n"
 		" -e, --extended       send/receive extended frames\n"
 		" -f, --canfd          send/receive CAN-FD CAN frames\n"
+		" -s, --strict         refuse classical CAN frames in CAN-FD mode\n"
 		" -b, --brs            send CAN-FD CAN frames with bitrate switch (BRS)\n"
 		" -i, --identifier=ID  CAN Identifier (default = %u)\n"
 		"     --loop=COUNT     send message COUNT times\n"
@@ -150,6 +152,12 @@ static void do_receive()
 		}
 
 		sequence_rx = frame.data[0];
+
+		if (canfd_strict && nbytes == CAN_MTU) {
+			if (verbose > 1)
+				printf("sequence CNT: 0x%07x  RX: 0x%02x (ignoring classical CAN frame)\n", sequence, sequence_rx);
+			continue;
+		}
 
 		if (sequence_init) {
 			sequence_init = false;
@@ -291,7 +299,7 @@ int main(int argc, char **argv)
 		{ 0, 0, 0, 0 },
 	};
 
-	while ((opt = getopt_long(argc, argv, "efbi:pq::rvh?", long_options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "efsbi:pq::rvh?", long_options, NULL)) != -1) {
 		switch (opt) {
 		case 'e':
 			extended = true;
@@ -299,6 +307,10 @@ int main(int argc, char **argv)
 
 		case 'f':
 			canfd = true;
+			break;
+
+		case 's':
+			canfd_strict = true;
 			break;
 
 		case 'b':
@@ -409,6 +421,8 @@ int main(int argc, char **argv)
 			printf("error when enabling CAN FD support\n");
 			exit(EXIT_FAILURE);
 		}
+	} else {
+		canfd_strict = false;
 	}
 
 	if (brs)
