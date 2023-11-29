@@ -40,11 +40,11 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
-#define CAN_MSG_ID_PING	0x77
-#define CAN_MSG_ID_PONG	0x78
-#define CAN_MSG_LEN	8
-#define CAN_MSG_COUNT	50
-#define CAN_MSG_WAIT	27
+#define CAN_MSG_ID_PING 0x77
+#define CAN_MSG_ID_PONG 0x78
+#define CAN_MSG_LEN 8
+#define CAN_MSG_COUNT 50
+#define CAN_MSG_WAIT 27
 
 static int running = 1;
 static int verbose;
@@ -82,7 +82,7 @@ static void print_usage(char *prg)
 		"\n"
 		"With the option '-g' CAN messages are generated and checked\n"
 		"on <can-interface>, otherwise all messages received on the\n"
-                "<can-interface> are sent back incrementing the CAN id and\n"
+		"<can-interface> are sent back incrementing the CAN id and\n"
 		"all data bytes. The program can be aborted with ^C.\n"
 		"\n"
 		"Examples:\n"
@@ -110,14 +110,9 @@ static void print_frame(canid_t id, const uint8_t *data, int dlc, int inc_data)
 	printf("\n");
 }
 
-static void print_compare(
-	canid_t exp_id,
-	const uint8_t *exp_data,
-	uint8_t exp_dlc,
-	canid_t rec_id,
-	const uint8_t *rec_data,
-	uint8_t rec_dlc,
-	int inc)
+static void print_compare(canid_t exp_id, const uint8_t *exp_data, uint8_t exp_dlc,
+			  canid_t rec_id, const uint8_t *rec_data, uint8_t rec_dlc,
+			  int inc)
 {
 	printf("expected: ");
 	print_frame(exp_id, exp_data, exp_dlc, inc);
@@ -255,7 +250,7 @@ static int check_frame(const struct canfd_frame *frame)
 	}
 
 	for (i = 1; i < frame->len; i++) {
-		if (frame->data[i] != (uint8_t)(frame->data[i-1] + 1)) {
+		if (frame->data[i] != (uint8_t)(frame->data[i - 1] + 1)) {
 			printf("Frame inconsistent!\n");
 			print_frame(frame->can_id, frame->data, frame->len, 0);
 			err = -1;
@@ -263,7 +258,7 @@ static int check_frame(const struct canfd_frame *frame)
 		}
 	}
 
- out:
+out:
 	return err;
 }
 
@@ -324,11 +319,11 @@ static int can_echo_gen(void)
 	int err = 0;
 	int i;
 
-	tx_frames = calloc(inflight_count, sizeof(* tx_frames));
+	tx_frames = calloc(inflight_count, sizeof(*tx_frames));
 	if (!tx_frames)
 		return -1;
 
-	recv_tx = calloc(inflight_count, sizeof(* recv_tx));
+	recv_tx = calloc(inflight_count, sizeof(*recv_tx));
 	if (!recv_tx) {
 		err = -1;
 		goto out_free_tx_frames;
@@ -400,9 +395,9 @@ static int can_echo_gen(void)
 
 	printf("\nTest messages sent and received: %d\n", loops);
 
- out_free:
+out_free:
 	free(recv_tx);
- out_free_tx_frames:
+out_free_tx_frames:
 	free(tx_frames);
 
 	return err;
@@ -523,7 +518,7 @@ int main(int argc, char *argv[])
 
 	if (echo_gen) {
 		if (setsockopt(sockfd, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS,
-			   &enable_socket_option, sizeof(enable_socket_option)) == -1) {
+			       &enable_socket_option, sizeof(enable_socket_option)) == -1) {
 			perror("setsockopt CAN_RAW_RECV_OWN_MSGS");
 			return 1;
 		}
@@ -531,7 +526,7 @@ int main(int argc, char *argv[])
 
 	if (is_can_fd) {
 		if (setsockopt(sockfd, SOL_CAN_RAW, CAN_RAW_FD_FRAMES,
-			   &enable_socket_option, sizeof(enable_socket_option)) == -1) {
+			       &enable_socket_option, sizeof(enable_socket_option)) == -1) {
 			perror("setsockopt CAN_RAW_FD_FRAMES");
 			return 1;
 		}
@@ -567,7 +562,7 @@ int main(int argc, char *argv[])
 		};
 
 		if (setsockopt(sockfd, SOL_CAN_RAW, CAN_RAW_FILTER, filters,
-					   sizeof(struct can_filter) * (1 + echo_gen))) {
+			       sizeof(struct can_filter) * (1 + echo_gen))) {
 			perror("setsockopt()");
 			close(sockfd);
 			return 1;
