@@ -27,8 +27,8 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
-#define CAN_ID_DEFAULT	(2)
-#define ANYDEV "any"	/* name of interface to receive from any CAN interface */
+#define CAN_ID_DEFAULT (2)
+#define ANYDEV "any" /* name of interface to receive from any CAN interface */
 
 extern int optind, opterr, optopt;
 
@@ -47,12 +47,15 @@ static struct can_frame frame = {
 	.can_dlc = 1,
 };
 static struct can_filter filter[] = {
-	{ .can_id = CAN_ID_DEFAULT, },
+	{
+		.can_id = CAN_ID_DEFAULT,
+	},
 };
 
 static void print_usage(char *prg)
 {
-	fprintf(stderr, "Usage: %s [<can-interface>] [Options]\n"
+	fprintf(stderr,
+		"Usage: %s [<can-interface>] [Options]\n"
 		"\n"
 		"cansequence sends CAN messages with a rising sequence number as payload.\n"
 		"When the -r option is given, cansequence expects to receive these messages\n"
@@ -76,7 +79,6 @@ static void sig_handler(int signo)
 	running = false;
 	signal_num = signo;
 }
-
 
 static void do_receive()
 {
@@ -181,14 +183,13 @@ static void do_receive()
 
 			sequence = sequence_rx;
 			overflow_old = overflow;
-		} else 	if (verbose > 1) {
+		} else if (verbose > 1) {
 			printf("sequence CNT: 0x%07x  RX: 0x%02x\n", sequence, sequence_rx);
 		}
 
 		sequence++;
 		if (verbose && !(sequence & sequence_mask))
 			printf("sequence wrap around (%d)\n", sequence_wrap++);
-
 	}
 }
 
@@ -203,7 +204,7 @@ static void do_send()
 		if (verbose > 1)
 			printf("sending frame. sequence number: %d\n", sequence);
 
-	again:
+again:
 		len = write(s, &frame, sizeof(frame));
 		if (len == -1) {
 			switch (errno) {
@@ -211,8 +212,8 @@ static void do_send()
 				int err;
 				struct pollfd fds[] = {
 					{
-						.fd	= s,
-						.events	= POLLOUT,
+						.fd = s,
+						.events = POLLOUT,
 					},
 				};
 
@@ -227,7 +228,7 @@ static void do_send()
 					exit(EXIT_FAILURE);
 				}
 			}
-			case EINTR:	/* fallthrough */
+			case EINTR: /* fallthrough */
 				goto again;
 			default:
 				perror("write");
@@ -261,15 +262,15 @@ int main(int argc, char **argv)
 	sigaction(SIGHUP, &act, NULL);
 
 	struct option long_options[] = {
-		{ "extended",	no_argument,		0, 'e' },
-		{ "identifier",	required_argument,	0, 'i' },
-		{ "loop",	required_argument,	0, 'l' },
-		{ "poll",	no_argument,		0, 'p' },
-		{ "quit",	optional_argument,	0, 'q' },
-		{ "receive",	no_argument,		0, 'r' },
-		{ "verbose",	no_argument,		0, 'v' },
-		{ "help",	no_argument,		0, 'h' },
-		{ 0,		0,			0, 0},
+		{ "extended", no_argument, 0, 'e' },
+		{ "identifier", required_argument, 0, 'i' },
+		{ "loop", required_argument, 0, 'l' },
+		{ "poll", no_argument, 0, 'p' },
+		{ "quit", optional_argument, 0, 'q' },
+		{ "receive", no_argument, 0, 'r' },
+		{ "verbose", no_argument, 0, 'v' },
+		{ "help", no_argument, 0, 'h' },
+		{ 0, 0, 0, 0 },
 	};
 
 	while ((opt = getopt_long(argc, argv, "ei:pq::rvh", long_options, NULL)) != -1) {
@@ -327,11 +328,11 @@ int main(int argc, char **argv)
 
 	if (extended) {
 		filter->can_mask = CAN_EFF_MASK;
-		filter->can_id  &= CAN_EFF_MASK;
-		filter->can_id  |= CAN_EFF_FLAG;
+		filter->can_id &= CAN_EFF_MASK;
+		filter->can_id |= CAN_EFF_FLAG;
 	} else {
 		filter->can_mask = CAN_SFF_MASK;
-		filter->can_id  &= CAN_SFF_MASK;
+		filter->can_id &= CAN_SFF_MASK;
 	}
 	frame.can_id = filter->can_id;
 	filter->can_mask |= CAN_EFF_FLAG;
