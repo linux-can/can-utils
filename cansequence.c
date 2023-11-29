@@ -63,7 +63,7 @@ static void print_usage(char *prg)
 		"The main purpose of this program is to test the reliability of CAN links.\n"
 		"\n"
 		"Options:\n"
-		" -e, --extended       send extended frame\n"
+		" -e, --extended       send/receive extended frames\n"
 		" -i, --identifier=ID  CAN Identifier (default = %u)\n"
 		"     --loop=COUNT     send message COUNT times\n"
 		" -p, --poll           use poll(2) to wait for buffer space while sending\n"
