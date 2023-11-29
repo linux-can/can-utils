@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-// Copyright (c) 2007, 2008, 2009, 2010, 2014, 2015, 2019 Pengutronix,
+// Copyright (c) 2007, 2008, 2009, 2010, 2014, 2015, 2019, 2023 Pengutronix,
 //		 Marc Kleine-Budde <kernel@pengutronix.de>
 // Copyright (c) 2005 Pengutronix,
 //		 Sascha Hauer <kernel@pengutronix.de>
@@ -27,8 +27,8 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
-#define CAN_ID_DEFAULT	(2)
-#define ANYDEV "any"	/* name of interface to receive from any CAN interface */
+#define CAN_ID_DEFAULT (2)
+#define ANYDEV "any" /* name of interface to receive from any CAN interface */
 
 extern int optind, opterr, optopt;
 
@@ -36,6 +36,8 @@ static int s = -1;
 static bool running = true;
 static volatile sig_atomic_t signal_num;
 static bool infinite = true;
+static bool canfd = false;
+static bool canfd_strict = false;
 static unsigned int drop_until_quit;
 static unsigned int drop_count;
 static bool use_poll = false;
@@ -43,16 +45,19 @@ static bool use_poll = false;
 static unsigned int loopcount = 1;
 static int verbose;
 
-static struct can_frame frame = {
-	.can_dlc = 1,
+static struct canfd_frame frame = {
+	.len = 1,
 };
 static struct can_filter filter[] = {
-	{ .can_id = CAN_ID_DEFAULT, },
+	{
+		.can_id = CAN_ID_DEFAULT,
+	},
 };
 
 static void print_usage(char *prg)
 {
-	fprintf(stderr, "Usage: %s [<can-interface>] [Options]\n"
+	fprintf(stderr,
+		"Usage: %s [<can-interface>] [Options]\n"
 		"\n"
 		"cansequence sends CAN messages with a rising sequence number as payload.\n"
 		"When the -r option is given, cansequence expects to receive these messages\n"
@@ -60,14 +65,17 @@ static void print_usage(char *prg)
 		"The main purpose of this program is to test the reliability of CAN links.\n"
 		"\n"
 		"Options:\n"
-		" -e, --extended		send extended frame\n"
-		" -i, --identifier=ID	CAN Identifier (default = %u)\n"
-		"     --loop=COUNT	send message COUNT times\n"
-		" -p, --poll		use poll(2) to wait for buffer space while sending\n"
-		" -q, --quit <num>	quit if <num> wrong sequences are encountered\n"
-		" -r, --receive		work as receiver\n"
-		" -v, --verbose		be verbose (twice to be even more verbose\n"
-		" -h, --help		this help\n",
+		" -e, --extended       send/receive extended frames\n"
+		" -f, --canfd          send/receive CAN-FD CAN frames\n"
+		" -s, --strict         refuse classical CAN frames in CAN-FD mode\n"
+		" -b, --brs            send CAN-FD CAN frames with bitrate switch (BRS)\n"
+		" -i, --identifier=ID  CAN Identifier (default = %u)\n"
+		"     --loop=COUNT     send message COUNT times\n"
+		" -p, --poll           use poll(2) to wait for buffer space while sending\n"
+		" -q, --quit <num>     quit if <num> wrong sequences are encountered\n"
+		" -r, --receive        work as receiver\n"
+		" -v, --verbose        be verbose (twice to be even more verbose\n"
+		" -h, --help           this help\n",
 		prg, CAN_ID_DEFAULT);
 }
 
@@ -76,7 +84,6 @@ static void sig_handler(int signo)
 	running = false;
 	signal_num = signo;
 }
-
 
 static void do_receive()
 {
@@ -98,6 +105,12 @@ static void do_receive()
 	uint32_t sequence = 0;
 	unsigned int overflow_old = 0;
 	can_err_mask_t err_mask = CAN_ERR_MASK;
+	size_t mtu;
+
+	if (canfd)
+		mtu = CANFD_MTU;
+	else
+		mtu = CAN_MTU;
 
 	if (setsockopt(s, SOL_SOCKET, SO_RXQ_OVFL,
 		       &dropmonitor_on, sizeof(dropmonitor_on)) < 0) {
@@ -119,7 +132,7 @@ static void do_receive()
 	while ((infinite || loopcount--) && running) {
 		ssize_t nbytes;
 
-		msg.msg_iov[0].iov_len = sizeof(frame);
+		msg.msg_iov[0].iov_len = mtu;
 		msg.msg_controllen = sizeof(ctrlmsg);
 		msg.msg_flags = 0;
 
@@ -139,6 +152,12 @@ static void do_receive()
 		}
 
 		sequence_rx = frame.data[0];
+
+		if (canfd_strict && nbytes == CAN_MTU) {
+			if (verbose > 1)
+				printf("sequence CNT: 0x%07x  RX: 0x%02x (ignoring classical CAN frame)\n", sequence, sequence_rx);
+			continue;
+		}
 
 		if (sequence_init) {
 			sequence_init = false;
@@ -181,14 +200,13 @@ static void do_receive()
 
 			sequence = sequence_rx;
 			overflow_old = overflow;
-		} else 	if (verbose > 1) {
+		} else if (verbose > 1) {
 			printf("sequence CNT: 0x%07x  RX: 0x%02x\n", sequence, sequence_rx);
 		}
 
 		sequence++;
 		if (verbose && !(sequence & sequence_mask))
 			printf("sequence wrap around (%d)\n", sequence_wrap++);
-
 	}
 }
 
@@ -196,6 +214,12 @@ static void do_send()
 {
 	unsigned int seq_wrap = 0;
 	uint8_t sequence = 0;
+	size_t mtu;
+
+	if (canfd)
+		mtu = CANFD_MTU;
+	else
+		mtu = CAN_MTU;
 
 	while ((infinite || loopcount--) && running) {
 		ssize_t len;
@@ -203,16 +227,16 @@ static void do_send()
 		if (verbose > 1)
 			printf("sending frame. sequence number: %d\n", sequence);
 
-	again:
-		len = write(s, &frame, sizeof(frame));
+again:
+		len = write(s, &frame, mtu);
 		if (len == -1) {
 			switch (errno) {
 			case ENOBUFS: {
 				int err;
 				struct pollfd fds[] = {
 					{
-						.fd	= s,
-						.events	= POLLOUT,
+						.fd = s,
+						.events = POLLOUT,
 					},
 				};
 
@@ -227,7 +251,7 @@ static void do_send()
 					exit(EXIT_FAILURE);
 				}
 			}
-			case EINTR:	/* fallthrough */
+			case EINTR: /* fallthrough */
 				goto again;
 			default:
 				perror("write");
@@ -252,8 +276,9 @@ int main(int argc, char **argv)
 		.can_family = AF_CAN,
 	};
 	char *interface = "can0";
-	int extended = 0;
-	int receive = 0;
+	bool extended = false;
+	bool brs = false;
+	bool receive = false;
 	int opt;
 
 	sigaction(SIGINT, &act, NULL);
@@ -261,21 +286,36 @@ int main(int argc, char **argv)
 	sigaction(SIGHUP, &act, NULL);
 
 	struct option long_options[] = {
-		{ "extended",	no_argument,		0, 'e' },
-		{ "identifier",	required_argument,	0, 'i' },
-		{ "loop",	required_argument,	0, 'l' },
-		{ "poll",	no_argument,		0, 'p' },
-		{ "quit",	optional_argument,	0, 'q' },
-		{ "receive",	no_argument,		0, 'r' },
-		{ "verbose",	no_argument,		0, 'v' },
-		{ "help",	no_argument,		0, 'h' },
-		{ 0,		0,			0, 0},
+		{ "extended", no_argument, 0, 'e' },
+		{ "canfd", no_argument, 0, 'f' },
+		{ "brs", no_argument, 0, 'b' },
+		{ "identifier", required_argument, 0, 'i' },
+		{ "loop", required_argument, 0, 'l' },
+		{ "poll", no_argument, 0, 'p' },
+		{ "quit", optional_argument, 0, 'q' },
+		{ "receive", no_argument, 0, 'r' },
+		{ "verbose", no_argument, 0, 'v' },
+		{ "help", no_argument, 0, 'h' },
+		{ 0, 0, 0, 0 },
 	};
 
-	while ((opt = getopt_long(argc, argv, "ei:pq::rvh", long_options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "efsbi:pq::rvh?", long_options, NULL)) != -1) {
 		switch (opt) {
 		case 'e':
 			extended = true;
+			break;
+
+		case 'f':
+			canfd = true;
+			break;
+
+		case 's':
+			canfd_strict = true;
+			break;
+
+		case 'b':
+			brs = true; /* bitrate switch implies CAN-FD */
+			canfd = true;
 			break;
 
 		case 'i':
@@ -311,6 +351,7 @@ int main(int argc, char **argv)
 			break;
 
 		case 'h':
+		case '?':
 			print_usage(basename(argv[0]));
 			exit(EXIT_SUCCESS);
 			break;
@@ -327,11 +368,11 @@ int main(int argc, char **argv)
 
 	if (extended) {
 		filter->can_mask = CAN_EFF_MASK;
-		filter->can_id  &= CAN_EFF_MASK;
-		filter->can_id  |= CAN_EFF_FLAG;
+		filter->can_id &= CAN_EFF_MASK;
+		filter->can_id |= CAN_EFF_FLAG;
 	} else {
 		filter->can_mask = CAN_SFF_MASK;
-		filter->can_id  &= CAN_SFF_MASK;
+		filter->can_id &= CAN_SFF_MASK;
 	}
 	frame.can_id = filter->can_id;
 	filter->can_mask |= CAN_EFF_FLAG;
@@ -357,6 +398,35 @@ int main(int argc, char **argv)
 		perror("setsockopt()");
 		exit(EXIT_FAILURE);
 	}
+
+	if (canfd) {
+		const int enable_canfd = 1;
+		struct ifreq ifr;
+
+		strncpy(ifr.ifr_name, interface, sizeof(ifr.ifr_name));
+
+		/* check if the frame fits into the CAN netdevice */
+		if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {
+			perror("SIOCGIFMTU");
+			exit(EXIT_FAILURE);
+		}
+
+		if (ifr.ifr_mtu != CANFD_MTU && ifr.ifr_mtu != CANXL_MTU) {
+			printf("CAN interface is only Classical CAN capable - sorry.\n");
+			exit(EXIT_FAILURE);
+		}
+
+		/* interface is ok - try to switch the socket into CAN FD mode */
+		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd, sizeof(enable_canfd))) {
+			printf("error when enabling CAN FD support\n");
+			exit(EXIT_FAILURE);
+		}
+	} else {
+		canfd_strict = false;
+	}
+
+	if (brs)
+		frame.flags |= CANFD_BRS;
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind()");
