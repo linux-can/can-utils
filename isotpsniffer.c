@@ -332,7 +332,7 @@ int main(int argc, char **argv)
 		opts.rx_ext_address = tmpext;
 	}
 
-	if ((setsockopt(t, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts))) < 0) {
+	if (setsockopt(t, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts)) < 0) {
 		perror("setsockopt");
 		r = 1;
 		goto out;
