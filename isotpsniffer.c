@@ -77,8 +77,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -c           (color mode)\n");
 	fprintf(stderr, "         -t <type>    (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
 	fprintf(stderr, "         -f <format>  (1 = HEX, 2 = ASCII, 3 = HEX & ASCII - default: %d)\n", FORMAT_DEFAULT);
-	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags>  (link layer options for CAN FD)\n");
-	fprintf(stderr, "         -h <len>    (head: print only first <len> bytes)\n");
+	fprintf(stderr, "         -L           (set link layer options for CAN FD)\n");
+	fprintf(stderr, "         -h <len>     (head: print only first <len> bytes)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "\n");
 }
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
 	unsigned char buffer[4096];
 	int nbytes;
 
-	while ((opt = getopt(argc, argv, "s:d:x:X:h:ct:f:L:?")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:x:X:h:ct:f:L?")) != -1) {
 		switch (opt) {
 		case 's':
 			src = strtoul(optarg, NULL, 16);
@@ -226,14 +226,9 @@ int main(int argc, char **argv)
 			break;
 
 		case 'L':
-			if (sscanf(optarg, "%hhu:%hhu:%hhu",
-						&llopts.mtu,
-						&llopts.tx_dl,
-						&llopts.tx_flags) != 3) {
-				printf("unknown link layer options '%s'.\n", optarg);
-				print_usage(basename(argv[0]));
-				exit(1);
-			}
+			llopts.mtu = CANFD_MTU;
+			llopts.tx_dl = CANFD_MAX_DLEN;
+			llopts.tx_flags = CANFD_BRS;
 			break;
 
 		case 'h':
