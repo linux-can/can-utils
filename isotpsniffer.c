@@ -302,7 +302,11 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
-	setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
+	if (setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts)) < 0) {
+		perror("setsockopt");
+		r = 1;
+		goto out;
+	}
 
 	if ((llopts.mtu) && (setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &llopts, sizeof(llopts))) < 0) {
 		perror("setsockopt");
