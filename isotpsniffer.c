@@ -304,6 +304,12 @@ int main(int argc, char **argv)
 
 	setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
 
+	if ((llopts.mtu) && (setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &llopts, sizeof(llopts))) < 0) {
+		perror("setsockopt");
+		r = 1;
+		goto out;
+	}
+
 	addr.can_addr.tp.tx_id = src;
 	addr.can_addr.tp.rx_id = dst;
 
