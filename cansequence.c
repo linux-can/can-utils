@@ -288,6 +288,7 @@ int main(int argc, char **argv)
 	struct option long_options[] = {
 		{ "extended", no_argument, 0, 'e' },
 		{ "canfd", no_argument, 0, 'f' },
+		{ "strict", no_argument, 0, 's' },
 		{ "brs", no_argument, 0, 'b' },
 		{ "identifier", required_argument, 0, 'i' },
 		{ "loop", required_argument, 0, 'l' },
