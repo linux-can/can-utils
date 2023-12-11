@@ -146,7 +146,7 @@ static struct timespec timespec_add(struct timespec ts1, struct timespec ts2)
 struct timespec double_to_timespec(double s)
 {
 	struct timespec ts = {
-		.tv_sec  = s,
+		.tv_sec = s,
 		.tv_nsec = (s - (long)(s)) * NSEC_PER_SEC,
 	};
 
@@ -156,7 +156,7 @@ struct timespec double_to_timespec(double s)
 static struct timespec ns_to_timespec(int64_t ns)
 {
 	struct timespec ts = {
-		.tv_sec  = ns / NSEC_PER_SEC,
+		.tv_sec = ns / NSEC_PER_SEC,
 		.tv_nsec = ns % NSEC_PER_SEC,
 	};
 
@@ -324,7 +324,7 @@ static int do_send_one(int fd, void *buf, size_t len, int timeout)
 		memcpy(CMSG_DATA(cm), &tdeliver, sizeof(tdeliver));
 	}
 
- resend:
+resend:
 	nbytes = sendmsg(fd, &msg, 0);
 	if (nbytes < 0) {
 		ret = -errno;
@@ -460,7 +460,7 @@ int main(int argc, char **argv)
 	int incdlc = 0;
 	unsigned long rnd;
 	unsigned char fixdata[CANFD_MAX_DLEN];
-	unsigned char rand_position[CANFD_MAX_DLEN] = {0};
+	unsigned char rand_position[CANFD_MAX_DLEN] = { 0 };
 
 	int opt;
 	int s; /* socket */
@@ -490,7 +490,6 @@ int main(int argc, char **argv)
 
 	while ((opt = getopt_long(argc, argv, "g:atefbER8mI:L:D:p:n:ixc:vh?", long_options, NULL)) != -1) {
 		switch (opt) {
-
 		case 'g':
 			gap = strtod(optarg, NULL);
 			break;
@@ -793,7 +792,7 @@ int main(int argc, char **argv)
 
 		if (data_mode == MODE_RANDOM_FIX) {
 			int i;
-			
+
 			memcpy(frame.data, fixdata, CANFD_MAX_DLEN);
 
 			for (i = 0; i < frame.len; i++) {

@@ -81,11 +81,9 @@ void print_usage(char *prg)
 		 "  1F334455#1122334455667788_B / 123#R / 00000123#R3 / 333#R8_E\n\n");
 }
 
-
-
 int main(int argc, char **argv)
 {
-	int s; /* can raw socket */ 
+	int s; /* can raw socket */
 	int required_mtu;
 	int mtu;
 	int enable_canfd = 1;
@@ -101,7 +99,7 @@ int main(int argc, char **argv)
 
 	/* parse CAN frame */
 	required_mtu = parse_canframe(argv[2], &frame);
-	if (!required_mtu){
+	if (!required_mtu) {
 		fprintf(stderr, "\nWrong CAN-frame format!\n\n");
 		print_usage(argv[0]);
 		return 1;
@@ -126,7 +124,6 @@ int main(int argc, char **argv)
 	addr.can_ifindex = ifr.ifr_ifindex;
 
 	if (required_mtu > (int)CAN_MTU) {
-
 		/* check if the frame fits into the CAN netdevice */
 		if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {
 			perror("SIOCGIFMTU");

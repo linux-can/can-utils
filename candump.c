@@ -75,16 +75,16 @@
 
 #define TIMESTAMPSZ 50 /* string 'absolute with date' requires max 49 bytes */
 
-#define MAXSOCK 16    /* max. number of CAN interfaces given on the cmdline */
+#define MAXSOCK 16 /* max. number of CAN interfaces given on the cmdline */
 #define MAXIFNAMES 30 /* size of receive name index to omit ioctls */
-#define MAXCOL 6      /* number of different colors for colorized output */
-#define ANYDEV "any"  /* name of interface to receive from any CAN interface */
-#define ANL "\r\n"    /* newline in ASC mode */
+#define MAXCOL 6 /* number of different colors for colorized output */
+#define ANYDEV "any" /* name of interface to receive from any CAN interface */
+#define ANL "\r\n" /* newline in ASC mode */
 
 #define SILENT_INI 42 /* detect user setting on commandline */
-#define SILENT_OFF 0  /* no silent mode */
-#define SILENT_ANI 1  /* silent mode with animation */
-#define SILENT_ON 2   /* silent mode (completely silent) */
+#define SILENT_OFF 0 /* no silent mode */
+#define SILENT_ANI 1 /* silent mode with animation */
+#define SILENT_ON 2 /* silent mode (completely silent) */
 
 #define BOLD ATTBOLD
 #define RED (ATTBOLD FGRED)
@@ -106,7 +106,7 @@ struct if_info { /* bundled information per open socket */
 static struct if_info sock_info[MAXSOCK];
 
 static char *progname;
-static char devname[MAXIFNAMES][IFNAMSIZ+1];
+static char devname[MAXIFNAMES][IFNAMSIZ + 1];
 static int dindex[MAXIFNAMES];
 static int max_devname_len; /* to prevent frazzled device name output */
 static const int canfd_on = 1;
@@ -175,7 +175,6 @@ static void sigterm(int signo)
 
 static int idx2dindex(int ifidx, int socket)
 {
-
 	int i;
 	struct ifreq ifr;
 
@@ -245,9 +244,9 @@ static inline void sprint_timestamp(const char timestamp, const struct timeval *
 	{
 		struct timeval diff;
 
-		if (last_tv->tv_sec == 0)   /* first init */
+		if (last_tv->tv_sec == 0) /* first init */
 			*last_tv = *tv;
-		diff.tv_sec  = tv->tv_sec - last_tv->tv_sec;
+		diff.tv_sec = tv->tv_sec - last_tv->tv_sec;
 		diff.tv_usec = tv->tv_usec - last_tv->tv_usec;
 		if (diff.tv_usec < 0)
 			diff.tv_sec--, diff.tv_usec += 1000000;
@@ -474,8 +473,8 @@ int main(int argc, char **argv)
 	}
 
 	for (i = 0; i < currmax; i++) {
-		struct if_info* obj = &sock_info[i];
-		ptr = argv[optind+i];
+		struct if_info *obj = &sock_info[i];
+		ptr = argv[optind + i];
 		nptr = strchr(ptr, ',');
 
 		pr_debug("open %d '%s'.\n", i, ptr);
@@ -495,7 +494,7 @@ int main(int argc, char **argv)
 		obj->cmdlinename = ptr; /* save pointer to cmdline name of this socket */
 
 		if (nptr)
-			nbytes = nptr - ptr;  /* interface name is up the first ',' */
+			nbytes = nptr - ptr; /* interface name is up the first ',' */
 		else
 			nbytes = strlen(ptr); /* no ',' found => no filter definitions */
 
@@ -714,8 +713,8 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		for (i = 0; i < num_events; i++) {  /* check waiting CAN RAW sockets */
-			struct if_info* obj = events_pending[i].data.ptr;
+		for (i = 0; i < num_events; i++) { /* check waiting CAN RAW sockets */
+			struct if_info *obj = events_pending[i].data.ptr;
 			int idx;
 			char *extra_info = "";
 
@@ -838,9 +837,9 @@ int main(int argc, char **argv)
 
 			if (extra_msg_info) {
 				if (msg.msg_flags & MSG_DONTROUTE)
-					printf ("  TX %s", extra_m_info[frame.flags & 3]);
+					printf("  TX %s", extra_m_info[frame.flags & 3]);
 				else
-					printf ("  RX %s", extra_m_info[frame.flags & 3]);
+					printf("  RX %s", extra_m_info[frame.flags & 3]);
 			}
 
 			printf("%s  ", (color == 1) ? col_off : "");
@@ -850,7 +849,7 @@ int main(int argc, char **argv)
 			printf("%s", (color > 1) ? col_off : "");
 			printf("\n");
 
- out_fflush:
+out_fflush:
 			fflush(stdout);
 		}
 	}
