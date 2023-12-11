@@ -340,6 +340,34 @@ static const struct calc_bittiming_const can_calc_consts[] = {
 			.brp_max = 1024,
 			.brp_inc = 1,
 		},
+	}, {
+		.bittiming_const = {
+			.name = "rockchip_canfd",
+			.tseg1_min = 1,
+			.tseg1_max = 256,
+			.tseg2_min = 1,
+			.tseg2_max = 128,
+			.sjw_max = 128,
+			.brp_min = 2,
+			.brp_max = 256,
+			.brp_inc = 2,
+		},
+		.data_bittiming_const = {
+			.name = "rockchip_canfd",
+			.tseg1_min = 1,
+			.tseg1_max = 32,
+			.tseg2_min = 1,
+			.tseg2_max = 16,
+			.sjw_max = 16,
+			.brp_min = 2,
+			.brp_max = 256,
+			.brp_inc = 2,
+		},
+		.ref_clk = {
+			{ .clk = 20000000, .name = "CIA recommendation" },
+			{ .clk = 40000000, .name = "CIA recommendation" },
+			{ .clk = 300000000, .name = "rock-3a" },
+		},
 	}, {	/* -------- SPI -------- */
 		.bittiming_const = {
 			.name = "hi311x",
