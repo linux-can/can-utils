@@ -314,7 +314,6 @@ static int can_echo_gen(void)
 {
 	struct canfd_frame *tx_frames;
 	bool *recv_tx;
-	struct canfd_frame rx_frame;
 	unsigned char counter = 0;
 	int send_pos = 0, recv_rx_pos = 0, recv_tx_pos = 0, unprocessed = 0, loops = 0;
 	int err = 0;
@@ -357,6 +356,8 @@ static int can_echo_gen(void)
 			else
 				millisleep(1);
 		} else {
+			struct canfd_frame rx_frame;
+
 			if (recv_frame(&rx_frame)) {
 				err = -1;
 				goto out_free;
