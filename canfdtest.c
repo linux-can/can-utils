@@ -54,11 +54,11 @@ static int exit_sig;
 static int inflight_count = CAN_MSG_COUNT;
 static canid_t can_id_ping = CAN_MSG_ID_PING;
 static canid_t can_id_pong = CAN_MSG_ID_PONG;
-static int has_pong_id = 0;
-static int is_can_fd = 0;
-static int bit_rate_switch = 0;
+static int has_pong_id;
+static int is_can_fd;
+static int bit_rate_switch;
 static int msg_len = CAN_MSG_LEN;
-static int is_extended_frame_format = 0;
+static int is_extended_frame_format;
 
 static void print_usage(char *prg)
 {
