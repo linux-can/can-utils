@@ -186,23 +186,30 @@ static void signal_handler(int signo)
 	exit_sig = signo;
 }
 
-static int recv_frame(struct canfd_frame *frame)
+static int recv_frame(struct canfd_frame *frame, int *flags)
 {
-	ssize_t ret, len;
+	struct iovec iov = {
+		.iov_base = frame,
+		.iov_len = is_can_fd ? sizeof(struct canfd_frame) : sizeof(struct can_frame),
+	};
+	struct msghdr msg = {
+		.msg_iov = &iov,
+		.msg_iovlen = 1,
+	};
+	ssize_t ret;
 
-	if (is_can_fd)
-		len = sizeof(struct canfd_frame);
-	else
-		len = sizeof(struct can_frame);
-
-	ret = recv(sockfd, frame, len, 0);
-	if (ret != len) {
+	ret = recvmsg(sockfd, &msg, 0);
+	if (ret != iov.iov_len) {
 		if (ret < 0)
-			perror("recv failed");
+			perror("recvmsg() failed");
 		else
-			fprintf(stderr, "recv returned %zd", ret);
+			fprintf(stderr, "recvmsg() returned %zd", ret);
 		return -1;
 	}
+
+	if (flags)
+		*flags = msg.msg_flags;
+
 	return 0;
 }
 
@@ -283,7 +290,7 @@ static int can_echo_dut(void)
 	int err = 0;
 
 	while (running) {
-		if (recv_frame(&frame))
+		if (recv_frame(&frame, NULL))
 			return -1;
 		frame_count++;
 		if (verbose == 1) {
@@ -359,8 +366,9 @@ static int can_echo_gen(void)
 				millisleep(1);
 		} else {
 			struct canfd_frame rx_frame;
+			int flags;
 
-			if (recv_frame(&rx_frame)) {
+			if (recv_frame(&rx_frame, &flags)) {
 				err = -1;
 				goto out_free;
 			}
@@ -369,7 +377,7 @@ static int can_echo_gen(void)
 				print_frame(rx_frame.can_id, rx_frame.data, rx_frame.len, 0);
 
 			/* own frame */
-			if (rx_frame.can_id == can_id_ping) {
+			if (flags & MSG_DONTROUTE) {
 				err = compare_frame(&tx_frames[recv_tx_pos], &rx_frame, 0);
 				recv_tx[recv_tx_pos] = true;
 				recv_tx_pos++;
