@@ -24,6 +24,7 @@
 #include <limits.h>
 #include <sched.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,11 +55,11 @@ static int exit_sig;
 static int inflight_count = CAN_MSG_COUNT;
 static canid_t can_id_ping = CAN_MSG_ID_PING;
 static canid_t can_id_pong = CAN_MSG_ID_PONG;
-static int has_pong_id;
-static int is_can_fd;
-static int bit_rate_switch;
+static bool has_pong_id;
+static bool is_can_fd;
+static bool bit_rate_switch;
 static int msg_len = CAN_MSG_LEN;
-static int is_extended_frame_format;
+static bool is_extended_frame_format;
 
 static void print_usage(char *prg)
 {
@@ -312,7 +313,7 @@ static int can_echo_dut(void)
 static int can_echo_gen(void)
 {
 	struct canfd_frame *tx_frames;
-	int *recv_tx;
+	bool *recv_tx;
 	struct canfd_frame rx_frame;
 	unsigned char counter = 0;
 	int send_pos = 0, recv_rx_pos = 0, recv_tx_pos = 0, unprocessed = 0, loops = 0;
@@ -334,7 +335,7 @@ static int can_echo_gen(void)
 			/* still send messages */
 			tx_frames[send_pos].len = msg_len;
 			tx_frames[send_pos].can_id = can_id_ping;
-			recv_tx[send_pos] = 0;
+			recv_tx[send_pos] = false;
 
 			for (i = 0; i < msg_len; i++)
 				tx_frames[send_pos].data[i] = counter + i;
@@ -367,7 +368,7 @@ static int can_echo_gen(void)
 			/* own frame */
 			if (rx_frame.can_id == can_id_ping) {
 				err = compare_frame(&tx_frames[recv_tx_pos], &rx_frame, 0);
-				recv_tx[recv_tx_pos] = 1;
+				recv_tx[recv_tx_pos] = true;
 				recv_tx_pos++;
 				if (recv_tx_pos == inflight_count)
 					recv_tx_pos = 0;
@@ -411,7 +412,7 @@ int main(int argc, char *argv[])
 	int echo_gen = 0;
 	int opt, err;
 	int enable_socket_option = 1;
-	int filter = 0;
+	bool filter = false;
 
 	signal(SIGTERM, signal_handler);
 	signal(SIGHUP, signal_handler);
@@ -420,15 +421,15 @@ int main(int argc, char *argv[])
 	while ((opt = getopt(argc, argv, "bdef:gi:l:o:s:vx?")) != -1) {
 		switch (opt) {
 		case 'b':
-			bit_rate_switch = 1;
+			bit_rate_switch = true;
 			break;
 
 		case 'd':
-			is_can_fd = 1;
+			is_can_fd = true;
 			break;
 
 		case 'e':
-			is_extended_frame_format = 1;
+			is_extended_frame_format = true;
 			break;
 
 		case 'f':
@@ -449,7 +450,7 @@ int main(int argc, char *argv[])
 
 		case 'o':
 			can_id_pong = strtoul(optarg, NULL, 16);
-			has_pong_id = 1;
+			has_pong_id = true;
 			break;
 
 		case 's':
@@ -461,7 +462,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'x':
-			filter = 1;
+			filter = true;
 			break;
 
 		case '?':
