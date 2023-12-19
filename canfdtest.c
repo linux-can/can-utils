@@ -65,7 +65,7 @@ static void print_usage(char *prg)
 {
 	fprintf(stderr,
 		"%s - Full-duplex test program (DUT and host part).\n"
-		"Usage: %s [options] <can-interface>\n"
+		"Usage: %s [options] [<can-interface>]\n"
 		"\n"
 		"Options:\n"
 		"         -b       (enable CAN FD Bit Rate Switch)\n"
@@ -85,6 +85,8 @@ static void print_usage(char *prg)
 		"on <can-interface>, otherwise all messages received on the\n"
 		"<can-interface> are sent back incrementing the CAN id and\n"
 		"all data bytes. The program can be aborted with ^C.\n"
+		"\n"
+		"Using 'can0' as default CAN-interface.\n"
 		"\n"
 		"Examples:\n"
 		"\ton DUT:\n"
@@ -428,7 +430,7 @@ out_free_tx_frames:
 int main(int argc, char *argv[])
 {
 	struct sockaddr_can addr;
-	char *intf_name;
+	char *intf_name = "can0";
 	int family = PF_CAN, type = SOCK_RAW, proto = CAN_RAW;
 	int echo_gen = 0;
 	int opt, err;
@@ -519,9 +521,10 @@ int main(int argc, char *argv[])
 	can_id_ping = normalize_canid(can_id_ping);
 	can_id_pong = normalize_canid(can_id_pong);
 
-	if ((argc - optind) != 1)
+	if ((argc - optind) == 1)
+		intf_name = argv[optind];
+	else if ((argc - optind))
 		print_usage(basename(argv[0]));
-	intf_name = argv[optind];
 
 	printf("interface = %s, family = %d, type = %d, proto = %d\n",
 	       intf_name, family, type, proto);
