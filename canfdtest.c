@@ -346,8 +346,8 @@ static int can_echo_gen(void)
 			}
 
 			send_pos++;
-			if (send_pos == inflight_count)
-				send_pos = 0;
+			send_pos %= inflight_count;
+
 			unprocessed++;
 			if (verbose == 1)
 				echo_progress(counter);
@@ -373,8 +373,7 @@ static int can_echo_gen(void)
 				err = compare_frame(&tx_frames[recv_tx_pos], &rx_frame, 0);
 				recv_tx[recv_tx_pos] = true;
 				recv_tx_pos++;
-				if (recv_tx_pos == inflight_count)
-					recv_tx_pos = 0;
+				recv_tx_pos %= inflight_count;
 				continue;
 			}
 
@@ -386,8 +385,7 @@ static int can_echo_gen(void)
 			/* compare with expected */
 			err = compare_frame(&tx_frames[recv_rx_pos], &rx_frame, 1);
 			recv_rx_pos++;
-			if (recv_rx_pos == inflight_count)
-				recv_rx_pos = 0;
+			recv_rx_pos %= inflight_count;
 
 			loops++;
 			if (test_loops && loops >= test_loops)
