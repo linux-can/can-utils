@@ -332,13 +332,15 @@ static int can_echo_gen(void)
 	while (running) {
 		if (unprocessed < inflight_count) {
 			/* still send messages */
-			tx_frames[send_pos].len = msg_len;
-			tx_frames[send_pos].can_id = can_id_ping;
+			struct canfd_frame *tx_frame = &tx_frames[send_pos];
+
+			tx_frame->len = msg_len;
+			tx_frame->can_id = can_id_ping;
 			recv_tx[send_pos] = false;
 
 			for (i = 0; i < msg_len; i++)
-				tx_frames[send_pos].data[i] = counter + i;
-			if (send_frame(&tx_frames[send_pos])) {
+				tx_frame->data[i] = counter + i;
+			if (send_frame(tx_frame)) {
 				err = -1;
 				goto out_free;
 			}
