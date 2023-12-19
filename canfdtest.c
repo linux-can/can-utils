@@ -121,6 +121,18 @@ static void print_compare(canid_t exp_id, const uint8_t *exp_data, uint8_t exp_d
 	print_frame(rec_id, rec_data, rec_dlc, 0);
 }
 
+static canid_t normalize_canid(canid_t id)
+{
+	if (is_extended_frame_format) {
+		id &= CAN_EFF_MASK;
+		id |= CAN_EFF_FLAG;
+	} else {
+		id &= CAN_SFF_MASK;
+	}
+
+	return id;
+}
+
 static int compare_frame(const struct canfd_frame *exp, const struct canfd_frame *rec, int inc)
 {
 	int i, err = 0;
@@ -277,7 +289,7 @@ static void inc_frame(struct canfd_frame *frame)
 	if (has_pong_id)
 		frame->can_id = can_id_pong;
 	else
-		frame->can_id++;
+		frame->can_id = normalize_canid(frame->can_id + 1);
 
 	for (i = 0; i < frame->len; i++)
 		frame->data[i]++;
@@ -504,15 +516,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (is_extended_frame_format) {
-		can_id_ping &= CAN_EFF_MASK;
-		can_id_ping |= CAN_EFF_FLAG;
-		can_id_pong &= CAN_EFF_MASK;
-		can_id_pong |= CAN_EFF_FLAG;
-	} else {
-		can_id_ping &= CAN_SFF_MASK;
-		can_id_pong &= CAN_SFF_MASK;
-	}
+	can_id_ping = normalize_canid(can_id_ping);
+	can_id_pong = normalize_canid(can_id_pong);
 
 	if ((argc - optind) != 1)
 		print_usage(basename(argv[0]));
