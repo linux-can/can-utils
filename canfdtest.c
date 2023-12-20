@@ -553,11 +553,11 @@ int main(int argc, char *argv[])
 		const struct can_filter filters[] = {
 			{
 				.can_id = can_id_ping,
-				.can_mask = CAN_EFF_FLAG | CAN_RTR_FLAG | CAN_SFF_MASK,
+				.can_mask = CAN_EFF_FLAG | CAN_RTR_FLAG | CAN_EFF_MASK,
 			},
 			{
 				.can_id = can_id_pong,
-				.can_mask = CAN_EFF_FLAG | CAN_RTR_FLAG | CAN_SFF_MASK,
+				.can_mask = CAN_EFF_FLAG | CAN_RTR_FLAG | CAN_EFF_MASK,
 			},
 		};
 
