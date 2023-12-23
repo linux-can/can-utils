@@ -113,5 +113,6 @@ foreach(name ${PROGRAMS})
   install(TARGETS ${name} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endforeach()
 
+install(TARGETS can-calc-bit-timing mcp251xfd-dump DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 ADD_CUSTOM_TARGET(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_SOURCE_DIR}/cmake/make_uninstall.cmake")
