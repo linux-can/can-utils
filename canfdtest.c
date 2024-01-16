@@ -24,6 +24,7 @@
 #include <limits.h>
 #include <sched.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,17 +55,17 @@ static int exit_sig;
 static int inflight_count = CAN_MSG_COUNT;
 static canid_t can_id_ping = CAN_MSG_ID_PING;
 static canid_t can_id_pong = CAN_MSG_ID_PONG;
-static int has_pong_id = 0;
-static int is_can_fd = 0;
-static int bit_rate_switch = 0;
+static bool has_pong_id;
+static bool is_can_fd;
+static bool bit_rate_switch;
 static int msg_len = CAN_MSG_LEN;
-static int is_extended_frame_format = 0;
+static bool is_extended_frame_format;
 
 static void print_usage(char *prg)
 {
 	fprintf(stderr,
 		"%s - Full-duplex test program (DUT and host part).\n"
-		"Usage: %s [options] <can-interface>\n"
+		"Usage: %s [options] [<can-interface>]\n"
 		"\n"
 		"Options:\n"
 		"         -b       (enable CAN FD Bit Rate Switch)\n"
@@ -84,6 +85,8 @@ static void print_usage(char *prg)
 		"on <can-interface>, otherwise all messages received on the\n"
 		"<can-interface> are sent back incrementing the CAN id and\n"
 		"all data bytes. The program can be aborted with ^C.\n"
+		"\n"
+		"Using 'can0' as default CAN-interface.\n"
 		"\n"
 		"Examples:\n"
 		"\ton DUT:\n"
@@ -118,6 +121,18 @@ static void print_compare(canid_t exp_id, const uint8_t *exp_data, uint8_t exp_d
 	print_frame(exp_id, exp_data, exp_dlc, inc);
 	printf("received: ");
 	print_frame(rec_id, rec_data, rec_dlc, 0);
+}
+
+static canid_t normalize_canid(canid_t id)
+{
+	if (is_extended_frame_format) {
+		id &= CAN_EFF_MASK;
+		id |= CAN_EFF_FLAG;
+	} else {
+		id &= CAN_SFF_MASK;
+	}
+
+	return id;
 }
 
 static int compare_frame(const struct canfd_frame *exp, const struct canfd_frame *rec, int inc)
@@ -185,23 +200,30 @@ static void signal_handler(int signo)
 	exit_sig = signo;
 }
 
-static int recv_frame(struct canfd_frame *frame)
+static int recv_frame(struct canfd_frame *frame, int *flags)
 {
-	ssize_t ret, len;
+	struct iovec iov = {
+		.iov_base = frame,
+		.iov_len = is_can_fd ? sizeof(struct canfd_frame) : sizeof(struct can_frame),
+	};
+	struct msghdr msg = {
+		.msg_iov = &iov,
+		.msg_iovlen = 1,
+	};
+	ssize_t ret;
 
-	if (is_can_fd)
-		len = sizeof(struct canfd_frame);
-	else
-		len = sizeof(struct can_frame);
-
-	ret = recv(sockfd, frame, len, 0);
-	if (ret != len) {
+	ret = recvmsg(sockfd, &msg, 0);
+	if (ret != iov.iov_len) {
 		if (ret < 0)
-			perror("recv failed");
+			perror("recvmsg() failed");
 		else
-			fprintf(stderr, "recv returned %zd", ret);
+			fprintf(stderr, "recvmsg() returned %zd", ret);
 		return -1;
 	}
+
+	if (flags)
+		*flags = msg.msg_flags;
+
 	return 0;
 }
 
@@ -269,7 +291,7 @@ static void inc_frame(struct canfd_frame *frame)
 	if (has_pong_id)
 		frame->can_id = can_id_pong;
 	else
-		frame->can_id++;
+		frame->can_id = normalize_canid(frame->can_id + 1);
 
 	for (i = 0; i < frame->len; i++)
 		frame->data[i]++;
@@ -282,7 +304,7 @@ static int can_echo_dut(void)
 	int err = 0;
 
 	while (running) {
-		if (recv_frame(&frame))
+		if (recv_frame(&frame, NULL))
 			return -1;
 		frame_count++;
 		if (verbose == 1) {
@@ -312,8 +334,7 @@ static int can_echo_dut(void)
 static int can_echo_gen(void)
 {
 	struct canfd_frame *tx_frames;
-	int *recv_tx;
-	struct canfd_frame rx_frame;
+	bool *recv_tx;
 	unsigned char counter = 0;
 	int send_pos = 0, recv_rx_pos = 0, recv_tx_pos = 0, unprocessed = 0, loops = 0;
 	int err = 0;
@@ -332,20 +353,22 @@ static int can_echo_gen(void)
 	while (running) {
 		if (unprocessed < inflight_count) {
 			/* still send messages */
-			tx_frames[send_pos].len = msg_len;
-			tx_frames[send_pos].can_id = can_id_ping;
-			recv_tx[send_pos] = 0;
+			struct canfd_frame *tx_frame = &tx_frames[send_pos];
+
+			tx_frame->len = msg_len;
+			tx_frame->can_id = can_id_ping;
+			recv_tx[send_pos] = false;
 
 			for (i = 0; i < msg_len; i++)
-				tx_frames[send_pos].data[i] = counter + i;
-			if (send_frame(&tx_frames[send_pos])) {
+				tx_frame->data[i] = counter + i;
+			if (send_frame(tx_frame)) {
 				err = -1;
 				goto out_free;
 			}
 
 			send_pos++;
-			if (send_pos == inflight_count)
-				send_pos = 0;
+			send_pos %= inflight_count;
+
 			unprocessed++;
 			if (verbose == 1)
 				echo_progress(counter);
@@ -356,7 +379,10 @@ static int can_echo_gen(void)
 			else
 				millisleep(1);
 		} else {
-			if (recv_frame(&rx_frame)) {
+			struct canfd_frame rx_frame;
+			int flags;
+
+			if (recv_frame(&rx_frame, &flags)) {
 				err = -1;
 				goto out_free;
 			}
@@ -365,12 +391,11 @@ static int can_echo_gen(void)
 				print_frame(rx_frame.can_id, rx_frame.data, rx_frame.len, 0);
 
 			/* own frame */
-			if (rx_frame.can_id == can_id_ping) {
+			if (flags & MSG_DONTROUTE) {
 				err = compare_frame(&tx_frames[recv_tx_pos], &rx_frame, 0);
-				recv_tx[recv_tx_pos] = 1;
+				recv_tx[recv_tx_pos] = true;
 				recv_tx_pos++;
-				if (recv_tx_pos == inflight_count)
-					recv_tx_pos = 0;
+				recv_tx_pos %= inflight_count;
 				continue;
 			}
 
@@ -382,8 +407,7 @@ static int can_echo_gen(void)
 			/* compare with expected */
 			err = compare_frame(&tx_frames[recv_rx_pos], &rx_frame, 1);
 			recv_rx_pos++;
-			if (recv_rx_pos == inflight_count)
-				recv_rx_pos = 0;
+			recv_rx_pos %= inflight_count;
 
 			loops++;
 			if (test_loops && loops >= test_loops)
@@ -406,12 +430,12 @@ out_free_tx_frames:
 int main(int argc, char *argv[])
 {
 	struct sockaddr_can addr;
-	char *intf_name;
+	char *intf_name = "can0";
 	int family = PF_CAN, type = SOCK_RAW, proto = CAN_RAW;
 	int echo_gen = 0;
 	int opt, err;
 	int enable_socket_option = 1;
-	int filter = 0;
+	bool filter = false;
 
 	signal(SIGTERM, signal_handler);
 	signal(SIGHUP, signal_handler);
@@ -420,15 +444,15 @@ int main(int argc, char *argv[])
 	while ((opt = getopt(argc, argv, "bdef:gi:l:o:s:vx?")) != -1) {
 		switch (opt) {
 		case 'b':
-			bit_rate_switch = 1;
+			bit_rate_switch = true;
 			break;
 
 		case 'd':
-			is_can_fd = 1;
+			is_can_fd = true;
 			break;
 
 		case 'e':
-			is_extended_frame_format = 1;
+			is_extended_frame_format = true;
 			break;
 
 		case 'f':
@@ -449,7 +473,7 @@ int main(int argc, char *argv[])
 
 		case 'o':
 			can_id_pong = strtoul(optarg, NULL, 16);
-			has_pong_id = 1;
+			has_pong_id = true;
 			break;
 
 		case 's':
@@ -461,7 +485,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'x':
-			filter = 1;
+			filter = true;
 			break;
 
 		case '?':
@@ -494,19 +518,13 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (is_extended_frame_format) {
-		can_id_ping &= CAN_EFF_MASK;
-		can_id_ping |= CAN_EFF_FLAG;
-		can_id_pong &= CAN_EFF_MASK;
-		can_id_pong |= CAN_EFF_FLAG;
-	} else {
-		can_id_ping &= CAN_SFF_MASK;
-		can_id_pong &= CAN_SFF_MASK;
-	}
+	can_id_ping = normalize_canid(can_id_ping);
+	can_id_pong = normalize_canid(can_id_pong);
 
-	if ((argc - optind) != 1)
+	if ((argc - optind) == 1)
+		intf_name = argv[optind];
+	else if ((argc - optind))
 		print_usage(basename(argv[0]));
-	intf_name = argv[optind];
 
 	printf("interface = %s, family = %d, type = %d, proto = %d\n",
 	       intf_name, family, type, proto);
@@ -553,11 +571,11 @@ int main(int argc, char *argv[])
 		const struct can_filter filters[] = {
 			{
 				.can_id = can_id_ping,
-				.can_mask = CAN_EFF_FLAG | CAN_RTR_FLAG | CAN_SFF_MASK,
+				.can_mask = CAN_EFF_FLAG | CAN_RTR_FLAG | CAN_EFF_MASK,
 			},
 			{
 				.can_id = can_id_pong,
-				.can_mask = CAN_EFF_FLAG | CAN_RTR_FLAG | CAN_SFF_MASK,
+				.can_mask = CAN_EFF_FLAG | CAN_RTR_FLAG | CAN_EFF_MASK,
 			},
 		};
 
