@@ -391,7 +391,7 @@ static int can_echo_gen(void)
 				print_frame(rx_frame.can_id, rx_frame.data, rx_frame.len, 0);
 
 			/* own frame */
-			if (flags & MSG_DONTROUTE) {
+			if (flags & MSG_CONFIRM) {
 				err = compare_frame(&tx_frames[recv_tx_pos], &rx_frame, 0);
 				recv_tx[recv_tx_pos] = true;
 				recv_tx_pos++;
