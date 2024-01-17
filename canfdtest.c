@@ -53,6 +53,7 @@ static int sockfd;
 static int test_loops;
 static int exit_sig;
 static int inflight_count = CAN_MSG_COUNT;
+static int filter;
 static canid_t can_id_ping = CAN_MSG_ID_PING;
 static canid_t can_id_pong = CAN_MSG_ID_PONG;
 static bool has_pong_id;
@@ -80,6 +81,7 @@ static void print_usage(char *prg)
 		"         -v       (low verbosity)\n"
 		"         -vv      (high verbosity)\n"
 		"         -x       (ignore other frames on bus)\n"
+		"         -xx      (ignore locally generated and other frames on bus -- use for loopback testing)\n"
 		"\n"
 		"With the option '-g' CAN messages are generated and checked\n"
 		"on <can-interface>, otherwise all messages received on the\n"
@@ -304,8 +306,14 @@ static int can_echo_dut(void)
 	int err = 0;
 
 	while (running) {
-		if (recv_frame(&frame, NULL))
+		int flags;
+
+		if (recv_frame(&frame, &flags))
 			return -1;
+
+		if (filter > 1 && flags & MSG_DONTROUTE)
+			continue;
+
 		frame_count++;
 		if (verbose == 1) {
 			echo_progress(frame.data[0]);
@@ -387,6 +395,11 @@ static int can_echo_gen(void)
 				goto out_free;
 			}
 
+			if (filter > 1 &&
+			    ((rx_frame.can_id == can_id_ping && !(flags & MSG_CONFIRM)) ||
+			     (rx_frame.can_id == can_id_pong && (flags & MSG_DONTROUTE))))
+				continue;
+
 			if (verbose > 1)
 				print_frame(rx_frame.can_id, rx_frame.data, rx_frame.len, 0);
 
@@ -435,7 +448,6 @@ int main(int argc, char *argv[])
 	int echo_gen = 0;
 	int opt, err;
 	int enable_socket_option = 1;
-	bool filter = false;
 
 	signal(SIGTERM, signal_handler);
 	signal(SIGHUP, signal_handler);
@@ -485,7 +497,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'x':
-			filter = true;
+			filter++;
 			break;
 
 		case '?':
