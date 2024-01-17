@@ -318,6 +318,10 @@ static int can_echo_dut(void)
 		if (verbose == 1) {
 			echo_progress(frame.data[0]);
 		} else if (verbose > 1) {
+			if (verbose > 2)
+				printf("%s %s: ",
+				       flags & MSG_DONTROUTE ? "DR" : "  ",
+				       flags & MSG_CONFIRM ? "CF" : "  ");
 			print_frame(frame.can_id, frame.data, frame.len, 0);
 		}
 
@@ -400,8 +404,13 @@ static int can_echo_gen(void)
 			     (rx_frame.can_id == can_id_pong && (flags & MSG_DONTROUTE))))
 				continue;
 
-			if (verbose > 1)
+			if (verbose > 1) {
+				if (verbose > 2)
+					printf("%s %s: ",
+					       flags & MSG_DONTROUTE ? "DR" : "  ",
+					       flags & MSG_CONFIRM ? "CF" : "  ");
 				print_frame(rx_frame.can_id, rx_frame.data, rx_frame.len, 0);
+			}
 
 			/* own frame */
 			if (flags & MSG_CONFIRM) {
