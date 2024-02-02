@@ -53,6 +53,11 @@ set(PROGRAMS_J1939
     testj1939
 )
 
+set(PROGRAMS_ISOBUSFS
+    isobusfs-srv
+    isobusfs-cli
+)
+
 set(PROGRAMS
     ${PROGRAMS_CANLIB}
     canfdtest
@@ -86,6 +91,7 @@ add_executable(mcp251xfd-dump
 
 if(NOT ANDROID)
   list(APPEND PROGRAMS ${PROGRAMS_J1939})
+  list(APPEND PROGRAMS ${PROGRAMS_ISOBUSFS})
 
   add_library(j1939 STATIC
       libj1939.c

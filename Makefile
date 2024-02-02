@@ -63,6 +63,10 @@ CPPFLAGS += \
 PROGRAMS_CANGW := \
 	cangw
 
+PROGRAMS_ISOBUSFS := \
+	isobusfs-srv \
+	isobusfs-cli
+
 PROGRAMS_ISOTP := \
 	isotpdump \
 	isotpperf \
@@ -89,6 +93,7 @@ PROGRAMS_SLCAN := \
 
 PROGRAMS := \
 	$(PROGRAMS_CANGW) \
+	$(PROGRAMS_ISOBUSFS) \
 	$(PROGRAMS_ISOTP) \
 	$(PROGRAMS_J1939) \
 	$(PROGRAMS_SLCAN) \
@@ -139,6 +144,8 @@ j1939cat.o:	libj1939.h
 j1939spy.o:	libj1939.h
 j1939sr.o:	libj1939.h
 testj1939.o:	libj1939.h
+isobusfs_srv.o:		libj1939.h lib.h
+isobusfs_c.o:		libj1939.h lib.h
 canframelen.o:  canframelen.h
 
 asc2log:	asc2log.o	lib.o
@@ -156,6 +163,21 @@ j1939cat:	j1939cat.o	libj1939.o
 j1939spy:	j1939spy.o	libj1939.o
 j1939sr:	j1939sr.o	libj1939.o
 testj1939:	testj1939.o	libj1939.o
+isobusfs-srv:	isobusfs_srv.o isobusfs_cmn.o libj1939.o lib.o \
+			isobusfs_srv_cm.o \
+			isobusfs_srv_cm_fss.o \
+			isobusfs_srv_dh.o \
+			isobusfs_srv_fa.o \
+			isobusfs_srv_fh.o \
+			isobusfs_srv_vh.o \
+			isobusfs_cmn_dh.o
+
+isobusfs-cli:	isobusfs_cli.o isobusfs_cmn.o libj1939.o lib.o \
+			isobusfs_cli_cm.o \
+			isobusfs_cli_dh.o \
+			isobusfs_cli_fa.o \
+			isobusfs_cli_selftests.o \
+			isobusfs_cli_int.o
 canbusload:	canbusload.o	canframelen.o
 
 can-calc-bit-timing: calc-bit-timing/can-calc-bit-timing.o

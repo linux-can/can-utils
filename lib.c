@@ -704,3 +704,21 @@ void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *c
 		n += snprintf_error_cnt(buf + n, len - n, cf);
 	}
 }
+
+int64_t timespec_diff_ms(struct timespec *ts1,
+					  struct timespec *ts2)
+{
+	int64_t diff = (ts1->tv_sec - ts2->tv_sec) * 1000;
+
+	diff += (ts1->tv_nsec - ts2->tv_nsec) / 1000000;
+
+	return diff;
+}
+
+void timespec_add_ms(struct timespec *ts, uint64_t milliseconds)
+{
+	uint64_t total_ns = ts->tv_nsec + (milliseconds * 1000000);
+
+	ts->tv_sec += total_ns / 1000000000;
+	ts->tv_nsec = total_ns % 1000000000;
+}

@@ -38,6 +38,8 @@ GNUmakefile.in
 /cansend
 /cansequence
 /cansniffer
+/isobusfs-cli
+/isobusfs-srv
 /isotpdump
 /isotpperf
 /isotprecv

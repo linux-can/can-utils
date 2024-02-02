@@ -13,6 +13,14 @@ LDADD = \
 
 noinst_HEADERS = \
 	canframelen.h \
+	isobusfs/isobusfs_cli.h \
+	isobusfs/isobusfs_cmn.h \
+	isobusfs/isobusfs_cmn_cm.h \
+	isobusfs/isobusfs_cmn_dh.h \
+	isobusfs/isobusfs_cmn_fa.h \
+	isobusfs/isobusfs_cmn_fh.h \
+	isobusfs/isobusfs_cmn_va.h \
+	isobusfs/isobusfs_srv.h \
 	lib.h \
 	libj1939.h \
 	terminal.h \
@@ -75,6 +83,13 @@ EXTRA_DIST += \
 	mcp251xfd/devcoredump \
 	mcp251xfd/mcp251xfd-gen-testdata.sh
 
+lib_LTLIBRARIES = \
+	libisobusfs.la
+
+libisobusfs_la_SOURCES = \
+	isobusfs/isobusfs_cmn.c \
+	isobusfs/isobusfs_cmn_dh.c
+
 bin_PROGRAMS = \
 	asc2log \
 	can-calc-bit-timing \
@@ -87,6 +102,8 @@ bin_PROGRAMS = \
 	cansend \
 	cansequence \
 	cansniffer \
+	isobusfs-cli \
+	isobusfs-srv \
 	isotpdump \
 	isotpperf \
 	isotprecv \
@@ -111,6 +128,33 @@ bin_PROGRAMS += \
 	canlogserver \
 	isotpserver
 endif
+
+isobusfs_cli_SOURCES = \
+	isobusfs/isobusfs_cli.c \
+	isobusfs/isobusfs_cli_cm.c \
+	isobusfs/isobusfs_cli_dh.c \
+	isobusfs/isobusfs_cli_fa.c \
+	isobusfs/isobusfs_cli_selftests.c \
+	isobusfs/isobusfs_cli_int.c
+
+isobusfs_cli_LDADD = \
+	libisobusfs.la \
+	libj1939.la \
+	libcan.la
+
+isobusfs_srv_SOURCES = \
+	isobusfs/isobusfs_srv.c \
+	isobusfs/isobusfs_srv_cm.c \
+	isobusfs/isobusfs_srv_cm_fss.c \
+	isobusfs/isobusfs_srv_dh.c \
+	isobusfs/isobusfs_srv_fa.c \
+	isobusfs/isobusfs_srv_fh.c \
+	isobusfs/isobusfs_srv_vh.c
+
+isobusfs_srv_LDADD = \
+	libisobusfs.la \
+	libj1939.la \
+	libcan.la
 
 j1939acd_LDADD = libj1939.la
 j1939cat_LDADD = libj1939.la
