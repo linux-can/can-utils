@@ -229,4 +229,20 @@ void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *c
  * Creates a CAN error frame output in user readable format.
  */
 
+/**
+ * timespec_diff_ms - calculate timespec difference in milliseconds
+ * @ts1: first timespec
+ * @ts2: second timespec
+ *
+ * Return negative difference if in the past.
+ */
+int64_t timespec_diff_ms(struct timespec *ts1, struct timespec *ts2);
+
+/**
+ * timespec_add_ms - add milliseconds to timespec
+ * @ts: timespec
+ * @milliseconds: milliseconds to add
+ */
+void timespec_add_ms(struct timespec *ts, uint64_t milliseconds);
+
 #endif
