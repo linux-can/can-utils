@@ -368,35 +368,68 @@ int main(int argc, char **argv)
 			nbytes = read(s, buffer, BUF_LEN);
 			if (nbytes < 0) {
 				perror_syslog("read isotp socket");
-				return -1;
-			}
-			if (nbytes > MAX_PDU_LENGTH)
-				return -1;
-			ret = write(t, buffer, nbytes);
-			if (verbose) {
-				if (ret < 0 && errno == EAGAIN)
-					printf(";");
-				else
-					printf(",");
-				fflush(stdout);
+				// Handle/ignore various RX/TX errors from isotp.
+				//
+				// Note, we must handle both RX and TX, since the RX path initiates TX flow control to the sender.
+				switch(errno) {
+					// Need to read again on next pass
+					case EAGAIN:
+					// RX path timeout of data reception leads to -ETIMEDOUT
+					case ETIMEDOUT:
+					// TX path flowcontrol reception timeout leads to -ECOMM
+					case ECOMM:
+					// RX path SN mismatch leads to -EILSEQ
+					case EILSEQ:
+					// TX path flowcontrol reception with wrong layout/padding leads to -EBADMSG
+					// RX path data reception with wrong padding leads to -EBADMSG
+					case EBADMSG:
+					// TX path flowcontrol reception overflow leads to -EMSGSIZE
+					case EMSGSIZE:
+						perror_syslog("read isotp socket ignore errno");
+						// ignore the above errors as they are recoverable
+						break;
+					default:
+						// otherwise, its an error we cannot recover from so exit
+						return nbytes;
+				}
+			} else {
+				if (nbytes > MAX_PDU_LENGTH) {
+					syslogger(LOG_WARNING, "isotp received too many bytes %d for max PDU length %d\n",
+							  nbytes, MAX_PDU_LENGTH);
+				} else {
+					ret = write(t, buffer, nbytes);
+					if (verbose) {
+						if (ret < 0 && errno == EAGAIN)
+							printf(";");
+						else
+							printf(",");
+						fflush(stdout);
+					}
+				}
 			}
 		}
 
 		if (FD_ISSET(t, &rdfs)) {
 			nbytes = read(t, buffer, BUF_LEN);
 			if (nbytes < 0) {
-				perror_syslog("read tunfd");
-				return -1;
-			}
-			if (nbytes > MAX_PDU_LENGTH)
-				return -1;
-			ret = write(s, buffer, nbytes);
-			if (verbose) {
-				if (ret < 0 && errno == EAGAIN)
-					printf(":");
-				else
-					printf(".");
-				fflush(stdout);
+				if (errno != EAGAIN) {
+					perror_syslog("read tunfd");
+					return nbytes;
+				}
+			} else {
+				if (nbytes > MAX_PDU_LENGTH) {
+					syslogger(LOG_WARNING, "tun received too many bytes %d for max PDU length %d\n",
+							  nbytes, MAX_PDU_LENGTH);
+				} else {
+					ret = write(s, buffer, nbytes);
+					if (verbose) {
+						if (ret < 0 && errno == EAGAIN)
+							printf(":");
+						else
+							printf(".");
+						fflush(stdout);
+					}
+				}
 			}
 		}
 	}
