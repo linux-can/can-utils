@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
-
+// SPDX-License-Identifier: LGPL-2.0-only
+// SPDX-FileCopyrightText: 2023 Oleksij Rempel <linux@rempel-privat.de>
 
 #ifndef ISOBUSFS_CLI_H
 #define ISOBUSFS_CLI_H

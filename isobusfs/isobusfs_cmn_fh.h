@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: LGPL-2.0-only
+// SPDX-FileCopyrightText: 2023 Oleksij Rempel <linux@rempel-privat.de>
+
 #ifndef _ISOBUSFS_CMN_FH_H
 #define _ISOBUSFS_CMN_FH_H
 
