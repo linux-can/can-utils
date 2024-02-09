@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: LGPL-2.0-only
+# SPDX-FileCopyrightText: 2023 Oleksij Rempel <linux@rempel-privat.de>
 
 mkdir dir1
 mkdir dir1/dir2

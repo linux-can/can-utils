@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only
+// SPDX-License-Identifier: LGPL-2.0-only
 // SPDX-FileCopyrightText: 2023 Oleksij Rempel <linux@rempel-privat.de>
 /*
  * This file implements Annex C.1.2 File Server Status according to

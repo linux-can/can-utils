@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: LGPL-2.0-only
+# SPDX-FileCopyrightText: 2023 Oleksij Rempel <linux@rempel-privat.de>
 
 # Arguments: path to the file and the file size
 FILEPATH=$1
