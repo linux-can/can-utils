@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -137,7 +138,7 @@ int isobusfs_get_timeout_ms(struct timespec *ts)
 		timeout_ms = 0;
 	} else {
 		if (time_diff > INT_MAX) {
-			warn("timeout too long: %ld ms", time_diff);
+			warn("timeout too long: %" PRId64 " ms", time_diff);
 			time_diff = INT_MAX;
 		}
 
