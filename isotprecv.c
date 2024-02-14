@@ -73,6 +73,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -f <time ns>  (force rx stmin value in nanosecs)\n");
 	fprintf(stderr, "         -w <num>      (max. wait frame transmissions.)\n");
 	fprintf(stderr, "         -l            (loop: do not exit after pdu reception.)\n");
+	fprintf(stderr, "         -F            (enable dynamic flow control parameters)\n");
 	fprintf(stderr, "         -L <mtu>:<tx_dl>:<tx_flags>  (link layer options for CAN FD)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "The pdu data is written on STDOUT in space separated ASCII hex values.\n");
@@ -96,7 +97,7 @@ int main(int argc, char **argv)
 
     addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-    while ((opt = getopt(argc, argv, "s:d:x:p:P:b:m:w:f:lL:?")) != -1) {
+    while ((opt = getopt(argc, argv, "s:d:x:p:P:b:m:w:f:lFL:?")) != -1) {
 	    switch (opt) {
 	    case 's':
 		    addr.can_addr.tp.tx_id = strtoul(optarg, NULL, 16);
@@ -181,6 +182,10 @@ int main(int argc, char **argv)
 
 	    case 'l':
 		    loop = 1;
+		    break;
+
+	    case 'F':
+		    opts.flags |= CAN_ISOTP_DYN_FC_PARMS;
 		    break;
 
 	    case 'L':
