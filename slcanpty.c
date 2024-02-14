@@ -53,24 +53,25 @@
 int pty2can(int pty, int socket, struct can_filter *fi,
 	    int *is_open, int *tstamp)
 {
-	int nbytes;
+	unsigned int nbytes;
 	char cmd;
 	static char buf[200];
 	char replybuf[10]; /* for answers to received commands */
 	int ptr;
 	struct can_frame frame;
-	int tmp, i;
-	static int rxoffset = 0; /* points to the end of an received incomplete SLCAN message */
+	int ret, tmp, i;
+	static unsigned int rxoffset = 0; /* points to the end of an received incomplete SLCAN message */
 
-	nbytes = read(pty, &buf[rxoffset], sizeof(buf)-rxoffset-1);
-	if (nbytes <= 0) {
-		/* nbytes == 0 : no error but pty descriptor has been closed */
-		if (nbytes < 0)
+	ret = read(pty, &buf[rxoffset], sizeof(buf)-rxoffset-1);
+	if (ret <= 0) {
+		/* ret == 0 : no error but pty descriptor has been closed */
+		if (ret < 0)
 			perror("read pty");
 
 		return 1;
 	}
 
+	nbytes = ret;
 	/* reset incomplete message offset */
 	nbytes += rxoffset;
 	rxoffset = 0;
