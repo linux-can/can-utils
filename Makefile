@@ -121,7 +121,7 @@ endif
 all: $(PROGRAMS)
 
 clean:
-	rm -f $(PROGRAMS) *.o mcp251xfd/*.o
+	rm -f $(PROGRAMS) *.o mcp251xfd/*.o isobusfs/*.o
 
 install:
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
@@ -148,6 +148,7 @@ isobusfs_srv.o:		libj1939.h lib.h
 isobusfs_c.o:		libj1939.h lib.h
 canframelen.o:  canframelen.h
 
+canbusload:	canbusload.o	canframelen.o
 asc2log:	asc2log.o	lib.o
 candump:	candump.o	lib.o
 cangen:		cangen.o	lib.o
@@ -163,22 +164,28 @@ j1939cat:	j1939cat.o	libj1939.o
 j1939spy:	j1939spy.o	libj1939.o
 j1939sr:	j1939sr.o	libj1939.o
 testj1939:	testj1939.o	libj1939.o
-isobusfs-srv:	isobusfs_srv.o isobusfs_cmn.o libj1939.o lib.o \
-			isobusfs_srv_cm.o \
-			isobusfs_srv_cm_fss.o \
-			isobusfs_srv_dh.o \
-			isobusfs_srv_fa.o \
-			isobusfs_srv_fh.o \
-			isobusfs_srv_vh.o \
-			isobusfs_cmn_dh.o
 
-isobusfs-cli:	isobusfs_cli.o isobusfs_cmn.o libj1939.o lib.o \
-			isobusfs_cli_cm.o \
-			isobusfs_cli_dh.o \
-			isobusfs_cli_fa.o \
-			isobusfs_cli_selftests.o \
-			isobusfs_cli_int.o
-canbusload:	canbusload.o	canframelen.o
+isobusfs-srv:	libj1939.o lib.o \
+		isobusfs/isobusfs_cmn.o \
+		isobusfs/isobusfs_srv.o \
+		isobusfs/isobusfs_srv_cm.o \
+		isobusfs/isobusfs_srv_cm_fss.o \
+		isobusfs/isobusfs_srv_dh.o \
+		isobusfs/isobusfs_srv_fa.o \
+		isobusfs/isobusfs_srv_fh.o \
+		isobusfs/isobusfs_srv_vh.o \
+		isobusfs/isobusfs_cmn_dh.o
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+isobusfs-cli:	libj1939.o lib.o \
+		isobusfs/isobusfs_cmn.o \
+		isobusfs/isobusfs_cli.o \
+		isobusfs/isobusfs_cli_cm.o \
+		isobusfs/isobusfs_cli_dh.o \
+		isobusfs/isobusfs_cli_fa.o \
+		isobusfs/isobusfs_cli_selftests.o \
+		isobusfs/isobusfs_cli_int.o
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 can-calc-bit-timing: calc-bit-timing/can-calc-bit-timing.o
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
