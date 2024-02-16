@@ -148,8 +148,8 @@ isobusfs_srv.o:		libj1939.h lib.h
 isobusfs_c.o:		libj1939.h lib.h
 canframelen.o:  canframelen.h
 
-canbusload:	canbusload.o	canframelen.o
 asc2log:	asc2log.o	lib.o
+canbusload:	canbusload.o	canframelen.o
 candump:	candump.o	lib.o
 cangen:		cangen.o	lib.o
 canlogserver:	canlogserver.o	lib.o
