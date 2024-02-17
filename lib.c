@@ -45,6 +45,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include <linux/can.h>
 #include <linux/can/error.h>
