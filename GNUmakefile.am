@@ -19,7 +19,6 @@ noinst_HEADERS = \
 	isobusfs/isobusfs_cmn_dh.h \
 	isobusfs/isobusfs_cmn_fa.h \
 	isobusfs/isobusfs_cmn_fh.h \
-	isobusfs/isobusfs_cmn_va.h \
 	isobusfs/isobusfs_srv.h \
 	lib.h \
 	libj1939.h \
