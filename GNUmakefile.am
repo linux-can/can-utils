@@ -139,7 +139,6 @@ isobusfs_cli_SOURCES = \
 
 isobusfs_cli_LDADD = \
 	libisobusfs.la \
-	libj1939.la \
 	libcan.la
 
 isobusfs_srv_SOURCES = \
@@ -153,7 +152,6 @@ isobusfs_srv_SOURCES = \
 
 isobusfs_srv_LDADD = \
 	libisobusfs.la \
-	libj1939.la \
 	libcan.la
 
 j1939acd_LDADD = libj1939.la
