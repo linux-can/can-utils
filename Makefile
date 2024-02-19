@@ -144,8 +144,8 @@ j1939cat.o:	libj1939.h
 j1939spy.o:	libj1939.h
 j1939sr.o:	libj1939.h
 testj1939.o:	libj1939.h
-isobusfs_srv.o:		libj1939.h lib.h
-isobusfs_c.o:		libj1939.h lib.h
+isobusfs_srv.o:	lib.h
+isobusfs_c.o:	lib.h
 canframelen.o:  canframelen.h
 
 canbusload:	canbusload.o	canframelen.o
