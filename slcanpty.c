@@ -387,6 +387,24 @@ int check_select_stdin(void)
 	return 1;
 }
 
+static void print_usage(const char *prg)
+{
+	fprintf(stderr,
+		"%s: adapter for applications using the slcan ASCII protocol.\n"
+		"\n"
+		"%s creates a pty for applications using the slcan ASCII protocol and\n"
+		"converts the ASCII data to a CAN network interface (and vice versa)\n"
+		"\n"
+		"Usage: %s <pty> <can interface>\n"
+		"\n"
+		"Examples:\n"
+		"%s /dev/ptyc0 can0  - creates /dev/ttyc0 for the slcan application\n"
+		"\n"
+		"e.g. for pseudo-terminal '%s %s can0' creates /dev/pts/N\n"
+		"\n",
+		prg, prg, prg, prg, prg, DEVICE_NAME_PTMX);
+}
+
 int main(int argc, char **argv)
 {
 	fd_set rdfs;
@@ -402,19 +420,7 @@ int main(int argc, char **argv)
 
 	/* check command line options */
 	if (argc != 3) {
-		fprintf(stderr, "%s: adapter for applications using"
-			" the slcan ASCII protocol.\n", basename(argv[0]));
-		fprintf(stderr, "\n%s creates a pty for applications using"
-			" the slcan ASCII protocol and\n", basename(argv[0]));
-		fprintf(stderr, "converts the ASCII data to a CAN network"
-			" interface (and vice versa)\n\n");
-		fprintf(stderr, "Usage: %s <pty> <can interface>\n", basename(argv[0]));
-		fprintf(stderr, "\nExamples:\n");
-		fprintf(stderr, "%s /dev/ptyc0 can0  - creates /dev/ttyc0 for the slcan application\n\n",
-			basename(argv[0]));
-		fprintf(stderr, "e.g. for pseudo-terminal '%s %s can0' creates"
-			" /dev/pts/N\n", basename(argv[0]), DEVICE_NAME_PTMX);
-		fprintf(stderr, "\n");
+		print_usage(basename(argv[0]));
 		return 1;
 	}
 
