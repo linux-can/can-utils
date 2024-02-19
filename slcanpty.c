@@ -46,12 +46,11 @@
 #include "lib.h"
 
 /* maximum rx buffer len: extended CAN frame with timestamp */
-#define SLC_MTU (sizeof("T1111222281122334455667788EA5F\r")+1)
+#define SLC_MTU (sizeof("T1111222281122334455667788EA5F\r") + 1)
 #define DEVICE_NAME_PTMX "/dev/ptmx"
 
 /* read data from pty, send CAN frames to CAN socket and answer commands */
-int pty2can(int pty, int socket, struct can_filter *fi,
-	    int *is_open, int *tstamp)
+int pty2can(int pty, int socket, struct can_filter *fi, int *is_open, int *tstamp)
 {
 	unsigned int nbytes;
 	char cmd;
@@ -62,7 +61,7 @@ int pty2can(int pty, int socket, struct can_filter *fi,
 	int ret, tmp, i;
 	static unsigned int rxoffset = 0; /* points to the end of an received incomplete SLCAN message */
 
-	ret = read(pty, &buf[rxoffset], sizeof(buf)-rxoffset-1);
+	ret = read(pty, &buf[rxoffset], sizeof(buf) - rxoffset - 1);
 	if (ret <= 0) {
 		/* ret == 0 : no error but pty descriptor has been closed */
 		if (ret < 0)
@@ -80,7 +79,7 @@ rx_restart:
 	/* remove trailing '\r' characters to be robust against some apps */
 	while (buf[0] == '\r' && nbytes > 0) {
 		for (tmp = 0; tmp < nbytes; tmp++)
-			buf[tmp] = buf[tmp+1];
+			buf[tmp] = buf[tmp + 1];
 		nbytes--;
 	}
 
@@ -137,7 +136,6 @@ rx_restart:
 		goto rx_out_ack;
 	}
 
-
 	/* check for timestamp on/off command */
 	if (cmd == 'Z') {
 		*tstamp = buf[1] & 0x01;
@@ -147,9 +145,7 @@ rx_restart:
 
 	/* check for 'O'pen command */
 	if (cmd == 'O') {
-		setsockopt(socket, SOL_CAN_RAW,
-			   CAN_RAW_FILTER, fi,
-			   sizeof(struct can_filter));
+		setsockopt(socket, SOL_CAN_RAW, CAN_RAW_FILTER, fi, sizeof(struct can_filter));
 		ptr = 1;
 		*is_open = 1;
 		goto rx_out_ack;
@@ -157,8 +153,7 @@ rx_restart:
 
 	/* check for 'C'lose command */
 	if (cmd == 'C') {
-		setsockopt(socket, SOL_CAN_RAW, CAN_RAW_FILTER,
-			   NULL, 0);
+		setsockopt(socket, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
 		ptr = 1;
 		*is_open = 0;
 		goto rx_out_ack;
@@ -221,9 +216,8 @@ rx_restart:
 	}
 
 	/* catch unknown commands */
-	if ((cmd != 't') && (cmd != 'T') &&
-	    (cmd != 'r') && (cmd != 'R')) {
-		ptr = nbytes-1;
+	if ((cmd != 't') && (cmd != 'T') && (cmd != 'r') && (cmd != 'R')) {
+		ptr = nbytes - 1;
 		goto rx_out_nack;
 	}
 
@@ -235,8 +229,7 @@ rx_restart:
 	memset(&frame.data, 0, 8); /* clear data[] */
 
 	if ((cmd | 0x20) == 'r' && buf[ptr] != '0') {
-
-		/* 
+		/*
 		 * RTR frame without dlc information!
 		 * This is against the SLCAN spec but sent
 		 * by a commercial CAN tool ... so we are
@@ -247,18 +240,17 @@ rx_restart:
 
 		buf[ptr] = 0; /* terminate can_id string */
 
-		frame.can_id = strtoul(buf+1, NULL, 16);
+		frame.can_id = strtoul(buf + 1, NULL, 16);
 		frame.can_id |= CAN_RTR_FLAG;
 
 		if (!(cmd & 0x20)) /* NO tiny chars => EFF */
 			frame.can_id |= CAN_EFF_FLAG;
 
-		buf[ptr]  = frame.can_dlc; /* restore following byte */
+		buf[ptr] = frame.can_dlc; /* restore following byte */
 		frame.can_dlc = 0;
 		ptr--; /* we have no dlc component in the violation case */
 
 	} else {
-
 		if (!(buf[ptr] >= '0' && buf[ptr] < '9'))
 			goto rx_out_nack;
 
@@ -266,7 +258,7 @@ rx_restart:
 
 		buf[ptr] = 0; /* terminate can_id string */
 
-		frame.can_id = strtoul(buf+1, NULL, 16);
+		frame.can_id = strtoul(buf + 1, NULL, 16);
 
 		if (!(cmd & 0x20)) /* NO tiny chars => EFF */
 			frame.can_id |= CAN_EFF_FLAG;
@@ -275,7 +267,6 @@ rx_restart:
 			frame.can_id |= CAN_RTR_FLAG;
 
 		for (i = 0, ptr++; i < frame.can_dlc; i++) {
-
 			tmp = asc2nibble(buf[ptr++]);
 			if (tmp > 0x0F)
 				goto rx_out_nack;
@@ -311,9 +302,9 @@ rx_out:
 	}
 
 	/* check if there is another command in this buffer */
-	if (nbytes > ptr+1) {
-		for (tmp = 0, ptr++; ptr+tmp < nbytes; tmp++)
-			buf[tmp] = buf[ptr+tmp];
+	if (nbytes > ptr + 1) {
+		for (tmp = 0, ptr++; ptr + tmp < nbytes; tmp++)
+			buf[tmp] = buf[ptr + tmp];
 		nbytes = tmp;
 		goto rx_restart;
 	}
@@ -344,19 +335,14 @@ int can2pty(int pty, int socket, int *tstamp)
 		cmd = 'T'; /* becomes 't' in SFF format */
 
 	if (frame.can_id & CAN_EFF_FLAG)
-		sprintf(buf, "%c%08X%d", cmd,
-			frame.can_id & CAN_EFF_MASK,
-			frame.can_dlc);
+		sprintf(buf, "%c%08X%d", cmd, frame.can_id & CAN_EFF_MASK, frame.can_dlc);
 	else
-		sprintf(buf, "%c%03X%d", cmd | 0x20,
-			frame.can_id & CAN_SFF_MASK,
-			frame.can_dlc);
+		sprintf(buf, "%c%03X%d", cmd | 0x20, frame.can_id & CAN_SFF_MASK, frame.can_dlc);
 
 	ptr = strlen(buf);
 
 	for (i = 0; i < frame.can_dlc; i++)
-		sprintf(&buf[ptr + 2*i], "%02X",
-			frame.data[i]);
+		sprintf(&buf[ptr + 2 * i], "%02X", frame.data[i]);
 
 	if (*tstamp) {
 		struct timeval tv;
@@ -401,11 +387,29 @@ int check_select_stdin(void)
 	return 1;
 }
 
+static void print_usage(const char *prg)
+{
+	fprintf(stderr,
+		"%s: adapter for applications using the slcan ASCII protocol.\n"
+		"\n"
+		"%s creates a pty for applications using the slcan ASCII protocol and\n"
+		"converts the ASCII data to a CAN network interface (and vice versa)\n"
+		"\n"
+		"Usage: %s <pty> <can interface>\n"
+		"\n"
+		"Examples:\n"
+		"%s /dev/ptyc0 can0  - creates /dev/ttyc0 for the slcan application\n"
+		"\n"
+		"e.g. for pseudo-terminal '%s %s can0' creates /dev/pts/N\n"
+		"\n",
+		prg, prg, prg, prg, prg, DEVICE_NAME_PTMX);
+}
+
 int main(int argc, char **argv)
 {
 	fd_set rdfs;
-	int p; /* pty master file */ 
-	int s; /* can raw socket */ 
+	int p; /* pty master file */
+	int s; /* can raw socket */
 	struct sockaddr_can addr;
 	struct termios topts;
 	int select_stdin = 0;
@@ -416,19 +420,7 @@ int main(int argc, char **argv)
 
 	/* check command line options */
 	if (argc != 3) {
-		fprintf(stderr, "%s: adapter for applications using"
-			" the slcan ASCII protocol.\n", basename(argv[0]));
-		fprintf(stderr, "\n%s creates a pty for applications using"
-			" the slcan ASCII protocol and\n", basename(argv[0]));
-		fprintf(stderr, "converts the ASCII data to a CAN network"
-			" interface (and vice versa)\n\n");
-		fprintf(stderr, "Usage: %s <pty> <can interface>\n", basename(argv[0]));
-		fprintf(stderr, "\nExamples:\n");
-		fprintf(stderr, "%s /dev/ptyc0 can0  - creates /dev/ttyc0 for the slcan application\n\n",
-			basename(argv[0]));
-		fprintf(stderr, "e.g. for pseudo-terminal '%s %s can0' creates"
-			" /dev/pts/N\n", basename(argv[0]), DEVICE_NAME_PTMX);
-		fprintf(stderr, "\n");
+		print_usage(basename(argv[0]));
 		return 1;
 	}
 
@@ -447,16 +439,14 @@ int main(int argc, char **argv)
 	}
 
 	/* disable local echo which would cause double frames */
-	topts.c_lflag &= ~(ICANON | ECHO | ECHOE | ECHOK |
-			   ECHONL | ECHOPRT | ECHOKE);
+	topts.c_lflag &= ~(ICANON | ECHO | ECHOE | ECHOK | ECHONL | ECHOPRT | ECHOKE);
 	topts.c_iflag &= ~(ICRNL);
 	topts.c_iflag |= INLCR;
 	tcsetattr(p, TCSANOW, &topts);
 
 	/* Support for the Unix 98 pseudo-terminal interface /dev/ptmx /dev/pts/N */
-	if  (strcmp(argv[1], DEVICE_NAME_PTMX) == 0) {
-
-		char *name_pts = NULL;	/* slave pseudo-terminal device name */
+	if (strcmp(argv[1], DEVICE_NAME_PTMX) == 0) {
+		char *name_pts = NULL; /* slave pseudo-terminal device name */
 
 		if (grantpt(p) < 0) {
 			perror("grantpt");
@@ -499,11 +489,10 @@ int main(int argc, char **argv)
 	}
 
 	/* open filter by default */
-	fi.can_id   = 0;
+	fi.can_id = 0;
 	fi.can_mask = 0;
 
 	while (running) {
-
 		FD_ZERO(&rdfs);
 
 		if (select_stdin)
@@ -512,7 +501,7 @@ int main(int argc, char **argv)
 		FD_SET(p, &rdfs);
 		FD_SET(s, &rdfs);
 
-		if (select(s+1, &rdfs, NULL, NULL, NULL) < 0) {
+		if (select(s + 1, &rdfs, NULL, NULL, NULL) < 0) {
 			perror("select");
 			return 1;
 		}
@@ -524,15 +513,15 @@ int main(int argc, char **argv)
 
 		if (FD_ISSET(p, &rdfs))
 			if (pty2can(p, s, &fi, &is_open, &tstamp)) {
-			running = 0;
-			continue;
-		}
+				running = 0;
+				continue;
+			}
 
 		if (FD_ISSET(s, &rdfs))
 			if (can2pty(p, s, &tstamp)) {
-			running = 0;
-			continue;
-		}
+				running = 0;
+				continue;
+			}
 	}
 
 	close(p);
