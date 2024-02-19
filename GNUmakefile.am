@@ -139,7 +139,6 @@ isobusfs_cli_SOURCES = \
 
 isobusfs_cli_LDADD = \
 	libisobusfs.la \
-	libj1939.la \
 	libcan.la
 
 isobusfs_srv_SOURCES = \
@@ -153,8 +152,11 @@ isobusfs_srv_SOURCES = \
 
 isobusfs_srv_LDADD = \
 	libisobusfs.la \
-	libj1939.la \
 	libcan.la
+
+EXTRA_DIST += \
+	isobusfs/isobusfs_create_test_dirs.sh \
+	isobusfs/isobusfs_create_test_file.sh
 
 j1939acd_LDADD = libj1939.la
 j1939cat_LDADD = libj1939.la

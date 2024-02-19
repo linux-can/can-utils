@@ -91,11 +91,63 @@ add_executable(mcp251xfd-dump
 
 if(NOT ANDROID)
   list(APPEND PROGRAMS ${PROGRAMS_J1939})
-  list(APPEND PROGRAMS ${PROGRAMS_ISOBUSFS})
 
   add_library(j1939 STATIC
       libj1939.c
   )
+
+  add_library(isobusfs SHARED
+    isobusfs/isobusfs_cmn.c
+    isobusfs/isobusfs_cmn_dh.c
+  )
+
+  set(PUBLIC_HEADER_ISOBUSFS
+    isobusfs/isobusfs_cmn.h
+    isobusfs/isobusfs_cmn_cm.h
+  )
+
+  set_target_properties(isobusfs PROPERTIES
+    PUBLIC_HEADER "${PUBLIC_HEADER_ISOBUSFS}"
+  )
+
+  install(TARGETS isobusfs
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  )
+
+  add_executable(isobusfs-cli
+    isobusfs/isobusfs_cli.c
+    isobusfs/isobusfs_cli_cm.c
+    isobusfs/isobusfs_cli_dh.c
+    isobusfs/isobusfs_cli_fa.c
+    isobusfs/isobusfs_cli_selftests.c
+    isobusfs/isobusfs_cli_int.c
+  )
+
+  target_link_libraries(isobusfs-cli
+    PRIVATE isobusfs
+    PRIVATE can
+  )
+
+  add_executable(isobusfs-srv
+    isobusfs/isobusfs_srv.c
+    isobusfs/isobusfs_srv_cm.c
+    isobusfs/isobusfs_srv_cm_fss.c
+    isobusfs/isobusfs_srv_dh.c
+    isobusfs/isobusfs_srv_fa.c
+    isobusfs/isobusfs_srv_fh.c
+    isobusfs/isobusfs_srv_vh.c
+  )
+
+  target_link_libraries(isobusfs-srv
+    PRIVATE isobusfs
+    PRIVATE can
+  )
+
+  install(TARGETS
+    isobusfs-cli
+    isobusfs-srv
+    DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
 add_library(can STATIC

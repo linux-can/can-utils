@@ -144,8 +144,8 @@ j1939cat.o:	libj1939.h
 j1939spy.o:	libj1939.h
 j1939sr.o:	libj1939.h
 testj1939.o:	libj1939.h
-isobusfs_srv.o:		libj1939.h lib.h
-isobusfs_c.o:		libj1939.h lib.h
+isobusfs_srv.o:	lib.h
+isobusfs_c.o:	lib.h
 canframelen.o:  canframelen.h
 
 asc2log:	asc2log.o	lib.o
@@ -165,7 +165,7 @@ j1939spy:	j1939spy.o	libj1939.o
 j1939sr:	j1939sr.o	libj1939.o
 testj1939:	testj1939.o	libj1939.o
 
-isobusfs-srv:	libj1939.o lib.o \
+isobusfs-srv:	lib.o \
 		isobusfs/isobusfs_cmn.o \
 		isobusfs/isobusfs_srv.o \
 		isobusfs/isobusfs_srv_cm.o \
@@ -177,7 +177,7 @@ isobusfs-srv:	libj1939.o lib.o \
 		isobusfs/isobusfs_cmn_dh.o
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-isobusfs-cli:	libj1939.o lib.o \
+isobusfs-cli:	lib.o \
 		isobusfs/isobusfs_cmn.o \
 		isobusfs/isobusfs_cli.o \
 		isobusfs/isobusfs_cli_cm.o \

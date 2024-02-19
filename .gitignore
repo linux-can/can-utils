@@ -14,6 +14,7 @@ GNUmakefile.in
 
 /aclocal.m4
 /autom4te.cache/
+/calc-bit-timing/.dirstamp
 /config.log
 /config.status
 /config/autoconf/
@@ -22,7 +23,7 @@ GNUmakefile.in
 /config/m4/ltsugar.m4
 /config/m4/ltversion.m4
 /config/m4/lt~obsolete.m4
-/calc-bit-timing/.dirstamp
+/isobusfs/.dirstamp
 /mcp251xfd/.dirstamp
 
 /asc2log
