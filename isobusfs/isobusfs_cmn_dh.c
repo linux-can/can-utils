@@ -3,6 +3,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "isobusfs_cmn.h"
