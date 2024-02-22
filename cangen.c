@@ -730,6 +730,7 @@ int main(int argc, char **argv)
 		if (canfd) {
 			mtu = CANFD_MTU;
 			maxdlen = CANFD_MAX_DLEN;
+			frame.flags |= CANFD_FDF;
 			if (brs)
 				frame.flags |= CANFD_BRS;
 			if (esi)
@@ -830,9 +831,9 @@ int main(int argc, char **argv)
 			printf("  %s  ", argv[optind]);
 
 			if (verbose > 1)
-				fprint_long_canframe(stdout, &frame, "\n", (verbose > 2) ? 1 : 0, maxdlen);
+				fprint_long_canframe(stdout, &frame, "\n", (verbose > 2) ? 1 : 0);
 			else
-				fprint_canframe(stdout, &frame, "\n", 1, maxdlen);
+				fprint_canframe(stdout, &frame, "\n", 1);
 		}
 
 		ret = do_send_one(s, &frame, mtu, polltimeout);

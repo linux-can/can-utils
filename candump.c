@@ -310,7 +310,7 @@ int main(int argc, char **argv)
 	struct can_filter *rfilter;
 	can_err_mask_t err_mask;
 	struct canfd_frame frame;
-	int nbytes, i, maxdlen;
+	int nbytes, i;
 	struct ifreq ifr;
 	struct timeval tv, last_tv;
 	int timeout_ms = -1; /* default to no timeout */
@@ -736,10 +736,11 @@ int main(int argc, char **argv)
 				return 1;
 			}
 
+			/* mark dual-use struct canfd_frame */
 			if ((size_t)nbytes == CAN_MTU)
-				maxdlen = CAN_MAX_DLEN;
+				frame.flags = 0;
 			else if ((size_t)nbytes == CANFD_MTU)
-				maxdlen = CANFD_MAX_DLEN;
+				frame.flags |= CANFD_FDF;
 			else {
 				fprintf(stderr, "read: incomplete CAN frame\n");
 				return 1;
@@ -803,7 +804,7 @@ int main(int argc, char **argv)
 				sprint_timestamp(logtimestamp, &tv, &last_tv, ts_buf);
 
 				/* log CAN frame with absolute timestamp & device */
-				sprint_canframe(buf, &frame, 0, maxdlen);
+				sprint_canframe(buf, &frame, 0);
 				fprintf(logfile, "%s%*s %s%s\n", ts_buf,
 					max_devname_len, devname[idx], buf,
 					extra_info);
@@ -813,7 +814,7 @@ int main(int argc, char **argv)
 				char buf[CL_CFSZ]; /* max length */
 
 				/* print CAN frame in log file style to stdout */
-				sprint_canframe(buf, &frame, 0, maxdlen);
+				sprint_canframe(buf, &frame, 0);
 				print_timestamp(logtimestamp, &tv, &last_tv);
 
 				printf("%*s %s%s\n",
@@ -844,7 +845,7 @@ int main(int argc, char **argv)
 
 			printf("%s  ", (color == 1) ? col_off : "");
 
-			fprint_long_canframe(stdout, &frame, NULL, view, maxdlen);
+			fprint_long_canframe(stdout, &frame, NULL, view);
 
 			printf("%s", (color > 1) ? col_off : "");
 			printf("\n");

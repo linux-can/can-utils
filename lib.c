@@ -223,6 +223,7 @@ int parse_canframe(char *cs, struct canfd_frame *cf)
 			return 0;
 
 		cf->flags = tmp;
+		cf->flags |= CANFD_FDF; /* dual-use */
 		idx += 2;
 	}
 
@@ -257,24 +258,31 @@ int parse_canframe(char *cs, struct canfd_frame *cf)
 	return ret;
 }
 
-void fprint_canframe(FILE *stream, struct canfd_frame *cf, char *eol, int sep, int maxdlen)
+void fprint_canframe(FILE *stream, struct canfd_frame *cf, char *eol, int sep)
 {
 	/* documentation see lib.h */
 
 	char buf[CL_CFSZ]; /* max length */
 
-	sprint_canframe(buf, cf, sep, maxdlen);
+	sprint_canframe(buf, cf, sep);
 	fprintf(stream, "%s", buf);
 	if (eol)
 		fprintf(stream, "%s", eol);
 }
 
-void sprint_canframe(char *buf, struct canfd_frame *cf, int sep, int maxdlen)
+void sprint_canframe(char *buf, struct canfd_frame *cf, int sep)
 {
 	/* documentation see lib.h */
 
+	unsigned char is_canfd = cf->flags;
 	int i, offset;
-	int len = (cf->len > maxdlen) ? maxdlen : cf->len;
+	int len;
+
+	/* ensure max length values */
+	if (is_canfd)
+		len = (cf->len > CANFD_MAX_DLEN) ? CANFD_MAX_DLEN : cf->len;
+	else
+		len = (cf->len > CAN_MAX_DLEN) ? CAN_MAX_DLEN : cf->len;
 
 	if (cf->can_id & CAN_ERR_FLAG) {
 		put_eff_id(buf, cf->can_id & (CAN_ERR_MASK | CAN_ERR_FLAG));
@@ -290,15 +298,15 @@ void sprint_canframe(char *buf, struct canfd_frame *cf, int sep, int maxdlen)
 		offset = 4;
 	}
 
-	/* standard CAN frames may have RTR enabled. There are no ERR frames with RTR */
-	if (maxdlen == CAN_MAX_DLEN && cf->can_id & CAN_RTR_FLAG) {
+	/* CAN CC frames may have RTR enabled. There are no ERR frames with RTR */
+	if (!(is_canfd) && cf->can_id & CAN_RTR_FLAG) {
 		buf[offset++] = 'R';
 		/* print a given CAN 2.0B DLC if it's not zero */
-		if (cf->len && cf->len <= CAN_MAX_DLEN) {
+		if (len && len <= CAN_MAX_DLEN) {
 			buf[offset++] = hex_asc_upper_lo(cf->len);
 
 			/* check for optional raw DLC value for CAN 2.0B frames */
-			if (cf->len == CAN_MAX_DLEN) {
+			if (len == CAN_MAX_DLEN) {
 				struct can_frame *ccf = (struct can_frame *)cf;
 
 				if ((ccf->len8_dlc > CAN_MAX_DLEN) && (ccf->len8_dlc <= CAN_MAX_RAW_DLC)) {
@@ -312,7 +320,8 @@ void sprint_canframe(char *buf, struct canfd_frame *cf, int sep, int maxdlen)
 		return;
 	}
 
-	if (maxdlen == CANFD_MAX_DLEN) {
+	/* any CAN FD flags */
+	if (is_canfd) {
 		/* add CAN FD specific escape char and flags */
 		buf[offset++] = '#';
 		buf[offset++] = hex_asc_upper_lo(cf->flags);
@@ -320,6 +329,7 @@ void sprint_canframe(char *buf, struct canfd_frame *cf, int sep, int maxdlen)
 			buf[offset++] = '.';
 	}
 
+	/* data */
 	for (i = 0; i < len; i++) {
 		put_hex_byte(buf + offset, cf->data[i]);
 		offset += 2;
@@ -328,7 +338,7 @@ void sprint_canframe(char *buf, struct canfd_frame *cf, int sep, int maxdlen)
 	}
 
 	/* check for extra DLC when having a Classic CAN with 8 bytes payload */
-	if ((maxdlen == CAN_MAX_DLEN) && (len == CAN_MAX_DLEN)) {
+	if (!(is_canfd) && (len == CAN_MAX_DLEN)) {
 		struct can_frame *ccf = (struct can_frame *)cf;
 		unsigned char dlc = ccf->len8_dlc;
 
@@ -341,13 +351,13 @@ void sprint_canframe(char *buf, struct canfd_frame *cf, int sep, int maxdlen)
 	buf[offset] = 0;
 }
 
-void fprint_long_canframe(FILE *stream, struct canfd_frame *cf, char *eol, int view, int maxdlen)
+void fprint_long_canframe(FILE *stream, struct canfd_frame *cf, char *eol, int view)
 {
 	/* documentation see lib.h */
 
 	char buf[CL_LONGCFSZ];
 
-	sprint_long_canframe(buf, cf, view, maxdlen);
+	sprint_long_canframe(buf, cf, view);
 	fprintf(stream, "%s", buf);
 	if ((view & CANLIB_VIEW_ERROR) && (cf->can_id & CAN_ERR_FLAG)) {
 		snprintf_can_error_frame(buf, sizeof(buf), cf, "\n\t");
@@ -357,12 +367,19 @@ void fprint_long_canframe(FILE *stream, struct canfd_frame *cf, char *eol, int v
 		fprintf(stream, "%s", eol);
 }
 
-void sprint_long_canframe(char *buf, struct canfd_frame *cf, int view, int maxdlen)
+void sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
 {
 	/* documentation see lib.h */
 
+	unsigned char is_canfd = cf->flags;
 	int i, j, dlen, offset;
-	int len = (cf->len > maxdlen) ? maxdlen : cf->len;
+	int len;
+
+	/* ensure max length values */
+	if (is_canfd)
+		len = (cf->len > CANFD_MAX_DLEN) ? CANFD_MAX_DLEN : cf->len;
+	else
+		len = (cf->len > CAN_MAX_DLEN) ? CAN_MAX_DLEN : cf->len;
 
 	/* initialize space for CAN-ID and length information */
 	memset(buf, ' ', 15);
@@ -383,8 +400,8 @@ void sprint_long_canframe(char *buf, struct canfd_frame *cf, int view, int maxdl
 		}
 	}
 
-	/* The len value is sanitized by maxdlen (see above) */
-	if (maxdlen == CAN_MAX_DLEN) {
+	/* The len value is sanitized (see above) */
+	if (!(is_canfd)) {
 		if (view & CANLIB_VIEW_LEN8_DLC) {
 			struct can_frame *ccf = (struct can_frame *)cf;
 			unsigned char dlc = ccf->len8_dlc;

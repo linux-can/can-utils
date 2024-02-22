@@ -470,7 +470,7 @@ int main(int argc, char **argv)
 
 				} else if (txidx > 0) { /* only send to valid CAN devices */
 
-					txmtu = parse_canframe(ascframe, &frame);
+					txmtu = parse_canframe(ascframe, &frame); /* dual-use frame */
 					if (!txmtu) {
 						fprintf(stderr, "wrong CAN frame format: '%s'!", ascframe);
 						return 1;
@@ -486,11 +486,7 @@ int main(int argc, char **argv)
 
 					if (verbose) {
 						printf("%s (%s) ", get_txname(device), device);
-
-						if (txmtu == CAN_MTU)
-							fprint_long_canframe(stdout, &frame, "\n", CANLIB_VIEW_INDENT_SFF, CAN_MAX_DLEN);
-						else
-							fprint_long_canframe(stdout, &frame, "\n", CANLIB_VIEW_INDENT_SFF, CANFD_MAX_DLEN);
+						fprint_long_canframe(stdout, &frame, "\n", CANLIB_VIEW_INDENT_SFF);
 					}
 
 					if (count && (--count == 0))

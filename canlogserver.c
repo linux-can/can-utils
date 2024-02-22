@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 	struct can_filter rfilter;
 	struct canfd_frame frame;
 	const int canfd_on = 1;
-	int nbytes, i, j, maxdlen;
+	int nbytes, i, j;
 	struct ifreq ifr;
 	struct timeval tv;
 	int port = DEFPORT;
@@ -400,10 +400,11 @@ int main(int argc, char **argv)
 					return 1;
 				}
 
+				/* mark dual-use struct canfd_frame */
 				if ((size_t)nbytes == CAN_MTU)
-					maxdlen = CAN_MAX_DLEN;
+					frame.flags = 0;
 				else if ((size_t)nbytes == CANFD_MTU)
-					maxdlen = CANFD_MAX_DLEN;
+					frame.flags |= CANFD_FDF;
 				else {
 					fprintf(stderr, "read: incomplete CAN frame\n");
 					return 1;
@@ -417,7 +418,7 @@ int main(int argc, char **argv)
 
 				sprintf(temp, "(%llu.%06llu) %*s ",
 					(unsigned long long)tv.tv_sec, (unsigned long long)tv.tv_usec, max_devname_len, devname[idx]);
-				sprint_canframe(temp+strlen(temp), &frame, 0, maxdlen); 
+				sprint_canframe(temp+strlen(temp), &frame, 0);
 				strcat(temp, "\n");
 
 				if (write(accsocket, temp, strlen(temp)) < 0) {

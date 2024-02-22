@@ -160,15 +160,16 @@ int parse_canframe(char *cs, struct canfd_frame *cf);
  * - CAN FD frames do not have a RTR bit
  */
 
-void fprint_canframe(FILE *stream , struct canfd_frame *cf, char *eol, int sep, int maxdlen);
-void sprint_canframe(char *buf , struct canfd_frame *cf, int sep, int maxdlen);
+void fprint_canframe(FILE *stream , struct canfd_frame *cf, char *eol, int sep);
+void sprint_canframe(char *buf , struct canfd_frame *cf, int sep);
 /*
  * Creates a CAN frame hexadecimal output in compact format.
  * The CAN data[] is separated by '.' when sep != 0.
  *
- * The type of the CAN frame (CAN 2.0 / CAN FD) is specified by maxdlen:
- * maxdlen = 8 -> CAN2.0 frame (aka Classical CAN)
- * maxdlen = 64 -> CAN FD frame
+ * The type of the CAN frame (CAN CC / CAN FD) is specified by
+ * by the dual-use struct canfd_frame.flags element:
+ * w/o  CAN FD flags (== 0) -> CAN CC frame (aka Classical CAN, CAN2.0B)
+ * with CAN FD flags (!= 0) -> CAN FD frame (with CANFD_[FDF/BRS/ESI])
  *
  * 12345678#112233 -> extended CAN-Id = 0x12345678, len = 3, data, sep = 0
  * 123#1122334455667788_E -> standard CAN-Id = 0x123, len = 8, dlc = 14, data, sep = 0
@@ -195,14 +196,15 @@ void sprint_canframe(char *buf , struct canfd_frame *cf, int sep, int maxdlen);
 
 #define SWAP_DELIMITER '`'
 
-void fprint_long_canframe(FILE *stream , struct canfd_frame *cf, char *eol, int view, int maxdlen);
-void sprint_long_canframe(char *buf , struct canfd_frame *cf, int view, int maxdlen);
+void fprint_long_canframe(FILE *stream , struct canfd_frame *cf, char *eol, int view);
+void sprint_long_canframe(char *buf , struct canfd_frame *cf, int view);
 /*
  * Creates a CAN frame hexadecimal output in user readable format.
  *
- * The type of the CAN frame (CAN 2.0 / CAN FD) is specified by maxdlen:
- * maxdlen = 8 -> CAN2.0 frame (aka Classical CAN)
- * maxdlen = 64 -> CAN FD frame
+ * The type of the CAN frame (CAN CC / CAN FD) is specified by
+ * by the dual-use struct canfd_frame.flags element:
+ * w/o  CAN FD flags (== 0) -> CAN CC frame (aka Classical CAN, CAN2.0B)
+ * with CAN FD flags (!= 0) -> CAN FD frame (with CANFD_[FDF/BRS/ESI])
  *
  * 12345678   [3]  11 22 33 -> extended CAN-Id = 0x12345678, len = 3, data
  * 12345678   [0]  remote request -> extended CAN-Id = 0x12345678, RTR
@@ -217,10 +219,10 @@ void sprint_long_canframe(char *buf , struct canfd_frame *cf, int view, int maxd
  * Examples:
  *
  * // CAN FD frame with eol to STDOUT
- * fprint_long_canframe(stdout, &frame, "\n", 0, CANFD_MAX_DLEN);
+ * fprint_long_canframe(stdout, &frame, "\n", 0);
  *
  * // Classical CAN 2.0 frame without eol to STDERR
- * fprint_long_canframe(stderr, &frame, NULL, 0, CAN_MAX_DLEN);
+ * fprint_long_canframe(stderr, &frame, NULL, 0);
  *
  */
 

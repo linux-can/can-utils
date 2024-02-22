@@ -56,25 +56,27 @@ int main(void)
 {
 	char buf[BUFSZ], timestamp[BUFSZ], device[BUFSZ], ascframe[BUFSZ];
 	struct canfd_frame cf;
-	int mtu, maxdlen;
+	int mtu;
 
 	while (fgets(buf, BUFSZ-1, stdin)) {
 		if (sscanf(buf, "%s %s %s", timestamp, device, ascframe) != 3)
 			return 1;
 
 		mtu = parse_canframe(ascframe, &cf);
+
+		/* mark dual-use struct canfd_frame */
 		if (mtu == CAN_MTU)
-			maxdlen = CAN_MAX_DLEN;
+			cf.flags = 0;
 		else if (mtu == CANFD_MTU)
-			maxdlen = CANFD_MAX_DLEN;
+			cf.flags |= CANFD_FDF;
 		else {
 			fprintf(stderr, "read: incomplete CAN frame\n");
 			return 1;
 		}
 
+		/* with ASCII output */
 		sprint_long_canframe(ascframe, &cf,
-				     (CANLIB_VIEW_INDENT_SFF | CANLIB_VIEW_ASCII),
-				     maxdlen); /* with ASCII output */
+				     (CANLIB_VIEW_INDENT_SFF | CANLIB_VIEW_ASCII));
 
 		printf("%s  %s  %s\n", timestamp, device, ascframe);
 	}
