@@ -270,7 +270,7 @@ void fprint_canframe(FILE *stream, struct canfd_frame *cf, char *eol, int sep)
 		fprintf(stream, "%s", eol);
 }
 
-void sprint_canframe(char *buf, struct canfd_frame *cf, int sep)
+int sprint_canframe(char *buf, struct canfd_frame *cf, int sep)
 {
 	/* documentation see lib.h */
 
@@ -317,7 +317,7 @@ void sprint_canframe(char *buf, struct canfd_frame *cf, int sep)
 		}
 
 		buf[offset] = 0;
-		return;
+		return offset;
 	}
 
 	/* any CAN FD flags */
@@ -349,6 +349,8 @@ void sprint_canframe(char *buf, struct canfd_frame *cf, int sep)
 	}
 
 	buf[offset] = 0;
+
+	return offset;
 }
 
 void fprint_long_canframe(FILE *stream, struct canfd_frame *cf, char *eol, int view)
@@ -367,7 +369,7 @@ void fprint_long_canframe(FILE *stream, struct canfd_frame *cf, char *eol, int v
 		fprintf(stream, "%s", eol);
 }
 
-void sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
+int sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
 {
 	/* documentation see lib.h */
 
@@ -422,8 +424,8 @@ void sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
 
 		/* standard CAN frames may have RTR enabled */
 		if (cf->can_id & CAN_RTR_FLAG) {
-			sprintf(buf + offset + 5, " remote request");
-			return;
+			offset += sprintf(buf + offset + 5, " remote request");
+			return offset + 5;
 		}
 	} else {
 		buf[offset] = '[';
@@ -477,10 +479,10 @@ void sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
 	 * Does it make sense to write 64 ASCII byte behind 64 ASCII HEX data on the console?
 	 */
 	if (len > CAN_MAX_DLEN)
-		return;
+		return offset;
 
 	if (cf->can_id & CAN_ERR_FLAG)
-		sprintf(buf + offset, "%*s", dlen * (8 - len) + 13, "ERRORFRAME");
+		offset += sprintf(buf + offset, "%*s", dlen * (8 - len) + 13, "ERRORFRAME");
 	else if (view & CANLIB_VIEW_ASCII) {
 		j = dlen * (8 - len) + 4;
 		if (view & CANLIB_VIEW_SWAP) {
@@ -492,7 +494,7 @@ void sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
 				else
 					buf[offset++] = '.';
 
-			sprintf(buf + offset, "`");
+			offset += sprintf(buf + offset, "`");
 		} else {
 			sprintf(buf + offset, "%*s", j, "'");
 			offset += j;
@@ -502,9 +504,11 @@ void sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
 				else
 					buf[offset++] = '.';
 
-			sprintf(buf + offset, "'");
+			offset += sprintf(buf + offset, "'");
 		}
 	}
+
+	return offset;
 }
 
 static const char *error_classes[] = {
@@ -668,7 +672,7 @@ static int snprintf_error_cnt(char *buf, size_t len, const struct canfd_frame *c
 	return n;
 }
 
-void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *cf,
+int snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *cf,
                   const char* sep)
 {
 	canid_t class, mask;
@@ -676,12 +680,12 @@ void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *c
 	char *defsep = ",";
 
 	if (!(cf->can_id & CAN_ERR_FLAG))
-		return;
+		return 0;
 
 	class = cf->can_id & CAN_EFF_MASK;
 	if (class > (1 << ARRAY_SIZE(error_classes))) {
 		fprintf(stderr, "Error class %#x is invalid\n", class);
-		return;
+		return 0;
 	}
 
 	if (!sep)
@@ -695,13 +699,15 @@ void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *c
 				/* Fix for potential buffer overflow https://lgtm.com/rules/1505913226124/ */
 				tmp_n = snprintf(buf + n, len - n, "%s", sep);
 				if (tmp_n < 0 || (size_t)tmp_n >= len - n) {
-					return;
+					buf[0] = 0; /* empty terminated string */
+					return 0;
 				}
 				n += tmp_n;
 			}
 			tmp_n = snprintf(buf + n, len - n, "%s", error_classes[i]);
 			if (tmp_n < 0 || (size_t)tmp_n >= len - n) {
-				return;
+				buf[0] = 0; /* empty terminated string */
+				return 0;
 			}
 			n += tmp_n;
 			if (mask == CAN_ERR_LOSTARB)
@@ -721,6 +727,8 @@ void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *c
 		n += snprintf(buf + n, len - n, "%serror-counter-tx-rx", sep);
 		n += snprintf_error_cnt(buf + n, len - n, cf);
 	}
+
+	return n;
 }
 
 int64_t timespec_diff_ms(struct timespec *ts1,

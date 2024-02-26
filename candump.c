@@ -220,12 +220,16 @@ static int idx2dindex(int ifidx, int socket)
 	return i;
 }
 
-static inline void sprint_timestamp(const char timestamp, const struct timeval *tv,
-				    struct timeval *const last_tv, char *ts_buffer)
+static int sprint_timestamp(char *ts_buffer, const char timestamp,
+			    const struct timeval *tv, struct timeval *const last_tv)
 {
+	int numchars = 0;
+
 	switch (timestamp) {
 	case 'a': /* absolute with timestamp */
-		sprintf(ts_buffer, "(%010llu.%06llu) ", (unsigned long long)tv->tv_sec, (unsigned long long)tv->tv_usec);
+		numchars = sprintf(ts_buffer, "(%010llu.%06llu) ",
+				   (unsigned long long)tv->tv_sec,
+				   (unsigned long long)tv->tv_usec);
 		break;
 
 	case 'A': /* absolute with date */
@@ -235,7 +239,8 @@ static inline void sprint_timestamp(const char timestamp, const struct timeval *
 
 		tm = *localtime(&tv->tv_sec);
 		strftime(timestring, 24, "%Y-%m-%d %H:%M:%S", &tm);
-		sprintf(ts_buffer, "(%s.%06llu) ", timestring, (unsigned long long)tv->tv_usec);
+		numchars = sprintf(ts_buffer, "(%s.%06llu) ", timestring,
+				   (unsigned long long)tv->tv_usec);
 	}
 	break;
 
@@ -252,7 +257,9 @@ static inline void sprint_timestamp(const char timestamp, const struct timeval *
 			diff.tv_sec--, diff.tv_usec += 1000000;
 		if (diff.tv_sec < 0)
 			diff.tv_sec = diff.tv_usec = 0;
-		sprintf(ts_buffer, "(%03llu.%06llu) ", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_usec);
+		numchars = sprintf(ts_buffer, "(%03llu.%06llu) ",
+				   (unsigned long long)diff.tv_sec,
+				   (unsigned long long)diff.tv_usec);
 
 		if (timestamp == 'd')
 			*last_tv = *tv; /* update for delta calculation */
@@ -262,15 +269,8 @@ static inline void sprint_timestamp(const char timestamp, const struct timeval *
 	default: /* no timestamp output */
 		break;
 	}
-}
 
-static inline void print_timestamp(const char timestamp, const struct timeval *tv,
-				   struct timeval *const last_tv)
-{
-	static char buffer[TIMESTAMPSZ];
-
-	sprint_timestamp(timestamp, tv, last_tv, buffer);
-	printf("%s", buffer);
+	return numchars;
 }
 
 int main(int argc, char **argv)
@@ -317,6 +317,8 @@ int main(int argc, char **argv)
 	FILE *logfile = NULL;
 	char fname[83]; /* suggested by -Wformat-overflow= */
 	const char *logname = NULL;
+	static char abuf[10000]; /* ASCII buf FIXME - use calculated value */
+	static int alen;
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -797,32 +799,29 @@ int main(int argc, char **argv)
 					extra_info = " R";
 			}
 
-			if (log) {
-				char buf[CL_CFSZ]; /* max length */
-				char ts_buf[TIMESTAMPSZ];
+			/* build common log format output */
+			if ((log) || ((logfrmt) && (silent == SILENT_OFF))) {
 
-				sprint_timestamp(logtimestamp, &tv, &last_tv, ts_buf);
+				alen = sprint_timestamp(abuf, logtimestamp,
+							  &tv, &last_tv);
 
-				/* log CAN frame with absolute timestamp & device */
-				sprint_canframe(buf, &frame, 0);
-				fprintf(logfile, "%s%*s %s%s\n", ts_buf,
-					max_devname_len, devname[idx], buf,
-					extra_info);
+				alen += sprintf(abuf + alen, "%*s ",
+						  max_devname_len, devname[idx]);
+
+				alen += sprint_canframe(abuf + alen, &frame, 0);
 			}
 
+			/* write CAN frame in log file style to logfile */
+			if (log)
+				fprintf(logfile, "%s%s\n", abuf, extra_info);
+
+			/* print CAN frame in log file style to stdout */
 			if ((logfrmt) && (silent == SILENT_OFF)) {
-				char buf[CL_CFSZ]; /* max length */
-
-				/* print CAN frame in log file style to stdout */
-				sprint_canframe(buf, &frame, 0);
-				print_timestamp(logtimestamp, &tv, &last_tv);
-
-				printf("%*s %s%s\n",
-					max_devname_len, devname[idx], buf,
-					extra_info);
+				printf("%s%s\n", abuf, extra_info);
 				goto out_fflush; /* no other output to stdout */
 			}
 
+			/* print only animation */
 			if (silent != SILENT_OFF) {
 				if (silent == SILENT_ANI) {
 					printf("%c\b", anichar[silentani %= MAXANI]);
@@ -831,25 +830,33 @@ int main(int argc, char **argv)
 				goto out_fflush; /* no other output to stdout */
 			}
 
-			printf(" %s", (color > 2) ? col_on[idx % MAXCOL] : "");
-			print_timestamp(timestamp, &tv, &last_tv);
-			printf(" %s", (color && (color < 3)) ? col_on[idx % MAXCOL] : "");
-			printf("%*s", max_devname_len, devname[idx]);
+			/* print (colored) long CAN frame style to stdout */
+			alen = sprintf(abuf, " %s", (color > 2) ? col_on[idx % MAXCOL] : "");
+			alen += sprint_timestamp(abuf + alen, timestamp, &tv, &last_tv);
+			alen += sprintf(abuf + alen, " %s%*s",
+					  (color && (color < 3)) ? col_on[idx % MAXCOL] : "",
+					  max_devname_len, devname[idx]);
 
 			if (extra_msg_info) {
 				if (msg.msg_flags & MSG_DONTROUTE)
-					printf("  TX %s", extra_m_info[frame.flags & 3]);
+					alen += sprintf(abuf + alen, "  TX %s",
+							  extra_m_info[frame.flags & 3]);
 				else
-					printf("  RX %s", extra_m_info[frame.flags & 3]);
+					alen += sprintf(abuf + alen, "  RX %s",
+							  extra_m_info[frame.flags & 3]);
 			}
 
-			printf("%s  ", (color == 1) ? col_off : "");
+			alen += sprintf(abuf + alen, "%s  ", (color == 1) ? col_off : "");
+			alen += sprint_long_canframe(abuf + alen, &frame, view);
 
-			fprint_long_canframe(stdout, &frame, NULL, view);
+			if ((view & CANLIB_VIEW_ERROR) && (frame.can_id & CAN_ERR_FLAG)) {
+				alen += sprintf(abuf + alen, "\n\t");
+				alen += snprintf_can_error_frame(abuf + alen,
+								 sizeof(abuf) - alen,
+								 &frame, "\n\t");
+			}
 
-			printf("%s", (color > 1) ? col_off : "");
-			printf("\n");
-
+			printf("%s%s\n", abuf, (color > 1) ? col_off : "");
 out_fflush:
 			fflush(stdout);
 		}

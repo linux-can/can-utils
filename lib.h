@@ -161,7 +161,7 @@ int parse_canframe(char *cs, struct canfd_frame *cf);
  */
 
 void fprint_canframe(FILE *stream , struct canfd_frame *cf, char *eol, int sep);
-void sprint_canframe(char *buf , struct canfd_frame *cf, int sep);
+int sprint_canframe(char *buf , struct canfd_frame *cf, int sep);
 /*
  * Creates a CAN frame hexadecimal output in compact format.
  * The CAN data[] is separated by '.' when sep != 0.
@@ -197,7 +197,7 @@ void sprint_canframe(char *buf , struct canfd_frame *cf, int sep);
 #define SWAP_DELIMITER '`'
 
 void fprint_long_canframe(FILE *stream , struct canfd_frame *cf, char *eol, int view);
-void sprint_long_canframe(char *buf , struct canfd_frame *cf, int view);
+int sprint_long_canframe(char *buf , struct canfd_frame *cf, int view);
 /*
  * Creates a CAN frame hexadecimal output in user readable format.
  *
@@ -226,8 +226,8 @@ void sprint_long_canframe(char *buf , struct canfd_frame *cf, int view);
  *
  */
 
-void snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *cf,
-                  const char *sep);
+int snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *cf,
+			     const char *sep);
 /*
  * Creates a CAN error frame output in user readable format.
  */
