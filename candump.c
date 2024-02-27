@@ -270,6 +270,11 @@ static int sprint_timestamp(char *ts_buffer, const char timestamp,
 		break;
 	}
 
+	if (numchars <= 0) {
+		ts_buffer[0] = 0; /* empty terminated string */
+		numchars = 0;
+	}
+
 	return numchars;
 }
 
