@@ -198,7 +198,7 @@ int sprint_canframe(char *buf , cu_t *cu, int sep);
 
 #define SWAP_DELIMITER '`'
 
-int sprint_long_canframe(char *buf , struct canfd_frame *cf, int view);
+int sprint_long_canframe(char *buf , cu_t *cu, int view);
 /*
  * Creates a CAN frame hexadecimal output in user readable format.
  *

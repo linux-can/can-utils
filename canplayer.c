@@ -488,7 +488,7 @@ int main(int argc, char **argv)
 						static char abuf[10000]; /* ASCII buf FIXME - use calculated value */
 
 						printf("%s (%s) ", get_txname(device), device);
-						sprint_long_canframe(abuf, &frame, CANLIB_VIEW_INDENT_SFF);
+						sprint_long_canframe(abuf, (cu_t *)&frame, CANLIB_VIEW_INDENT_SFF);
 						printf("%s\n", abuf);
 					}
 

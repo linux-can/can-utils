@@ -868,7 +868,7 @@ int main(int argc, char **argv)
 			}
 
 			alen += sprintf(abuf + alen, "%s  ", (color == 1) ? col_off : "");
-			alen += sprint_long_canframe(abuf + alen, &cu.fd, view);
+			alen += sprint_long_canframe(abuf + alen, &cu, view);
 
 			if ((view & CANLIB_VIEW_ERROR) && (cu.fd.can_id & CAN_ERR_FLAG)) {
 				alen += sprintf(abuf + alen, "\n\t");

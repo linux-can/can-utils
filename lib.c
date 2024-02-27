@@ -361,35 +361,73 @@ int sprint_canframe(char *buf, cu_t *cu, int sep)
 	return offset;
 }
 
-int sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
+int sprint_long_canframe(char *buf, cu_t *cu, int view)
 {
 	/* documentation see lib.h */
 
-	unsigned char is_canfd = cf->flags;
+	unsigned char is_canfd = cu->fd.flags;
 	int i, j, dlen, offset;
 	int len;
-
-	/* ensure max length values */
-	if (is_canfd)
-		len = (cf->len > CANFD_MAX_DLEN) ? CANFD_MAX_DLEN : cf->len;
-	else
-		len = (cf->len > CAN_MAX_DLEN) ? CAN_MAX_DLEN : cf->len;
 
 	/* initialize space for CAN-ID and length information */
 	memset(buf, ' ', 15);
 
-	if (cf->can_id & CAN_ERR_FLAG) {
-		put_eff_id(buf, cf->can_id & (CAN_ERR_MASK | CAN_ERR_FLAG));
+	/* handle CAN XL frames */
+	if (cu->xl.flags & CANXL_XLF) {
+		len = cu->xl.len;
+
+		if (view & CANLIB_VIEW_INDENT_SFF) {
+			put_sff_id(buf + 5, cu->xl.prio & CANXL_PRIO_MASK);
+			offset = 9;
+		} else {
+			put_sff_id(buf, cu->xl.prio & CANXL_PRIO_MASK);
+			offset = 4;
+		}
+
+		/* print prio and CAN XL header content */
+		offset += sprintf(buf + offset, "[%04d] (%02X|%02X:%02X:%08X) ",
+				  len,
+				  (canid_t)(cu->xl.prio & CANXL_VCID_MASK) >> CANXL_VCID_OFFSET,
+				  cu->xl.flags, cu->xl.sdt, cu->xl.af);
+
+		/* data - crop to CANFD_MAX_DLEN */
+		if (len > CANFD_MAX_DLEN)
+			len = CANFD_MAX_DLEN;
+
+		for (i = 0; i < len; i++) {
+			put_hex_byte(buf + offset, cu->xl.data[i]);
+			offset += 2;
+			if (i + 1 < len)
+				buf[offset++] = ' ';
+		}
+
+		/* indicate cropped output */
+		if (cu->xl.len > len)
+			offset += sprintf(buf + offset, " ...");
+
+		buf[offset] = 0;
+
+		return offset;
+	}
+
+	/* ensure max length values */
+	if (is_canfd)
+		len = (cu->fd.len > CANFD_MAX_DLEN) ? CANFD_MAX_DLEN : cu->fd.len;
+	else
+		len = (cu->fd.len > CAN_MAX_DLEN) ? CAN_MAX_DLEN : cu->fd.len;
+
+	if (cu->cc.can_id & CAN_ERR_FLAG) {
+		put_eff_id(buf, cu->cc.can_id & (CAN_ERR_MASK | CAN_ERR_FLAG));
 		offset = 10;
-	} else if (cf->can_id & CAN_EFF_FLAG) {
-		put_eff_id(buf, cf->can_id & CAN_EFF_MASK);
+	} else if (cu->fd.can_id & CAN_EFF_FLAG) {
+		put_eff_id(buf, cu->fd.can_id & CAN_EFF_MASK);
 		offset = 10;
 	} else {
 		if (view & CANLIB_VIEW_INDENT_SFF) {
-			put_sff_id(buf + 5, cf->can_id & CAN_SFF_MASK);
+			put_sff_id(buf + 5, cu->fd.can_id & CAN_SFF_MASK);
 			offset = 10;
 		} else {
-			put_sff_id(buf, cf->can_id & CAN_SFF_MASK);
+			put_sff_id(buf, cu->fd.can_id & CAN_SFF_MASK);
 			offset = 5;
 		}
 	}
@@ -397,8 +435,7 @@ int sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
 	/* The len value is sanitized (see above) */
 	if (!(is_canfd)) {
 		if (view & CANLIB_VIEW_LEN8_DLC) {
-			struct can_frame *ccf = (struct can_frame *)cf;
-			unsigned char dlc = ccf->len8_dlc;
+			unsigned char dlc = cu->cc.len8_dlc;
 
 			/* fall back to len if we don't have a valid DLC > 8 */
 			if (!((len == CAN_MAX_DLEN) && (dlc > CAN_MAX_DLEN) &&
@@ -415,7 +452,7 @@ int sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
 		}
 
 		/* standard CAN frames may have RTR enabled */
-		if (cf->can_id & CAN_RTR_FLAG) {
+		if (cu->fd.can_id & CAN_RTR_FLAG) {
 			offset += sprintf(buf + offset + 5, " remote request");
 			return offset + 5;
 		}
@@ -433,13 +470,13 @@ int sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
 			for (i = len - 1; i >= 0; i--) {
 				buf[offset++] = (i == len - 1) ? ' ' : SWAP_DELIMITER;
 				for (j = 7; j >= 0; j--)
-					buf[offset++] = (1 << j & cf->data[i]) ? '1' : '0';
+					buf[offset++] = (1 << j & cu->fd.data[i]) ? '1' : '0';
 			}
 		} else {
 			for (i = 0; i < len; i++) {
 				buf[offset++] = ' ';
 				for (j = 7; j >= 0; j--)
-					buf[offset++] = (1 << j & cf->data[i]) ? '1' : '0';
+					buf[offset++] = (1 << j & cu->fd.data[i]) ? '1' : '0';
 			}
 		}
 	} else {
@@ -451,13 +488,13 @@ int sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
 				else
 					buf[offset++] = SWAP_DELIMITER;
 
-				put_hex_byte(buf + offset, cf->data[i]);
+				put_hex_byte(buf + offset, cu->fd.data[i]);
 				offset += 2;
 			}
 		} else {
 			for (i = 0; i < len; i++) {
 				buf[offset++] = ' ';
-				put_hex_byte(buf + offset, cf->data[i]);
+				put_hex_byte(buf + offset, cu->fd.data[i]);
 				offset += 2;
 			}
 		}
@@ -473,7 +510,7 @@ int sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
 	if (len > CAN_MAX_DLEN)
 		return offset;
 
-	if (cf->can_id & CAN_ERR_FLAG)
+	if (cu->fd.can_id & CAN_ERR_FLAG)
 		offset += sprintf(buf + offset, "%*s", dlen * (8 - len) + 13, "ERRORFRAME");
 	else if (view & CANLIB_VIEW_ASCII) {
 		j = dlen * (8 - len) + 4;
@@ -481,8 +518,8 @@ int sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
 			sprintf(buf + offset, "%*s", j, "`");
 			offset += j;
 			for (i = len - 1; i >= 0; i--)
-				if ((cf->data[i] > 0x1F) && (cf->data[i] < 0x7F))
-					buf[offset++] = cf->data[i];
+				if ((cu->fd.data[i] > 0x1F) && (cu->fd.data[i] < 0x7F))
+					buf[offset++] = cu->fd.data[i];
 				else
 					buf[offset++] = '.';
 
@@ -491,8 +528,8 @@ int sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
 			sprintf(buf + offset, "%*s", j, "'");
 			offset += j;
 			for (i = 0; i < len; i++)
-				if ((cf->data[i] > 0x1F) && (cf->data[i] < 0x7F))
-					buf[offset++] = cf->data[i];
+				if ((cu->fd.data[i] > 0x1F) && (cu->fd.data[i] < 0x7F))
+					buf[offset++] = cu->fd.data[i];
 				else
 					buf[offset++] = '.';
 

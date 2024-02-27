@@ -75,7 +75,7 @@ int main(void)
 		}
 
 		/* with ASCII output */
-		sprint_long_canframe(ascframe, &cf,
+		sprint_long_canframe(ascframe, (cu_t *)&cf,
 				     (CANLIB_VIEW_INDENT_SFF | CANLIB_VIEW_ASCII));
 
 		printf("%s  %s  %s\n", timestamp, device, ascframe);
