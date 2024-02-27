@@ -485,8 +485,11 @@ int main(int argc, char **argv)
 					}
 
 					if (verbose) {
+						static char abuf[10000]; /* ASCII buf FIXME - use calculated value */
+
 						printf("%s (%s) ", get_txname(device), device);
-						fprint_long_canframe(stdout, &frame, "\n", CANLIB_VIEW_INDENT_SFF);
+						sprint_long_canframe(abuf, &frame, CANLIB_VIEW_INDENT_SFF);
+						printf("%s\n", abuf);
 					}
 
 					if (count && (--count == 0))
