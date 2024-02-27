@@ -46,6 +46,7 @@
 #define CAN_UTILS_LIB_H
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdio.h>
 
 #ifdef DEBUG
@@ -54,6 +55,13 @@
 __attribute__((format (printf, 1, 2)))
 static inline int pr_debug(const char* fmt, ...) {return 0;}
 #endif
+
+/* CAN CC/FD/XL frame union */
+typedef union {
+	struct can_frame cc;
+	struct canfd_frame fd;
+	struct canxl_frame xl;
+} cu_t;
 
 /* buffer sizes for CAN frame string representations */
 
@@ -160,7 +168,7 @@ int parse_canframe(char *cs, struct canfd_frame *cf);
  * - CAN FD frames do not have a RTR bit
  */
 
-int sprint_canframe(char *buf , struct canfd_frame *cf, int sep);
+int sprint_canframe(char *buf , cu_t *cu, int sep);
 /*
  * Creates a CAN frame hexadecimal output in compact format.
  * The CAN data[] is separated by '.' when sep != 0.

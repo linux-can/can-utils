@@ -109,7 +109,7 @@ static char *progname;
 static char devname[MAXIFNAMES][IFNAMSIZ + 1];
 static int dindex[MAXIFNAMES];
 static int max_devname_len; /* to prevent frazzled device name output */
-static const int canfd_on = 1;
+static const int canfx_on = 1;
 
 #define MAXANI 4
 static const char anichar[MAXANI] = { '|', '/', '-', '\\' };
@@ -314,7 +314,7 @@ int main(int argc, char **argv)
 	struct cmsghdr *cmsg;
 	struct can_filter *rfilter;
 	can_err_mask_t err_mask;
-	struct canfd_frame frame;
+	static cu_t cu; /* union for CAN CC/FD/XL frames */
 	int nbytes, i;
 	struct ifreq ifr;
 	struct timeval tv, last_tv;
@@ -596,7 +596,10 @@ int main(int argc, char **argv)
 		} /* if (nptr) */
 
 		/* try to switch the socket into CAN FD mode */
-		setsockopt(obj->s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));
+		setsockopt(obj->s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfx_on, sizeof(canfx_on));
+
+		/* try to switch the socket into CAN XL mode */
+		setsockopt(obj->s, SOL_CAN_RAW, CAN_RAW_XL_FRAMES, &canfx_on, sizeof(canfx_on));
 
 		if (rcvbuf_size) {
 			int curr_rcvbuf_size;
@@ -700,7 +703,7 @@ int main(int argc, char **argv)
 	}
 
 	/* these settings are static and can be held out of the hot path */
-	iov.iov_base = &frame;
+	iov.iov_base = &cu;
 	msg.msg_name = &addr;
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
@@ -726,7 +729,7 @@ int main(int argc, char **argv)
 			char *extra_info = "";
 
 			/* these settings may be modified by recvmsg() */
-			iov.iov_len = sizeof(frame);
+			iov.iov_len = sizeof(cu);
 			msg.msg_namelen = sizeof(addr);
 			msg.msg_controllen = sizeof(ctrlmsg);
 			msg.msg_flags = 0;
@@ -744,13 +747,26 @@ int main(int argc, char **argv)
 			}
 
 			/* mark dual-use struct canfd_frame */
-			if ((size_t)nbytes == CAN_MTU)
-				frame.flags = 0;
-			else if ((size_t)nbytes == CANFD_MTU)
-				frame.flags |= CANFD_FDF;
-			else {
-				fprintf(stderr, "read: incomplete CAN frame\n");
+			if (nbytes < CANXL_HDR_SIZE + CANXL_MIN_DLEN) {
+				fprintf(stderr, "read: no CAN frame\n");
 				return 1;
+			}
+
+			if (cu.xl.flags & CANXL_XLF) {
+				if (nbytes != CANXL_HDR_SIZE + cu.xl.len) {
+					printf("nbytes = %d\n", nbytes);
+					fprintf(stderr, "read: no CAN XL frame\n");
+					return 1;
+				}
+			} else {
+				if (nbytes == CAN_MTU)
+					cu.fd.flags = 0;
+				else if (nbytes == CANFD_MTU)
+					cu.fd.flags |= CANFD_FDF;
+				else {
+					fprintf(stderr, "read: incomplete CAN CC/FD frame\n");
+					return 1;
+				}
 			}
 
 			if (count && (--count == 0))
@@ -794,7 +810,7 @@ int main(int argc, char **argv)
 			}
 
 			/* once we detected a EFF frame indent SFF frames accordingly */
-			if (frame.can_id & CAN_EFF_FLAG)
+			if (cu.fd.can_id & CAN_EFF_FLAG)
 				view |= CANLIB_VIEW_INDENT_SFF;
 
 			if (extra_msg_info) {
@@ -813,7 +829,7 @@ int main(int argc, char **argv)
 				alen += sprintf(abuf + alen, "%*s ",
 						  max_devname_len, devname[idx]);
 
-				alen += sprint_canframe(abuf + alen, &frame, 0);
+				alen += sprint_canframe(abuf + alen, &cu, 0);
 			}
 
 			/* write CAN frame in log file style to logfile */
@@ -845,20 +861,20 @@ int main(int argc, char **argv)
 			if (extra_msg_info) {
 				if (msg.msg_flags & MSG_DONTROUTE)
 					alen += sprintf(abuf + alen, "  TX %s",
-							  extra_m_info[frame.flags & 3]);
+							  extra_m_info[cu.fd.flags & 3]);
 				else
 					alen += sprintf(abuf + alen, "  RX %s",
-							  extra_m_info[frame.flags & 3]);
+							  extra_m_info[cu.fd.flags & 3]);
 			}
 
 			alen += sprintf(abuf + alen, "%s  ", (color == 1) ? col_off : "");
-			alen += sprint_long_canframe(abuf + alen, &frame, view);
+			alen += sprint_long_canframe(abuf + alen, &cu.fd, view);
 
-			if ((view & CANLIB_VIEW_ERROR) && (frame.can_id & CAN_ERR_FLAG)) {
+			if ((view & CANLIB_VIEW_ERROR) && (cu.fd.can_id & CAN_ERR_FLAG)) {
 				alen += sprintf(abuf + alen, "\n\t");
 				alen += snprintf_can_error_frame(abuf + alen,
 								 sizeof(abuf) - alen,
-								 &frame, "\n\t");
+								 &cu.fd, "\n\t");
 			}
 
 			printf("%s%s\n", abuf, (color > 1) ? col_off : "");

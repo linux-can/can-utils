@@ -835,7 +835,7 @@ int main(int argc, char **argv)
 			if (verbose > 1)
 				sprint_long_canframe(abuf, &frame, (verbose > 2) ? CANLIB_VIEW_ASCII : 0);
 			else
-				sprint_canframe(abuf, &frame, 1);
+				sprint_canframe(abuf, (cu_t *)&frame, 1);
 
 			printf("%s\n", abuf);
 		}

@@ -82,7 +82,7 @@ void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, ch
 	else
 		fprintf(file, "canX ");
 
-	sprint_canframe(abuf, cf, 0);
+	sprint_canframe(abuf, (cu_t *)cf, 0);
 	fprintf(file, "%s%s", abuf, extra_info);
 }
 
