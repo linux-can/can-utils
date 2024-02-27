@@ -160,7 +160,6 @@ int parse_canframe(char *cs, struct canfd_frame *cf);
  * - CAN FD frames do not have a RTR bit
  */
 
-void fprint_canframe(FILE *stream , struct canfd_frame *cf, char *eol, int sep);
 int sprint_canframe(char *buf , struct canfd_frame *cf, int sep);
 /*
  * Creates a CAN frame hexadecimal output in compact format.
@@ -180,11 +179,6 @@ int sprint_canframe(char *buf , struct canfd_frame *cf, int sep);
  * 123##0112233 -> CAN FD frame standard CAN-Id = 0x123, flags = 0, len = 3
  * 123##2112233 -> CAN FD frame, flags = CANFD_ESI, len = 3
  *
- * Examples:
- *
- * fprint_canframe(stdout, &frame, "\n", 0); // with eol to STDOUT
- * fprint_canframe(stderr, &frame, NULL, 0); // no eol to STDERR
- *
  */
 
 #define CANLIB_VIEW_ASCII	0x1
@@ -196,7 +190,6 @@ int sprint_canframe(char *buf , struct canfd_frame *cf, int sep);
 
 #define SWAP_DELIMITER '`'
 
-void fprint_long_canframe(FILE *stream , struct canfd_frame *cf, char *eol, int view);
 int sprint_long_canframe(char *buf , struct canfd_frame *cf, int view);
 /*
  * Creates a CAN frame hexadecimal output in user readable format.
@@ -215,14 +208,6 @@ int sprint_long_canframe(char *buf , struct canfd_frame *cf, int view);
  *
  * 123   [3]  11 22 33         -> CANLIB_VIEW_INDENT_SFF == 0
  *      123   [3]  11 22 33    -> CANLIB_VIEW_INDENT_SFF == set
- *
- * Examples:
- *
- * // CAN FD frame with eol to STDOUT
- * fprint_long_canframe(stdout, &frame, "\n", 0);
- *
- * // Classical CAN 2.0 frame without eol to STDERR
- * fprint_long_canframe(stderr, &frame, NULL, 0);
  *
  */
 

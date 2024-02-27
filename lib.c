@@ -258,18 +258,6 @@ int parse_canframe(char *cs, struct canfd_frame *cf)
 	return ret;
 }
 
-void fprint_canframe(FILE *stream, struct canfd_frame *cf, char *eol, int sep)
-{
-	/* documentation see lib.h */
-
-	char buf[CL_CFSZ]; /* max length */
-
-	sprint_canframe(buf, cf, sep);
-	fprintf(stream, "%s", buf);
-	if (eol)
-		fprintf(stream, "%s", eol);
-}
-
 int sprint_canframe(char *buf, struct canfd_frame *cf, int sep)
 {
 	/* documentation see lib.h */
@@ -351,22 +339,6 @@ int sprint_canframe(char *buf, struct canfd_frame *cf, int sep)
 	buf[offset] = 0;
 
 	return offset;
-}
-
-void fprint_long_canframe(FILE *stream, struct canfd_frame *cf, char *eol, int view)
-{
-	/* documentation see lib.h */
-
-	char buf[CL_LONGCFSZ];
-
-	sprint_long_canframe(buf, cf, view);
-	fprintf(stream, "%s", buf);
-	if ((view & CANLIB_VIEW_ERROR) && (cf->can_id & CAN_ERR_FLAG)) {
-		snprintf_can_error_frame(buf, sizeof(buf), cf, "\n\t");
-		fprintf(stream, "\n\t%s", buf);
-	}
-	if (eol)
-		fprintf(stream, "%s", eol);
 }
 
 int sprint_long_canframe(char *buf, struct canfd_frame *cf, int view)
