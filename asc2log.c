@@ -73,6 +73,8 @@ void print_usage(char *prg)
 
 void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, char *extra_info) {
 
+	static char abuf[BUFLEN];
+
 	fprintf(file, "(%llu.%06llu) ", (unsigned long long)tv->tv_sec, (unsigned long long)tv->tv_usec);
 
 	if (dev > 0)
@@ -80,7 +82,8 @@ void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, ch
 	else
 		fprintf(file, "canX ");
 
-	fprint_canframe(file, cf, extra_info, 0);
+	sprint_canframe(abuf, cf, 0);
+	fprintf(file, "%s%s", abuf, extra_info);
 }
 
 void get_can_id(struct canfd_frame *cf, char *idstring, int base) {
