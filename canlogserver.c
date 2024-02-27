@@ -428,9 +428,7 @@ int main(int argc, char **argv)
 		    
 #if 0
 				/* print CAN frame in log file style to stdout */
-				printf("(%lu.%06lu) ", tv.tv_sec, tv.tv_usec);
-				printf("%*s ", max_devname_len, devname[idx]);
-				fprint_canframe(stdout, &frame, "\n", 0, maxdlen);
+				printf("%s", temp);
 #endif
 			}
 
