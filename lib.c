@@ -55,6 +55,7 @@
 
 #define CANID_DELIM '#'
 #define CC_DLC_DELIM '_'
+#define XL_HDR_DELIM ':'
 #define DATA_SEPERATOR '.'
 
 const char hex_asc_upper[] = "0123456789ABCDEF";
@@ -153,78 +154,128 @@ int hexstring2data(char *arg, unsigned char *data, int maxdlen)
 	return 0;
 }
 
-int parse_canframe(char *cs, struct canfd_frame *cf)
+int parse_canframe(char *cs, cu_t *cu)
 {
 	/* documentation see lib.h */
 
 	int i, idx, dlen, len;
 	int maxdlen = CAN_MAX_DLEN;
-	int ret = CAN_MTU;
+	int mtu = CAN_MTU;
+	__u8 *data = cu->fd.data; /* fill CAN CC/FD data by default */
 	canid_t tmp;
 
 	len = strlen(cs);
 	//printf("'%s' len %d\n", cs, len);
 
-	memset(cf, 0, sizeof(*cf)); /* init CAN FD frame, e.g. LEN = 0 */
+	memset(cu, 0, sizeof(*cu)); /* init CAN CC/FD/XL frame, e.g. LEN = 0 */
 
 	if (len < 4)
 		return 0;
 
-	if (cs[3] == CANID_DELIM) { /* 3 digits */
+	if (cs[3] == CANID_DELIM) { /* 3 digits SFF */
 
 		idx = 4;
 		for (i = 0; i < 3; i++) {
 			if ((tmp = asc2nibble(cs[i])) > 0x0F)
 				return 0;
-			cf->can_id |= (tmp << (2 - i) * 4);
+			cu->cc.can_id |= (tmp << (2 - i) * 4);
 		}
 
-	} else if (cs[8] == CANID_DELIM) { /* 8 digits */
+	} else if (cs[5] == CANID_DELIM) { /* 5 digits CAN XL VCID/PRIO*/
+
+		idx = 6;
+		for (i = 0; i < 5; i++) {
+			if ((tmp = asc2nibble(cs[i])) > 0x0F)
+				return 0;
+			cu->xl.prio |= (tmp << (4 - i) * 4);
+		}
+
+		/* the VCID starts at bit position 16 */
+		tmp = (cu->xl.prio << 4) & CANXL_VCID_MASK;
+		cu->xl.prio &= CANXL_PRIO_MASK;
+		cu->xl.prio |= tmp;
+
+	} else if (cs[8] == CANID_DELIM) { /* 8 digits EFF */
 
 		idx = 9;
 		for (i = 0; i < 8; i++) {
 			if ((tmp = asc2nibble(cs[i])) > 0x0F)
 				return 0;
-			cf->can_id |= (tmp << (7 - i) * 4);
+			cu->cc.can_id |= (tmp << (7 - i) * 4);
 		}
-		if (!(cf->can_id & CAN_ERR_FLAG)) /* 8 digits but no errorframe?  */
-			cf->can_id |= CAN_EFF_FLAG;   /* then it is an extended frame */
+		if (!(cu->cc.can_id & CAN_ERR_FLAG)) /* 8 digits but no errorframe?  */
+			cu->cc.can_id |= CAN_EFF_FLAG;   /* then it is an extended frame */
 
 	} else
 		return 0;
 
 	if ((cs[idx] == 'R') || (cs[idx] == 'r')) { /* RTR frame */
-		cf->can_id |= CAN_RTR_FLAG;
+		cu->cc.can_id |= CAN_RTR_FLAG;
 
 		/* check for optional DLC value for CAN 2.0B frames */
 		if (cs[++idx] && (tmp = asc2nibble(cs[idx++])) <= CAN_MAX_DLEN) {
-			cf->len = tmp;
+			cu->cc.len = tmp;
 
 			/* check for optional raw DLC value for CAN 2.0B frames */
 			if ((tmp == CAN_MAX_DLEN) && (cs[idx++] == CC_DLC_DELIM)) {
 				tmp = asc2nibble(cs[idx]);
-				if ((tmp > CAN_MAX_DLEN) && (tmp <= CAN_MAX_RAW_DLC)) {
-					struct can_frame *ccf = (struct can_frame *)cf;
-
-					ccf->len8_dlc = tmp;
-				}
+				if ((tmp > CAN_MAX_DLEN) && (tmp <= CAN_MAX_RAW_DLC))
+					cu->cc.len8_dlc = tmp;
 			}
 		}
-		return ret;
+		return mtu;
 	}
 
 	if (cs[idx] == CANID_DELIM) { /* CAN FD frame escape char '##' */
 
 		maxdlen = CANFD_MAX_DLEN;
-		ret = CANFD_MTU;
+		mtu = CANFD_MTU;
 
 		/* CAN FD frame <canid>##<flags><data>* */
 		if ((tmp = asc2nibble(cs[idx + 1])) > 0x0F)
 			return 0;
 
-		cf->flags = tmp;
-		cf->flags |= CANFD_FDF; /* dual-use */
+		cu->fd.flags = tmp;
+		cu->fd.flags |= CANFD_FDF; /* dual-use */
 		idx += 2;
+
+	} else if (cs[idx + 14] == CANID_DELIM) { /* CAN XL frame '#80:00:11223344#' */
+
+		maxdlen = CANXL_MAX_DLEN;
+		mtu = CANXL_MTU;
+		data = cu->xl.data; /* fill CAN XL data */
+
+		if ((cs[idx + 2] != XL_HDR_DELIM) || (cs[idx + 5] != XL_HDR_DELIM))
+			return 0;
+
+		if ((tmp = asc2nibble(cs[idx++])) > 0x0F)
+			return 0;
+		cu->xl.flags = (tmp << 4);
+		if ((tmp = asc2nibble(cs[idx++])) > 0x0F)
+			return 0;
+		cu->xl.flags |= tmp;
+
+		/* force CAN XL flag if it was missing in the ASCII string */
+		cu->xl.flags |= CANXL_XLF;
+
+		idx++; /* skip XL_HDR_DELIM */
+
+		if ((tmp = asc2nibble(cs[idx++])) > 0x0F)
+			return 0;
+		cu->xl.sdt = (tmp << 4);
+		if ((tmp = asc2nibble(cs[idx++])) > 0x0F)
+			return 0;
+		cu->xl.sdt |= tmp;
+
+		idx++; /* skip XL_HDR_DELIM */
+
+		for (i = 0; i < 8; i++) {
+			if ((tmp = asc2nibble(cs[idx++])) > 0x0F)
+				return 0;
+			cu->xl.af |= (tmp << (7 - i) * 4);
+		}
+
+		idx++; /* skip CANID_DELIM */
 	}
 
 	for (i = 0, dlen = 0; i < maxdlen; i++) {
@@ -236,26 +287,27 @@ int parse_canframe(char *cs, struct canfd_frame *cf)
 
 		if ((tmp = asc2nibble(cs[idx++])) > 0x0F)
 			return 0;
-		cf->data[i] = (tmp << 4);
+		data[i] = (tmp << 4);
 		if ((tmp = asc2nibble(cs[idx++])) > 0x0F)
 			return 0;
-		cf->data[i] |= tmp;
+		data[i] |= tmp;
 		dlen++;
 	}
-	cf->len = dlen;
+
+	if (mtu == CANXL_MTU)
+		cu->xl.len = dlen;
+	else
+		cu->fd.len = dlen;
 
 	/* check for extra DLC when having a Classic CAN with 8 bytes payload */
 	if ((maxdlen == CAN_MAX_DLEN) && (dlen == CAN_MAX_DLEN) && (cs[idx++] == CC_DLC_DELIM)) {
 		unsigned char dlc = asc2nibble(cs[idx]);
 
-		if ((dlc > CAN_MAX_DLEN) && (dlc <= CAN_MAX_RAW_DLC)) {
-			struct can_frame *ccf = (struct can_frame *)cf;
-
-			ccf->len8_dlc = dlc;
-		}
+		if ((dlc > CAN_MAX_DLEN) && (dlc <= CAN_MAX_RAW_DLC))
+			cu->cc.len8_dlc = dlc;
 	}
 
-	return ret;
+	return mtu;
 }
 
 int sprint_canframe(char *buf, cu_t *cu, int sep)

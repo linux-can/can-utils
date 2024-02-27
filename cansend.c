@@ -92,9 +92,12 @@ int main(int argc, char **argv)
 	int s; /* can raw socket */
 	int required_mtu;
 	int mtu;
-	int enable_canfd = 1;
+	int enable_canfx = 1;
 	struct sockaddr_can addr;
-	struct canfd_frame frame;
+	struct can_raw_vcid_options vcid_opts = {
+		.flags = CAN_RAW_XL_VCID_TX_PASS,
+	};
+	static cu_t cu;
 	struct ifreq ifr;
 
 	/* check command line options */
@@ -104,7 +107,7 @@ int main(int argc, char **argv)
 	}
 
 	/* parse CAN frame */
-	required_mtu = parse_canframe(argv[2], &frame);
+	required_mtu = parse_canframe(argv[2], &cu);
 	if (!required_mtu) {
 		fprintf(stderr, "\nWrong CAN-frame format!\n\n");
 		print_usage(argv[0]);
@@ -137,21 +140,38 @@ int main(int argc, char **argv)
 		}
 		mtu = ifr.ifr_mtu;
 
-		if (mtu != CANFD_MTU && mtu != CANXL_MTU) {
-			printf("CAN interface is only Classical CAN capable - sorry.\n");
-			return 1;
+		if (mtu == CANFD_MTU) {
+			/* interface is ok - try to switch the socket into CAN FD mode */
+			if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES,
+				       &enable_canfx, sizeof(enable_canfx))){
+				printf("error when enabling CAN FD support\n");
+				return 1;
+			}
 		}
 
-		/* interface is ok - try to switch the socket into CAN FD mode */
-		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES,
-			       &enable_canfd, sizeof(enable_canfd))){
-			printf("error when enabling CAN FD support\n");
-			return 1;
+		if (mtu >= CANXL_MIN_MTU) {
+			/* interface is ok - try to switch the socket into CAN XL mode */
+			if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_XL_FRAMES,
+				       &enable_canfx, sizeof(enable_canfx))){
+				printf("error when enabling CAN XL support\n");
+				return 1;
+			}
+			/* try to enable the CAN XL VCID pass through mode */
+			if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_XL_VCID_OPTS,
+				       &vcid_opts, sizeof(vcid_opts))) {
+				printf("error when enabling CAN XL VCID pass through\n");
+				return 1;
+			}
 		}
-
-		/* ensure discrete CAN FD length values 0..8, 12, 16, 20, 24, 32, 64 */
-		frame.len = can_fd_dlc2len(can_fd_len2dlc(frame.len));
 	}
+
+	/* ensure discrete CAN FD length values 0..8, 12, 16, 20, 24, 32, 64 */
+	if (required_mtu == CANFD_MTU)
+		cu.fd.len = can_fd_dlc2len(can_fd_len2dlc(cu.fd.len));
+
+	/* CAN XL frames need real frame length for sending */
+	if (required_mtu == CANXL_MTU)
+		required_mtu = CANXL_HDR_SIZE + cu.xl.len;
 
 	/*
 	 * disable default receive filter on this RAW socket This is
@@ -167,7 +187,7 @@ int main(int argc, char **argv)
 	}
 
 	/* send frame */
-	if (write(s, &frame, required_mtu) != required_mtu) {
+	if (write(s, &cu, required_mtu) != required_mtu) {
 		perror("write");
 		return 1;
 	}

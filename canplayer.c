@@ -71,7 +71,7 @@ struct assignment {
 	char rxif[IFNAMSIZ];
 };
 static struct assignment asgn[CHANNELS];
-const int canfd_on = 1;
+const int canfx_on = 1;
 
 extern int optind, opterr, optopt;
 
@@ -239,9 +239,12 @@ int add_assignment(char *mode, int socket, char *txname, char *rxname, int verbo
 
 int main(int argc, char **argv)
 {
-	static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ];
+	static char buf[BUFSZ], device[BUFSZ], ascframe[10000];
 	struct sockaddr_can addr;
-	static struct canfd_frame frame;
+	struct can_raw_vcid_options vcid_opts = {
+		.flags = CAN_RAW_XL_VCID_TX_PASS,
+	};
+	static cu_t cu;
 	static struct timeval today_tv, log_tv, last_log_tv, diff_tv;
 	struct timespec sleep_ts;
 	int s; /* CAN_RAW socket */
@@ -360,7 +363,13 @@ int main(int argc, char **argv)
 	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
 
 	/* try to switch the socket into CAN FD mode */
-	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfx_on, sizeof(canfx_on));
+
+	/* try to switch the socket into CAN XL mode */
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_XL_FRAMES, &canfx_on, sizeof(canfx_on));
+
+	/* try to enable the CAN XL VCID pass through mode */
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_XL_VCID_OPTS, &vcid_opts, sizeof(vcid_opts));
 
 	if (loopback_disable) {
 		int loopback = 0;
@@ -470,26 +479,28 @@ int main(int argc, char **argv)
 
 				} else if (txidx > 0) { /* only send to valid CAN devices */
 
-					txmtu = parse_canframe(ascframe, &frame); /* dual-use frame */
+					txmtu = parse_canframe(ascframe, &cu); /* dual-use frame */
 					if (!txmtu) {
 						fprintf(stderr, "wrong CAN frame format: '%s'!", ascframe);
 						return 1;
 					}
 
+					/* CAN XL frames need real frame length for sending */
+					if (txmtu == CANXL_MTU)
+						txmtu = CANXL_HDR_SIZE + cu.xl.len;
+
 					addr.can_family = AF_CAN;
 					addr.can_ifindex = txidx; /* send via this interface */
 
-					if (sendto(s, &frame, txmtu, 0, (struct sockaddr *)&addr, sizeof(addr)) != txmtu) {
+					if (sendto(s, &cu, txmtu, 0, (struct sockaddr *)&addr, sizeof(addr)) != txmtu) {
 						perror("sendto");
 						return 1;
 					}
 
 					if (verbose) {
-						static char abuf[10000]; /* ASCII buf FIXME - use calculated value */
-
 						printf("%s (%s) ", get_txname(device), device);
-						sprint_long_canframe(abuf, (cu_t *)&frame, CANLIB_VIEW_INDENT_SFF);
-						printf("%s\n", abuf);
+						sprint_long_canframe(ascframe, &cu, CANLIB_VIEW_INDENT_SFF);
+						printf("%s\n", ascframe);
 					}
 
 					if (count && (--count == 0))

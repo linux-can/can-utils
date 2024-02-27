@@ -111,8 +111,7 @@ int hexstring2data(char *arg, unsigned char *data, int maxdlen);
  *
  */
 
-struct canfd_frame;
-int parse_canframe(char *cs, struct canfd_frame *cf);
+int parse_canframe(char *cs, cu_t *cu);
 /*
  * Transfers a valid ASCII string describing a CAN frame into struct canfd_frame.
  *

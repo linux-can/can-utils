@@ -306,6 +306,11 @@ int main(int argc, char **argv)
 	struct sockaddr_can addr = {
 		.can_family = AF_CAN,
 	};
+	struct can_raw_vcid_options vcid_opts = {
+		.flags = CAN_RAW_XL_VCID_RX_FILTER,
+		.rx_vcid = 0,
+		.rx_vcid_mask = 0,
+	};
 	char ctrlmsg[CMSG_SPACE(sizeof(struct timeval)) +
 		     CMSG_SPACE(3 * sizeof(struct timespec)) +
 		     CMSG_SPACE(sizeof(__u32))];
@@ -600,6 +605,9 @@ int main(int argc, char **argv)
 
 		/* try to switch the socket into CAN XL mode */
 		setsockopt(obj->s, SOL_CAN_RAW, CAN_RAW_XL_FRAMES, &canfx_on, sizeof(canfx_on));
+
+		/* try to enable the CAN XL VCID pass through mode */
+		setsockopt(obj->s, SOL_CAN_RAW, CAN_RAW_XL_VCID_OPTS, &vcid_opts, sizeof(vcid_opts));
 
 		if (rcvbuf_size) {
 			int curr_rcvbuf_size;
