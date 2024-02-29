@@ -110,9 +110,10 @@ int hexstring2data(char *arg, unsigned char *data, int maxdlen);
 
 int parse_canframe(char *cs, cu_t *cu);
 /*
- * Transfers a valid ASCII string describing a CAN frame into struct canfd_frame.
+ * Transfers a valid ASCII string describing a CAN frame into the CAN union
+ * containing CAN CC/FD/XL structs.
  *
- * CAN 2.0 frames (aka Classical CAN)
+ * CAN CC frames (aka Classical CAN, CAN 2.0B)
  * - string layout <can_id>#{R{len}|data}{_len8_dlc}
  * - {data} has 0 to 8 hex-values that can (optionally) be separated by '.'
  * - {len} can take values from 0 to 8 and can be omitted if zero
@@ -124,6 +125,16 @@ int parse_canframe(char *cs, cu_t *cu);
  * - <flags> a single ASCII Hex value (0 .. F) which defines canfd_frame.flags
  * - {data} has 0 to 64 hex-values that can (optionally) be separated by '.'
  * - return value on successful parsing: CANFD_MTU
+ *
+ * CAN XL frames
+ * - string layout <vcid><prio>#<flags>:<sdt>:<af>#{data}
+ * - <vcid> a two ASCII Hex value (00 .. FF) which defines the VCID
+ * - <prio> a three ASCII Hex value (000 .. 7FF) which defines the 11 bit PRIO
+ * - <flags> a two ASCII Hex value (00 .. FF) which defines canxl_frame.flags
+ * - <sdt> a two ASCII Hex value (00 .. FF) which defines canxl_frame.sdt
+ * - <af> a 8 digit ASCII Hex value which defines the 32 bit canxl_frame.af
+ * - {data} has 1 to 2048 hex-values that can (optionally) be separated by '.'
+ * - return value on successful parsing: CANXL_MTU
  *
  * Return value on detected problems: 0
  *
@@ -155,6 +166,9 @@ int parse_canframe(char *cs, cu_t *cu);
  *     ^^
  *     CAN FD extension to handle the canfd_frame.flags content
  *
+ * 45123#81:00:12345678#11223344.556677 -> CAN XL frame with len = 7,
+ *   VCID = 0x45, PRIO = 0x123, flags = 0x81, sdt = 0x00, af = 0x12345678
+ *
  * Simple facts on this compact ASCII CAN frame representation:
  *
  * - 3 digits: standard frame format
@@ -169,8 +183,9 @@ int sprint_canframe(char *buf , cu_t *cu, int sep);
  * Creates a CAN frame hexadecimal output in compact format.
  * The CAN data[] is separated by '.' when sep != 0.
  *
- * The type of the CAN frame (CAN CC / CAN FD) is specified by
- * by the dual-use struct canfd_frame.flags element:
+ * A CAN XL frame is detected when CANXL_XLF is set in the struct
+ * cu.canxl_frame.flags. Otherwise the type of the CAN frame (CAN CC/FD)
+ * is specified by the dual-use struct cu.canfd_frame.flags element:
  * w/o  CAN FD flags (== 0) -> CAN CC frame (aka Classical CAN, CAN2.0B)
  * with CAN FD flags (!= 0) -> CAN FD frame (with CANFD_[FDF/BRS/ESI])
  *
@@ -182,6 +197,8 @@ int sprint_canframe(char *buf , cu_t *cu, int sep);
  * 32345678#112233 -> error frame with CAN_ERR_FLAG (0x2000000) set
  * 123##0112233 -> CAN FD frame standard CAN-Id = 0x123, flags = 0, len = 3
  * 123##2112233 -> CAN FD frame, flags = CANFD_ESI, len = 3
+ * 45123#81:00:12345678#11223344.556677 -> CAN XL frame with len = 7,
+ *   VCID = 0x45, PRIO = 0x123, flags = 0x81, sdt = 0x00, af = 0x12345678
  *
  */
 
@@ -198,8 +215,9 @@ int sprint_long_canframe(char *buf , cu_t *cu, int view);
 /*
  * Creates a CAN frame hexadecimal output in user readable format.
  *
- * The type of the CAN frame (CAN CC / CAN FD) is specified by
- * by the dual-use struct canfd_frame.flags element:
+ * A CAN XL frame is detected when CANXL_XLF is set in the struct
+ * cu.canxl_frame.flags. Otherwise the type of the CAN frame (CAN CC/FD)
+ * is specified by the dual-use struct cu.canfd_frame.flags element:
  * w/o  CAN FD flags (== 0) -> CAN CC frame (aka Classical CAN, CAN2.0B)
  * with CAN FD flags (!= 0) -> CAN FD frame (with CANFD_[FDF/BRS/ESI])
  *
@@ -209,10 +227,13 @@ int sprint_long_canframe(char *buf , cu_t *cu, int view);
  * 321   {B}  11 22 33 44 55 66 77 88 -> Classical CAN with raw '{DLC}' value B
  * 20001111   [7]  C6 23 7B 32 69 98 3C      ERRORFRAME -> (CAN_ERR_FLAG set)
  * 12345678  [03]  11 22 33 -> CAN FD with extended CAN-Id = 0x12345678, len = 3
+ *      123 [0003] (45|81:00:12345678) 11 22 33 -> CAN XL frame with VCID 0x45
  *
  * 123   [3]  11 22 33         -> CANLIB_VIEW_INDENT_SFF == 0
  *      123   [3]  11 22 33    -> CANLIB_VIEW_INDENT_SFF == set
  *
+ * There are no binary or ASCII view modes for CAN XL and the number of displayed
+ * data bytes is limited to 64 to fit terminal output use-cases.
  */
 
 int snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *cf,
