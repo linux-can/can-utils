@@ -63,8 +63,6 @@ typedef union {
 	struct canxl_frame xl;
 } cu_t;
 
-#define CL_CFSZ 400 /* to be removed */
-
 /*
  * The buffer size for ASCII CAN frame string representations
  * covers also the 'long' CAN frame output from sprint_long_canframe()

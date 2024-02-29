@@ -54,8 +54,6 @@
 
 #include "lib.h"
 
-#define BUFSZ 400 /* for one line in the logfile */
-
 extern int optind, opterr, optopt;
 
 void print_usage(char *prg)
@@ -181,9 +179,25 @@ void canfd_asc(struct canfd_frame *cf, int devno, int mtu, char *extra_info, FIL
 	fprintf(outfile, " %8d %4d %8X 0 0 0 0 0", 130000, 130, flags);
 }
 
+#define DEVSZ 22
+#define EXTRASZ 20
+#define TIMESZ sizeof("(1345212884.318850)   ")
+#define BUFSZ (DEVSZ + AFRSZ + EXTRASZ + TIMESZ)
+
+/* adapt sscanf() functions below on error */
+#if (AFRSZ != 6300)
+#error "AFRSZ value does not fit sscanf restrictions!"
+#endif
+#if (DEVSZ != 22)
+#error "DEVSZ value does not fit sscanf restrictions!"
+#endif
+#if (EXTRASZ != 20)
+#error "EXTRASZ value does not fit sscanf restrictions!"
+#endif
+
 int main(int argc, char **argv)
 {
-	static char buf[BUFSZ], device[BUFSZ], afrbuf[AFRSZ], extra_info[BUFSZ];
+	static char buf[BUFSZ], device[DEVSZ], afrbuf[AFRSZ], extra_info[EXTRASZ];
 
 	static cu_t cu;
 	static struct timeval tv, start_tv;
@@ -261,13 +275,13 @@ int main(int argc, char **argv)
 		if (buf[0] != '(')
 			continue;
 
-		if (sscanf(buf, "(%llu.%llu) %s %s %s", &sec, &usec,
+		if (sscanf(buf, "(%llu.%llu) %21s %6299s %19s", &sec, &usec,
 			   device, afrbuf, extra_info) != 5) {
 
 			/* do not evaluate the extra info */
 			extra_info[0] = 0;
 
-			if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec,
+			if (sscanf(buf, "(%llu.%llu) %21s %6299s", &sec, &usec,
 				   device, afrbuf) != 4) {
 				fprintf(stderr, "incorrect line format in logfile\n");
 				return 1;

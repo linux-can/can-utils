@@ -61,9 +61,23 @@
 #define DEFAULT_GAP 1 /* ms */
 #define DEFAULT_LOOPS 1 /* only one replay */
 #define CHANNELS 20 /* anyone using more than 20 CAN interfaces at a time? */
-#define COMMENTSZ 200
-#define BUFSZ (sizeof("(1345212884.318850)") + IFNAMSIZ + 4 + CL_CFSZ + COMMENTSZ) /* for one line in the logfile */
 #define STDOUTIDX 65536 /* interface index for printing on stdout - bigger than max uint16 */
+
+#if (IFNAMSIZ != 16)
+#error "IFNAMSIZ value does not to DEVSZ calculation!"
+#endif
+
+#define DEVSZ 22 /* IFNAMSZ + 6 */
+#define TIMESZ sizeof("(1345212884.318850)   ")
+#define BUFSZ (TIMESZ + DEVSZ + AFRSZ)
+
+/* adapt sscanf() functions below on error */
+#if (AFRSZ != 6300)
+#error "AFRSZ value does not fit sscanf restrictions!"
+#endif
+#if (DEVSZ != 22)
+#error "DEVSZ value does not fit sscanf restrictions!"
+#endif
 
 struct assignment {
 	char txif[IFNAMSIZ];
@@ -239,7 +253,7 @@ int add_assignment(char *mode, int socket, char *txname, char *rxname, int verbo
 
 int main(int argc, char **argv)
 {
-	static char buf[BUFSZ], device[BUFSZ], afrbuf[AFRSZ];
+	static char buf[BUFSZ], device[DEVSZ], afrbuf[AFRSZ];
 	struct sockaddr_can addr;
 	struct can_raw_vcid_options vcid_opts = {
 		.flags = CAN_RAW_XL_VCID_TX_PASS,
@@ -426,7 +440,7 @@ int main(int argc, char **argv)
 
 		eof = 0;
 
-		if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec, device, afrbuf) != 4) {
+		if (sscanf(buf, "(%llu.%llu) %21s %6299s", &sec, &usec, device, afrbuf) != 4) {
 			fprintf(stderr, "incorrect line format in logfile\n");
 			return 1;
 		}

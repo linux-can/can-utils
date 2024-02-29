@@ -72,9 +72,6 @@
 #define ANYDEV "any"
 #define ANL "\r\n" /* newline in ASC mode */
 
-#define COMMENTSZ 200
-#define BUFSZ (sizeof("(1345212884.318850)") + IFNAMSIZ + 4 + CL_CFSZ + COMMENTSZ) /* for one line in the logfile */
-
 #define DEFPORT 28700
 
 static char devname[MAXDEV][IFNAMSIZ+1];
@@ -199,7 +196,7 @@ int main(int argc, char **argv)
 	struct sockaddr_in inaddr;
 	struct sockaddr_in clientaddr;
 	socklen_t sin_size = sizeof(clientaddr);
-	char temp[BUFSZ];
+	char afrbuf[AFRSZ];
 
 	sigemptyset(&sigset);
 	signalaction.sa_handler = &childdied;
@@ -416,19 +413,19 @@ int main(int argc, char **argv)
 
 				idx = idx2dindex(addr.can_ifindex, s[i]);
 
-				sprintf(temp, "(%llu.%06llu) %*s ",
+				sprintf(afrbuf, "(%llu.%06llu) %*s ",
 					(unsigned long long)tv.tv_sec, (unsigned long long)tv.tv_usec, max_devname_len, devname[idx]);
-				sprint_canframe(temp+strlen(temp), (cu_t *)&frame, 0);
-				strcat(temp, "\n");
+				sprint_canframe(afrbuf+strlen(afrbuf), (cu_t *)&frame, 0);
+				strcat(afrbuf, "\n");
 
-				if (write(accsocket, temp, strlen(temp)) < 0) {
+				if (write(accsocket, afrbuf, strlen(afrbuf)) < 0) {
 					perror("writeaccsock");
 					return 1;
 				}
 		    
 #if 0
 				/* print CAN frame in log file style to stdout */
-				printf("%s", temp);
+				printf("%s", afrbuf);
 #endif
 			}
 
