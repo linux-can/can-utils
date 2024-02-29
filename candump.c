@@ -327,7 +327,7 @@ int main(int argc, char **argv)
 	FILE *logfile = NULL;
 	char fname[83]; /* suggested by -Wformat-overflow= */
 	const char *logname = NULL;
-	static char abuf[10000]; /* ASCII buf FIXME - use calculated value */
+	static char afrbuf[AFRSZ]; /* ASCII CAN frame buffer size */
 	static int alen;
 
 	signal(SIGTERM, sigterm);
@@ -831,22 +831,22 @@ int main(int argc, char **argv)
 			/* build common log format output */
 			if ((log) || ((logfrmt) && (silent == SILENT_OFF))) {
 
-				alen = sprint_timestamp(abuf, logtimestamp,
+				alen = sprint_timestamp(afrbuf, logtimestamp,
 							  &tv, &last_tv);
 
-				alen += sprintf(abuf + alen, "%*s ",
+				alen += sprintf(afrbuf + alen, "%*s ",
 						  max_devname_len, devname[idx]);
 
-				alen += sprint_canframe(abuf + alen, &cu, 0);
+				alen += sprint_canframe(afrbuf + alen, &cu, 0);
 			}
 
 			/* write CAN frame in log file style to logfile */
 			if (log)
-				fprintf(logfile, "%s%s\n", abuf, extra_info);
+				fprintf(logfile, "%s%s\n", afrbuf, extra_info);
 
 			/* print CAN frame in log file style to stdout */
 			if ((logfrmt) && (silent == SILENT_OFF)) {
-				printf("%s%s\n", abuf, extra_info);
+				printf("%s%s\n", afrbuf, extra_info);
 				goto out_fflush; /* no other output to stdout */
 			}
 
@@ -860,32 +860,32 @@ int main(int argc, char **argv)
 			}
 
 			/* print (colored) long CAN frame style to stdout */
-			alen = sprintf(abuf, " %s", (color > 2) ? col_on[idx % MAXCOL] : "");
-			alen += sprint_timestamp(abuf + alen, timestamp, &tv, &last_tv);
-			alen += sprintf(abuf + alen, " %s%*s",
+			alen = sprintf(afrbuf, " %s", (color > 2) ? col_on[idx % MAXCOL] : "");
+			alen += sprint_timestamp(afrbuf + alen, timestamp, &tv, &last_tv);
+			alen += sprintf(afrbuf + alen, " %s%*s",
 					  (color && (color < 3)) ? col_on[idx % MAXCOL] : "",
 					  max_devname_len, devname[idx]);
 
 			if (extra_msg_info) {
 				if (msg.msg_flags & MSG_DONTROUTE)
-					alen += sprintf(abuf + alen, "  TX %s",
+					alen += sprintf(afrbuf + alen, "  TX %s",
 							  extra_m_info[cu.fd.flags & 3]);
 				else
-					alen += sprintf(abuf + alen, "  RX %s",
+					alen += sprintf(afrbuf + alen, "  RX %s",
 							  extra_m_info[cu.fd.flags & 3]);
 			}
 
-			alen += sprintf(abuf + alen, "%s  ", (color == 1) ? col_off : "");
-			alen += sprint_long_canframe(abuf + alen, &cu, view);
+			alen += sprintf(afrbuf + alen, "%s  ", (color == 1) ? col_off : "");
+			alen += sprint_long_canframe(afrbuf + alen, &cu, view);
 
 			if ((view & CANLIB_VIEW_ERROR) && (cu.fd.can_id & CAN_ERR_FLAG)) {
-				alen += sprintf(abuf + alen, "\n\t");
-				alen += snprintf_can_error_frame(abuf + alen,
-								 sizeof(abuf) - alen,
+				alen += sprintf(afrbuf + alen, "\n\t");
+				alen += snprintf_can_error_frame(afrbuf + alen,
+								 sizeof(afrbuf) - alen,
 								 &cu.fd, "\n\t");
 			}
 
-			printf("%s%s\n", abuf, (color > 1) ? col_off : "");
+			printf("%s%s\n", afrbuf, (color > 1) ? col_off : "");
 out_fflush:
 			fflush(stdout);
 		}

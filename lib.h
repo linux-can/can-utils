@@ -63,17 +63,16 @@ typedef union {
 	struct canxl_frame xl;
 } cu_t;
 
-/* buffer sizes for CAN frame string representations */
+#define CL_CFSZ 400 /* to be removed */
 
-#define CL_ID (sizeof("12345678##1"))
-#define CL_DATA sizeof(".AA")
-#define CL_BINDATA sizeof(".10101010")
-
- /* CAN FD ASCII hex short representation with DATA_SEPERATORs */
-#define CL_CFSZ (2*CL_ID + 64*CL_DATA)
-
-/* CAN FD ASCII hex long representation with binary output */
-#define CL_LONGCFSZ (2*CL_ID + sizeof("   [255]  ") + (64*CL_BINDATA))
+/*
+ * The buffer size for ASCII CAN frame string representations
+ * covers also the 'long' CAN frame output from sprint_long_canframe()
+ * including (swapped) binary represetations, timestamps, netdevice names,
+ * lengths and error message details as the CAN XL data is cropped to 64
+ * byte (the 'long' CAN frame output is only for display on terminals).
+ */
+#define AFRSZ 6300 /* 3*2048 (data) + 22 (timestamp) + 18 (netdev) + ID/HDR */
 
 /* CAN DLC to real data length conversion helpers especially for CAN FD */
 

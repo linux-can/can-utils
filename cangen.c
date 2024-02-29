@@ -828,16 +828,17 @@ int main(int argc, char **argv)
 		}
 
 		if (verbose) {
-			static char abuf[10000]; /* ASCII buf FIXME - use calculated value */
+			static char afrbuf[AFRSZ]; /* ASCII CAN frame buffer size */
+
 
 			printf("  %s  ", argv[optind]);
 
 			if (verbose > 1)
-				sprint_long_canframe(abuf, (cu_t *)&frame, (verbose > 2) ? CANLIB_VIEW_ASCII : 0);
+				sprint_long_canframe(afrbuf, (cu_t *)&frame, (verbose > 2) ? CANLIB_VIEW_ASCII : 0);
 			else
-				sprint_canframe(abuf, (cu_t *)&frame, 1);
+				sprint_canframe(afrbuf, (cu_t *)&frame, 1);
 
-			printf("%s\n", abuf);
+			printf("%s\n", afrbuf);
 		}
 
 		ret = do_send_one(s, &frame, mtu, polltimeout);

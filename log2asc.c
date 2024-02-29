@@ -183,7 +183,7 @@ void canfd_asc(struct canfd_frame *cf, int devno, int mtu, char *extra_info, FIL
 
 int main(int argc, char **argv)
 {
-	static char buf[BUFSZ], device[BUFSZ], ascframe[10000], extra_info[BUFSZ];
+	static char buf[BUFSZ], device[BUFSZ], afrbuf[AFRSZ], extra_info[BUFSZ];
 
 	static cu_t cu;
 	static struct timeval tv, start_tv;
@@ -262,13 +262,13 @@ int main(int argc, char **argv)
 			continue;
 
 		if (sscanf(buf, "(%llu.%llu) %s %s %s", &sec, &usec,
-			   device, ascframe, extra_info) != 5) {
+			   device, afrbuf, extra_info) != 5) {
 
 			/* do not evaluate the extra info */
 			extra_info[0] = 0;
 
 			if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec,
-				   device, ascframe) != 4) {
+				   device, afrbuf) != 4) {
 				fprintf(stderr, "incorrect line format in logfile\n");
 				return 1;
 			}
@@ -295,7 +295,7 @@ int main(int argc, char **argv)
 
 		if (devno) { /* only convert for selected CAN devices */
 
-			mtu = parse_canframe(ascframe, &cu);
+			mtu = parse_canframe(afrbuf, &cu);
 
 			/* convert only CAN CC and CAN FD frames */
 			if ((mtu != CAN_MTU) && (mtu != CANFD_MTU))

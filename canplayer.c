@@ -239,7 +239,7 @@ int add_assignment(char *mode, int socket, char *txname, char *rxname, int verbo
 
 int main(int argc, char **argv)
 {
-	static char buf[BUFSZ], device[BUFSZ], ascframe[10000];
+	static char buf[BUFSZ], device[BUFSZ], afrbuf[AFRSZ];
 	struct sockaddr_can addr;
 	struct can_raw_vcid_options vcid_opts = {
 		.flags = CAN_RAW_XL_VCID_TX_PASS,
@@ -426,7 +426,7 @@ int main(int argc, char **argv)
 
 		eof = 0;
 
-		if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec, device, ascframe) != 4) {
+		if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec, device, afrbuf) != 4) {
 			fprintf(stderr, "incorrect line format in logfile\n");
 			return 1;
 		}
@@ -455,7 +455,7 @@ int main(int argc, char **argv)
 				if (interactive)
 					getchar();
 
-				/* log_tv/device/ascframe are valid here */
+				/* log_tv/device/afrbuf are valid here */
 
 				if (strlen(device) >= IFNAMSIZ) {
 					fprintf(stderr, "log interface name '%s' too long!", device);
@@ -479,9 +479,9 @@ int main(int argc, char **argv)
 
 				} else if (txidx > 0) { /* only send to valid CAN devices */
 
-					txmtu = parse_canframe(ascframe, &cu); /* dual-use frame */
+					txmtu = parse_canframe(afrbuf, &cu); /* dual-use frame */
 					if (!txmtu) {
-						fprintf(stderr, "wrong CAN frame format: '%s'!", ascframe);
+						fprintf(stderr, "wrong CAN frame format: '%s'!", afrbuf);
 						return 1;
 					}
 
@@ -499,8 +499,8 @@ int main(int argc, char **argv)
 
 					if (verbose) {
 						printf("%s (%s) ", get_txname(device), device);
-						sprint_long_canframe(ascframe, &cu, CANLIB_VIEW_INDENT_SFF);
-						printf("%s\n", ascframe);
+						sprint_long_canframe(afrbuf, &cu, CANLIB_VIEW_INDENT_SFF);
+						printf("%s\n", afrbuf);
 					}
 
 					if (count && (--count == 0))
@@ -520,7 +520,7 @@ int main(int argc, char **argv)
 					break;
 				}
 
-				if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec, device, ascframe) != 4) {
+				if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec, device, afrbuf) != 4) {
 					fprintf(stderr, "incorrect line format in logfile\n");
 					return 1;
 				}
