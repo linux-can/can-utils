@@ -186,9 +186,14 @@ int main(int argc, char **argv)
 	int opt, ret;
 	int currmax = 1; /* we assume at least one can bus ;-) */
 	struct sockaddr_can addr;
+	struct can_raw_vcid_options vcid_opts = {
+		.flags = CAN_RAW_XL_VCID_RX_FILTER,
+		.rx_vcid = 0,
+		.rx_vcid_mask = 0,
+	};
 	struct can_filter rfilter;
-	struct canfd_frame frame;
-	const int canfd_on = 1;
+	static cu_t cu; /* union for CAN CC/FD/XL frames */
+	const int canfx_on = 1;
 	int nbytes, i, j;
 	struct ifreq ifr;
 	struct timeval tv;
@@ -342,7 +347,13 @@ int main(int argc, char **argv)
 				   &err_mask[i], sizeof(err_mask[i]));
 
 		/* try to switch the socket into CAN FD mode */
-		setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));
+		setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfx_on, sizeof(canfx_on));
+
+		/* try to switch the socket into CAN XL mode */
+		setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_XL_FRAMES, &canfx_on, sizeof(canfx_on));
+
+		/* try to enable the CAN XL VCID pass through mode */
+		setsockopt(s[i], SOL_CAN_RAW, CAN_RAW_XL_VCID_OPTS, &vcid_opts, sizeof(vcid_opts));
 
 		j = strlen(argv[optind+i]);
 
@@ -391,20 +402,33 @@ int main(int argc, char **argv)
 				socklen_t len = sizeof(addr);
 				int idx;
 
-				if ((nbytes = recvfrom(s[i], &frame, CANFD_MTU, 0,
+				if ((nbytes = recvfrom(s[i], &cu, sizeof(cu), 0,
 						       (struct sockaddr*)&addr, &len)) < 0) {
 					perror("read");
 					return 1;
 				}
 
-				/* mark dual-use struct canfd_frame */
-				if ((size_t)nbytes == CAN_MTU)
-					frame.flags = 0;
-				else if ((size_t)nbytes == CANFD_MTU)
-					frame.flags |= CANFD_FDF;
-				else {
-					fprintf(stderr, "read: incomplete CAN frame\n");
+				if (nbytes < CANXL_HDR_SIZE + CANXL_MIN_DLEN) {
+					fprintf(stderr, "read: no CAN frame\n");
 					return 1;
+				}
+
+				if (cu.xl.flags & CANXL_XLF) {
+					if (nbytes != CANXL_HDR_SIZE + cu.xl.len) {
+						printf("nbytes = %d\n", nbytes);
+						fprintf(stderr, "read: no CAN XL frame\n");
+						return 1;
+					}
+				} else {
+					/* mark dual-use struct canfd_frame */
+					if (nbytes == CAN_MTU)
+						cu.fd.flags = 0;
+					else if (nbytes == CANFD_MTU)
+						cu.fd.flags |= CANFD_FDF;
+					else {
+						fprintf(stderr, "read: incomplete CAN CC/FD frame\n");
+						return 1;
+					}
 				}
 
 				if (ioctl(s[i], SIOCGSTAMP, &tv) < 0)
@@ -415,7 +439,7 @@ int main(int argc, char **argv)
 
 				sprintf(afrbuf, "(%llu.%06llu) %*s ",
 					(unsigned long long)tv.tv_sec, (unsigned long long)tv.tv_usec, max_devname_len, devname[idx]);
-				sprint_canframe(afrbuf+strlen(afrbuf), (cu_t *)&frame, 0);
+				sprint_canframe(afrbuf+strlen(afrbuf), &cu, 0);
 				strcat(afrbuf, "\n");
 
 				if (write(accsocket, afrbuf, strlen(afrbuf)) < 0) {
