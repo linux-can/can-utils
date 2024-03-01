@@ -201,7 +201,7 @@ int main(int argc, char **argv)
 	struct sockaddr_in inaddr;
 	struct sockaddr_in clientaddr;
 	socklen_t sin_size = sizeof(clientaddr);
-	char afrbuf[AFRSZ];
+	static char afrbuf[AFRSZ];
 
 	sigemptyset(&sigset);
 	signalaction.sa_handler = &childdied;

@@ -67,7 +67,7 @@
 
 int main(void)
 {
-	char buf[BUFSZ], timestamp[TIMESZ], device[DEVSZ], afrbuf[AFRSZ];
+	static char buf[BUFSZ], timestamp[TIMESZ], device[DEVSZ], afrbuf[AFRSZ];
 	static cu_t cu;
 	int mtu;
 
