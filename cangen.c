@@ -293,11 +293,11 @@ static int setsockopt_txtime(int fd)
 	return 0;
 }
 
-static int do_send_one(int fd, void *buf, size_t len, int timeout)
+static int do_send_one(int fd, cu_t *cu, size_t len, int timeout)
 {
 	uint8_t control[CMSG_SPACE(sizeof(uint64_t))] = { 0 };
 	struct iovec iov = {
-		.iov_base = buf,
+		.iov_base = cu,
 		.iov_len = len,
 	};
 	struct msghdr msg = {
@@ -466,8 +466,7 @@ int main(int argc, char **argv)
 	int s; /* socket */
 
 	struct sockaddr_can addr = { 0 };
-	static struct canfd_frame frame;
-	struct can_frame *ccf = (struct can_frame *)&frame;
+	static cu_t cu;
 	int i;
 	struct ifreq ifr;
 
@@ -556,7 +555,7 @@ int main(int argc, char **argv)
 				id_mode = MODE_RANDOM_ODD;
 			} else {
 				id_mode = MODE_FIX;
-				frame.can_id = strtoul(optarg, NULL, 16);
+				cu.fd.can_id = strtoul(optarg, NULL, 16);
 			}
 			break;
 
@@ -567,7 +566,7 @@ int main(int argc, char **argv)
 				dlc_mode = MODE_INCREMENT;
 			} else {
 				dlc_mode = MODE_FIX;
-				frame.len = atoi(optarg) & 0xFF; /* is cut to 8 / 64 later */
+				cu.fd.len = atoi(optarg) & 0xFF; /* is cut to 8 / 64 later */
 			}
 			break;
 
@@ -630,7 +629,7 @@ int main(int argc, char **argv)
 	ts_gap = double_to_timespec(gap / 1000);
 
 	/* recognize obviously missing commandline option */
-	if (id_mode == MODE_FIX && frame.can_id > 0x7FF && !extended) {
+	if (id_mode == MODE_FIX && cu.fd.can_id > 0x7FF && !extended) {
 		printf("The given CAN-ID is greater than 0x7FF and the '-e' option is not set.\n");
 		return 1;
 	}
@@ -691,19 +690,19 @@ int main(int argc, char **argv)
 		}
 
 		/* ensure discrete CAN FD length values 0..8, 12, 16, 20, 24, 32, 64 */
-		frame.len = can_fd_dlc2len(can_fd_len2dlc(frame.len));
+		cu.fd.len = can_fd_dlc2len(can_fd_len2dlc(cu.fd.len));
 	} else {
 		/* sanitize Classical CAN 2.0 frame length */
 		if (len8_dlc) {
-			if (frame.len > CAN_MAX_RAW_DLC)
-				frame.len = CAN_MAX_RAW_DLC;
+			if (cu.cc.len > CAN_MAX_RAW_DLC)
+				cu.cc.len = CAN_MAX_RAW_DLC;
 
-			if (frame.len > CAN_MAX_DLEN)
-				ccf->len8_dlc = frame.len;
+			if (cu.cc.len > CAN_MAX_DLEN)
+				cu.cc.len8_dlc = cu.cc.len;
 		}
 
-		if (frame.len > CAN_MAX_DLEN)
-			frame.len = CAN_MAX_DLEN;
+		if (cu.cc.len > CAN_MAX_DLEN)
+			cu.cc.len = CAN_MAX_DLEN;
 	}
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -722,7 +721,7 @@ int main(int argc, char **argv)
 		return 1;
 
 	while (running) {
-		frame.flags = 0;
+		cu.fd.flags = 0;
 
 		if (count && (--count == 0))
 			running = 0;
@@ -730,89 +729,89 @@ int main(int argc, char **argv)
 		if (canfd) {
 			mtu = CANFD_MTU;
 			maxdlen = CANFD_MAX_DLEN;
-			frame.flags |= CANFD_FDF;
+			cu.fd.flags |= CANFD_FDF;
 			if (brs)
-				frame.flags |= CANFD_BRS;
+				cu.fd.flags |= CANFD_BRS;
 			if (esi)
-				frame.flags |= CANFD_ESI;
+				cu.fd.flags |= CANFD_ESI;
 		} else {
 			mtu = CAN_MTU;
 			maxdlen = CAN_MAX_DLEN;
 		}
 
 		if (id_mode == MODE_RANDOM)
-			frame.can_id = random();
+			cu.fd.can_id = random();
 		else if (id_mode == MODE_RANDOM_EVEN)
-			frame.can_id = random() & ~0x1;
+			cu.fd.can_id = random() & ~0x1;
 		else if (id_mode == MODE_RANDOM_ODD)
-			frame.can_id = random() | 0x1;
+			cu.fd.can_id = random() | 0x1;
 
 		if (extended) {
-			frame.can_id &= CAN_EFF_MASK;
-			frame.can_id |= CAN_EFF_FLAG;
+			cu.fd.can_id &= CAN_EFF_MASK;
+			cu.fd.can_id |= CAN_EFF_FLAG;
 		} else
-			frame.can_id &= CAN_SFF_MASK;
+			cu.fd.can_id &= CAN_SFF_MASK;
 
 		if (rtr_frame && !canfd)
-			frame.can_id |= CAN_RTR_FLAG;
+			cu.fd.can_id |= CAN_RTR_FLAG;
 
 		if (dlc_mode == MODE_RANDOM) {
 			if (canfd)
-				frame.len = can_fd_dlc2len(random() & 0xF);
+				cu.fd.len = can_fd_dlc2len(random() & 0xF);
 			else {
-				frame.len = random() & 0xF;
+				cu.cc.len = random() & 0xF;
 
-				if (frame.len > CAN_MAX_DLEN) {
+				if (cu.cc.len > CAN_MAX_DLEN) {
 					/* generate Classic CAN len8 DLCs? */
 					if (len8_dlc)
-						ccf->len8_dlc = frame.len;
+						cu.cc.len8_dlc = cu.cc.len;
 
-					frame.len = 8; /* for about 50% of the frames */
+					cu.cc.len = 8; /* for about 50% of the frames */
 				} else {
-					ccf->len8_dlc = 0;
+					cu.cc.len8_dlc = 0;
 				}
 			}
 		}
 
-		if (data_mode == MODE_INCREMENT && !frame.len)
-			frame.len = 1; /* min dlc value for incr. data */
+		if (data_mode == MODE_INCREMENT && !cu.cc.len)
+			cu.cc.len = 1; /* min dlc value for incr. data */
 
 		if (data_mode == MODE_RANDOM) {
 			rnd = random();
-			memcpy(&frame.data[0], &rnd, 4);
+			memcpy(&cu.cc.data[0], &rnd, 4);
 			rnd = random();
-			memcpy(&frame.data[4], &rnd, 4);
+			memcpy(&cu.cc.data[4], &rnd, 4);
 
 			/* omit extra random number generation for CAN FD */
-			if (canfd && frame.len > 8) {
-				memcpy(&frame.data[8], &frame.data[0], 8);
-				memcpy(&frame.data[16], &frame.data[0], 16);
-				memcpy(&frame.data[32], &frame.data[0], 32);
+			if (canfd && cu.fd.len > 8) {
+				memcpy(&cu.fd.data[8], &cu.fd.data[0], 8);
+				memcpy(&cu.fd.data[16], &cu.fd.data[0], 16);
+				memcpy(&cu.fd.data[32], &cu.fd.data[0], 32);
 			}
 		}
 
 		if (data_mode == MODE_RANDOM_FIX) {
 			int i;
 
-			memcpy(frame.data, fixdata, CANFD_MAX_DLEN);
+			memcpy(cu.fd.data, fixdata, CANFD_MAX_DLEN);
 
-			for (i = 0; i < frame.len; i++) {
+			for (i = 0; i < cu.fd.len; i++) {
 				if (rand_position[i] == (NIBBLE_H | NIBBLE_L)) {
-					frame.data[i] = random();
+					cu.fd.data[i] = random();
 				} else if (rand_position[i] == NIBBLE_H) {
-					frame.data[i] = (frame.data[i] & 0x0f) | (random() & 0xf0);
+					cu.fd.data[i] = (cu.fd.data[i] & 0x0f) | (random() & 0xf0);
 				} else if (rand_position[i] == NIBBLE_L) {
-					frame.data[i] = (frame.data[i] & 0xf0) | (random() & 0x0f);
+					cu.fd.data[i] = (cu.fd.data[i] & 0xf0) | (random() & 0x0f);
 				}
 			}
 		}
 
 		if (data_mode == MODE_FIX)
-			memcpy(frame.data, fixdata, CANFD_MAX_DLEN);
+			memcpy(cu.fd.data, fixdata, CANFD_MAX_DLEN);
 
 		/* set unused payload data to zero like the CAN driver does it on rx */
-		if (frame.len < maxdlen)
-			memset(&frame.data[frame.len], 0, maxdlen - frame.len);
+		if (cu.fd.len < maxdlen)
+			memset(&cu.fd.data[cu.fd.len], 0, maxdlen - cu.fd.len);
 
 		if (!use_so_txtime &&
 		    (ts.tv_sec || ts.tv_nsec) &&
@@ -834,14 +833,14 @@ int main(int argc, char **argv)
 			printf("  %s  ", argv[optind]);
 
 			if (verbose > 1)
-				sprint_long_canframe(afrbuf, (cu_t *)&frame, (verbose > 2) ? CANLIB_VIEW_ASCII : 0);
+				sprint_long_canframe(afrbuf, &cu, (verbose > 2) ? CANLIB_VIEW_ASCII : 0);
 			else
-				sprint_canframe(afrbuf, (cu_t *)&frame, 1);
+				sprint_canframe(afrbuf, &cu, 1);
 
 			printf("%s\n", afrbuf);
 		}
 
-		ret = do_send_one(s, &frame, mtu, polltimeout);
+		ret = do_send_one(s, &cu, mtu, polltimeout);
 		if (ret)
 			return 1;
 
@@ -850,25 +849,25 @@ int main(int argc, char **argv)
 		burst_sent_count++;
 
 		if (id_mode == MODE_INCREMENT)
-			frame.can_id++;
+			cu.cc.can_id++;
 
 		if (dlc_mode == MODE_INCREMENT) {
 			incdlc++;
 			incdlc %= CAN_MAX_RAW_DLC + 1;
 
 			if (canfd && !mix)
-				frame.len = can_fd_dlc2len(incdlc);
+				cu.fd.len = can_fd_dlc2len(incdlc);
 			else if (len8_dlc) {
 				if (incdlc > CAN_MAX_DLEN) {
-					frame.len = CAN_MAX_DLEN;
-					ccf->len8_dlc = incdlc;
+					cu.cc.len = CAN_MAX_DLEN;
+					cu.cc.len8_dlc = incdlc;
 				} else {
-					frame.len = incdlc;
-					ccf->len8_dlc = 0;
+					cu.cc.len = incdlc;
+					cu.cc.len8_dlc = 0;
 				}
 			} else {
 				incdlc %= CAN_MAX_DLEN + 1;
-				frame.len = incdlc;
+				cu.fd.len = incdlc;
 			}
 		}
 
@@ -876,7 +875,7 @@ int main(int argc, char **argv)
 			incdata++;
 
 			for (i = 0; i < 8; i++)
-				frame.data[i] = incdata >> i * 8;
+				cu.cc.data[i] = incdata >> i * 8;
 		}
 
 		if (mix) {
