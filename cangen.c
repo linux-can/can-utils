@@ -453,6 +453,7 @@ int main(int argc, char **argv)
 	unsigned char verbose = 0;
 	unsigned char rtr_frame = 0;
 	unsigned char len8_dlc = 0;
+	unsigned char view = 0;
 	int count = 0;
 	unsigned long burst_sent_count = 0;
 	int mtu, maxdlen;
@@ -515,6 +516,7 @@ int main(int argc, char **argv)
 			break;
 		case 'e':
 			extended = 1;
+			view |= CANLIB_VIEW_INDENT_SFF;
 			break;
 
 		case 'f':
@@ -537,11 +539,13 @@ int main(int argc, char **argv)
 
 		case '8':
 			len8_dlc = 1;
+			view |= CANLIB_VIEW_LEN8_DLC;
 			break;
 
 		case 'm':
 			mix = 1;
 			canfd = 1; /* to switch the socket into CAN FD mode */
+			view |= CANLIB_VIEW_INDENT_SFF;
 			break;
 
 		case 'I':
@@ -625,6 +629,9 @@ int main(int argc, char **argv)
 		print_usage(basename(argv[0]));
 		return 1;
 	}
+
+	if (verbose > 2)
+		view |= CANLIB_VIEW_ASCII;
 
 	ts_gap = double_to_timespec(gap / 1000);
 
@@ -829,11 +836,10 @@ int main(int argc, char **argv)
 		if (verbose) {
 			static char afrbuf[AFRSZ]; /* ASCII CAN frame buffer size */
 
-
 			printf("  %s  ", argv[optind]);
 
 			if (verbose > 1)
-				sprint_long_canframe(afrbuf, &cu, (verbose > 2) ? CANLIB_VIEW_ASCII : 0);
+				sprint_long_canframe(afrbuf, &cu, view);
 			else
 				sprint_canframe(afrbuf, &cu, 1);
 
