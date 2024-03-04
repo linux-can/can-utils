@@ -184,6 +184,10 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -I <mode>     (CAN ID generation mode - see below)\n");
 	fprintf(stderr, "         -L <mode>     (CAN data length code (dlc) generation mode - see below)\n");
 	fprintf(stderr, "         -D <mode>     (CAN data (payload) generation mode - see below)\n");
+	fprintf(stderr, "         -F <mode>     (CAN XL Flags generation mode - see below, no e/o mode)\n");
+	fprintf(stderr, "         -S <mode>     (CAN XL SDT generation mode - see below, no e/o mode)\n");
+	fprintf(stderr, "         -A <mode>     (CAN XL AF generation mode - see below, no e/o mode)\n");
+	fprintf(stderr, "         -V <mode>     (CAN XL VCID generation mode - see below, no e/o mode)\n");
 	fprintf(stderr, "         -p <timeout>  (poll on -ENOBUFS to write frames with <timeout> ms)\n");
 	fprintf(stderr, "         -n <count>    (terminate after <count> CAN frames - default infinite)\n");
 	fprintf(stderr, "         -i            (ignore -ENOBUFS return values on write() syscalls)\n");
@@ -456,6 +460,14 @@ int main(int argc, char **argv)
 	unsigned char id_mode = MODE_RANDOM;
 	unsigned char data_mode = MODE_RANDOM;
 	unsigned char dlc_mode = MODE_RANDOM;
+	__u8 xl_flags = 0;
+	__u8 xl_sdt = 0;
+	__u32 xl_af = 0;
+	__u8 xl_vcid = 0;
+	unsigned char xl_flags_mode = MODE_RANDOM;
+	unsigned char xl_sdt_mode = MODE_RANDOM;
+	unsigned char xl_af_mode = MODE_RANDOM;
+	unsigned char xl_vcid_mode = MODE_RANDOM;
 	unsigned char loopback_disable = 0;
 	unsigned char verbose = 0;
 	unsigned char rtr_frame = 0;
@@ -500,7 +512,7 @@ int main(int argc, char **argv)
 		{ 0,		0,			0, 0 },
 	};
 
-	while ((opt = getopt_long(argc, argv, "g:atefbEXR8mI:L:D:p:n:ixc:vh?", long_options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "g:atefbEXR8mI:L:D:F:S:A:V:p:n:ixc:vh?", long_options, NULL)) != -1) {
 		switch (opt) {
 		case 'g':
 			gap = strtod(optarg, NULL);
@@ -601,6 +613,59 @@ int main(int argc, char **argv)
 				if (hexstring2data(optarg, fixdata, CANFD_MAX_DLEN)) {
 					printf("wrong fix data definition\n");
 					return 1;
+				}
+			}
+			break;
+
+		case 'F':
+			if (optarg[0] == 'r') {
+				xl_flags_mode = MODE_RANDOM;
+			} else if (optarg[0] == 'i') {
+				xl_flags_mode = MODE_INCREMENT;
+			} else {
+				xl_flags_mode = MODE_FIX;
+				if (sscanf(optarg, "%hhx", &xl_flags) != 1) {
+					printf("Bad xl_flags definition '%s'.\n", optarg);
+					exit(1);
+				}
+			}
+			break;
+
+		case 'S':
+			if (optarg[0] == 'r') {
+				xl_sdt_mode = MODE_RANDOM;
+			} else if (optarg[0] == 'i') {
+				xl_sdt_mode = MODE_INCREMENT;
+			} else {
+				xl_sdt_mode = MODE_FIX;
+				if (sscanf(optarg, "%hhx", &xl_sdt) != 1) {
+					printf("Bad xl_sdt definition '%s'.\n", optarg);
+					exit(1);
+				}
+			}
+			break;
+
+		case 'A':
+			if (optarg[0] == 'r') {
+				xl_af_mode = MODE_RANDOM;
+			} else if (optarg[0] == 'i') {
+				xl_af_mode = MODE_INCREMENT;
+			} else {
+				xl_af_mode = MODE_FIX;
+				xl_af = strtoul(optarg, NULL, 16);
+			}
+			break;
+
+		case 'V':
+			if (optarg[0] == 'r') {
+				xl_vcid_mode = MODE_RANDOM;
+			} else if (optarg[0] == 'i') {
+				xl_vcid_mode = MODE_INCREMENT;
+			} else {
+				xl_vcid_mode = MODE_FIX;
+				if (sscanf(optarg, "%hhx", &xl_vcid) != 1) {
+					printf("Bad xl_vcid definition '%s'.\n", optarg);
+					exit(1);
 				}
 			}
 			break;
@@ -894,12 +959,47 @@ int main(int argc, char **argv)
 				data[0] = 0xCC; /* default filler */
 			}
 			cu.xl.len = cu.fd.len;
-			cu.xl.flags = CANXL_XLF;
 
-			/* static values for now */
-			cu.xl.sdt = 0x22;
-			cu.xl.af = 0x12345678;
-			cu.xl.prio |= (0x33 << CANXL_VCID_OFFSET);
+			rnd = random();
+
+			if (xl_flags_mode == MODE_RANDOM)
+				cu.xl.flags = (__u8)(rnd & CANXL_SEC);
+			else if (xl_flags_mode == MODE_FIX)
+				cu.xl.flags = xl_flags;
+			else if (xl_flags_mode == MODE_INCREMENT) {
+				xl_flags ^= CANXL_SEC;
+				cu.xl.flags = (xl_flags & CANXL_SEC);
+			}
+
+			/* mark CAN XL frame */
+			cu.xl.flags |= CANXL_XLF;
+
+			if (xl_sdt_mode == MODE_RANDOM)
+				cu.xl.sdt = (__u8)(rnd & 0xFF);
+			else if (xl_sdt_mode == MODE_FIX)
+				cu.xl.sdt = xl_sdt;
+			else if (xl_sdt_mode == MODE_INCREMENT) {
+				xl_sdt++;
+				cu.xl.sdt = xl_sdt;
+			}
+
+			if (xl_af_mode == MODE_RANDOM)
+				cu.xl.af = (__u32)(rnd & 0xFFFFFFFF);
+			else if (xl_af_mode == MODE_FIX)
+				cu.xl.af = xl_af;
+			else if (xl_af_mode == MODE_INCREMENT) {
+				xl_af++;
+				cu.xl.af = xl_af;
+			}
+
+			if (xl_vcid_mode == MODE_RANDOM)
+				cu.xl.prio |= (__u32)(rnd & CANXL_VCID_MASK);
+			else if (xl_vcid_mode == MODE_FIX)
+				cu.xl.prio |= (xl_vcid << CANXL_VCID_OFFSET);
+			else if (xl_vcid_mode == MODE_INCREMENT) {
+				xl_vcid++;
+				cu.xl.prio |= (xl_vcid << CANXL_VCID_OFFSET);
+			}
 		}
 
 		if (verbose) {
