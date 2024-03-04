@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
 
 	if (todo_promisc) {
 		if (verbose)
-			fprintf(stderr, "- setsockopt(, SOL_SOCKET, SO_J1939_PROMISC, %d, %zd);\n",
+			fprintf(stderr, "- setsockopt(, SOL_CAN_J1939, SO_J1939_PROMISC, %d, %zd);\n",
 				todo_promisc, sizeof(todo_promisc));
 		ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_PROMISC,
 				 &todo_promisc, sizeof(todo_promisc));
