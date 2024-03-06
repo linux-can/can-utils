@@ -421,11 +421,11 @@ int main(int argc, char **argv)
 					}
 				} else {
 					/* mark dual-use struct canfd_frame */
-					if (nbytes == CAN_MTU)
+					if (nbytes == CAN_MTU) {
 						cu.fd.flags = 0;
-					else if (nbytes == CANFD_MTU)
+					} else if (nbytes == CANFD_MTU) {
 						cu.fd.flags |= CANFD_FDF;
-					else {
+					} else {
 						fprintf(stderr, "read: incomplete CAN CC/FD frame\n");
 						return 1;
 					}
