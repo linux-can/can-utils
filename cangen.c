@@ -492,7 +492,7 @@ int main(int argc, char **argv)
 	};
 	static cu_t cu;
 	int i;
-	static struct ifreq ifr;
+	struct ifreq ifr = { 0 };
 	const int enable_canfx = 1;
 
 	struct timeval now;
@@ -873,8 +873,9 @@ int main(int argc, char **argv)
 		if (extended) {
 			cu.fd.can_id &= CAN_EFF_MASK;
 			cu.fd.can_id |= CAN_EFF_FLAG;
-		} else
+		} else {
 			cu.fd.can_id &= CAN_SFF_MASK;
+		}
 
 		if (rtr_frame && !canfd && !canxl)
 			cu.fd.can_id |= CAN_RTR_FLAG;
@@ -962,11 +963,11 @@ int main(int argc, char **argv)
 
 			rnd = random();
 
-			if (xl_flags_mode == MODE_RANDOM)
-				cu.xl.flags = (__u8)(rnd & CANXL_SEC);
-			else if (xl_flags_mode == MODE_FIX)
+			if (xl_flags_mode == MODE_RANDOM) {
+				cu.xl.flags = rnd & CANXL_SEC;
+			} else if (xl_flags_mode == MODE_FIX) {
 				cu.xl.flags = xl_flags;
-			else if (xl_flags_mode == MODE_INCREMENT) {
+			} else if (xl_flags_mode == MODE_INCREMENT) {
 				xl_flags ^= CANXL_SEC;
 				cu.xl.flags = (xl_flags & CANXL_SEC);
 			}
@@ -974,31 +975,31 @@ int main(int argc, char **argv)
 			/* mark CAN XL frame */
 			cu.xl.flags |= CANXL_XLF;
 
-			if (xl_sdt_mode == MODE_RANDOM)
-				cu.xl.sdt = (__u8)(rnd & 0xFF);
-			else if (xl_sdt_mode == MODE_FIX)
+			if (xl_sdt_mode == MODE_RANDOM) {
+				cu.xl.sdt = rnd & 0xFF;
+			} else if (xl_sdt_mode == MODE_FIX) {
 				cu.xl.sdt = xl_sdt;
-			else if (xl_sdt_mode == MODE_INCREMENT) {
+			} else if (xl_sdt_mode == MODE_INCREMENT) {
 				xl_sdt++;
 				cu.xl.sdt = xl_sdt;
 			}
 
-			if (xl_af_mode == MODE_RANDOM)
-				cu.xl.af = (__u32)(rnd & 0xFFFFFFFF);
-			else if (xl_af_mode == MODE_FIX)
+			if (xl_af_mode == MODE_RANDOM) {
+				cu.xl.af = rnd;
+			} else if (xl_af_mode == MODE_FIX) {
 				cu.xl.af = xl_af;
-			else if (xl_af_mode == MODE_INCREMENT) {
+			} else if (xl_af_mode == MODE_INCREMENT) {
 				xl_af++;
 				cu.xl.af = xl_af;
 			}
 
-			if (xl_vcid_mode == MODE_RANDOM)
-				cu.xl.prio |= (__u32)(rnd & CANXL_VCID_MASK);
-			else if (xl_vcid_mode == MODE_FIX)
-				cu.xl.prio |= (xl_vcid << CANXL_VCID_OFFSET);
-			else if (xl_vcid_mode == MODE_INCREMENT) {
+			if (xl_vcid_mode == MODE_RANDOM) {
+				cu.xl.prio |= rnd & CANXL_VCID_MASK;
+			} else if (xl_vcid_mode == MODE_FIX) {
+				cu.xl.prio |= xl_vcid << CANXL_VCID_OFFSET;
+			} else if (xl_vcid_mode == MODE_INCREMENT) {
 				xl_vcid++;
-				cu.xl.prio |= (xl_vcid << CANXL_VCID_OFFSET);
+				cu.xl.prio |= xl_vcid << CANXL_VCID_OFFSET;
 			}
 		}
 
@@ -1023,10 +1024,9 @@ int main(int argc, char **argv)
 			burst_sent_count = 0;
 		burst_sent_count++;
 
-		if (canxl) {
-			/* restore some CAN FD frame content from CAN XL frame */
+		/* restore some CAN FD frame content from CAN XL frame */
+		if (canxl)
 			cu.fd.len = cu.xl.len;
-		}
 
 		if (id_mode == MODE_INCREMENT)
 			cu.cc.can_id++;
