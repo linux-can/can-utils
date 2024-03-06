@@ -71,8 +71,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "\t-O <outfile>\t(default stdout)\n");
 }
 
-void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, char *extra_info) {
-
+void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, char *extra_info)
+{
 	static char abuf[BUFLEN];
 
 	fprintf(file, "(%llu.%06llu) ", (unsigned long long)tv->tv_sec, (unsigned long long)tv->tv_usec);
@@ -86,8 +86,8 @@ void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, ch
 	fprintf(file, "%s%s", abuf, extra_info);
 }
 
-void get_can_id(struct canfd_frame *cf, char *idstring, int base) {
-
+void get_can_id(struct canfd_frame *cf, char *idstring, int base)
+{
 	if (idstring[strlen(idstring)-1] == 'x') {
 		cf->can_id = CAN_EFF_FLAG;
 		idstring[strlen(idstring)-1] = 0;
@@ -98,8 +98,8 @@ void get_can_id(struct canfd_frame *cf, char *idstring, int base) {
 }
 
 void calc_tv(struct timeval *tv, struct timeval *read_tv,
-	     struct timeval *date_tv, char timestamps, int dplace) {
-
+	     struct timeval *date_tv, char timestamps, int dplace)
+{
 	if (dplace == 4) /* shift values having only 4 decimal places */
 		read_tv->tv_usec *= 100;                /* and need for 6 */
 
@@ -129,8 +129,8 @@ void calc_tv(struct timeval *tv, struct timeval *read_tv,
 	}
 }
 
-void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, int dplace, FILE *outfile) {
-
+void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, int dplace, FILE *outfile)
+{
 	int interface;
 	static struct timeval tv; /* current frame timestamp */
 	static struct timeval read_tv; /* frame timestamp from ASC file */
@@ -239,8 +239,8 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 	}
 }
 
-void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace, FILE *outfile) {
-
+void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace, FILE *outfile)
+{
 	int interface;
 	static struct timeval tv; /* current frame timestamp */
 	static struct timeval read_tv; /* frame timestamp from ASC file */
@@ -376,8 +376,8 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	/* No support for really strange CANFD ErrorFrames format m( */
 }
 
-int get_date(struct timeval *tv, char *date) {
-
+int get_date(struct timeval *tv, char *date)
+{
 	struct tm tms;
 	unsigned int msecs = 0;
 
