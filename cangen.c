@@ -1009,9 +1009,9 @@ int main(int argc, char **argv)
 			printf("  %s  ", argv[optind]);
 
 			if (verbose > 1)
-				sprint_long_canframe(afrbuf, &cu, view);
+				snprintf_long_canframe(afrbuf, sizeof(afrbuf), &cu, view);
 			else
-				sprint_canframe(afrbuf, &cu, 1);
+				snprintf_canframe(afrbuf, sizeof(afrbuf), &cu, 1);
 
 			printf("%s\n", afrbuf);
 		}

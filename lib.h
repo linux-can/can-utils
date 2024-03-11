@@ -178,7 +178,7 @@ int parse_canframe(char *cs, cu_t *cu);
  * - CAN FD frames do not have a RTR bit
  */
 
-int sprint_canframe(char *buf , cu_t *cu, int sep);
+int snprintf_canframe(char *buf, size_t size, cu_t *cu, int sep);
 /*
  * Creates a CAN frame hexadecimal output in compact format.
  * The CAN data[] is separated by '.' when sep != 0.
@@ -211,7 +211,7 @@ int sprint_canframe(char *buf , cu_t *cu, int sep);
 
 #define SWAP_DELIMITER '`'
 
-int sprint_long_canframe(char *buf , cu_t *cu, int view);
+int snprintf_long_canframe(char *buf, size_t size, cu_t *cu, int view);
 /*
  * Creates a CAN frame hexadecimal output in user readable format.
  *

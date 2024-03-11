@@ -94,8 +94,8 @@ int main(void)
 		}
 
 		/* with ASCII output */
-		sprint_long_canframe(afrbuf, &cu,
-				     (CANLIB_VIEW_INDENT_SFF | CANLIB_VIEW_ASCII));
+		snprintf_long_canframe(afrbuf, sizeof(afrbuf), &cu,
+				       (CANLIB_VIEW_INDENT_SFF | CANLIB_VIEW_ASCII));
 
 		printf("%s  %s  %s\n", timestamp, device, afrbuf);
 	}

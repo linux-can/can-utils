@@ -837,7 +837,7 @@ int main(int argc, char **argv)
 				alen += sprintf(afrbuf + alen, "%*s ",
 						  max_devname_len, devname[idx]);
 
-				alen += sprint_canframe(afrbuf + alen, &cu, 0);
+				alen += snprintf_canframe(afrbuf + alen, sizeof(afrbuf) - alen, &cu, 0);
 			}
 
 			/* write CAN frame in log file style to logfile */
@@ -876,7 +876,7 @@ int main(int argc, char **argv)
 			}
 
 			alen += sprintf(afrbuf + alen, "%s  ", (color == 1) ? col_off : "");
-			alen += sprint_long_canframe(afrbuf + alen, &cu, view);
+			alen += snprintf_long_canframe(afrbuf + alen, sizeof(afrbuf) - alen, &cu, view);
 
 			if ((view & CANLIB_VIEW_ERROR) && (cu.fd.can_id & CAN_ERR_FLAG)) {
 				alen += sprintf(afrbuf + alen, "\n\t");

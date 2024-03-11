@@ -439,7 +439,7 @@ int main(int argc, char **argv)
 
 				sprintf(afrbuf, "(%llu.%06llu) %*s ",
 					(unsigned long long)tv.tv_sec, (unsigned long long)tv.tv_usec, max_devname_len, devname[idx]);
-				sprint_canframe(afrbuf+strlen(afrbuf), &cu, 0);
+				snprintf_canframe(afrbuf + strlen(afrbuf), sizeof(afrbuf) - strlen(afrbuf), &cu, 0);
 				strcat(afrbuf, "\n");
 
 				if (write(accsocket, afrbuf, strlen(afrbuf)) < 0) {

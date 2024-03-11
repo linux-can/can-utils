@@ -513,7 +513,7 @@ int main(int argc, char **argv)
 
 					if (verbose) {
 						printf("%s (%s) ", get_txname(device), device);
-						sprint_long_canframe(afrbuf, &cu, CANLIB_VIEW_INDENT_SFF);
+						snprintf_long_canframe(afrbuf, sizeof(afrbuf), &cu, CANLIB_VIEW_INDENT_SFF);
 						printf("%s\n", afrbuf);
 					}
 

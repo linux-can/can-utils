@@ -308,7 +308,7 @@ int parse_canframe(char *cs, cu_t *cu)
 	return mtu;
 }
 
-int sprint_canframe(char *buf, cu_t *cu, int sep)
+int snprintf_canframe(char *buf, size_t size, cu_t *cu, int sep)
 {
 	/* documentation see lib.h */
 
@@ -316,9 +316,21 @@ int sprint_canframe(char *buf, cu_t *cu, int sep)
 	int i, offset;
 	int len;
 
+	/* ensure space for string termination */
+	if (size < 1)
+		return size;
+
 	/* handle CAN XL frames */
 	if (cu->xl.flags & CANXL_XLF) {
 		len = cu->xl.len;
+
+		/* check if the CAN frame fits into the provided buffer */
+		if (sizeof("00123#11:22:12345678#") + 2 * len + (sep ? len : 0) > size - 1) {
+			/* mark buffer overflow in output */
+			memset(buf, '-', size - 1);
+			buf[size - 1] = 0;
+			return size;
+		}
 
 		/* print prio and CAN XL header content */
 		offset = sprintf(buf, "%02X%03X#%02X:%02X:%08X#",
@@ -344,6 +356,15 @@ int sprint_canframe(char *buf, cu_t *cu, int sep)
 		len = (cu->fd.len > CANFD_MAX_DLEN) ? CANFD_MAX_DLEN : cu->fd.len;
 	else
 		len = (cu->fd.len > CAN_MAX_DLEN) ? CAN_MAX_DLEN : cu->fd.len;
+
+	/* check if the CAN frame fits into the provided buffer */
+	if (sizeof("12345678#_F") + 2 * len + (sep ? len : 0) +	\
+	    (cu->fd.can_id & CAN_RTR_FLAG ? 2 : 0) > size - 1) {
+		/* mark buffer overflow in output */
+		memset(buf, '-', size - 1);
+		buf[size - 1] = 0;
+		return size;
+	}
 
 	if (cu->fd.can_id & CAN_ERR_FLAG) {
 		put_eff_id(buf, cu->fd.can_id & (CAN_ERR_MASK | CAN_ERR_FLAG));
@@ -411,48 +432,60 @@ int sprint_canframe(char *buf, cu_t *cu, int sep)
 	return offset;
 }
 
-int sprint_long_canframe(char *buf, cu_t *cu, int view)
+int snprintf_long_canframe(char *buf, size_t size, cu_t *cu, int view)
 {
 	/* documentation see lib.h */
 
 	unsigned char is_canfd = cu->fd.flags;
-	int i, j, dlen, offset;
+	int i, j, dlen, offset, maxsize;
 	int len;
 
-	/* initialize space for CAN-ID and length information */
-	memset(buf, ' ', 15);
+	/* ensure space for string termination */
+	if (size < 1)
+		return size;
 
 	/* handle CAN XL frames */
 	if (cu->xl.flags & CANXL_XLF) {
 		len = cu->xl.len;
 
+		/* crop to CANFD_MAX_DLEN */
+		if (len > CANFD_MAX_DLEN)
+			dlen = CANFD_MAX_DLEN;
+		else
+			dlen = len;
+
+		/* check if the CAN frame fits into the provided buffer */
+		if (sizeof(".....123 [2048] (00|11:22:12345678)  ...") + 3 * dlen > size - 1) {
+			/* mark buffer overflow in output */
+			memset(buf, '-', size - 1);
+			buf[size - 1] = 0;
+			return size;
+		}
+
 		if (view & CANLIB_VIEW_INDENT_SFF) {
+			memset(buf, ' ', 5);
 			put_sff_id(buf + 5, cu->xl.prio & CANXL_PRIO_MASK);
-			offset = 9;
+			offset = 8;
 		} else {
 			put_sff_id(buf, cu->xl.prio & CANXL_PRIO_MASK);
-			offset = 4;
+			offset = 3;
 		}
 
 		/* print prio and CAN XL header content */
-		offset += sprintf(buf + offset, "[%04d] (%02X|%02X:%02X:%08X) ",
+		offset += sprintf(buf + offset, " [%04d] (%02X|%02X:%02X:%08X) ",
 				  len,
 				  (canid_t)(cu->xl.prio & CANXL_VCID_MASK) >> CANXL_VCID_OFFSET,
 				  cu->xl.flags, cu->xl.sdt, cu->xl.af);
 
-		/* data - crop to CANFD_MAX_DLEN */
-		if (len > CANFD_MAX_DLEN)
-			len = CANFD_MAX_DLEN;
-
-		for (i = 0; i < len; i++) {
+		for (i = 0; i < dlen; i++) {
 			put_hex_byte(buf + offset, cu->xl.data[i]);
 			offset += 2;
-			if (i + 1 < len)
+			if (i + 1 < dlen)
 				buf[offset++] = ' ';
 		}
 
 		/* indicate cropped output */
-		if (cu->xl.len > len)
+		if (cu->xl.len > dlen)
 			offset += sprintf(buf + offset, " ...");
 
 		buf[offset] = 0;
@@ -465,6 +498,39 @@ int sprint_long_canframe(char *buf, cu_t *cu, int view)
 		len = (cu->fd.len > CANFD_MAX_DLEN) ? CANFD_MAX_DLEN : cu->fd.len;
 	else
 		len = (cu->fd.len > CAN_MAX_DLEN) ? CAN_MAX_DLEN : cu->fd.len;
+
+	/* check if the CAN frame fits into the provided buffer */
+	maxsize = sizeof("12345678  [12]  ");
+	if (view & CANLIB_VIEW_BINARY)
+		dlen = 9; /* _10101010 */
+	else
+		dlen = 3; /* _AA */
+
+	if (cu->fd.can_id & CAN_RTR_FLAG) {
+		maxsize += sizeof("    remote request");
+	} else {
+		maxsize += len * dlen;
+
+		if (len <= CAN_MAX_DLEN) {
+			if (cu->fd.can_id & CAN_ERR_FLAG) {
+				maxsize += sizeof("    ERRORFRAME");
+				maxsize += (8 - len) * dlen;
+			} else if (view & CANLIB_VIEW_ASCII) {
+				maxsize += sizeof("    'a.b.CDEF'");
+				maxsize += (8 - len) * dlen;
+			}
+		}
+	}
+
+	if (maxsize > size - 1) {
+		/* mark buffer overflow in output */
+		memset(buf, '-', size - 1);
+		buf[size - 1] = 0;
+		return size;
+	}
+
+	/* initialize space for CAN-ID and length information */
+	memset(buf, ' ', 15);
 
 	if (cu->cc.can_id & CAN_ERR_FLAG) {
 		put_eff_id(buf, cu->cc.can_id & (CAN_ERR_MASK | CAN_ERR_FLAG));
@@ -515,7 +581,7 @@ int sprint_long_canframe(char *buf, cu_t *cu, int view)
 	offset += 5;
 
 	if (view & CANLIB_VIEW_BINARY) {
-		dlen = 9; /* _10101010 */
+		/* _10101010 - dlen = 9, see above */
 		if (view & CANLIB_VIEW_SWAP) {
 			for (i = len - 1; i >= 0; i--) {
 				buf[offset++] = (i == len - 1) ? ' ' : SWAP_DELIMITER;
@@ -530,7 +596,7 @@ int sprint_long_canframe(char *buf, cu_t *cu, int view)
 			}
 		}
 	} else {
-		dlen = 3; /* _AA */
+		/* _AA - dlen = 3, see above */
 		if (view & CANLIB_VIEW_SWAP) {
 			for (i = len - 1; i >= 0; i--) {
 				if (i == len - 1)
