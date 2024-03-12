@@ -82,8 +82,8 @@ struct fdmodattr {
 #define NLMSG_TAIL(nmsg) \
         ((struct rtattr *)(((char *) (nmsg)) + NLMSG_ALIGN((nmsg)->nlmsg_len)))
 
-int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
-	      int alen)
+static int addattr_l(struct nlmsghdr *n, int maxlen, int type,
+		     const void *data, int alen)
 {
 	int len = RTA_LENGTH(alen);
 	struct rtattr *rta;
@@ -101,7 +101,7 @@ int addattr_l(struct nlmsghdr *n, int maxlen, int type, const void *data,
 	return 0;
 }
 
-void printfilter(const void *data)
+static void printfilter(const void *data)
 {
 	struct can_filter *filter = (struct can_filter *)data;
 
@@ -111,7 +111,7 @@ void printfilter(const void *data)
 		printf("-f %03X:%X ", filter->can_id, filter->can_mask);
 }
 
-void printmod(const char *type, const void *data)
+static void printmod(const char *type, const void *data)
 {
 	struct modattr mod;
 	int i;
@@ -137,7 +137,7 @@ void printmod(const char *type, const void *data)
 	printf(" ");
 }
 
-void printfdmod(const char *type, const void *data)
+static void printfdmod(const char *type, const void *data)
 {
 	struct fdmodattr mod;
 	int i;
@@ -166,14 +166,14 @@ void printfdmod(const char *type, const void *data)
 	printf(" ");
 }
 
-void print_cs_xor(struct cgw_csum_xor *cs_xor)
+static void print_cs_xor(struct cgw_csum_xor *cs_xor)
 {
 	printf("-x %d:%d:%d:%02X ",
 	       cs_xor->from_idx, cs_xor->to_idx,
 	       cs_xor->result_idx, cs_xor->init_xor_val);
 }
 
-void print_cs_crc8_profile(struct cgw_csum_crc8 *cs_crc8)
+static void print_cs_crc8_profile(struct cgw_csum_crc8 *cs_crc8)
 {
 	int i;
 
@@ -202,7 +202,7 @@ void print_cs_crc8_profile(struct cgw_csum_crc8 *cs_crc8)
 	printf(" ");
 }
 
-void print_cs_crc8(struct cgw_csum_crc8 *cs_crc8)
+static void print_cs_crc8(struct cgw_csum_crc8 *cs_crc8)
 {
 	int i;
 
@@ -220,7 +220,7 @@ void print_cs_crc8(struct cgw_csum_crc8 *cs_crc8)
 		print_cs_crc8_profile(cs_crc8);
 }
 
-void print_usage(char *prg)
+static void print_usage(char *prg)
 {
 	fprintf(stderr, "%s - manage PF_CAN netlink gateway.\n", prg);
 	fprintf(stderr, "\nUsage: %s [options]\n\n", prg);
@@ -279,7 +279,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "\n");
 }
 
-int b64hex(char *asc, unsigned char *bin, int len)
+static int b64hex(char *asc, unsigned char *bin, int len)
 {
 	int i;
 
@@ -290,7 +290,7 @@ int b64hex(char *asc, unsigned char *bin, int len)
 	return 0;
 }
 
-int parse_crc8_profile(char *optarg, struct cgw_csum_crc8 *crc8)
+static int parse_crc8_profile(char *optarg, struct cgw_csum_crc8 *crc8)
 {
 	int ret = 1;
 	char *ptr;
@@ -329,7 +329,7 @@ int parse_crc8_profile(char *optarg, struct cgw_csum_crc8 *crc8)
 	return ret;
 }
 
-int parse_mod(char *optarg, struct modattr *modmsg)
+static int parse_mod(char *optarg, struct modattr *modmsg)
 {
 	char *ptr, *nptr;
 	char hexdata[(CAN_MAX_DLEN * 2) + 1] = {0};
@@ -397,7 +397,7 @@ int parse_mod(char *optarg, struct modattr *modmsg)
 	return 0; /* ok */
 }
 
-int parse_fdmod(char *optarg, struct fdmodattr *modmsg)
+static int parse_fdmod(char *optarg, struct fdmodattr *modmsg)
 {
 	char *ptr, *nptr;
 	char hexdata[(CANFD_MAX_DLEN * 2) + 1] = {0};
@@ -470,7 +470,7 @@ int parse_fdmod(char *optarg, struct fdmodattr *modmsg)
 	return 0; /* ok */
 }
 
-int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
+static int parse_rtlist(char *prgname, unsigned char *rxbuf, int len)
 {
 	char ifname[IF_NAMESIZE]; /* interface name for if_indextoname() */
 	struct rtcanmsg *rtc;

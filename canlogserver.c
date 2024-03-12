@@ -83,7 +83,7 @@ extern int optind, opterr, optopt;
 static volatile int running = 1;
 static volatile sig_atomic_t signal_num;
 
-void print_usage(char *prg)
+static void print_usage(char *prg)
 {
 	fprintf(stderr, "%s - log CAN frames and serves them.\n", prg);
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>+\n", prg);
@@ -107,7 +107,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "\n");
 }
 
-int idx2dindex(int ifidx, int socket)
+static int idx2dindex(int ifidx, int socket)
 {
 	int i;
 	struct ifreq ifr;
@@ -157,7 +157,7 @@ int idx2dindex(int ifidx, int socket)
  * This is a Signalhandler. When we get a signal, that a child
  * terminated, we wait for it, so the zombie will disappear.
  */
-void childdied(int i)
+static void childdied(int i)
 {
 	wait(NULL);
 }
@@ -165,12 +165,11 @@ void childdied(int i)
 /*
  * This is a Signalhandler for a caught SIGTERM
  */
-void shutdown_gra(int i)
+static void shutdown_gra(int i)
 {
 	running = 0;
 	signal_num = i;
 }
-
 
 int main(int argc, char **argv)
 {

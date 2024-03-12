@@ -89,7 +89,7 @@ const int canfx_on = 1;
 
 extern int optind, opterr, optopt;
 
-void print_usage(char *prg)
+static void print_usage(char *prg)
 {
 	fprintf(stderr, "%s - replay a compact CAN frame logfile to CAN devices.\n", prg);
 	fprintf(stderr, "\nUsage: %s <options> [interface assignment]*\n\n", prg);
@@ -172,7 +172,7 @@ static inline int frames_to_send(struct timeval *today, struct timeval *diff, st
 	return timeval_compare(&cmp, today);
 }
 
-int get_txidx(char *logif_name)
+static int get_txidx(char *logif_name)
 {
 	int i;
 
@@ -189,7 +189,7 @@ int get_txidx(char *logif_name)
 	return asgn[i].txifidx; /* return interface index */
 }
 
-char *get_txname(char *logif_name)
+static char *get_txname(char *logif_name)
 {
 	int i;
 
@@ -206,7 +206,8 @@ char *get_txname(char *logif_name)
 	return asgn[i].txif; /* return interface name */
 }
 
-int add_assignment(char *mode, int socket, char *txname, char *rxname, int verbose)
+static int add_assignment(char *mode, int socket, char *txname,
+			  char *rxname, int verbose)
 {
 	struct ifreq ifr;
 	int i;

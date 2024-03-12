@@ -56,7 +56,7 @@
 
 extern int optind, opterr, optopt;
 
-void print_usage(char *prg)
+static void print_usage(char *prg)
 {
 	fprintf(stderr, "%s - convert compact CAN frame logfile to ASC logfile.\n", prg);
 	fprintf(stderr, "Usage: %s <options> [can-interfaces]\n", prg);
@@ -69,7 +69,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -r  (suppress dlc for RTR frames - pre v8.5 tools)\n");
 }
 
-void can_asc(struct canfd_frame *cfd, int devno, int nortrdlc, char *extra_info, FILE *outfile)
+static void can_asc(struct canfd_frame *cfd, int devno, int nortrdlc,
+		    char *extra_info, FILE *outfile)
 {
 	int i;
 	char id[10];
@@ -116,7 +117,8 @@ void can_asc(struct canfd_frame *cfd, int devno, int nortrdlc, char *extra_info,
 	}
 }
 
-void canfd_asc(struct canfd_frame *cf, int devno, int mtu, char *extra_info, FILE *outfile)
+static void canfd_asc(struct canfd_frame *cf, int devno, int mtu,
+		      char *extra_info, FILE *outfile)
 {
 	int i;
 	char id[10];
