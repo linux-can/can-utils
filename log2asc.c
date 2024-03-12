@@ -312,8 +312,10 @@ int main(int argc, char **argv)
 			mtu = parse_canframe(afrbuf, &cu);
 
 			/* convert only CAN CC and CAN FD frames */
-			if ((mtu != CAN_MTU) && (mtu != CANFD_MTU))
+			if ((mtu != CAN_MTU) && (mtu != CANFD_MTU)) {
+				printf("no valid CAN CC/FD frame\n");
 				return 1;
+			}
 
 			/* we don't support error message frames in CAN FD */
 			if ((mtu == CANFD_MTU) && (cu.cc.can_id & CAN_ERR_FLAG))
