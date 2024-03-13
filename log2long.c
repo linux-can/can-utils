@@ -43,40 +43,61 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
 #include <linux/can.h>
 #include <net/if.h>
 
 #include "lib.h"
 
-#define COMMENTSZ 200
-#define BUFSZ (sizeof("(1345212884.318850)") + IFNAMSIZ + 4 + CL_CFSZ + COMMENTSZ) /* for one line in the logfile */
+#define DEVSZ 22
+#define TIMESZ 22 /* sizeof("(1345212884.318850)   ") */
+#define BUFSZ (DEVSZ + AFRSZ + TIMESZ)
+
+/* adapt sscanf() functions below on error */
+#if (AFRSZ != 6300)
+#error "AFRSZ value does not fit sscanf restrictions!"
+#endif
+#if (DEVSZ != 22)
+#error "DEVSZ value does not fit sscanf restrictions!"
+#endif
+#if (TIMESZ != 22)
+#error "TIMESZ value does not fit sscanf restrictions!"
+#endif
 
 int main(void)
 {
-	char buf[BUFSZ], timestamp[BUFSZ], device[BUFSZ], ascframe[BUFSZ];
-	struct canfd_frame cf;
-	int mtu, maxdlen;
+	static char buf[BUFSZ], timestamp[TIMESZ], device[DEVSZ], afrbuf[AFRSZ];
+	static cu_t cu;
+	int mtu;
 
 	while (fgets(buf, BUFSZ-1, stdin)) {
-		if (sscanf(buf, "%s %s %s", timestamp, device, ascframe) != 3)
-			return 1;
 
-		mtu = parse_canframe(ascframe, &cf);
-		if (mtu == CAN_MTU)
-			maxdlen = CAN_MAX_DLEN;
-		else if (mtu == CANFD_MTU)
-			maxdlen = CANFD_MAX_DLEN;
-		else {
-			fprintf(stderr, "read: incomplete CAN frame\n");
+		if (strlen(buf) >= BUFSZ-2) {
+			fprintf(stderr, "line too long for input buffer\n");
 			return 1;
 		}
 
-		sprint_long_canframe(ascframe, &cf,
-				     (CANLIB_VIEW_INDENT_SFF | CANLIB_VIEW_ASCII),
-				     maxdlen); /* with ASCII output */
+		if (sscanf(buf, "%21s %21s %6299s", timestamp, device, afrbuf) != 3)
+			return 1;
 
-		printf("%s  %s  %s\n", timestamp, device, ascframe);
+		mtu = parse_canframe(afrbuf, &cu);
+
+		/* mark dual-use struct canfd_frame - no CAN_XL support */
+		if (mtu == CAN_MTU)
+			cu.fd.flags = 0;
+		else if (mtu == CANFD_MTU)
+			cu.fd.flags |= CANFD_FDF;
+		else {
+			fprintf(stderr, "read: no valid CAN CC/FD frame\n");
+			return 1;
+		}
+
+		/* with ASCII output */
+		snprintf_long_canframe(afrbuf, sizeof(afrbuf), &cu,
+				       (CANLIB_VIEW_INDENT_SFF | CANLIB_VIEW_ASCII));
+
+		printf("%s  %s  %s\n", timestamp, device, afrbuf);
 	}
 
 	return 0;

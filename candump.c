@@ -109,7 +109,7 @@ static char *progname;
 static char devname[MAXIFNAMES][IFNAMSIZ + 1];
 static int dindex[MAXIFNAMES];
 static int max_devname_len; /* to prevent frazzled device name output */
-static const int canfd_on = 1;
+static const int canfx_on = 1;
 
 #define MAXANI 4
 static const char anichar[MAXANI] = { '|', '/', '-', '\\' };
@@ -220,12 +220,16 @@ static int idx2dindex(int ifidx, int socket)
 	return i;
 }
 
-static inline void sprint_timestamp(const char timestamp, const struct timeval *tv,
-				    struct timeval *const last_tv, char *ts_buffer)
+static int sprint_timestamp(char *ts_buffer, const char timestamp,
+			    const struct timeval *tv, struct timeval *const last_tv)
 {
+	int numchars = 0;
+
 	switch (timestamp) {
 	case 'a': /* absolute with timestamp */
-		sprintf(ts_buffer, "(%010llu.%06llu) ", (unsigned long long)tv->tv_sec, (unsigned long long)tv->tv_usec);
+		numchars = sprintf(ts_buffer, "(%010llu.%06llu) ",
+				   (unsigned long long)tv->tv_sec,
+				   (unsigned long long)tv->tv_usec);
 		break;
 
 	case 'A': /* absolute with date */
@@ -235,7 +239,8 @@ static inline void sprint_timestamp(const char timestamp, const struct timeval *
 
 		tm = *localtime(&tv->tv_sec);
 		strftime(timestring, 24, "%Y-%m-%d %H:%M:%S", &tm);
-		sprintf(ts_buffer, "(%s.%06llu) ", timestring, (unsigned long long)tv->tv_usec);
+		numchars = sprintf(ts_buffer, "(%s.%06llu) ", timestring,
+				   (unsigned long long)tv->tv_usec);
 	}
 	break;
 
@@ -252,7 +257,9 @@ static inline void sprint_timestamp(const char timestamp, const struct timeval *
 			diff.tv_sec--, diff.tv_usec += 1000000;
 		if (diff.tv_sec < 0)
 			diff.tv_sec = diff.tv_usec = 0;
-		sprintf(ts_buffer, "(%03llu.%06llu) ", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_usec);
+		numchars = sprintf(ts_buffer, "(%03llu.%06llu) ",
+				   (unsigned long long)diff.tv_sec,
+				   (unsigned long long)diff.tv_usec);
 
 		if (timestamp == 'd')
 			*last_tv = *tv; /* update for delta calculation */
@@ -262,15 +269,13 @@ static inline void sprint_timestamp(const char timestamp, const struct timeval *
 	default: /* no timestamp output */
 		break;
 	}
-}
 
-static inline void print_timestamp(const char timestamp, const struct timeval *tv,
-				   struct timeval *const last_tv)
-{
-	static char buffer[TIMESTAMPSZ];
+	if (numchars <= 0) {
+		ts_buffer[0] = 0; /* empty terminated string */
+		numchars = 0;
+	}
 
-	sprint_timestamp(timestamp, tv, last_tv, buffer);
-	printf("%s", buffer);
+	return numchars;
 }
 
 int main(int argc, char **argv)
@@ -301,6 +306,11 @@ int main(int argc, char **argv)
 	struct sockaddr_can addr = {
 		.can_family = AF_CAN,
 	};
+	struct can_raw_vcid_options vcid_opts = {
+		.flags = CAN_RAW_XL_VCID_RX_FILTER,
+		.rx_vcid = 0,
+		.rx_vcid_mask = 0,
+	};
 	char ctrlmsg[CMSG_SPACE(sizeof(struct timeval)) +
 		     CMSG_SPACE(3 * sizeof(struct timespec)) +
 		     CMSG_SPACE(sizeof(__u32))];
@@ -309,14 +319,16 @@ int main(int argc, char **argv)
 	struct cmsghdr *cmsg;
 	struct can_filter *rfilter;
 	can_err_mask_t err_mask;
-	struct canfd_frame frame;
-	int nbytes, i, maxdlen;
+	static cu_t cu; /* union for CAN CC/FD/XL frames */
+	int nbytes, i;
 	struct ifreq ifr;
 	struct timeval tv, last_tv;
 	int timeout_ms = -1; /* default to no timeout */
 	FILE *logfile = NULL;
 	char fname[83]; /* suggested by -Wformat-overflow= */
 	const char *logname = NULL;
+	static char afrbuf[AFRSZ]; /* ASCII CAN frame buffer size */
+	static int alen;
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -589,7 +601,13 @@ int main(int argc, char **argv)
 		} /* if (nptr) */
 
 		/* try to switch the socket into CAN FD mode */
-		setsockopt(obj->s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));
+		setsockopt(obj->s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfx_on, sizeof(canfx_on));
+
+		/* try to switch the socket into CAN XL mode */
+		setsockopt(obj->s, SOL_CAN_RAW, CAN_RAW_XL_FRAMES, &canfx_on, sizeof(canfx_on));
+
+		/* try to enable the CAN XL VCID pass through mode */
+		setsockopt(obj->s, SOL_CAN_RAW, CAN_RAW_XL_VCID_OPTS, &vcid_opts, sizeof(vcid_opts));
 
 		if (rcvbuf_size) {
 			int curr_rcvbuf_size;
@@ -693,7 +711,7 @@ int main(int argc, char **argv)
 	}
 
 	/* these settings are static and can be held out of the hot path */
-	iov.iov_base = &frame;
+	iov.iov_base = &cu;
 	msg.msg_name = &addr;
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
@@ -719,7 +737,7 @@ int main(int argc, char **argv)
 			char *extra_info = "";
 
 			/* these settings may be modified by recvmsg() */
-			iov.iov_len = sizeof(frame);
+			iov.iov_len = sizeof(cu);
 			msg.msg_namelen = sizeof(addr);
 			msg.msg_controllen = sizeof(ctrlmsg);
 			msg.msg_flags = 0;
@@ -736,13 +754,27 @@ int main(int argc, char **argv)
 				return 1;
 			}
 
-			if ((size_t)nbytes == CAN_MTU)
-				maxdlen = CAN_MAX_DLEN;
-			else if ((size_t)nbytes == CANFD_MTU)
-				maxdlen = CANFD_MAX_DLEN;
-			else {
-				fprintf(stderr, "read: incomplete CAN frame\n");
+			/* mark dual-use struct canfd_frame */
+			if (nbytes < CANXL_HDR_SIZE + CANXL_MIN_DLEN) {
+				fprintf(stderr, "read: no CAN frame\n");
 				return 1;
+			}
+
+			if (cu.xl.flags & CANXL_XLF) {
+				if (nbytes != CANXL_HDR_SIZE + cu.xl.len) {
+					printf("nbytes = %d\n", nbytes);
+					fprintf(stderr, "read: no CAN XL frame\n");
+					return 1;
+				}
+			} else {
+				if (nbytes == CAN_MTU)
+					cu.fd.flags = 0;
+				else if (nbytes == CANFD_MTU)
+					cu.fd.flags |= CANFD_FDF;
+				else {
+					fprintf(stderr, "read: incomplete CAN CC/FD frame\n");
+					return 1;
+				}
 			}
 
 			if (count && (--count == 0))
@@ -786,7 +818,7 @@ int main(int argc, char **argv)
 			}
 
 			/* once we detected a EFF frame indent SFF frames accordingly */
-			if (frame.can_id & CAN_EFF_FLAG)
+			if (cu.fd.can_id & CAN_EFF_FLAG)
 				view |= CANLIB_VIEW_INDENT_SFF;
 
 			if (extra_msg_info) {
@@ -796,32 +828,29 @@ int main(int argc, char **argv)
 					extra_info = " R";
 			}
 
-			if (log) {
-				char buf[CL_CFSZ]; /* max length */
-				char ts_buf[TIMESTAMPSZ];
+			/* build common log format output */
+			if ((log) || ((logfrmt) && (silent == SILENT_OFF))) {
 
-				sprint_timestamp(logtimestamp, &tv, &last_tv, ts_buf);
+				alen = sprint_timestamp(afrbuf, logtimestamp,
+							  &tv, &last_tv);
 
-				/* log CAN frame with absolute timestamp & device */
-				sprint_canframe(buf, &frame, 0, maxdlen);
-				fprintf(logfile, "%s%*s %s%s\n", ts_buf,
-					max_devname_len, devname[idx], buf,
-					extra_info);
+				alen += sprintf(afrbuf + alen, "%*s ",
+						  max_devname_len, devname[idx]);
+
+				alen += snprintf_canframe(afrbuf + alen, sizeof(afrbuf) - alen, &cu, 0);
 			}
 
+			/* write CAN frame in log file style to logfile */
+			if (log)
+				fprintf(logfile, "%s%s\n", afrbuf, extra_info);
+
+			/* print CAN frame in log file style to stdout */
 			if ((logfrmt) && (silent == SILENT_OFF)) {
-				char buf[CL_CFSZ]; /* max length */
-
-				/* print CAN frame in log file style to stdout */
-				sprint_canframe(buf, &frame, 0, maxdlen);
-				print_timestamp(logtimestamp, &tv, &last_tv);
-
-				printf("%*s %s%s\n",
-					max_devname_len, devname[idx], buf,
-					extra_info);
+				printf("%s%s\n", afrbuf, extra_info);
 				goto out_fflush; /* no other output to stdout */
 			}
 
+			/* print only animation */
 			if (silent != SILENT_OFF) {
 				if (silent == SILENT_ANI) {
 					printf("%c\b", anichar[silentani %= MAXANI]);
@@ -830,25 +859,33 @@ int main(int argc, char **argv)
 				goto out_fflush; /* no other output to stdout */
 			}
 
-			printf(" %s", (color > 2) ? col_on[idx % MAXCOL] : "");
-			print_timestamp(timestamp, &tv, &last_tv);
-			printf(" %s", (color && (color < 3)) ? col_on[idx % MAXCOL] : "");
-			printf("%*s", max_devname_len, devname[idx]);
+			/* print (colored) long CAN frame style to stdout */
+			alen = sprintf(afrbuf, " %s", (color > 2) ? col_on[idx % MAXCOL] : "");
+			alen += sprint_timestamp(afrbuf + alen, timestamp, &tv, &last_tv);
+			alen += sprintf(afrbuf + alen, " %s%*s",
+					  (color && (color < 3)) ? col_on[idx % MAXCOL] : "",
+					  max_devname_len, devname[idx]);
 
 			if (extra_msg_info) {
 				if (msg.msg_flags & MSG_DONTROUTE)
-					printf("  TX %s", extra_m_info[frame.flags & 3]);
+					alen += sprintf(afrbuf + alen, "  TX %s",
+							  extra_m_info[cu.fd.flags & 3]);
 				else
-					printf("  RX %s", extra_m_info[frame.flags & 3]);
+					alen += sprintf(afrbuf + alen, "  RX %s",
+							  extra_m_info[cu.fd.flags & 3]);
 			}
 
-			printf("%s  ", (color == 1) ? col_off : "");
+			alen += sprintf(afrbuf + alen, "%s  ", (color == 1) ? col_off : "");
+			alen += snprintf_long_canframe(afrbuf + alen, sizeof(afrbuf) - alen, &cu, view);
 
-			fprint_long_canframe(stdout, &frame, NULL, view, maxdlen);
+			if ((view & CANLIB_VIEW_ERROR) && (cu.fd.can_id & CAN_ERR_FLAG)) {
+				alen += sprintf(afrbuf + alen, "\n\t");
+				alen += snprintf_can_error_frame(afrbuf + alen,
+								 sizeof(afrbuf) - alen,
+								 &cu.fd, "\n\t");
+			}
 
-			printf("%s", (color > 1) ? col_off : "");
-			printf("\n");
-
+			printf("%s%s\n", afrbuf, (color > 1) ? col_off : "");
 out_fflush:
 			fflush(stdout);
 		}

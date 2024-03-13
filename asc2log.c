@@ -62,7 +62,7 @@
 
 extern int optind, opterr, optopt;
 
-void print_usage(char *prg)
+static void print_usage(char *prg)
 {
 	fprintf(stderr, "%s - convert ASC logfile to compact CAN frame logfile.\n", prg);
 	fprintf(stderr, "Usage: %s\n", prg);
@@ -71,7 +71,10 @@ void print_usage(char *prg)
 	fprintf(stderr, "\t-O <outfile>\t(default stdout)\n");
 }
 
-void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, unsigned int max_dlen, char *extra_info) {
+static void prframe(FILE *file, struct timeval *tv, int dev,
+		    struct canfd_frame *cf, char *extra_info)
+{
+	static char abuf[BUFLEN];
 
 	fprintf(file, "(%llu.%06llu) ", (unsigned long long)tv->tv_sec, (unsigned long long)tv->tv_usec);
 
@@ -80,11 +83,12 @@ void prframe(FILE *file, struct timeval *tv, int dev, struct canfd_frame *cf, un
 	else
 		fprintf(file, "canX ");
 
-	fprint_canframe(file, cf, extra_info, 0, max_dlen);
+	snprintf_canframe(abuf, sizeof(abuf), (cu_t *)cf, 0);
+	fprintf(file, "%s%s", abuf, extra_info);
 }
 
-void get_can_id(struct canfd_frame *cf, char *idstring, int base) {
-
+static void get_can_id(struct canfd_frame *cf, char *idstring, int base)
+{
 	if (idstring[strlen(idstring)-1] == 'x') {
 		cf->can_id = CAN_EFF_FLAG;
 		idstring[strlen(idstring)-1] = 0;
@@ -94,9 +98,9 @@ void get_can_id(struct canfd_frame *cf, char *idstring, int base) {
 	cf->can_id |= strtoul(idstring, NULL, base);
 }
 
-void calc_tv(struct timeval *tv, struct timeval *read_tv,
-	     struct timeval *date_tv, char timestamps, int dplace) {
-
+static void calc_tv(struct timeval *tv, struct timeval *read_tv,
+		    struct timeval *date_tv, char timestamps, int dplace)
+{
 	if (dplace == 4) /* shift values having only 4 decimal places */
 		read_tv->tv_usec *= 100;                /* and need for 6 */
 
@@ -126,12 +130,13 @@ void calc_tv(struct timeval *tv, struct timeval *read_tv,
 	}
 }
 
-void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, int dplace, FILE *outfile) {
-
+static void eval_can(char* buf, struct timeval *date_tvp, char timestamps,
+		     char base, int dplace, FILE *outfile)
+{
 	int interface;
 	static struct timeval tv; /* current frame timestamp */
 	static struct timeval read_tv; /* frame timestamp from ASC file */
-	struct canfd_frame cf;
+	struct canfd_frame cf = { 0 };
 	struct can_frame *ccf = (struct can_frame *)&cf; /* for len8_dlc */
 	char rtr;
 	int dlc = 0;
@@ -152,13 +157,12 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 
 		if (!strncmp(tmp1, "ErrorFrame", strlen("ErrorFrame"))) {
 
-			memset(&cf, 0, sizeof(cf));
 			/* do not know more than 'Error' */
 			cf.can_id = (CAN_ERR_FLAG | CAN_ERR_BUSERROR);
 			cf.len = CAN_ERR_DLC;
 
 			calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-			prframe(outfile, &tv, interface, &cf, CAN_MAX_DLEN, "\n");
+			prframe(outfile, &tv, interface, &cf, "\n");
 			fflush(outfile);
 			return;
 		}
@@ -232,13 +236,14 @@ void eval_can(char* buf, struct timeval *date_tvp, char timestamps, char base, i
 				cf.data[i] = data[i] & 0xFFU;
 
 		calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-		prframe(outfile, &tv, interface, &cf, CAN_MAX_DLEN, extra_info);
+		prframe(outfile, &tv, interface, &cf, extra_info);
 		fflush(outfile);
 	}
 }
 
-void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace, FILE *outfile) {
-
+static void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps,
+		       int dplace, FILE *outfile)
+{
 	int interface;
 	static struct timeval tv; /* current frame timestamp */
 	static struct timeval read_tv; /* frame timestamp from ASC file */
@@ -343,14 +348,13 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 #define ASC_F_ESI 0x00004000
 
 	if (flags & ASC_F_FDF) {
-		dlen = CANFD_MAX_DLEN;
+		cf.flags = CANFD_FDF;
 		if (flags & ASC_F_BRS)
 			cf.flags |= CANFD_BRS;
 		if (flags & ASC_F_ESI)
 			cf.flags |= CANFD_ESI;
 	} else {
 		/* yes. The 'CANFD' format supports classic CAN content! */
-		dlen = CAN_MAX_DLEN;
 		if (flags & ASC_F_RTR) {
 			cf.can_id |= CAN_RTR_FLAG;
 			/* dlen is always 0 for classic CAN RTR frames
@@ -369,14 +373,14 @@ void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps, int dplace
 	}
 
 	calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-	prframe(outfile, &tv, interface, &cf, dlen, extra_info);
+	prframe(outfile, &tv, interface, &cf, extra_info);
 	fflush(outfile);
 
 	/* No support for really strange CANFD ErrorFrames format m( */
 }
 
-int get_date(struct timeval *tv, char *date) {
-
+static int get_date(struct timeval *tv, char *date)
+{
 	struct tm tms;
 	unsigned int msecs = 0;
 

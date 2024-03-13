@@ -61,9 +61,23 @@
 #define DEFAULT_GAP 1 /* ms */
 #define DEFAULT_LOOPS 1 /* only one replay */
 #define CHANNELS 20 /* anyone using more than 20 CAN interfaces at a time? */
-#define COMMENTSZ 200
-#define BUFSZ (sizeof("(1345212884.318850)") + IFNAMSIZ + 4 + CL_CFSZ + COMMENTSZ) /* for one line in the logfile */
 #define STDOUTIDX 65536 /* interface index for printing on stdout - bigger than max uint16 */
+
+#if (IFNAMSIZ != 16)
+#error "IFNAMSIZ value does not to DEVSZ calculation!"
+#endif
+
+#define DEVSZ 22 /* IFNAMSZ + 6 */
+#define TIMESZ sizeof("(1345212884.318850)   ")
+#define BUFSZ (TIMESZ + DEVSZ + AFRSZ)
+
+/* adapt sscanf() functions below on error */
+#if (AFRSZ != 6300)
+#error "AFRSZ value does not fit sscanf restrictions!"
+#endif
+#if (DEVSZ != 22)
+#error "DEVSZ value does not fit sscanf restrictions!"
+#endif
 
 struct assignment {
 	char txif[IFNAMSIZ];
@@ -71,11 +85,11 @@ struct assignment {
 	char rxif[IFNAMSIZ];
 };
 static struct assignment asgn[CHANNELS];
-const int canfd_on = 1;
+const int canfx_on = 1;
 
 extern int optind, opterr, optopt;
 
-void print_usage(char *prg)
+static void print_usage(char *prg)
 {
 	fprintf(stderr, "%s - replay a compact CAN frame logfile to CAN devices.\n", prg);
 	fprintf(stderr, "\nUsage: %s <options> [interface assignment]*\n\n", prg);
@@ -158,7 +172,7 @@ static inline int frames_to_send(struct timeval *today, struct timeval *diff, st
 	return timeval_compare(&cmp, today);
 }
 
-int get_txidx(char *logif_name)
+static int get_txidx(char *logif_name)
 {
 	int i;
 
@@ -175,7 +189,7 @@ int get_txidx(char *logif_name)
 	return asgn[i].txifidx; /* return interface index */
 }
 
-char *get_txname(char *logif_name)
+static char *get_txname(char *logif_name)
 {
 	int i;
 
@@ -192,7 +206,8 @@ char *get_txname(char *logif_name)
 	return asgn[i].txif; /* return interface name */
 }
 
-int add_assignment(char *mode, int socket, char *txname, char *rxname, int verbose)
+static int add_assignment(char *mode, int socket, char *txname,
+			  char *rxname, int verbose)
 {
 	struct ifreq ifr;
 	int i;
@@ -239,9 +254,12 @@ int add_assignment(char *mode, int socket, char *txname, char *rxname, int verbo
 
 int main(int argc, char **argv)
 {
-	static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ];
+	static char buf[BUFSZ], device[DEVSZ], afrbuf[AFRSZ];
 	struct sockaddr_can addr;
-	static struct canfd_frame frame;
+	struct can_raw_vcid_options vcid_opts = {
+		.flags = CAN_RAW_XL_VCID_TX_PASS,
+	};
+	static cu_t cu;
 	static struct timeval today_tv, log_tv, last_log_tv, diff_tv;
 	struct timespec sleep_ts;
 	int s; /* CAN_RAW socket */
@@ -360,7 +378,13 @@ int main(int argc, char **argv)
 	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
 
 	/* try to switch the socket into CAN FD mode */
-	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfx_on, sizeof(canfx_on));
+
+	/* try to switch the socket into CAN XL mode */
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_XL_FRAMES, &canfx_on, sizeof(canfx_on));
+
+	/* try to enable the CAN XL VCID pass through mode */
+	setsockopt(s, SOL_CAN_RAW, CAN_RAW_XL_VCID_OPTS, &vcid_opts, sizeof(vcid_opts));
 
 	if (loopback_disable) {
 		int loopback = 0;
@@ -417,7 +441,7 @@ int main(int argc, char **argv)
 
 		eof = 0;
 
-		if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec, device, ascframe) != 4) {
+		if (sscanf(buf, "(%llu.%llu) %21s %6299s", &sec, &usec, device, afrbuf) != 4) {
 			fprintf(stderr, "incorrect line format in logfile\n");
 			return 1;
 		}
@@ -446,7 +470,7 @@ int main(int argc, char **argv)
 				if (interactive)
 					getchar();
 
-				/* log_tv/device/ascframe are valid here */
+				/* log_tv/device/afrbuf are valid here */
 
 				if (strlen(device) >= IFNAMSIZ) {
 					fprintf(stderr, "log interface name '%s' too long!", device);
@@ -470,27 +494,28 @@ int main(int argc, char **argv)
 
 				} else if (txidx > 0) { /* only send to valid CAN devices */
 
-					txmtu = parse_canframe(ascframe, &frame);
+					txmtu = parse_canframe(afrbuf, &cu); /* dual-use frame */
 					if (!txmtu) {
-						fprintf(stderr, "wrong CAN frame format: '%s'!", ascframe);
+						fprintf(stderr, "wrong CAN frame format: '%s'!", afrbuf);
 						return 1;
 					}
+
+					/* CAN XL frames need real frame length for sending */
+					if (txmtu == CANXL_MTU)
+						txmtu = CANXL_HDR_SIZE + cu.xl.len;
 
 					addr.can_family = AF_CAN;
 					addr.can_ifindex = txidx; /* send via this interface */
 
-					if (sendto(s, &frame, txmtu, 0, (struct sockaddr *)&addr, sizeof(addr)) != txmtu) {
+					if (sendto(s, &cu, txmtu, 0, (struct sockaddr *)&addr, sizeof(addr)) != txmtu) {
 						perror("sendto");
 						return 1;
 					}
 
 					if (verbose) {
 						printf("%s (%s) ", get_txname(device), device);
-
-						if (txmtu == CAN_MTU)
-							fprint_long_canframe(stdout, &frame, "\n", CANLIB_VIEW_INDENT_SFF, CAN_MAX_DLEN);
-						else
-							fprint_long_canframe(stdout, &frame, "\n", CANLIB_VIEW_INDENT_SFF, CANFD_MAX_DLEN);
+						snprintf_long_canframe(afrbuf, sizeof(afrbuf), &cu, CANLIB_VIEW_INDENT_SFF);
+						printf("%s\n", afrbuf);
 					}
 
 					if (count && (--count == 0))
@@ -510,7 +535,7 @@ int main(int argc, char **argv)
 					break;
 				}
 
-				if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec, device, ascframe) != 4) {
+				if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec, device, afrbuf) != 4) {
 					fprintf(stderr, "incorrect line format in logfile\n");
 					return 1;
 				}

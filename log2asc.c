@@ -54,11 +54,9 @@
 
 #include "lib.h"
 
-#define BUFSZ 400 /* for one line in the logfile */
-
 extern int optind, opterr, optopt;
 
-void print_usage(char *prg)
+static void print_usage(char *prg)
 {
 	fprintf(stderr, "%s - convert compact CAN frame logfile to ASC logfile.\n", prg);
 	fprintf(stderr, "Usage: %s <options> [can-interfaces]\n", prg);
@@ -71,7 +69,8 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -r  (suppress dlc for RTR frames - pre v8.5 tools)\n");
 }
 
-void can_asc(struct canfd_frame *cfd, int devno, int nortrdlc, char *extra_info, FILE *outfile)
+static void can_asc(struct canfd_frame *cfd, int devno, int nortrdlc,
+		    char *extra_info, FILE *outfile)
 {
 	int i;
 	char id[10];
@@ -118,7 +117,8 @@ void can_asc(struct canfd_frame *cfd, int devno, int nortrdlc, char *extra_info,
 	}
 }
 
-void canfd_asc(struct canfd_frame *cf, int devno, int mtu, char *extra_info, FILE *outfile)
+static void canfd_asc(struct canfd_frame *cf, int devno, int mtu,
+		      char *extra_info, FILE *outfile)
 {
 	int i;
 	char id[10];
@@ -181,11 +181,27 @@ void canfd_asc(struct canfd_frame *cf, int devno, int mtu, char *extra_info, FIL
 	fprintf(outfile, " %8d %4d %8X 0 0 0 0 0", 130000, 130, flags);
 }
 
+#define DEVSZ 22
+#define EXTRASZ 20
+#define TIMESZ sizeof("(1345212884.318850)   ")
+#define BUFSZ (DEVSZ + AFRSZ + EXTRASZ + TIMESZ)
+
+/* adapt sscanf() functions below on error */
+#if (AFRSZ != 6300)
+#error "AFRSZ value does not fit sscanf restrictions!"
+#endif
+#if (DEVSZ != 22)
+#error "DEVSZ value does not fit sscanf restrictions!"
+#endif
+#if (EXTRASZ != 20)
+#error "EXTRASZ value does not fit sscanf restrictions!"
+#endif
+
 int main(int argc, char **argv)
 {
-	static char buf[BUFSZ], device[BUFSZ], ascframe[BUFSZ], extra_info[BUFSZ];
+	static char buf[BUFSZ], device[DEVSZ], afrbuf[AFRSZ], extra_info[EXTRASZ];
 
-	struct canfd_frame cf;
+	static cu_t cu;
 	static struct timeval tv, start_tv;
 	FILE *infile = stdin;
 	FILE *outfile = stdout;
@@ -261,14 +277,14 @@ int main(int argc, char **argv)
 		if (buf[0] != '(')
 			continue;
 
-		if (sscanf(buf, "(%llu.%llu) %s %s %s", &sec, &usec,
-			   device, ascframe, extra_info) != 5) {
+		if (sscanf(buf, "(%llu.%llu) %21s %6299s %19s", &sec, &usec,
+			   device, afrbuf, extra_info) != 5) {
 
 			/* do not evaluate the extra info */
 			extra_info[0] = 0;
 
-			if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec,
-				   device, ascframe) != 4) {
+			if (sscanf(buf, "(%llu.%llu) %21s %6299s", &sec, &usec,
+				   device, afrbuf) != 4) {
 				fprintf(stderr, "incorrect line format in logfile\n");
 				return 1;
 			}
@@ -286,20 +302,25 @@ int main(int argc, char **argv)
 				(crlf)?"\r\n":"\n");
 		}
 
-		for (i=0, devno=0; i<maxdev; i++) {
+		for (i = 0, devno = 0; i < maxdev; i++) {
 			if (!strcmp(device, argv[optind+i])) {
-				devno = i+1; /* start with channel '1' */
+				devno = i + 1; /* start with channel '1' */
 				break;
 			}
 		}
 
 		if (devno) { /* only convert for selected CAN devices */
-			mtu = parse_canframe(ascframe, &cf);
-			if ((mtu != CAN_MTU) && (mtu != CANFD_MTU))
+
+			mtu = parse_canframe(afrbuf, &cu);
+
+			/* convert only CAN CC and CAN FD frames */
+			if ((mtu != CAN_MTU) && (mtu != CANFD_MTU)) {
+				printf("no valid CAN CC/FD frame\n");
 				return 1;
+			}
 
 			/* we don't support error message frames in CAN FD */
-			if ((mtu == CANFD_MTU) && (cf.can_id & CAN_ERR_FLAG))
+			if ((mtu == CANFD_MTU) && (cu.cc.can_id & CAN_ERR_FLAG))
 				continue;
 
 			tv.tv_sec  = tv.tv_sec - start_tv.tv_sec;
@@ -315,9 +336,9 @@ int main(int argc, char **argv)
 				fprintf(outfile, "%4llu.%06llu ", (unsigned long long)tv.tv_sec, (unsigned long long)tv.tv_usec);
 
 			if ((mtu == CAN_MTU) && (fdfmt == 0))
-				can_asc(&cf, devno, nortrdlc, extra_info, outfile);
+				can_asc(&cu.fd, devno, nortrdlc, extra_info, outfile);
 			else
-				canfd_asc(&cf, devno, mtu, extra_info, outfile);
+				canfd_asc(&cu.fd, devno, mtu, extra_info, outfile);
 
 			if (crlf)
 				fprintf(outfile, "\r");

@@ -94,7 +94,7 @@ static unsigned char bargraph;
 static enum cfl_mode mode = CFL_WORSTCASE;
 static char *prg;
 
-void print_usage(char *prg)
+static void print_usage(char *prg)
 {
 	fprintf(stderr, "%s - monitor CAN bus load.\n", prg);
 	fprintf(stderr, "\nUsage: %s [options] <CAN interface>+\n", prg);
@@ -124,13 +124,13 @@ void print_usage(char *prg)
 	fprintf(stderr, "\n");
 }
 
-void sigterm(int signo)
+static void sigterm(int signo)
 {
 	running = 0;
 	signal_num = signo;
 }
 
-void printstats(int signo)
+static void printstats(int signo)
 {
 	int i, j, percent;
 

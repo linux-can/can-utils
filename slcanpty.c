@@ -50,7 +50,8 @@
 #define DEVICE_NAME_PTMX "/dev/ptmx"
 
 /* read data from pty, send CAN frames to CAN socket and answer commands */
-int pty2can(int pty, int socket, struct can_filter *fi, int *is_open, int *tstamp)
+static int pty2can(int pty, int socket, struct can_filter *fi,
+		   int *is_open, int *tstamp)
 {
 	unsigned int nbytes;
 	char cmd;
@@ -313,7 +314,7 @@ rx_out:
 }
 
 /* read CAN frames from CAN interface and write it to the pty */
-int can2pty(int pty, int socket, int *tstamp)
+static int can2pty(int pty, int socket, int *tstamp)
 {
 	int nbytes;
 	char cmd;
@@ -365,7 +366,7 @@ int can2pty(int pty, int socket, int *tstamp)
 	return 0;
 }
 
-int check_select_stdin(void)
+static int check_select_stdin(void)
 {
 	fd_set rdfs;
 	struct timeval timeout;

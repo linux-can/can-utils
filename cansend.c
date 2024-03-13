@@ -64,11 +64,13 @@ static void print_usage(char *prg)
 		"Usage: %s <device> <can_frame>.\n"
 		"\n"
 		"<can_frame>:\n"
-		" <can_id>#{data}          for Classical CAN 2.0 data frames\n"
-		" <can_id>#R{len}          for Classical CAN 2.0 data frames\n"
-		" <can_id>#{data}_{dlc}    for Classical CAN 2.0 data frames\n"
-		" <can_id>#R{len}_{dlc}    for Classical CAN 2.0 data frames\n"
-		" <can_id>##<flags>{data}  for CAN FD frames\n\n"
+		" <can_id>#{data}          for CAN CC (Classical CAN 2.0B) data frames\n"
+		" <can_id>#R{len}          for CAN CC (Classical CAN 2.0B) data frames\n"
+		" <can_id>#{data}_{dlc}    for CAN CC (Classical CAN 2.0B) data frames\n"
+		" <can_id>#R{len}_{dlc}    for CAN CC (Classical CAN 2.0B) data frames\n"
+		" <can_id>##<flags>{data}  for CAN FD frames\n"
+		" <vcid><prio>#<flags>:<sdt>:<af>#<data> for CAN XL frames\n"
+		"\n"
 		"<can_id>:\n"
 		" 3 (SFF) or 8 (EFF) hex chars\n"
 		"{data}:\n"
@@ -80,9 +82,23 @@ static void print_usage(char *prg)
 		"<flags>:\n"
 		" a single ASCII Hex value (0 .. F) which defines canfd_frame.flags\n"
 		"\n"
+		"<vcid>:\n"
+		" 2 hex chars - virtual CAN network identifier (00 .. FF)\n"
+		"<prio>:\n"
+		" 3 hex chars - 11 bit priority value (000 .. 7FF)\n"
+		"<flags>:\n"
+		" 2 hex chars values (00 .. FF) which defines canxl_frame.flags\n"
+		"<sdt>:\n"
+		" 2 hex chars values (00 .. FF) which defines canxl_frame.sdt\n"
+		"<af>:\n"
+		" 8 hex chars - 32 bit acceptance field (canxl_frame.af)\n"
+		"<data>:\n"
+		" 1..2048 ASCII hex-values (optionally separated by '.')\n"
+		"\n"
 		"Examples:\n"
 		"  5A1#11.2233.44556677.88 / 123#DEADBEEF / 5AA# / 123##1 / 213##311223344 /\n"
-		"  1F334455#1122334455667788_B / 123#R / 00000123#R3 / 333#R8_E\n"
+		"  1F334455#1122334455667788_B / 123#R / 00000123#R3 / 333#R8_E /\n"
+		"  45123#81:00:12345678#11223344.556677 / 00242#81:07:40000123#112233\n"
 		"\n",
 		prg, prg);
 }
@@ -92,9 +108,12 @@ int main(int argc, char **argv)
 	int s; /* can raw socket */
 	int required_mtu;
 	int mtu;
-	int enable_canfd = 1;
+	int enable_canfx = 1;
 	struct sockaddr_can addr;
-	struct canfd_frame frame;
+	struct can_raw_vcid_options vcid_opts = {
+		.flags = CAN_RAW_XL_VCID_TX_PASS,
+	};
+	static cu_t cu;
 	struct ifreq ifr;
 
 	/* check command line options */
@@ -104,7 +123,7 @@ int main(int argc, char **argv)
 	}
 
 	/* parse CAN frame */
-	required_mtu = parse_canframe(argv[2], &frame);
+	required_mtu = parse_canframe(argv[2], &cu);
 	if (!required_mtu) {
 		fprintf(stderr, "\nWrong CAN-frame format!\n\n");
 		print_usage(argv[0]);
@@ -137,21 +156,38 @@ int main(int argc, char **argv)
 		}
 		mtu = ifr.ifr_mtu;
 
-		if (mtu != CANFD_MTU && mtu != CANXL_MTU) {
-			printf("CAN interface is only Classical CAN capable - sorry.\n");
-			return 1;
+		if (mtu == CANFD_MTU) {
+			/* interface is ok - try to switch the socket into CAN FD mode */
+			if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES,
+				       &enable_canfx, sizeof(enable_canfx))){
+				printf("error when enabling CAN FD support\n");
+				return 1;
+			}
 		}
 
-		/* interface is ok - try to switch the socket into CAN FD mode */
-		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES,
-			       &enable_canfd, sizeof(enable_canfd))){
-			printf("error when enabling CAN FD support\n");
-			return 1;
+		if (mtu >= CANXL_MIN_MTU) {
+			/* interface is ok - try to switch the socket into CAN XL mode */
+			if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_XL_FRAMES,
+				       &enable_canfx, sizeof(enable_canfx))){
+				printf("error when enabling CAN XL support\n");
+				return 1;
+			}
+			/* try to enable the CAN XL VCID pass through mode */
+			if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_XL_VCID_OPTS,
+				       &vcid_opts, sizeof(vcid_opts))) {
+				printf("error when enabling CAN XL VCID pass through\n");
+				return 1;
+			}
 		}
-
-		/* ensure discrete CAN FD length values 0..8, 12, 16, 20, 24, 32, 64 */
-		frame.len = can_fd_dlc2len(can_fd_len2dlc(frame.len));
 	}
+
+	/* ensure discrete CAN FD length values 0..8, 12, 16, 20, 24, 32, 64 */
+	if (required_mtu == CANFD_MTU)
+		cu.fd.len = can_fd_dlc2len(can_fd_len2dlc(cu.fd.len));
+
+	/* CAN XL frames need real frame length for sending */
+	if (required_mtu == CANXL_MTU)
+		required_mtu = CANXL_HDR_SIZE + cu.xl.len;
 
 	/*
 	 * disable default receive filter on this RAW socket This is
@@ -167,7 +203,7 @@ int main(int argc, char **argv)
 	}
 
 	/* send frame */
-	if (write(s, &frame, required_mtu) != required_mtu) {
+	if (write(s, &cu, required_mtu) != required_mtu) {
 		perror("write");
 		return 1;
 	}
