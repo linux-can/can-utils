@@ -838,7 +838,10 @@ int main(int argc, char **argv)
 		return 1;
 
 	while (running) {
+		/* clear values but preserve cu.fd.len */
 		cu.fd.flags = 0;
+		cu.fd.__res0 = 0;
+		cu.fd.__res1 = 0;
 
 		if (count && (--count == 0))
 			running = 0;
