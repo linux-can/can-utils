@@ -35,10 +35,7 @@ do_mcp251xfd_regmap_read(struct mcp251xfd_priv *priv,
 
 	while ((ret = fscanf(reg_file, "%hx: %x\n", &reg, &val)) != EOF) {
 		if (ret != 2) {
-			int tmp;
-
-			tmp = fscanf(reg_file, "%*[^\n]\n");
-			(void)tmp;
+			ret = fscanf(reg_file, "%*[^\n]\n");
 
 			continue;
 		}
