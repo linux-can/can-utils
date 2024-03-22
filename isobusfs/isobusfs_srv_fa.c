@@ -348,8 +348,8 @@ static int isobusfs_srv_fa_open_file_req(struct isobusfs_srv_priv *priv,
 	uint8_t error_code = 0;
 	uint8_t access_type;
 	size_t abs_path_len;
+	uint8_t handle = 0;
 	char *abs_path;
-	uint8_t handle;
 	int ret = 0;
 
 	client = isobusfs_srv_get_client_by_msg(priv, msg);
@@ -502,8 +502,6 @@ static int isobusfs_srv_read_directory(struct isobusfs_srv_handles *handle,
 	DIR *dir = handle->dir;
 	struct dirent *entry;
 	size_t pos = 0;
-	size_t entry_count = 0;
-
 
 	/*
 	 * Position the directory stream to the previously stored offset (handle->dir_pos).
@@ -596,8 +594,6 @@ static int isobusfs_srv_read_directory(struct isobusfs_srv_handles *handle,
 		size = htole32(file_stat.st_size);
 		memcpy(buffer + pos, &size, sizeof(size));
 		pos += sizeof(size);
-
-		entry_count++;
 	}
 
 	*readed_size = pos;
