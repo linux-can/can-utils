@@ -522,7 +522,7 @@ int snprintf_long_canframe(char *buf, size_t size, cu_t *cu, int view)
 		}
 	}
 
-	if (maxsize > size - 1) {
+	if (maxsize > (int)size - 1) {
 		/* mark buffer overflow in output */
 		memset(buf, '-', size - 1);
 		buf[size - 1] = 0;

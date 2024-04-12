@@ -218,10 +218,10 @@ struct canxl_frame {
 	__u8    data[CANXL_MAX_DLEN];
 };
 
-#define CAN_MTU		(sizeof(struct can_frame))
-#define CANFD_MTU	(sizeof(struct canfd_frame))
-#define CANXL_MTU	(sizeof(struct canxl_frame))
-#define CANXL_HDR_SIZE	(offsetof(struct canxl_frame, data))
+#define CAN_MTU		(int)(sizeof(struct can_frame))
+#define CANFD_MTU	(int)(sizeof(struct canfd_frame))
+#define CANXL_MTU	(int)(sizeof(struct canxl_frame))
+#define CANXL_HDR_SIZE	(int)(offsetof(struct canxl_frame, data))
 #define CANXL_MIN_MTU	(CANXL_HDR_SIZE + 64)
 #define CANXL_MAX_MTU	CANXL_MTU
 
