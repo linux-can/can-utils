@@ -36,7 +36,7 @@ int isobusfs_srv_request_volume(struct isobusfs_srv_priv *priv,
 				struct isobusfs_srv_client *client,
 				struct isobusfs_srv_volume *volume)
 {
-	int j;
+	unsigned int j;
 
 	/* Check if the client already requested this volume */
 	for (j = 0; j < ARRAY_SIZE(volume->clients); j++) {

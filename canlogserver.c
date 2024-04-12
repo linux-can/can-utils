@@ -407,13 +407,13 @@ int main(int argc, char **argv)
 					return 1;
 				}
 
-				if (nbytes < CANXL_HDR_SIZE + CANXL_MIN_DLEN) {
+				if (nbytes < (int)CANXL_HDR_SIZE + CANXL_MIN_DLEN) {
 					fprintf(stderr, "read: no CAN frame\n");
 					return 1;
 				}
 
 				if (cu.xl.flags & CANXL_XLF) {
-					if (nbytes != CANXL_HDR_SIZE + cu.xl.len) {
+					if (nbytes != (int)CANXL_HDR_SIZE + cu.xl.len) {
 						printf("nbytes = %d\n", nbytes);
 						fprintf(stderr, "read: no CAN XL frame\n");
 						return 1;

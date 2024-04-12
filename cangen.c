@@ -774,17 +774,17 @@ int main(int argc, char **argv)
 				cu.fd.len = CANFD_MAX_DLEN;
 		}
 
-		if (canxl && (ifr.ifr_mtu < CANXL_MIN_MTU)) {
+		if (canxl && (ifr.ifr_mtu < (int)CANXL_MIN_MTU)) {
 			printf("CAN interface not CAN XL capable - sorry.\n");
 			return 1;
 		}
 
-		if (canfd && (ifr.ifr_mtu < CANFD_MTU)) {
+		if (canfd && (ifr.ifr_mtu < (int)CANFD_MTU)) {
 			printf("CAN interface not CAN FD capable - sorry.\n");
 			return 1;
 		}
 
-		if (ifr.ifr_mtu == CANFD_MTU) {
+		if (ifr.ifr_mtu == (int)CANFD_MTU) {
 			/* interface is ok - try to switch the socket into CAN FD mode */
 			if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES,
 				       &enable_canfx, sizeof(enable_canfx))){
@@ -793,7 +793,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		if (ifr.ifr_mtu >= CANXL_MIN_MTU) {
+		if (ifr.ifr_mtu >= (int)CANXL_MIN_MTU) {
 			/* interface is ok - try to switch the socket into CAN XL mode */
 			if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_XL_FRAMES,
 				       &enable_canfx, sizeof(enable_canfx))){
@@ -1070,7 +1070,7 @@ int main(int argc, char **argv)
 				esi = i & 8;
 			}
 			/* generate CAN XL traffic if the interface is capable */
-			if (ifr.ifr_mtu >= CANXL_MIN_MTU)
+			if (ifr.ifr_mtu >= (int)CANXL_MIN_MTU)
 				canxl = ((i & 96) == 96);
 
 			rtr_frame = ((i & 24) == 24); /* reduce RTR frames to 1/4 */

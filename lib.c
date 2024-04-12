@@ -437,7 +437,8 @@ int snprintf_long_canframe(char *buf, size_t size, cu_t *cu, int view)
 	/* documentation see lib.h */
 
 	unsigned char is_canfd = cu->fd.flags;
-	int i, j, dlen, offset, maxsize;
+	int i, j, dlen, offset;
+	size_t maxsize;
 	int len;
 
 	/* ensure space for string termination */

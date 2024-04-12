@@ -43,7 +43,7 @@ PREFIX ?= /usr/local
 
 MAKEFLAGS := -k
 
-CFLAGS := -O2 -Wall -Wno-parentheses
+CFLAGS := -O2 -Wall -Wno-parentheses -Wsign-compare
 
 HAVE_FORK := $(shell ./check_cc.sh "$(CC)" fork_test.c)
 

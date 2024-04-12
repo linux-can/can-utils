@@ -16,7 +16,7 @@
 static struct isobusfs_srv_handles *
 isobusfs_srv_walk_handles(struct isobusfs_srv_priv *priv, const char *path)
 {
-	int i;
+	unsigned int i;
 
 	for (i = 0; i < ARRAY_SIZE(priv->handles); i++) {
 		if (priv->handles[i].path == NULL)
@@ -32,9 +32,9 @@ isobusfs_srv_walk_handles(struct isobusfs_srv_priv *priv, const char *path)
 static int isobusfs_srv_add_file(struct isobusfs_srv_priv *priv,
 				 const char *path, int fd, DIR *dir)
 {
-	int j;
+	unsigned int j;
 
-	if (priv->handles_count >= ARRAY_SIZE(priv->handles)) {
+	if (priv->handles_count >= (int)ARRAY_SIZE(priv->handles)) {
 		pr_err("too many handles");
 		return -ENOSPC;
 	}
@@ -55,7 +55,7 @@ static int isobusfs_srv_add_file(struct isobusfs_srv_priv *priv,
 static int isobusfs_srv_add_client_to_file(struct isobusfs_srv_handles *file,
 					   struct isobusfs_srv_client *client)
 {
-	int j;
+	unsigned int j;
 
 	for (j = 0; j < ARRAY_SIZE(file->clients); j++) {
 		if (file->clients[j] == client)
@@ -102,7 +102,7 @@ static int isobusfs_srv_request_file(struct isobusfs_srv_priv *priv,
 static struct isobusfs_srv_handles *
 isobusfs_srv_get_handle(struct isobusfs_srv_priv *priv, int handle)
 {
-	if (handle < 0 || handle >= ARRAY_SIZE(priv->handles))
+	if (handle < 0 || handle >= (int)ARRAY_SIZE(priv->handles))
 		return NULL;
 
 	return &priv->handles[handle];
@@ -113,7 +113,7 @@ static int isobusfs_srv_release_handle(struct isobusfs_srv_priv *priv,
 				       int handle)
 {
 	struct isobusfs_srv_handles *hdl = isobusfs_srv_get_handle(priv, handle);
-	int client_index;
+	unsigned int client_index;
 
 	if (!hdl) {
 		pr_warn("%s: invalid handle %d", __func__, handle);
@@ -152,8 +152,8 @@ static int isobusfs_srv_release_handle(struct isobusfs_srv_priv *priv,
 void isobusfs_srv_remove_client_from_handles(struct isobusfs_srv_priv *priv,
 					   struct isobusfs_srv_client *client)
 {
-	int handle;
-	int client_index;
+	unsigned int handle;
+	unsigned int client_index;
 
 	for (handle = 0; handle < ARRAY_SIZE(priv->handles); handle++) {
 		struct isobusfs_srv_handles *hdl = &priv->handles[handle];
@@ -488,7 +488,7 @@ static int check_access_with_base(const char *base_dir,
 	char full_path[ISOBUSFS_SRV_MAX_PATH_LEN];
 
 	if (snprintf(full_path, sizeof(full_path), "%s/%s", base_dir,
-		 relative_path) >= sizeof(full_path)) {
+		     relative_path) >= (int)sizeof(full_path)) {
 		return -ENAMETOOLONG;
 	}
 
@@ -519,7 +519,7 @@ static int isobusfs_srv_read_directory(struct isobusfs_srv_handles *handle,
 	 *   either returning an error or restarting from the beginning of the directory, depending
 	 *   on the application's requirements.
 	 */
-	for (size_t i = 0; i < handle->dir_pos &&
+	for (int i = 0; i < handle->dir_pos &&
 	     (entry = readdir(dir)) != NULL; i++) {
 		/* Iterating to the desired position */
 	}
