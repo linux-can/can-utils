@@ -53,13 +53,13 @@
 static int pty2can(int pty, int socket, struct can_filter *fi,
 		   int *is_open, int *tstamp)
 {
-	unsigned int nbytes;
+	unsigned int nbytes, tmp;
 	char cmd;
 	static char buf[200];
 	char replybuf[10]; /* for answers to received commands */
-	int ptr;
+	unsigned int ptr;
 	struct can_frame frame;
-	int ret, tmp, i;
+	int ret, i;
 	static unsigned int rxoffset = 0; /* points to the end of an received incomplete SLCAN message */
 
 	ret = read(pty, &buf[rxoffset], sizeof(buf) - rxoffset - 1);
@@ -282,8 +282,8 @@ rx_restart:
 			ptr--;
 	}
 
-	tmp = write(socket, &frame, sizeof(frame));
-	if (tmp != sizeof(frame)) {
+	ret = write(socket, &frame, sizeof(frame));
+	if (ret != sizeof(frame)) {
 		perror("write socket");
 		return 1;
 	}
@@ -296,8 +296,8 @@ rx_out_nack:
 	replybuf[0] = '\a';
 	tmp = 1;
 rx_out:
-	tmp = write(pty, replybuf, tmp);
-	if (tmp < 0) {
+	ret = write(pty, replybuf, tmp);
+	if (ret < 0) {
 		perror("write pty replybuf");
 		return 1;
 	}

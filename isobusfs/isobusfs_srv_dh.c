@@ -110,7 +110,7 @@ int isobusfs_path_to_linux_path(struct isobusfs_srv_priv *priv,
 
 		ptr++;
 		vol_end++;
-		if (ptr - linux_path >= linux_path_size) {
+		if (ptr - linux_path >= (long int)linux_path_size) {
 			/* Ensure null termination */
 			linux_path[linux_path_size - 1] = '\0';
 			break;

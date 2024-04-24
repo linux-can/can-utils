@@ -215,11 +215,12 @@ static int recv_frame(struct canfd_frame *frame, int *flags)
 	ssize_t ret;
 
 	ret = recvmsg(sockfd, &msg, 0);
-	if (ret != iov.iov_len) {
-		if (ret < 0)
-			perror("recvmsg() failed");
-		else
-			fprintf(stderr, "recvmsg() returned %zd", ret);
+	if (ret < 0) {
+		perror("recvmsg() failed");
+		return -1;
+	}
+	if ((size_t)ret != iov.iov_len) {
+		fprintf(stderr, "recvmsg() returned %zd", ret);
 		return -1;
 	}
 

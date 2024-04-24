@@ -823,7 +823,7 @@ void isobusfs_cmn_dump_last_x_bytes(const uint8_t *buffer, size_t buffer_size,
 	size_t start_offset = 0;
 	char *output_ptr;
 	unsigned char c;
-	size_t remaining;
+	int remaining;
 	char output[80];
 	int n, j;
 
@@ -832,7 +832,7 @@ void isobusfs_cmn_dump_last_x_bytes(const uint8_t *buffer, size_t buffer_size,
 
 	for (size_t i = start_offset; i < buffer_size; i += 8) {
 		output_ptr = output;
-		remaining = sizeof(output);
+		remaining = (int)sizeof(output);
 
 		n = snprintf(output_ptr, remaining, "%08lx: ",
 			     (unsigned long)(start_offset + i));

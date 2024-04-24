@@ -268,10 +268,10 @@ static int isobusfs_cli_rx_one(struct isobusfs_priv *priv, int sock)
 	return 0;
 }
 
-static int isobusfs_cli_handle_events(struct isobusfs_priv *priv, int nfds)
+static int isobusfs_cli_handle_events(struct isobusfs_priv *priv, unsigned int nfds)
 {
 	int ret;
-	int n;
+	unsigned int n;
 
 	for (n = 0; n < nfds && n < priv->cmn.epoll_events_size; ++n) {
 		struct epoll_event *ev = &priv->cmn.epoll_events[n];
@@ -341,7 +341,7 @@ int isobusfs_cli_process_events_and_tasks(struct isobusfs_priv *priv)
 		return ret;
 
 	if (nfds > 0) {
-		ret = isobusfs_cli_handle_events(priv, nfds);
+		ret = isobusfs_cli_handle_events(priv, (unsigned int)nfds);
 		if (ret)
 			return ret;
 	}

@@ -201,10 +201,10 @@ done:
 	return EXIT_SUCCESS;
 }
 
-static int isobusfs_srv_handle_events(struct isobusfs_srv_priv *priv, int nfds)
+static int isobusfs_srv_handle_events(struct isobusfs_srv_priv *priv, unsigned int nfds)
 {
 	int ret;
-	int n;
+	unsigned int n;
 
 	for (n = 0; n < nfds && n < priv->cmn.epoll_events_size; ++n) {
 		struct epoll_event *ev = &priv->cmn.epoll_events[n];
