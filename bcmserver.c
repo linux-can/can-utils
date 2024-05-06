@@ -156,6 +156,7 @@ int main(void)
 	char rxmsg[50];
 
 #pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wgnu-variable-sized-type-not-at-end"
 	struct {
 		struct bcm_msg_head msg_head;
