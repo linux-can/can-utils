@@ -155,10 +155,13 @@ int main(void)
 	char format[FORMATSZ];
 	char rxmsg[50];
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wgnu-variable-sized-type-not-at-end"
 	struct {
 		struct bcm_msg_head msg_head;
 		struct can_frame frame;
 	} msg;
+#pragma GCC diagnostic pop
 
 	if (snprintf(format, FORMATSZ, "< %%%ds %%c %%lu %%lu %%x %%hhu "
 		     "%%hhx %%hhx %%hhx %%hhx %%hhx %%hhx "
