@@ -194,7 +194,7 @@ int main(void)
 		exit(1);
 	}
 
-	while (1) { 
+	while (1) {
 		sa = accept(sl,(struct sockaddr *)&clientaddr, &sin_size);
 		if (sa > 0 ){
 			if (!fork())
@@ -295,7 +295,7 @@ int main(void)
 
 			items = sscanf(buf, format,
 				       ifr.ifr_name,
-				       &cmd, 
+				       &cmd,
 				       &msg.msg_head.ival2.tv_sec,
 				       &msg.msg_head.ival2.tv_usec,
 				       &msg.msg_head.can_id,
