@@ -1514,11 +1514,6 @@ int main(int argc, char *argv[])
 			data->verbose = true;
 			break;
 
-		case '?':
-			print_usage(basename(argv[0]));
-			exit(EXIT_SUCCESS);
-			break;
-
 		case OPT_TQ:
 			opt_bt->tq = strtoul(optarg, NULL, 10);
 			break;
