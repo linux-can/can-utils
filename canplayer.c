@@ -116,7 +116,9 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -x           (disable local "
 			"loopback of sent CAN frames)\n");
 	fprintf(stderr, "         -v           (verbose: print "
-			"sent CAN frames)\n\n");
+			"sent CAN frames)\n");
+	fprintf(stderr, "         -h           (show "
+			"this help message)\n\n");
 	fprintf(stderr, "Interface assignment:\n");
 	fprintf(stderr, " 0..n assignments like <write-if>=<log-if>\n\n");
 	fprintf(stderr, " e.g. vcan2=can0  (send frames received from can0 on "
@@ -279,7 +281,7 @@ int main(int argc, char **argv)
 	char *fret;
 	unsigned long long sec, usec;
 
-	while ((opt = getopt(argc, argv, "I:l:tin:g:s:xv?")) != -1) {
+	while ((opt = getopt(argc, argv, "I:l:tin:g:s:xvh")) != -1) {
 		switch (opt) {
 		case 'I':
 			infile = fopen(optarg, "r");
@@ -334,10 +336,14 @@ int main(int argc, char **argv)
 			verbose++;
 			break;
 
-		case '?':
+		case 'h':
+			print_usage(basename(argv[0]));
+			exit(EXIT_SUCCESS);
+			break;
+
 		default:
 			print_usage(basename(argv[0]));
-			return 1;
+			exit(EXIT_FAILURE);
 			break;
 		}
 	}
