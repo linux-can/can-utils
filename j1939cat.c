@@ -97,15 +97,6 @@ static const char help_msg[] =
 
 static const char optstring[] = "?hi:vs:rp:P:R:B";
 
-
-static void j1939cat_init_sockaddr_can(struct sockaddr_can *sac)
-{
-	sac->can_family = AF_CAN;
-	sac->can_addr.j1939.addr = J1939_NO_ADDR;
-	sac->can_addr.j1939.name = J1939_NO_NAME;
-	sac->can_addr.j1939.pgn = J1939_NO_PGN;
-}
-
 static ssize_t j1939cat_send_one(struct j1939cat_priv *priv, int out_fd,
 			     const void *buf, size_t buf_size)
 {
@@ -766,8 +757,8 @@ int main(int argc, char *argv[])
 	priv->polltimeout = 100000;
 	priv->repeat = 1;
 
-	j1939cat_init_sockaddr_can(&priv->sockname);
-	j1939cat_init_sockaddr_can(&priv->peername);
+	libj1939_init_sockaddr_can(&priv->sockname, J1939_NO_PGN);
+	libj1939_init_sockaddr_can(&priv->peername, J1939_NO_PGN);
 
 	ret = j1939cat_parse_args(priv, argc, argv);
 	if (ret)

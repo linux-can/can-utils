@@ -105,6 +105,10 @@ if(NOT ANDROID)
     libj1939.c
   )
 
+  target_link_libraries(j1939
+    PRIVATE can
+  )
+
   add_library(isobusfs SHARED
     isobusfs/isobusfs_cmn.c
     isobusfs/isobusfs_cmn_dh.c
@@ -134,7 +138,7 @@ if(NOT ANDROID)
   )
 
   target_link_libraries(isobusfs-cli
-    PRIVATE isobusfs can
+    PRIVATE isobusfs can j1939
   )
 
   add_executable(isobusfs-srv
@@ -148,7 +152,7 @@ if(NOT ANDROID)
   )
 
   target_link_libraries(isobusfs-srv
-    PRIVATE isobusfs can
+    PRIVATE isobusfs can j1939
   )
 
   install(TARGETS
@@ -167,7 +171,7 @@ foreach(name ${PROGRAMS})
 
   if("${name}" IN_LIST PROGRAMS_J1939)
     target_link_libraries(${name}
-      PRIVATE j1939
+      PRIVATE j1939 can
     )
   elseif("${name}" IN_LIST PROGRAMS_CANLIB)
     target_link_libraries(${name}

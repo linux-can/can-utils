@@ -125,29 +125,6 @@ void isobusfs_log_level_set(log_level_t level)
 	log_level = level;
 }
 
-int isobusfs_get_timeout_ms(struct timespec *ts)
-{
-	struct timespec curr_time;
-	int64_t time_diff;
-	int timeout_ms;
-
-	clock_gettime(CLOCK_MONOTONIC, &curr_time);
-	time_diff = timespec_diff_ms(ts, &curr_time);
-	if (time_diff < 0) {
-		/* Too late to send next message. Send it now */
-		timeout_ms = 0;
-	} else {
-		if (time_diff > INT_MAX) {
-			warn("timeout too long: %" PRId64 " ms", time_diff);
-			time_diff = INT_MAX;
-		}
-
-		timeout_ms = time_diff;
-	}
-
-	return timeout_ms;
-}
-
 const char *isobusfs_error_to_str(enum isobusfs_error err)
 {
 	switch (err) {
@@ -236,15 +213,6 @@ enum isobusfs_error linux_error_to_isobusfs_error(int linux_err)
 	default:
 		return ISOBUSFS_ERR_OTHER;
 	}
-}
-
-
-void isobusfs_init_sockaddr_can(struct sockaddr_can *sac, uint32_t pgn)
-{
-	sac->can_family = AF_CAN;
-	sac->can_addr.j1939.addr = J1939_NO_ADDR;
-	sac->can_addr.j1939.name = J1939_NO_NAME;
-	sac->can_addr.j1939.pgn = pgn;
 }
 
 static void isobusfs_print_timestamp(struct isobusfs_err_msg *emsg,
@@ -521,28 +489,6 @@ int isobusfs_send(int sock, const void *data, size_t len,
 }
 
 /**
- * isobusfs_cmn_open_socket - Open a CAN J1939 socket
- *
- * This function opens a CAN J1939 socket and returns the file descriptor
- * on success. In case of an error, the function returns the negative
- * error code.
- */
-int isobusfs_cmn_open_socket(void)
-{
-	int ret;
-
-	/* Create a new CAN J1939 socket */
-	ret = socket(PF_CAN, SOCK_DGRAM, CAN_J1939);
-	if (ret < 0) {
-		/* Get the error code and print an error message */
-		ret = -errno;
-		pr_err("socket(j1939): %d (%s)", ret, strerror(ret));
-		return ret;
-	}
-	return ret;
-}
-
-/**
  * isobusfs_cmn_configure_socket_filter - Configure a J1939 socket filter
  * @sock: Socket file descriptor
  * @pgn: Parameter Group Number to filter
@@ -650,47 +596,6 @@ int isobusfs_cmn_configure_error_queue(int sock)
 	return 0;
 }
 
-/**
- * isobusfs_cmn_bind_socket - Bind a J1939 socket to a given address
- * @sock: socket file descriptor
- * @addr: pointer to a sockaddr_can structure containing the address
- *         information to bind the socket to
- *
- * This function binds a J1939 socket to the specified address. It returns
- * 0 on successful binding or a negative error code on failure.
- *
- * Return: 0 on success, or a negative error code on failure.
- */
-int isobusfs_cmn_bind_socket(int sock, struct sockaddr_can *addr)
-{
-	int ret;
-
-	ret = bind(sock, (void *)addr, sizeof(*addr));
-	if (ret < 0) {
-		ret = -errno;
-		pr_err("failed to bind: %d (%s)", ret, strerror(ret));
-		return ret;
-	}
-
-	return 0;
-}
-
-int isobusfs_cmn_socket_prio(int sock, int prio)
-{
-	int ret;
-
-	ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_SEND_PRIO,
-			 &prio, sizeof(prio));
-	if (ret < 0) {
-		ret = -errno;
-		pr_warn("Failed to set priority %i. Error %i (%s)", prio, ret,
-			strerror(ret));
-		return ret;
-	}
-
-	return 0;
-}
-
 int isobusfs_cmn_connect_socket(int sock, struct sockaddr_can *addr)
 {
 	int ret;
@@ -699,32 +604,6 @@ int isobusfs_cmn_connect_socket(int sock, struct sockaddr_can *addr)
 	if (ret < 0) {
 		ret = -errno;
 		pr_err("failed to connect socket: %d (%s)", ret, strerror(ret));
-		return ret;
-	}
-
-	return 0;
-}
-
-/**
- * isobusfs_cmn_set_broadcast - Enable broadcast option for a socket
- * @sock: socket file descriptor
- *
- * This function enables the SO_BROADCAST option for the given socket,
- * allowing it to send and receive broadcast messages. It returns 0 on success
- * or a negative error code on failure.
- *
- * Return: 0 on success, or a negative error code on failure.
- */
-int isobusfs_cmn_set_broadcast(int sock)
-{
-	int broadcast = true;
-	int ret;
-
-	ret = setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast,
-			 sizeof(broadcast));
-	if (ret < 0) {
-		ret = -errno;
-		pr_err("setsockopt(SO_BROADCAST): %d (%s)", ret, strerror(ret));
 		return ret;
 	}
 
@@ -747,70 +626,6 @@ int isobusfs_cmn_set_linger(int sock)
 	if (ret < 0) {
 		ret = -errno;
 		pr_err("setsockopt(SO_LINGER): %d (%s)", ret, strerror(ret));
-		return ret;
-	}
-
-	return 0;
-}
-
-int isobusfs_cmn_add_socket_to_epoll(int epoll_fd, int sock, uint32_t events)
-{
-	struct epoll_event ev = {0};
-	int ret;
-
-	ev.events = events;
-	ev.data.fd = sock;
-
-	ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sock, &ev);
-	if (ret < 0) {
-		ret = errno;
-		pr_err("epoll_ctl(EPOLL_CTL_ADD): %d (%s)", ret, strerror(ret));
-		return ret;
-	}
-
-	return 0;
-}
-
-int isobusfs_cmn_create_epoll(void)
-{
-	int ret, epoll_fd;
-
-	epoll_fd = epoll_create1(0);
-	if (epoll_fd < 0) {
-		ret = -errno;
-		pr_err("epoll_create1: %d (%s)", ret, strerror(ret));
-		return ret;
-	}
-
-	return epoll_fd;
-}
-
-int isobusfs_cmn_prepare_for_events(struct isobusfs_cmn *cmn, int *nfds,
-				    bool dont_wait)
-{
-	int ret, timeout_ms;
-
-	if (dont_wait)
-		timeout_ms = 0;
-	else
-		timeout_ms = isobusfs_get_timeout_ms(&cmn->next_send_time);
-
-	ret = epoll_wait(cmn->epoll_fd, cmn->epoll_events,
-			 cmn->epoll_events_size, timeout_ms);
-	if (ret < 0) {
-		ret = -errno;
-		if (ret != -EINTR) {
-			*nfds = 0;
-			return ret;
-		}
-	}
-
-	*nfds = ret;
-
-	ret = clock_gettime(CLOCK_MONOTONIC, &cmn->last_time);
-	if (ret < 0) {
-		ret = -errno;
-		pr_err("failed to get time: %i (%s)", ret, strerror(ret));
 		return ret;
 	}
 

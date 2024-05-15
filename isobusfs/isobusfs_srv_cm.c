@@ -213,14 +213,14 @@ static int isobusfs_srv_init_client(struct isobusfs_srv_priv *priv,
 		return -EINVAL;
 	}
 
-	ret = isobusfs_cmn_open_socket();
+	ret = libj1939_open_socket();
 	if (ret < 0)
 		return ret;
 
 	client->sock = ret;
 
 	addr.can_addr.j1939.pgn = ISOBUSFS_PGN_CL_TO_FS;
-	ret = isobusfs_cmn_bind_socket(client->sock, &addr);
+	ret = libj1939_bind_socket(client->sock, &addr);
 	if (ret < 0)
 		return ret;
 
@@ -243,7 +243,7 @@ static int isobusfs_srv_init_client(struct isobusfs_srv_priv *priv,
 		goto close_socket;
 	}
 
-	ret = isobusfs_cmn_socket_prio(client->sock, ISOBUSFS_PRIO_DEFAULT);
+	ret = libj1939_socket_prio(client->sock, ISOBUSFS_PRIO_DEFAULT);
 	if (ret < 0)
 		return ret;
 
