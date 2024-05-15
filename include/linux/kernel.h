@@ -22,6 +22,8 @@ struct regmap {
 };
 
 #define pr_info(...) fprintf(stdout, ## __VA_ARGS__)
+#define pr_err(...) fprintf(stderr, ## __VA_ARGS__)
+#define pr_warn(...) fprintf(stderr, ## __VA_ARGS__)
 #define pr_cont(...) fprintf(stdout, ## __VA_ARGS__)
 #define netdev_info(ndev, ...) fprintf(stdout, ## __VA_ARGS__)
 #define BUILD_BUG_ON(...)
