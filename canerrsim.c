@@ -130,16 +130,16 @@ void err_exit(const char *msg) {
 
 void show_custom_format_and_exit(const char *param, const char *format) {
     char str_buf[80];
-    sprintf(str_buf, format, param);        
+    sprintf(str_buf, format, param);
     err_exit(str_buf);
 }
 
 void show_invalid_option(const char *option) {
-    show_custom_format_and_exit(option, "Error: Invalid option %s\n");        
+    show_custom_format_and_exit(option, "Error: Invalid option %s\n");
 }
 
 void show_err_and_exit(const char *err_type) {
-    show_custom_format_and_exit(err_type, "Error: You can only have one %s parameter!\n");        
+    show_custom_format_and_exit(err_type, "Error: You can only have one %s parameter!\n");
 }
 
 void show_loc_err_and_exit() {
@@ -175,7 +175,7 @@ int main(int argc, char *argv[]) {
     printf("CAN Sockets Error Messages Simulator\n");
     if (argc < 3)
         show_help_and_exit();
- 
+
     // initialize CAN frame
     memset(&frame, 0, sizeof(frame));
     frame.can_id  = CAN_ERR_FLAG;
@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
         // error class (mask) in can_id
         if (strcasecmp(argv[i], "TxTimeout")      == STR_EQUAL)
             frame.can_id |= CAN_ERR_TX_TIMEOUT;   // generate TxTimeout error
-        else if (strcasecmp(argv[i], "NoAck")     == STR_EQUAL) 
+        else if (strcasecmp(argv[i], "NoAck")     == STR_EQUAL)
             frame.can_id |= CAN_ERR_ACK;          // generate NoAck error
         else if (strcasecmp(argv[i], "BusOff")    == STR_EQUAL)
             frame.can_id |= CAN_ERR_BUSOFF;       // generate BusOff error
@@ -197,258 +197,258 @@ int main(int argc, char *argv[]) {
         else if (strcasecmp(argv[i], "Restarted") == STR_EQUAL)
             frame.can_id |= CAN_ERR_RESTARTED;    // generate Restarted error
         // error status of CAN controller / data[1]
-        else if (strcasecmp(argv[i], "OverflowRX") == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "OverflowRX") == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_CRTL;                         // generate Controller error
             frame.data[1] |= CAN_ERR_CRTL_RX_OVERFLOW;             // generate RX Overflow suberror
         }
-        else if (strcasecmp(argv[i], "OverflowTX") == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "OverflowTX") == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_CRTL;                         // generate Controller error
             frame.data[1] |= CAN_ERR_CRTL_TX_OVERFLOW;             // generate TX Overflow suberror
         }
-        else if (strcasecmp(argv[i], "WarningRX")  == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "WarningRX")  == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_CRTL;                         // generate Controller error
             frame.data[1] |= CAN_ERR_CRTL_RX_WARNING;              // generate RX Warning suberror
         }
-        else if (strcasecmp(argv[i], "WarningTX")  == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "WarningTX")  == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_CRTL;                         // generate Controller error
             frame.data[1] |= CAN_ERR_CRTL_TX_WARNING;              // generate TX Warning suberror
         }
-        else if (strcasecmp(argv[i], "PassiveRX")  == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "PassiveRX")  == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_CRTL;                         // generate Controller error
             frame.data[1] |= CAN_ERR_CRTL_RX_PASSIVE;              // generate RX Passive suberror
         }
-        else if (strcasecmp(argv[i], "PassiveTX")  == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "PassiveTX")  == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_CRTL;                         // generate Controller error
             frame.data[1] |= CAN_ERR_CRTL_TX_PASSIVE;              // generate TX Passive suberror
         }
-        else if (strcasecmp(argv[i], "Active")     == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "Active")     == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_CRTL;                         // generate Controller error
             frame.data[1] |= CAN_ERR_CRTL_ACTIVE;                  // generate Active suberror
         }
-        else if (strcasecmp(argv[i], "CtrlUnspec") == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "CtrlUnspec") == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_CRTL;                         // generate Controller error
             frame.data[1]  = CAN_ERR_CRTL_UNSPEC;                  // generate Unspec suberror
         }
         // error in CAN protocol (type) / data[2]
-        else if (strcasecmp(argv[i], "SingleBit") == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "SingleBit") == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Type error
             frame.data[2]  = CAN_ERR_PROT_BIT;                     // generate SingleBit suberror
         }
-        else if (strcasecmp(argv[i], "FrameFormat") == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "FrameFormat") == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Type error
             frame.data[2]  = CAN_ERR_PROT_FORM;                    // generate FrameFormat suberror
         }
-        else if (strcasecmp(argv[i], "BitStuffing") == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "BitStuffing") == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Type error
             frame.data[2]  = CAN_ERR_PROT_STUFF;                   // generate BitStuffing suberror
         }
-        else if (strcasecmp(argv[i], "Bit0") == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "Bit0") == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Type error
             frame.data[2]  = CAN_ERR_PROT_BIT0;                  // generate Bit0 suberror
         }
-        else if (strcasecmp(argv[i], "Bit1") == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "Bit1") == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Type error
             frame.data[2]  = CAN_ERR_PROT_BIT1;                    // generate Bit1 suberror
         }
-        else if (strcasecmp(argv[i], "BusOverload") == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "BusOverload") == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Type error
             frame.data[2]  = CAN_ERR_PROT_OVERLOAD;                // generate BusOverload suberror
         }
-        else if (strcasecmp(argv[i], "ActiveAnnouncement") == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "ActiveAnnouncement") == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Type error
             frame.data[2]  = CAN_ERR_PROT_ACTIVE;                  // generate ActiveAnnouncement suberror
         }
-        else if (strcasecmp(argv[i], "TX") == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "TX") == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Type error
             frame.data[2]  = CAN_ERR_PROT_TX;                  // generate TX suberror
         }
-        else if (strcasecmp(argv[i], "ProtUnspec") == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "ProtUnspec") == STR_EQUAL) {
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Type error
             frame.data[2]  = CAN_ERR_PROT_UNSPEC;                  // generate Unspec suberror
         }
         // error in CAN protocol (location) / data[3]
-        else if (strcasecmp(argv[i], "LocUnspec") == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "LocUnspec") == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_UNSPEC;              // generate Unspec suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "SOF")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "SOF")       == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_SOF;                 // generate SOF suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "SOF")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "SOF")       == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_SOF;                 // generate SOF suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "ID28_21")   == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "ID28_21")   == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_ID28_21;             // generate ID28_21 suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "ID20_18")   == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "ID20_18")   == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_ID20_18;             // generate ID20_18 suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "SRTR")      == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "SRTR")      == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_SRTR;                // generate SRTR suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "IDE")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "IDE")       == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_IDE;                 // generate IDE suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "ID17_13")   == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "ID17_13")   == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_ID17_13;             // generate ID17_13 suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "ID12_05")   == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "ID12_05")   == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_ID12_05;                 // generate ID12_05 suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "ID04_00")   == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "ID04_00")   == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_ID04_00;             // generate ID04_00 suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "RTR")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "RTR")       == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_RTR;                 // generate RTR suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "RES1")      == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "RES1")      == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_RES1;                // generate RES1 suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "RES0")      == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "RES0")      == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_RES0;                // generate RES0 suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "DLC")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "DLC")       == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_DLC;                 // generate DLC suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "DATA")      == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "DATA")      == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_DATA;                // generate DATA suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "CRC_SEQ")   == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "CRC_SEQ")   == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_CRC_SEQ;             // generate CRC_SEQ suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "CRC_DEL")   == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "CRC_DEL")   == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_CRC_DEL;             // generate CRC_DEL suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "ACK")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "ACK")       == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_ACK;                 // generate ACK suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "ACK_DEL")   == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "ACK_DEL")   == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_ACK_DEL;             // generate ACK_DEL suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "EOF")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "EOF")       == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_EOF;                 // generate EOF suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "INTERM")    == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "INTERM")    == STR_EQUAL) {
             if (location_processed) show_loc_err_and_exit;
             frame.can_id  |= CAN_ERR_PROT;                         // generate Protocol Location error
             frame.data[3]  = CAN_ERR_PROT_LOC_INTERM;              // generate INTERM suberror
             location_processed = true;
         }
         // error status of CAN transceiver / data[4]
-        else if (strcasecmp(argv[i], "TransUnspec")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "TransUnspec")       == STR_EQUAL) {
             if (transceiver_processed) show_transc_err_and_exit;
             frame.can_id  |= CAN_ERR_TRX;                          // generate Transceiver error
             frame.data[4]  = CAN_ERR_TRX_UNSPEC;                   // generate EOF suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "CanHiNoWire")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "CanHiNoWire")       == STR_EQUAL) {
             if (transceiver_processed) show_transc_err_and_exit;
             frame.can_id  |= CAN_ERR_TRX;                          // generate Transceiver error
             frame.data[4]  = CAN_ERR_TRX_CANH_NO_WIRE;             // generate CanHiNoWire suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "CanHiShortToBAT")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "CanHiShortToBAT")       == STR_EQUAL) {
             if (transceiver_processed) show_transc_err_and_exit;
             frame.can_id  |= CAN_ERR_TRX;                          // generate Transceiver error
             frame.data[4]  = CAN_ERR_TRX_CANH_SHORT_TO_BAT;        // generate CanHiShortToBAT suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "CanHiShortToVCC")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "CanHiShortToVCC")       == STR_EQUAL) {
             if (transceiver_processed) show_transc_err_and_exit;
             frame.can_id  |= CAN_ERR_TRX;                          // generate Transceiver error
             frame.data[4]  = CAN_ERR_TRX_CANH_SHORT_TO_VCC;        // generate CanHiShortToVCC suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "CanHiShortToGND")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "CanHiShortToGND")       == STR_EQUAL) {
             if (transceiver_processed) show_transc_err_and_exit;
             frame.can_id  |= CAN_ERR_TRX;                          // generate Transceiver error
             frame.data[4]  = CAN_ERR_TRX_CANH_SHORT_TO_GND;        // generate CanHiShortToGND suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "CanLoNoWire")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "CanLoNoWire")       == STR_EQUAL) {
             if (transceiver_processed) show_transc_err_and_exit;
             frame.can_id  |= CAN_ERR_TRX;                          // generate Transceiver error
             frame.data[4]  = CAN_ERR_TRX_CANL_NO_WIRE;             // generate CanLoNoWire suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "CanLoShortToBAT")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "CanLoShortToBAT")       == STR_EQUAL) {
             if (transceiver_processed) show_transc_err_and_exit;
             frame.can_id  |= CAN_ERR_TRX;                          // generate Transceiver error
             frame.data[4]  = CAN_ERR_TRX_CANL_SHORT_TO_BAT;        // generate CanLoShortToBAT suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "CanLoShortToVCC")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "CanLoShortToVCC")       == STR_EQUAL) {
             if (transceiver_processed) show_transc_err_and_exit;
             frame.can_id  |= CAN_ERR_TRX;                          // generate Transceiver error
             frame.data[4]  = CAN_ERR_TRX_CANL_SHORT_TO_VCC;        // generate CanLoShortToVCC suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "CanLoShortToGND")       == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "CanLoShortToGND")       == STR_EQUAL) {
             if (transceiver_processed) show_transc_err_and_exit;
             frame.can_id  |= CAN_ERR_TRX;                          // generate Transceiver error
             frame.data[4]  = CAN_ERR_TRX_CANL_SHORT_TO_GND;        // generate CanLoShortToGND suberror
             location_processed = true;
         }
-        else if (strcasecmp(argv[i], "CanLoShortToCanHi")     == STR_EQUAL) { 
+        else if (strcasecmp(argv[i], "CanLoShortToCanHi")     == STR_EQUAL) {
             if (transceiver_processed) show_transc_err_and_exit;
             frame.can_id  |= CAN_ERR_TRX;                          // generate Transceiver error
             frame.data[4]  = CAN_ERR_TRX_CANL_SHORT_TO_CANH;       // generate CanLoShortToCanHi suberror
@@ -461,7 +461,7 @@ int main(int argc, char *argv[]) {
                  (argv[i][11] >= '0' && argv[i][11] <= '9')) { // valid bits are from 00 to 29 (in decimal)
             unsigned char arb_bit_num = (argv[i][10] - '0') * 10 + argv[i][11] - '0'; // convert decimal bitnumber to byte
             argv[i][9] = 0;                                    // terminate string for comparison
-            if (strcasecmp(argv[i], "LostArBit") == STR_EQUAL) { 
+            if (strcasecmp(argv[i], "LostArBit") == STR_EQUAL) {
                 if (arbitration_processed) show_arb_err_and_exit;
                 frame.can_id  |= CAN_ERR_LOSTARB;              // generate LostArbitartionBit error
                 frame.data[0]  = arb_bit_num;                  // bitnumber
@@ -488,9 +488,9 @@ int main(int argc, char *argv[]) {
             if (argv[i][7] >= 'A')                             // convert lower digit hexadecimal char to byte
                 data_byte_value += (argv[i][7] - 'A' + 10);
             else
-                data_byte_value += (argv[i][7] - '0'     ); 
+                data_byte_value += (argv[i][7] - '0'     );
             argv[i][4] = 0;                                    // terminate string for comparison
-            if (strcasecmp(argv[i], "Data") == STR_EQUAL) { 
+            if (strcasecmp(argv[i], "Data") == STR_EQUAL) {
                 if (transceiver_processed) show_transc_err_and_exit;
                 frame.data[data_byte_no] = data_byte_value;    // populate proper data byte
                 arbitration_processed    = true;
@@ -513,13 +513,13 @@ int main(int argc, char *argv[]) {
             if (argv[i][9] >= 'A')                            // convert lower digit hexadecimal char to byte
                 counter_value += (argv[i][9] - 'A' + 10);
             else
-                counter_value += (argv[i][9] - '0'     ); 
+                counter_value += (argv[i][9] - '0'     );
             argv[i][7] = 0;                                   // terminate string for comparison
-            if (strcasecmp(argv[i], "TxCount") == STR_EQUAL) { 
+            if (strcasecmp(argv[i], "TxCount") == STR_EQUAL) {
                 frame.can_id |= CAN_ERR_CNT;                 // generate TxCounter error
                 frame.data[6] = counter_value;               // populate proper data byte
             }
-            else if (strcasecmp(argv[i], "RxCount") == STR_EQUAL) { 
+            else if (strcasecmp(argv[i], "RxCount") == STR_EQUAL) {
                 frame.can_id |= CAN_ERR_CNT;                 // generate RxCounter error
                 frame.data[7] = counter_value;               // populate proper data byte
             }
@@ -541,7 +541,7 @@ int main(int argc, char *argv[]) {
         // printf("frame.can_dlc = %d\n", frame.can_dlc);
         printf("CAN Data = ");
         for (size_t i = 0; i < frame.can_dlc; i++)
-            printf("%02X ", frame.data[i]);        
+            printf("%02X ", frame.data[i]);
         printf("\n");
     }
 
@@ -552,7 +552,7 @@ int main(int argc, char *argv[]) {
     // set interface name
     strcpy(ifr.ifr_name, can_interface_name); // can0, vcan0...
     if (ioctl(sock, SIOCGIFINDEX, &ifr) < 0) {
-        sprintf(tmp_str, "Error setting CAN interface name %s", can_interface_name);        
+        sprintf(tmp_str, "Error setting CAN interface name %s", can_interface_name);
         err_exit(tmp_str);
     }
 
