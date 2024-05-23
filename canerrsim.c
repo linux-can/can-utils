@@ -126,7 +126,7 @@ void show_help_and_exit()
 
 void err_exit(const char *msg)
 {
-	printf(msg);
+	printf("%s", msg);
 	exit(EXIT_FAILURE);
 }
 
