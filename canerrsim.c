@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_can addr;
 	struct ifreq ifr;
 	struct can_frame frame;
-	bool show_bits, location_processed, transceiver_processed, arbitration_processed = false;
+	bool show_bits = false, location_processed = false, transceiver_processed = false, arbitration_processed = false;
 	char tmp_str[256];
 
 	printf("CAN Sockets Error Messages Simulator\n");
