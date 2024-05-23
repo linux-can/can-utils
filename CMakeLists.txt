@@ -69,6 +69,7 @@ set(PROGRAMS_ISOBUSFS
 
 set(PROGRAMS
   ${PROGRAMS_CANLIB}
+  canerrsim
   canfdtest
   cangw
   cansniffer
