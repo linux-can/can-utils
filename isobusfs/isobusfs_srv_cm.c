@@ -574,10 +574,15 @@ static int isobusfs_srv_volume_status_resp(struct isobusfs_srv_priv *priv,
 	ret = isobusfs_srv_process_volume_status_request(priv, msg, &resp);
 	resp.error_code = ret;
 
-	buf_size = sizeof(resp);
+	buf_size = sizeof(resp) - sizeof(resp.name) + le16toh(resp.name_len);
 	if (buf_size < ISOBUSFS_MIN_TRANSFER_LENGH) {
+		/* Fill the rest of the buffer with 0xFF. We need to fill
+		 * only buffers under 8 bytes. Padding for ETP/TP is done
+		 * by the kernel.
+		 */
+		memset(((uint8_t *) &resp) + buf_size, 0xFF,
+			ISOBUSFS_MIN_TRANSFER_LENGH - buf_size);
 		buf_size = ISOBUSFS_MIN_TRANSFER_LENGH;
-		memset(((uint8_t *) &resp) + sizeof(resp), 0xFF, buf_size - sizeof(resp));
 	} else if (buf_size > ISOBUSFS_MAX_TRANSFER_LENGH) {
 		pr_warn("volume status response too long");
 		resp.error_code = ISOBUSFS_ERR_OUT_OF_MEM;
