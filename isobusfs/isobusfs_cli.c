@@ -288,8 +288,8 @@ static int isobusfs_cli_handle_events(struct isobusfs_priv *priv, unsigned int n
 				};
 
 				ret = isobusfs_recv_err(priv->sock_ccm, &emsg);
-				if (ret && ret != -EINTR)
-					return ret;
+				if (ret)
+					pr_warn("error queue reported error: %i", ret);
 			}
 		} else if (ev->data.fd == STDIN_FILENO) {
 			if (!priv->interactive) {
