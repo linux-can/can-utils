@@ -221,8 +221,8 @@ static int isobusfs_srv_handle_events(struct isobusfs_srv_priv *priv, unsigned i
 				};
 
 				ret = isobusfs_recv_err(priv->sock_fss, &emsg);
-				if (ret && ret != -EINTR)
-					return ret;
+				if (ret)
+					pr_warn("error queue reported error: %i", ret);
 			}
 		}
 
