@@ -464,15 +464,17 @@ static int isobusfs_srv_process_volume_status_request(struct isobusfs_srv_priv *
 	struct isobusfs_cm_vol_stat_req *req =
 		(struct isobusfs_cm_vol_stat_req *)msg->buf;
 	char isobusfs_volume_path[ISOBUSFS_MAX_VOLUME_NAME_LENGTH];
+	size_t path_len, req_name_len, resp_name_len;
 	char linux_path[ISOBUSFS_SRV_MAX_PATH_LEN];
 	struct isobusfs_srv_volume *volume = NULL;
 	struct isobusfs_srv_client *client;
 	const char *path;
-	size_t path_len;
 	int ret, i;
 
+	req_name_len = le16toh(req->name_len);
+
 	pr_debug("< rx volume status request. mode: %x, length: %d, name: %s",
-		 req->volume_mode, req->name_len, req->name);
+		 req->volume_mode, req_name_len, req->name);
 
 	client = isobusfs_srv_get_client_by_msg(priv, msg);
 	if (!client) {
@@ -480,12 +482,12 @@ static int isobusfs_srv_process_volume_status_request(struct isobusfs_srv_priv *
 		return ISOBUSFS_ERR_OTHER;
 	}
 
-	if (req->name_len == 0) {
+	if (req_name_len == 0) {
 		path = client->current_dir;
 		path_len = sizeof(client->current_dir);
 	} else {
 		path = req->name;
-		path_len = req->name_len;
+		path_len = req_name_len;
 	}
 
 	ret = isobusfs_extract_volume_name(path, path_len, isobusfs_volume_path,
@@ -495,11 +497,12 @@ static int isobusfs_srv_process_volume_status_request(struct isobusfs_srv_priv *
 		return ISOBUSFS_ERR_OTHER;
 	}
 
-	resp->name_len = strlen(isobusfs_volume_path);
+	resp_name_len = strlen(isobusfs_volume_path);
+	resp->name_len = htole16(resp_name_len);
 	/* the isobusfs_volume_path is already null terminated
 	 * by isobusfs_extract_volume_name()
 	 */
-	memcpy(resp->name, isobusfs_volume_path, resp->name_len + 1);
+	memcpy(resp->name, isobusfs_volume_path, resp_name_len + 1);
 
 	ret = isobusfs_path_to_linux_path(priv, isobusfs_volume_path,
 					  sizeof(isobusfs_volume_path),
@@ -530,7 +533,7 @@ static int isobusfs_srv_process_volume_status_request(struct isobusfs_srv_priv *
 
 	if (req->volume_mode & ISOBUSFS_VOL_MODE_PREP_TO_REMOVE) {
 		if (!volume->removable ||
-		    (req->name_len == 0 &&
+		    (req_name_len == 0 &&
 		     0 /* Current directory is not set condition */)) {
 			/* Volume is not removable, or the Path Name Length of
 			 * request is zero and the current directory is not set
