@@ -62,3 +62,5 @@ GNUmakefile.in
 
 /can-utils-*.tar.bz2
 /can-utils-*.tar.gz
+
+tags
