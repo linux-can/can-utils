@@ -31,71 +31,71 @@ include_directories (./include)
 check_function_exists(fork HAVE_FORK)
 
 set(PROGRAMS_CANLIB
-    asc2log
-    canbusload
-    candump
-    cangen
-    canplayer
-    cansend
-    cansequence
-    log2asc
-    log2long
-    slcanpty
+  asc2log
+  canbusload
+  candump
+  cangen
+  canplayer
+  cansend
+  cansequence
+  log2asc
+  log2long
+  slcanpty
 )
 
 if(HAVE_FORK)
-    list(APPEND PROGRAMS_CANLIB canlogserver)
+  list(APPEND PROGRAMS_CANLIB canlogserver)
 endif()
 
 set(PROGRAMS_J1939
-    j1939acd
-    j1939cat
-    j1939spy
-    j1939sr
-    testj1939
+  j1939acd
+  j1939cat
+  j1939spy
+  j1939sr
+  testj1939
 )
 
 set(PROGRAMS_ISOBUSFS
-    isobusfs-srv
-    isobusfs-cli
+  isobusfs-srv
+  isobusfs-cli
 )
 
 set(PROGRAMS
-    ${PROGRAMS_CANLIB}
-    canfdtest
-    cangw
-    cansniffer
-    isotpdump
-    isotpperf
-    isotprecv
-    isotpsend
-    isotpsniffer
-    isotptun
-    slcan_attach
-    slcand
+  ${PROGRAMS_CANLIB}
+  canfdtest
+  cangw
+  cansniffer
+  isotpdump
+  isotpperf
+  isotprecv
+  isotpsend
+  isotpsniffer
+  isotptun
+  slcan_attach
+  slcand
 )
 
 if(HAVE_FORK)
-    list(APPEND PROGRAMS bcmserver)
-    list(APPEND PROGRAMS isotpserver)
+  list(APPEND PROGRAMS bcmserver)
+  list(APPEND PROGRAMS isotpserver)
 endif()
 
 add_executable(can-calc-bit-timing
-    calc-bit-timing/can-calc-bit-timing.c
+  calc-bit-timing/can-calc-bit-timing.c
 )
 
 add_executable(mcp251xfd-dump
-    mcp251xfd/mcp251xfd-dev-coredump.c
-    mcp251xfd/mcp251xfd-dump.c
-    mcp251xfd/mcp251xfd-main.c
-    mcp251xfd/mcp251xfd-regmap.c
+  mcp251xfd/mcp251xfd-dev-coredump.c
+  mcp251xfd/mcp251xfd-dump.c
+  mcp251xfd/mcp251xfd-main.c
+  mcp251xfd/mcp251xfd-regmap.c
 )
 
 if(NOT ANDROID)
   list(APPEND PROGRAMS ${PROGRAMS_J1939})
 
   add_library(j1939 STATIC
-      libj1939.c
+    libj1939.c
   )
 
   add_library(isobusfs SHARED
@@ -127,8 +127,7 @@ if(NOT ANDROID)
   )
 
   target_link_libraries(isobusfs-cli
-    PRIVATE isobusfs
-    PRIVATE can
+    PRIVATE isobusfs can
   )
 
   add_executable(isobusfs-srv
@@ -142,8 +141,7 @@ if(NOT ANDROID)
   )
 
   target_link_libraries(isobusfs-srv
-    PRIVATE isobusfs
-    PRIVATE can
+    PRIVATE isobusfs can
   )
 
   install(TARGETS
@@ -153,8 +151,8 @@ if(NOT ANDROID)
 endif()
 
 add_library(can STATIC
-    lib.c
-    canframelen.c
+  lib.c
+  canframelen.c
 )
 
 foreach(name ${PROGRAMS})
@@ -162,17 +160,24 @@ foreach(name ${PROGRAMS})
 
   if("${name}" IN_LIST PROGRAMS_J1939)
     target_link_libraries(${name}
-        PRIVATE j1939
+      PRIVATE j1939
     )
   elseif("${name}" IN_LIST PROGRAMS_CANLIB)
     target_link_libraries(${name}
-        PRIVATE can
+      PRIVATE can
     )
   endif()
 
   install(TARGETS ${name} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endforeach()
 
-install(TARGETS can-calc-bit-timing mcp251xfd-dump DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS
+  can-calc-bit-timing
+  mcp251xfd-dump
+  DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
 
-ADD_CUSTOM_TARGET(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_SOURCE_DIR}/cmake/make_uninstall.cmake")
+add_custom_target(uninstall
+  "${CMAKE_COMMAND}" -P "${CMAKE_SOURCE_DIR}/cmake/make_uninstall.cmake"
+  COMMENT "Add uninstall target"
+)
