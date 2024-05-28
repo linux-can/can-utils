@@ -155,10 +155,13 @@ int main(void)
 	char format[FORMATSZ];
 	char rxmsg[50];
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wgnu-variable-sized-type-not-at-end"
 	struct {
 		struct bcm_msg_head msg_head;
 		struct can_frame frame;
 	} msg;
+#pragma GCC diagnostic pop
 
 	if (snprintf(format, FORMATSZ, "< %%%ds %%c %%lu %%lu %%x %%hhu "
 		     "%%hhx %%hhx %%hhx %%hhx %%hhx %%hhx "
@@ -194,7 +197,7 @@ int main(void)
 		exit(1);
 	}
 
-	while (1) { 
+	while (1) {
 		sa = accept(sl,(struct sockaddr *)&clientaddr, &sin_size);
 		if (sa > 0 ){
 			if (!fork())
@@ -295,7 +298,7 @@ int main(void)
 
 			items = sscanf(buf, format,
 				       ifr.ifr_name,
-				       &cmd, 
+				       &cmd,
 				       &msg.msg_head.ival2.tv_sec,
 				       &msg.msg_head.ival2.tv_usec,
 				       &msg.msg_head.can_id,
