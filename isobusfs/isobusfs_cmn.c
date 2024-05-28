@@ -101,7 +101,7 @@ void isobusfs_log(log_level_t level, const char *fmt, ...)
 	va_end(args);
 
 	snprintf(complete_log_entry, sizeof(complete_log_entry),
-		 "[%s] [%s]: %s", time_buffer, level_str, log_entry);
+		 "[%.40s] [%.10s]: %.150s", time_buffer, level_str, log_entry);
 
 	if (interactive_mode) {
 		add_log_to_buffer(complete_log_entry);
