@@ -12,6 +12,13 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
+# Add an option to enable treating warnings as errors
+option(ENABLE_WERROR "Treat all compiler warnings as errors" OFF)
+
+if(ENABLE_WERROR)
+  add_compile_options(-Werror)
+endif()
+
 add_definitions(-D_GNU_SOURCE)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wno-parentheses")
