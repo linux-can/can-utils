@@ -258,9 +258,9 @@ static void isobusfs_print_timestamp(struct isobusfs_err_msg *emsg,
 	if (!(cur->tv_sec | cur->tv_nsec))
 		return;
 
-	fprintf(stderr, "  %s: %lu s %lu us (seq=%u/%u, send=%u)",
-			name, cur->tv_sec, cur->tv_nsec / 1000,
-			stats->tskey_sch, stats->tskey_ack, stats->send);
+	fprintf(stderr, "  %s: %llu s %llu us (seq=%u/%u, send=%u)",
+		name, (unsigned long long)cur->tv_sec, (unsigned long long)cur->tv_nsec / 1000,
+		stats->tskey_sch, stats->tskey_ack, stats->send);
 
 	fprintf(stderr, "\n");
 }

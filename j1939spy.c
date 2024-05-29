@@ -99,7 +99,7 @@ int main(int argc, char **argv)
 	int filter = 0;
 	uint8_t priority, dst_addr;
 	uint64_t dst_name;
-	long recvflags;
+	uint64_t recvflags;
 
 	/* argument parsing */
 	while ((opt = getopt_long(argc, argv, optstring, long_opts, NULL)) != -1)
@@ -230,11 +230,11 @@ int main(int argc, char **argv)
 			case SOL_SOCKET:
 				if (cmsg->cmsg_type == SCM_TIMESTAMP) {
 					memcpy(&tdut, CMSG_DATA(cmsg), sizeof(tdut));
-					recvflags |= 1 << cmsg->cmsg_type;
+					recvflags |= 1ULL << cmsg->cmsg_type;
 				}
 				break;
 			case SOL_CAN_J1939:
-				recvflags |= 1 << cmsg->cmsg_type;
+				recvflags |= 1ULL << cmsg->cmsg_type;
 				if (cmsg->cmsg_type == SCM_J1939_DEST_ADDR)
 					dst_addr = *CMSG_DATA(cmsg);
 				else if (cmsg->cmsg_type == SCM_J1939_DEST_NAME)
@@ -245,7 +245,7 @@ int main(int argc, char **argv)
 			}
 
 		}
-		if (recvflags & (1 << SCM_TIMESTAMP)) {
+		if (recvflags & (1ULL << SCM_TIMESTAMP)) {
 			if ('z' == s.time) {
 				if (!tref.tv_sec)
 					tref = tdut;
@@ -270,9 +270,9 @@ abs_time:
 			}
 		}
 		printf(" %s ", libj1939_addr2str(&src));
-		if (recvflags & (1 << SCM_J1939_DEST_NAME))
+		if (recvflags & (1ULL << SCM_J1939_DEST_NAME))
 			printf("%016llx ", (unsigned long long)dst_name);
-		else if (recvflags & (1 << SCM_J1939_DEST_ADDR))
+		else if (recvflags & (1ULL << SCM_J1939_DEST_ADDR))
 			printf("%02x ", dst_addr);
 		else
 			printf("- ");
