@@ -63,6 +63,10 @@ CPPFLAGS += \
 PROGRAMS_CANGW := \
 	cangw
 
+PROGRAMS_J1939_TIMEDATE := \
+	j1939-timedate-srv \
+	j1939-timedate-cli
+
 PROGRAMS_ISOBUSFS := \
 	isobusfs-srv \
 	isobusfs-cli
@@ -93,6 +97,7 @@ PROGRAMS_SLCAN := \
 
 PROGRAMS := \
 	$(PROGRAMS_CANGW) \
+	$(PROGRAMS_J1939_TIMEDATE) \
 	$(PROGRAMS_ISOBUSFS) \
 	$(PROGRAMS_ISOTP) \
 	$(PROGRAMS_J1939) \
@@ -121,7 +126,7 @@ endif
 all: $(PROGRAMS)
 
 clean:
-	rm -f $(PROGRAMS) *.o mcp251xfd/*.o isobusfs/*.o
+	rm -f $(PROGRAMS) *.o mcp251xfd/*.o isobusfs/*.o j1939_timedate/*.o
 
 install:
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
@@ -139,13 +144,15 @@ cansend.o:	lib.h
 log2asc.o:	lib.h
 log2long.o:	lib.h
 slcanpty.o:	lib.h
-j1939acd.o:	libj1939.h
-j1939cat.o:	libj1939.h
-j1939spy.o:	libj1939.h
-j1939sr.o:	libj1939.h
-testj1939.o:	libj1939.h
-isobusfs_srv.o:	lib.h
-isobusfs_c.o:	lib.h
+j1939acd.o:	lib.h libj1939.h
+j1939cat.o:	lib.h libj1939.h
+j1939spy.o:	lib.h libj1939.h
+j1939sr.o:	lib.h libj1939.h
+testj1939.o:	lib.h libj1939.h
+isobusfs_srv.o:	lib.h libj1939.h
+isobusfs_c.o:	lib.h libj1939.h
+j1939_timedate_srv.o: lib.h libj1939.h
+j1939_timedate_cli.o: lib.h libj1939.h
 canframelen.o:  canframelen.h
 
 asc2log:	asc2log.o	lib.o
@@ -159,13 +166,24 @@ cansequence:	cansequence.o	lib.o
 log2asc:	log2asc.o	lib.o
 log2long:	log2long.o	lib.o
 slcanpty:	slcanpty.o	lib.o
-j1939acd:	j1939acd.o	libj1939.o
-j1939cat:	j1939cat.o	libj1939.o
-j1939spy:	j1939spy.o	libj1939.o
-j1939sr:	j1939sr.o	libj1939.o
-testj1939:	testj1939.o	libj1939.o
+j1939acd:	j1939acd.o	lib.o libj1939.o
+j1939cat:	j1939cat.o	lib.o libj1939.o
+j1939spy:	j1939spy.o	lib.o libj1939.o
+j1939sr:	j1939sr.o	lib.o libj1939.o
+testj1939:	testj1939.o	lib.o libj1939.o
+
+j1939-timedate-srv:	lib.o \
+			libj1939.o \
+			j1939_timedate/j1939_timedate_srv.o
+		$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+j1939-timedate-cli:	lib.o \
+			libj1939.o \
+			j1939_timedate/j1939_timedate_cli.o
+		$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 isobusfs-srv:	lib.o \
+		libj1939.o \
 		isobusfs/isobusfs_cmn.o \
 		isobusfs/isobusfs_srv.o \
 		isobusfs/isobusfs_srv_cm.o \
@@ -178,6 +196,7 @@ isobusfs-srv:	lib.o \
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 isobusfs-cli:	lib.o \
+		libj1939.o \
 		isobusfs/isobusfs_cmn.o \
 		isobusfs/isobusfs_cli.o \
 		isobusfs/isobusfs_cli_cm.o \
