@@ -62,6 +62,11 @@ set(PROGRAMS_J1939
   testj1939
 )
 
+set(PROGRAMS_J1939_TIMEDATE
+  j1939-timedate-srv
+  j1939-timedate-cli
+)
+
 set(PROGRAMS_ISOBUSFS
   isobusfs-srv
   isobusfs-cli
@@ -105,6 +110,10 @@ if(NOT ANDROID)
     libj1939.c
   )
 
+  target_link_libraries(j1939
+    PRIVATE can
+  )
+
   add_library(isobusfs SHARED
     isobusfs/isobusfs_cmn.c
     isobusfs/isobusfs_cmn_dh.c
@@ -134,7 +143,7 @@ if(NOT ANDROID)
   )
 
   target_link_libraries(isobusfs-cli
-    PRIVATE isobusfs can
+    PRIVATE isobusfs can j1939
   )
 
   add_executable(isobusfs-srv
@@ -148,13 +157,39 @@ if(NOT ANDROID)
   )
 
   target_link_libraries(isobusfs-srv
-    PRIVATE isobusfs can
+    PRIVATE isobusfs can j1939
   )
 
   install(TARGETS
     isobusfs-cli
     isobusfs-srv
     DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+  set(PUBLIC_HEADER_j1939_TIMEDATE
+    j1939_timedate/j1939_timedate_cmn.h
+  )
+
+  add_executable(j1939-timedate-cli
+    j1939_timedate/j1939_timedate_cli.c
+  )
+
+  target_link_libraries(j1939-timedate-cli
+    PRIVATE can j1939
+  )
+
+  add_executable(j1939-timedate-srv
+    j1939_timedate/j1939_timedate_srv.c
+  )
+
+  target_link_libraries(j1939-timedate-srv
+    PRIVATE can j1939
+  )
+
+  install(TARGETS
+    j1939-timedate-cli
+    j1939-timedate-srv
+    DESTINATION ${CMAKE_INSTALL_BINDIR})
+
 endif()
 
 add_library(can STATIC
@@ -167,7 +202,7 @@ foreach(name ${PROGRAMS})
 
   if("${name}" IN_LIST PROGRAMS_J1939)
     target_link_libraries(${name}
-      PRIVATE j1939
+      PRIVATE j1939 can
     )
   elseif("${name}" IN_LIST PROGRAMS_CANLIB)
     target_link_libraries(${name}

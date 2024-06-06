@@ -250,7 +250,7 @@ static int isobusfs_srv_process_events_and_tasks(struct isobusfs_srv_priv *priv)
 {
 	int ret, nfds;
 
-	ret = isobusfs_cmn_prepare_for_events(&priv->cmn, &nfds, false);
+	ret = libj1939_prepare_for_events(&priv->cmn, &nfds, false);
 	if (ret)
 		return ret;
 
@@ -268,7 +268,7 @@ static int isobusfs_srv_sock_fss_prepare(struct isobusfs_srv_priv *priv)
 	struct sockaddr_can addr = priv->addr;
 	int ret;
 
-	ret = isobusfs_cmn_open_socket();
+	ret = libj1939_open_socket();
 	if (ret < 0)
 		return ret;
 
@@ -283,11 +283,11 @@ static int isobusfs_srv_sock_fss_prepare(struct isobusfs_srv_priv *priv)
 	 * PGN?
 	 */
 	addr.can_addr.j1939.pgn = ISOBUSFS_PGN_CL_TO_FS;
-	ret = isobusfs_cmn_bind_socket(priv->sock_fss, &addr);
+	ret = libj1939_bind_socket(priv->sock_fss, &addr);
 	if (ret < 0)
 		return ret;
 
-	ret = isobusfs_cmn_set_broadcast(priv->sock_fss);
+	ret = libj1939_set_broadcast(priv->sock_fss);
 	if (ret < 0)
 		return ret;
 
@@ -295,7 +295,7 @@ static int isobusfs_srv_sock_fss_prepare(struct isobusfs_srv_priv *priv)
 	if (ret < 0)
 		return ret;
 
-	ret = isobusfs_cmn_socket_prio(priv->sock_fss, ISOBUSFS_PRIO_FSS);
+	ret = libj1939_socket_prio(priv->sock_fss, ISOBUSFS_PRIO_FSS);
 	if (ret < 0)
 		return ret;
 
@@ -308,7 +308,7 @@ static int isobusfs_srv_sock_fss_prepare(struct isobusfs_srv_priv *priv)
 		return ret;
 
 	/* poll for errors to get confirmation if our packets are send */
-	return isobusfs_cmn_add_socket_to_epoll(priv->cmn.epoll_fd, priv->sock_fss,
+	return libj1939_add_socket_to_epoll(priv->cmn.epoll_fd, priv->sock_fss,
 						EPOLLERR);
 }
 
@@ -317,7 +317,7 @@ static int isobusfs_srv_sock_in_prepare(struct isobusfs_srv_priv *priv)
 	struct sockaddr_can addr = priv->addr;
 	int ret;
 
-	ret = isobusfs_cmn_open_socket();
+	ret = libj1939_open_socket();
 	if (ret < 0)
 		return ret;
 
@@ -325,12 +325,12 @@ static int isobusfs_srv_sock_in_prepare(struct isobusfs_srv_priv *priv)
 
 	/* keep address and name and overwrite PGN */
 	addr.can_addr.j1939.pgn = ISOBUSFS_PGN_CL_TO_FS;
-	ret = isobusfs_cmn_bind_socket(priv->sock_in, &addr);
+	ret = libj1939_bind_socket(priv->sock_in, &addr);
 	if (ret < 0)
 		return ret;
 
-	return isobusfs_cmn_add_socket_to_epoll(priv->cmn.epoll_fd, priv->sock_in,
-						EPOLLIN);
+	return libj1939_add_socket_to_epoll(priv->cmn.epoll_fd, priv->sock_in,
+					    EPOLLIN);
 }
 
 static int isobusfs_srv_sock_nack_prepare(struct isobusfs_srv_priv *priv)
@@ -338,24 +338,24 @@ static int isobusfs_srv_sock_nack_prepare(struct isobusfs_srv_priv *priv)
 	struct sockaddr_can addr = priv->addr;
 	int ret;
 
-	ret = isobusfs_cmn_open_socket();
+	ret = libj1939_open_socket();
 	if (ret < 0)
 		return ret;
 
 	priv->sock_nack = ret;
 
 	addr.can_addr.j1939.pgn = ISOBUS_PGN_ACK;
-	ret = isobusfs_cmn_bind_socket(priv->sock_nack, &addr);
+	ret = libj1939_bind_socket(priv->sock_nack, &addr);
 	if (ret < 0)
 		return ret;
 
-	ret = isobusfs_cmn_socket_prio(priv->sock_nack, ISOBUSFS_PRIO_ACK);
+	ret = libj1939_socket_prio(priv->sock_nack, ISOBUSFS_PRIO_ACK);
 	if (ret < 0)
 		return ret;
 
 	/* poll for errors to get confirmation if our packets are send */
-	return isobusfs_cmn_add_socket_to_epoll(priv->cmn.epoll_fd,
-						priv->sock_nack, EPOLLIN);
+	return libj1939_add_socket_to_epoll(priv->cmn.epoll_fd,
+					    priv->sock_nack, EPOLLIN);
 }
 
 /**
@@ -370,7 +370,7 @@ static int isobusfs_srv_sock_prepare(struct isobusfs_srv_priv *priv)
 {
 	int ret;
 
-	ret = isobusfs_cmn_create_epoll();
+	ret = libj1939_create_epoll();
 	if (ret < 0)
 		return ret;
 
@@ -762,7 +762,7 @@ int main(int argc, char *argv[])
 	memset(priv, 0, sizeof(*priv));
 
 	/* Initialize sockaddr_can with a non-configurable PGN */
-	isobusfs_init_sockaddr_can(&priv->addr, J1939_NO_PGN);
+	libj1939_init_sockaddr_can(&priv->addr, J1939_NO_PGN);
 
 	priv->server_version = ISOBUSFS_SRV_VERSION;
 	/* Parse command line arguments */

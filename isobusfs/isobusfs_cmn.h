@@ -257,15 +257,6 @@ struct isobusfs_err_msg {
 	struct isobusfs_stats *stats;
 };
 
-struct isobusfs_cmn {
-	int epoll_fd;
-	struct epoll_event *epoll_events;
-	size_t epoll_events_size;
-	struct timespec next_send_time;
-	struct timespec last_time;
-};
-
-void isobusfs_init_sockaddr_can(struct sockaddr_can *sac, uint32_t pgn);
 int isobusfs_recv_err(int sock, struct isobusfs_err_msg *emsg);
 
 /*
@@ -300,7 +291,6 @@ static inline uint8_t isobusfs_cg_function_to_buf(enum isobusfs_cg cg,
 const char *isobusfs_error_to_str(enum isobusfs_error err);
 enum isobusfs_error linux_error_to_isobusfs_error(int linux_err);
 
-int isobusfs_get_timeout_ms(struct timespec *ts);
 void isobusfs_send_nack(int sock, struct isobusfs_msg *msg);
 void isobufs_store_tx_data(struct isobusfs_buf_log *buffer, uint8_t *data);
 void isobusfs_dump_tx_data(const struct isobusfs_buf_log *buffer);
@@ -313,19 +303,10 @@ int isobusfs_send(int sock, const void *data, size_t len,
 void isobusfs_cmn_dump_last_x_bytes(const uint8_t *buffer, size_t buffer_size,
 				    size_t x);
 
-int isobusfs_cmn_open_socket(void);
 int isobusfs_cmn_configure_socket_filter(int sock, pgn_t pgn);
 int isobusfs_cmn_configure_error_queue(int sock);
-int isobusfs_cmn_bind_socket(int sock, struct sockaddr_can *addr);
 int isobusfs_cmn_connect_socket(int sock, struct sockaddr_can *addr);
-int isobusfs_cmn_set_broadcast(int sock);
-int isobusfs_cmn_add_socket_to_epoll(int epoll_fd, int sock, uint32_t events);
-int isobusfs_cmn_create_epoll(void);
-int isobusfs_cmn_socket_prio(int sock, int prio);
 int isobusfs_cmn_set_linger(int sock);
-
-int isobusfs_cmn_prepare_for_events(struct isobusfs_cmn *cmn, int *nfds,
-				    bool dont_wait);
 
 /* ============ directory handling ============ */
 int isobusfs_cmn_dh_validate_dir_path(const char *path, bool writable);

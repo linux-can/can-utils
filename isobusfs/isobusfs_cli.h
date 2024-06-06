@@ -103,7 +103,7 @@ struct isobusfs_priv {
 	struct isobusfs_buf_log tx_buf_log;
 	enum isobusfs_cli_state state;
 
-	struct isobusfs_cmn cmn;
+	struct libj1939_cmn cmn;
 	uint8_t handle;
 
 	uint32_t read_offset;

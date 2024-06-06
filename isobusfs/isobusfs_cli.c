@@ -336,7 +336,7 @@ int isobusfs_cli_process_events_and_tasks(struct isobusfs_priv *priv)
 	if (priv->state == ISOBUSFS_CLI_STATE_SELFTEST)
 		dont_wait = true;
 
-	ret = isobusfs_cmn_prepare_for_events(&priv->cmn, &nfds, dont_wait);
+	ret = libj1939_prepare_for_events(&priv->cmn, &nfds, dont_wait);
 	if (ret)
 		return ret;
 
@@ -354,7 +354,7 @@ static int isobusfs_cli_sock_main_prepare(struct isobusfs_priv *priv)
 	struct sockaddr_can addr = priv->sockname;
 	int ret;
 
-	ret = isobusfs_cmn_open_socket();
+	ret = libj1939_open_socket();
 	if (ret < 0)
 		return ret;
 
@@ -362,7 +362,7 @@ static int isobusfs_cli_sock_main_prepare(struct isobusfs_priv *priv)
 
 	/* TODO: this is TX only socket */
 	addr.can_addr.j1939.pgn = ISOBUSFS_PGN_FS_TO_CL;
-	ret = isobusfs_cmn_bind_socket(priv->sock_main, &addr);
+	ret = libj1939_bind_socket(priv->sock_main, &addr);
 	if (ret < 0)
 		return ret;
 
@@ -370,7 +370,7 @@ static int isobusfs_cli_sock_main_prepare(struct isobusfs_priv *priv)
 	if (ret < 0)
 		return ret;
 
-	ret = isobusfs_cmn_socket_prio(priv->sock_main, ISOBUSFS_PRIO_DEFAULT);
+	ret = libj1939_socket_prio(priv->sock_main, ISOBUSFS_PRIO_DEFAULT);
 	if (ret < 0)
 		return ret;
 
@@ -378,7 +378,7 @@ static int isobusfs_cli_sock_main_prepare(struct isobusfs_priv *priv)
 	if (ret < 0)
 		return ret;
 
-	return isobusfs_cmn_add_socket_to_epoll(priv->cmn.epoll_fd,
+	return libj1939_add_socket_to_epoll(priv->cmn.epoll_fd,
 						priv->sock_main, EPOLLIN);
 }
 
@@ -398,7 +398,7 @@ static int isobusfs_cli_sock_int_prepare(struct isobusfs_priv *priv)
 	if (ret < 0)
 		return ret;
 
-	return isobusfs_cmn_add_socket_to_epoll(priv->cmn.epoll_fd,
+	return libj1939_add_socket_to_epoll(priv->cmn.epoll_fd,
 						STDIN_FILENO, EPOLLIN);
 }
 
@@ -407,7 +407,7 @@ static int isobusfs_cli_sock_ccm_prepare(struct isobusfs_priv *priv)
 	struct sockaddr_can addr = priv->sockname;
 	int ret;
 
-	ret = isobusfs_cmn_open_socket();
+	ret = libj1939_open_socket();
 	if (ret < 0)
 		return ret;
 
@@ -419,7 +419,7 @@ static int isobusfs_cli_sock_ccm_prepare(struct isobusfs_priv *priv)
 
 	/* TODO: this is TX only socket */
 	addr.can_addr.j1939.pgn = J1939_NO_PGN;
-	ret = isobusfs_cmn_bind_socket(priv->sock_ccm, &addr);
+	ret = libj1939_bind_socket(priv->sock_ccm, &addr);
 	if (ret < 0)
 		return ret;
 
@@ -427,7 +427,7 @@ static int isobusfs_cli_sock_ccm_prepare(struct isobusfs_priv *priv)
 	if (ret < 0)
 		return ret;
 
-	ret = isobusfs_cmn_socket_prio(priv->sock_ccm, ISOBUSFS_PRIO_DEFAULT);
+	ret = libj1939_socket_prio(priv->sock_ccm, ISOBUSFS_PRIO_DEFAULT);
 	if (ret < 0)
 		return ret;
 
@@ -436,7 +436,7 @@ static int isobusfs_cli_sock_ccm_prepare(struct isobusfs_priv *priv)
 		return ret;
 
 	/* poll for errors to get confirmation if our packets are send */
-	return isobusfs_cmn_add_socket_to_epoll(priv->cmn.epoll_fd, priv->sock_ccm,
+	return libj1939_add_socket_to_epoll(priv->cmn.epoll_fd, priv->sock_ccm,
 						EPOLLERR);
 }
 
@@ -445,23 +445,23 @@ static int isobusfs_cli_sock_nack_prepare(struct isobusfs_priv *priv)
 	struct sockaddr_can addr = priv->sockname;
 	int ret;
 
-	ret = isobusfs_cmn_open_socket();
+	ret = libj1939_open_socket();
 	if (ret < 0)
 		return ret;
 
 	priv->sock_nack = ret;
 
 	addr.can_addr.j1939.pgn = ISOBUS_PGN_ACK;
-	ret = isobusfs_cmn_bind_socket(priv->sock_nack, &addr);
+	ret = libj1939_bind_socket(priv->sock_nack, &addr);
 	if (ret < 0)
 		return ret;
 
-	ret = isobusfs_cmn_socket_prio(priv->sock_nack, ISOBUSFS_PRIO_ACK);
+	ret = libj1939_socket_prio(priv->sock_nack, ISOBUSFS_PRIO_ACK);
 	if (ret < 0)
 		return ret;
 
 	/* poll for errors to get confirmation if our packets are send */
-	return isobusfs_cmn_add_socket_to_epoll(priv->cmn.epoll_fd,
+	return libj1939_add_socket_to_epoll(priv->cmn.epoll_fd,
 						priv->sock_nack, EPOLLIN);
 }
 
@@ -471,7 +471,7 @@ static int isobusfs_cli_sock_bcast_prepare(struct isobusfs_priv *priv)
 	struct sockaddr_can addr = priv->sockname;
 	int ret;
 
-	ret = isobusfs_cmn_open_socket();
+	ret = libj1939_open_socket();
 	if (ret < 0)
 		return ret;
 
@@ -481,11 +481,11 @@ static int isobusfs_cli_sock_bcast_prepare(struct isobusfs_priv *priv)
 	addr.can_addr.j1939.name = J1939_NO_NAME;
 	addr.can_addr.j1939.addr = J1939_NO_ADDR;
 	addr.can_addr.j1939.pgn = ISOBUSFS_PGN_FS_TO_CL;
-	ret = isobusfs_cmn_bind_socket(priv->sock_bcast_rx, &addr);
+	ret = libj1939_bind_socket(priv->sock_bcast_rx, &addr);
 	if (ret < 0)
 		return ret;
 
-	ret = isobusfs_cmn_set_broadcast(priv->sock_bcast_rx);
+	ret = libj1939_set_broadcast(priv->sock_bcast_rx);
 	if (ret < 0)
 		return ret;
 
@@ -493,7 +493,7 @@ static int isobusfs_cli_sock_bcast_prepare(struct isobusfs_priv *priv)
 	if (ret < 0)
 		return ret;
 
-	return isobusfs_cmn_add_socket_to_epoll(priv->cmn.epoll_fd, priv->sock_bcast_rx,
+	return libj1939_add_socket_to_epoll(priv->cmn.epoll_fd, priv->sock_bcast_rx,
 						EPOLLIN);
 }
 
@@ -501,7 +501,7 @@ static int isobusfs_cli_sock_prepare(struct isobusfs_priv *priv)
 {
 	int ret;
 
-	ret = isobusfs_cmn_create_epoll();
+	ret = libj1939_create_epoll();
 	if (ret < 0)
 		return ret;
 
@@ -647,8 +647,8 @@ int main(int argc, char *argv[])
 
 	bzero(priv, sizeof(*priv));
 
-	isobusfs_init_sockaddr_can(&priv->sockname, J1939_NO_PGN);
-	isobusfs_init_sockaddr_can(&priv->peername, ISOBUSFS_PGN_CL_TO_FS);
+	libj1939_init_sockaddr_can(&priv->sockname, J1939_NO_PGN);
+	libj1939_init_sockaddr_can(&priv->peername, ISOBUSFS_PGN_CL_TO_FS);
 
 	ret = isobusfs_cli_parse_args(priv, argc, argv);
 	if (ret)

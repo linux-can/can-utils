@@ -103,7 +103,7 @@ struct isobusfs_srv_priv {
 	int clients_count;
 	struct isobusfs_buf_log tx_buf_log;
 
-	struct isobusfs_cmn cmn;
+	struct libj1939_cmn cmn;
 
 	struct isobusfs_srv_volume volumes[ISOBUSFS_SRV_MAX_VOLUMES];
 	int volume_count;
