@@ -47,7 +47,7 @@ static void print_time_date_packet(struct j1939_timedate_cli_priv *priv,
 	double actual_seconds;
 	double actual_day;
 
-	if (msg->len < sizeof(*tdp)) {
+	if (msg->len < (int)sizeof(*tdp)) {
 		pr_warn("received too short time and date packet: %zi",
 			msg->len);
 		return;
