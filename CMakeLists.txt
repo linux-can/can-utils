@@ -21,7 +21,7 @@ endif()
 
 add_definitions(-D_GNU_SOURCE)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wno-parentheses")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wno-parentheses -Wsign-compare")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSO_RXQ_OVFL=40")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DPF_CAN=29")
