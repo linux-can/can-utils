@@ -384,7 +384,7 @@ static int get_date(struct timeval *tv, char *date)
 	struct tm tms;
 	unsigned int msecs = 0;
 
-	if (strcasestr(date, " pm ") != NULL) {
+	if ((strcasestr(date, " am ") != NULL) || (strcasestr(date, " pm ") != NULL)) {
 		/* assume EN/US date due to existing am/pm field */
 
 		if (!setlocale(LC_TIME, "en_US")) {
