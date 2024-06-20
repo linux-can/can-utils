@@ -17,18 +17,21 @@ jobs:
         - "debian:stable-slim"
         - "debian:testing-slim"
         - "debian:unstable-slim"
+        - "debian:experimental"
 
     steps:
     - uses: actions/checkout@v4
 
     - name: Prepare ${{ matrix.release }} container
+      env:
+        release: ${{ matrix.release == 'debian:experimental' && '-t experimental' || '' }}
       run: |
         podman version
         podman run --name stable -di --userns=keep-id:uid=1000,gid=1000 -v "$PWD":/home -w /home ${{ matrix.release }} bash
         podman exec -i stable uname -a
         podman exec -i stable id
         podman exec -i -u root stable apt update
-        podman exec -e DEBIAN_FRONTEND='noninteractive' -i -u root stable apt install -o APT::Install-Suggests=false -qy \
+        podman exec -e DEBIAN_FRONTEND='noninteractive' -i -u root stable apt install -o APT::Install-Suggests=false -qy ${release} \
                 clang \
                 cmake \
                 gcc \
