@@ -485,12 +485,16 @@ int main(int argc, char *argv[])
 			s.current_sa = strtoul(optarg, 0, 0);
 			break;
 		case 'p':
-#ifdef _GNU_SOURCE
+#if defined(_GNU_SOURCE) && !defined(__UCLIBC__)
 			if (asprintf(&program_invocation_name, "%s.%s",
 				     program_invocation_short_name, optarg) < 0)
 				err(1, "asprintf(program invocation name)");
 #else
+#if defined(__UCLIBC__)
+			err(0, "option -p disabled with uclibc");
+#else
 			err(0, "compile with -D_GNU_SOURCE to use -p");
+#endif
 #endif
 			break;
 		default:
