@@ -38,7 +38,6 @@ static const char help_msg[] =
 	"			e.g. 80,50-100,200-210 (defaults to 0-253)" "\n"
 	"  -c, --cache=FILE	Cache file to save/restore the source address" "\n"
 	"  -a, --address=ADDRESS	Start with Source Address ADDRESS" "\n"
-	"  -p, --prefix=STR	Prefix to use when logging" "\n"
 	"\n"
 	"NAME is the 64bit nodename" "\n"
 	"\n"
@@ -54,14 +53,13 @@ static struct option long_opts[] = {
 	{ "range", required_argument, NULL, 'r', },
 	{ "cache", required_argument, NULL, 'c', },
 	{ "address", required_argument, NULL, 'a', },
-	{ "prefix", required_argument, NULL, 'p', },
 	{ },
 };
 #else
 #define getopt_long(argc, argv, optstring, longopts, longindex) \
 	getopt((argc), (argv), (optstring))
 #endif
-static const char optstring[] = "vr:c:a:p:?";
+static const char optstring[] = "vr:c:a:?";
 
 /* byte swap functions */
 static inline int host_is_little_endian(void)
@@ -466,9 +464,6 @@ int main(int argc, char *argv[])
 	struct sockaddr_can saddr;
 	uint64_t cmd_name;
 
-#ifdef _GNU_SOURCE
-	program_invocation_name = program_invocation_short_name;
-#endif
 	/* argument parsing */
 	while ((opt = getopt_long(argc, argv, optstring, long_opts, NULL)) != -1)
 		switch (opt) {
@@ -483,15 +478,6 @@ int main(int argc, char *argv[])
 			break;
 		case 'a':
 			s.current_sa = strtoul(optarg, 0, 0);
-			break;
-		case 'p':
-#ifdef _GNU_SOURCE
-			if (asprintf(&program_invocation_name, "%s.%s",
-				     program_invocation_short_name, optarg) < 0)
-				err(1, "asprintf(program invocation name)");
-#else
-			err(0, "compile with -D_GNU_SOURCE to use -p");
-#endif
 			break;
 		default:
 			fputs(help_msg, stderr);

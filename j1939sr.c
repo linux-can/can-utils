@@ -94,9 +94,6 @@ int main(int argc, char **argv)
 	struct pollfd pfd[2];
 	uint8_t *buf;
 
-#ifdef _GNU_SOURCE
-	program_invocation_name = program_invocation_short_name;
-#endif
 	/* argument parsing */
 	while ((opt = getopt_long(argc, argv, optstring, long_opts, NULL)) != -1)
 		switch (opt) {
