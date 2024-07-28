@@ -894,3 +894,12 @@ void timespec_add_ms(struct timespec *ts, uint64_t milliseconds)
 	ts->tv_sec += total_ns / 1000000000;
 	ts->tv_nsec = total_ns % 1000000000;
 }
+
+struct timespec timespec_earliest(struct timespec *ts1, struct timespec *ts2)
+{
+	if (ts1->tv_sec < ts2->tv_sec ||
+	    (ts1->tv_sec == ts2->tv_sec && ts1->tv_nsec < ts2->tv_nsec))
+		return *ts1;
+	else
+		return *ts2;
+}

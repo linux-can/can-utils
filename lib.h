@@ -258,4 +258,11 @@ int64_t timespec_diff_ms(struct timespec *ts1, struct timespec *ts2);
  */
 void timespec_add_ms(struct timespec *ts, uint64_t milliseconds);
 
+/**
+ * timespec_earliest - return the earliest of two timespecs
+ * @ts1: first timespec
+ * @ts2: second timespec
+ */
+struct timespec timespec_earliest(struct timespec *ts1, struct timespec *ts2);
+
 #endif
