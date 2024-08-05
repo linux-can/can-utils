@@ -30,7 +30,45 @@ jobs:
         podman run --name stable -di --userns=keep-id:uid=1000,gid=1000 -v "$PWD":/home -w /home ${{ matrix.release }} bash
         podman exec -i stable uname -a
         podman exec -i stable id
+
+    - name: Update APT Sources List (Ubuntu Only)
+      if:
+        startsWith(matrix.release, 'ubuntu:') && matrix.release != 'ubuntu:20.04'
+      run: |
         podman exec -i -u root stable apt update
+        podman exec -e DEBIAN_FRONTEND='noninteractive' -i -u root stable apt install -o APT::Install-Suggests=false -qy \
+                lsb-release
+
+        podman exec -i -u root stable \
+                test -e /etc/apt/sources.list &&
+                podman exec -i -u root stable \
+                        sed -i -e 's|\(http.*:\)|[arch=amd64] \1|g' /etc/apt/sources.list
+
+        podman exec -i -u root stable \
+                test -e /etc/apt/sources.list.d/ubuntu.sources &&
+                podman exec -i -u root stable \
+                        sed -i -e '/^Components:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+
+        echo "deb [arch=armhf,arm64] http://ports.ubuntu.com/ubuntu-ports/ $(podman exec -i stable lsb_release -cs) main restricted universe multiverse" | \
+                podman exec -i -u root stable tee -a /etc/apt/sources.list.d/cross.list
+        echo "deb [arch=armhf,arm64] http://ports.ubuntu.com/ubuntu-ports/ $(podman exec -i stable lsb_release -cs)-updates main restricted universe multiverse" | \
+                podman exec -i -u root stable tee -a /etc/apt/sources.list.d/cross.list
+        echo "deb [arch=armhf,arm64] http://ports.ubuntu.com/ubuntu-ports/ $(podman exec -i stable lsb_release -cs)-backports main restricted universe multiverse" | \
+                podman exec -i -u root stable tee -a /etc/apt/sources.list.d/cross.list
+
+    - name: Add Architecture
+      if:
+        matrix.release != 'ubuntu:20.04'
+      run: |
+        podman exec -i -u root stable dpkg --add-architecture arm64
+        podman exec -i -u root stable dpkg --add-architecture armhf
+
+    - name: Install Development Packages
+      env:
+        release: ${{ matrix.release == 'debian:experimental' && '-t experimental' || '' }}
+      run: |
+        podman exec -i -u root stable apt update
+        podman exec -e DEBIAN_FRONTEND='noninteractive' -i -u root stable apt upgrade -o APT::Install-Suggests=false -qy
         podman exec -e DEBIAN_FRONTEND='noninteractive' -i -u root stable apt install -o APT::Install-Suggests=false -qy ${release} \
                 clang \
                 cmake \
@@ -38,52 +76,67 @@ jobs:
                 gcc-aarch64-linux-gnu \
                 gcc-arm-linux-gnueabihf \
                 gcc-mips-linux-gnu \
+                libgps-dev \
                 make
+
+    - name: Install Cross Libs
+      env:
+        release: ${{ matrix.release == 'debian:experimental' && '-t experimental' || '' }}
+      if:
+        matrix.release != 'ubuntu:20.04'
+      run: |
+        podman exec -e DEBIAN_FRONTEND='noninteractive' -i -u root stable apt install -o APT::Install-Suggests=false -qy ${release} \
+                libgps-dev:arm64 \
+                libgps-dev:armhf
 
     - name: Configure & Build with gcc
       env:
         cc: gcc
       run: |
-        podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${cc} -DENABLE_WERROR=ON -B build-${cc}
+        podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${cc} -DENABLE_WERROR=ON -DENABLE_GPS=ON -B build-${cc}
         podman exec -i stable cmake --build build-${cc}
 
     - name: Configure & Build with clang
       env:
         cc: clang
       run: |
-        podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${cc} -DENABLE_WERROR=ON -B build-${cc}
+        podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${cc} -DENABLE_WERROR=ON -DENABLE_GPS=ON -B build-${cc}
         podman exec -i stable cmake --build build-${cc}
 
     - name: Configure & Build with arm-linux-gnueabihf-gcc
       env:
         toolchain: arm-linux-gnueabihf-gcc
+        gps: ${{ matrix.release == 'ubuntu:20.04' && 'OFF' || 'ON' }}
       run: |
-        podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=cmake/${toolchain}.cmake -DENABLE_WERROR=ON -B build-${toolchain}
+        podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=cmake/${toolchain}.cmake -DENABLE_WERROR=ON -DENABLE_GPS=${gps} -B build-${toolchain}
         podman exec -i stable cmake --build build-${toolchain}
 
     - name: Configure & Build with arm-linux-gnueabihf-clang
       if:
-        ${{ matrix.release != 'ubuntu:20.04' && matrix.release != 'debian:oldstable-slim' }}
+        matrix.release != 'ubuntu:20.04' && matrix.release != 'debian:oldstable-slim'
       env:
         toolchain: arm-linux-gnueabihf-clang
+        gps: ${{ matrix.release == 'ubuntu:20.04' && 'OFF' || 'ON' }}
       run: |
-        podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=cmake/${toolchain}.cmake -DENABLE_WERROR=ON -B build-${toolchain}
+        podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=cmake/${toolchain}.cmake -DENABLE_WERROR=ON -DENABLE_GPS=${gps} -B build-${toolchain}
         podman exec -i stable cmake --build build-${toolchain}
 
     - name: Configure & Build with aarch64-linux-gnu-gcc
       env:
         toolchain: aarch64-linux-gnu-gcc
+        gps: ${{ matrix.release == 'ubuntu:20.04' && 'OFF' || 'ON' }}
       run: |
-        podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=cmake/${toolchain}.cmake -DENABLE_WERROR=ON -B build-${toolchain}
+        podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=cmake/${toolchain}.cmake -DENABLE_WERROR=ON -DENABLE_GPS=${gps} -B build-${toolchain}
         podman exec -i stable cmake --build build-${toolchain}
 
     - name: Configure & Build with aarch64-linux-gnu-clang
       if:
-        ${{ matrix.release != 'ubuntu:20.04' && matrix.release != 'debian:oldstable-slim' }}
+        matrix.release != 'ubuntu:20.04' && matrix.release != 'debian:oldstable-slim'
       env:
         toolchain: aarch64-linux-gnu-clang
+        gps: ${{ matrix.release == 'ubuntu:20.04' && 'OFF' || 'ON' }}
       run: |
-        podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=cmake/${toolchain}.cmake -DENABLE_WERROR=ON -B build-${toolchain}
+        podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=cmake/${toolchain}.cmake -DENABLE_WERROR=ON -DENABLE_GPS=${gps} -B build-${toolchain}
         podman exec -i stable cmake --build build-${toolchain}
 
     - name: Configure & Build with mips-linux-gnu-gcc
