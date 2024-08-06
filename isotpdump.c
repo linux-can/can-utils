@@ -372,8 +372,14 @@ int main(int argc, char **argv)
 		    rx_extaddr != frame.data[0])
 			continue;
 
-		if (color)
-			printf("%s", (frame.can_id == src) ? FGRED : FGBLUE);
+		if (color) {
+			if (frame.can_id == src)
+				printf("%s", FGRED);
+			else if (frame.can_id == dst)
+				printf("%s", FGBLUE);
+			else if (frame.can_id == bst)
+				printf("%s", FGGREEN);
+		}
 
 		if (timestamp) {
 			ioctl(s, SIOCGSTAMP, &tv);
