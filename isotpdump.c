@@ -72,6 +72,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "         -s <can_id>  (source can_id. Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -d <can_id>  (destination can_id. Use 8 digits for extended IDs)\n");
+	fprintf(stderr, "         -b <can_id>  (broadcast can_id, Use 8 digits for extended IDs)\n");
 	fprintf(stderr, "         -x <addr>    (extended addressing mode. Use 'any' for all addresses)\n");
 	fprintf(stderr, "         -X <addr>    (extended addressing mode (rx addr). Use 'any' for all)\n");
 	fprintf(stderr, "         -c           (color mode)\n");
@@ -197,11 +198,12 @@ int main(int argc, char **argv)
 {
 	int s;
 	struct sockaddr_can addr;
-	struct can_filter rfilter[2];
+	struct can_filter rfilter[3];
 	struct canfd_frame frame;
 	int nbytes, i;
 	canid_t src = NO_CAN_ID;
 	canid_t dst = NO_CAN_ID;
+	canid_t bst = NO_CAN_ID;
 	int ext = 0;
 	int extaddr = 0;
 	int extany = 0;
@@ -222,7 +224,7 @@ int main(int argc, char **argv)
 	last_tv.tv_sec  = 0;
 	last_tv.tv_usec = 0;
 
-	while ((opt = getopt(argc, argv, "s:d:ax:X:ct:u?")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:b:ax:X:ct:u?")) != -1) {
 		switch (opt) {
 		case 's':
 			src = strtoul(optarg, NULL, 16);
@@ -234,6 +236,12 @@ int main(int argc, char **argv)
 			dst = strtoul(optarg, NULL, 16);
 			if (strlen(optarg) > 7)
 				dst |= CAN_EFF_FLAG;
+			break;
+
+		case 'b':
+			bst = strtoul(optarg, NULL, 16);
+			if (strlen(optarg) > 7)
+				bst |= CAN_EFF_FLAG;
 			break;
 
 		case 'c':
@@ -321,7 +329,18 @@ int main(int argc, char **argv)
 		rfilter[1].can_mask = (CAN_SFF_MASK|CAN_EFF_FLAG|CAN_RTR_FLAG);
 	}
 
-	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, &rfilter, sizeof(rfilter));
+	if (bst & CAN_EFF_FLAG) {
+		rfilter[2].can_id   = bst & (CAN_EFF_MASK | CAN_EFF_FLAG);
+		rfilter[2].can_mask = (CAN_EFF_MASK|CAN_EFF_FLAG|CAN_RTR_FLAG);
+	} else {
+		rfilter[2].can_id   = bst & CAN_SFF_MASK;
+		rfilter[2].can_mask = (CAN_SFF_MASK|CAN_EFF_FLAG|CAN_RTR_FLAG);
+	}
+
+	if (bst != NO_CAN_ID)
+		setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, &rfilter, sizeof(rfilter));
+	else
+		setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, &rfilter, sizeof(rfilter) - sizeof(rfilter[0]));
 
 	addr.can_family = AF_CAN;
 	addr.can_ifindex = if_nametoindex(argv[optind]);
