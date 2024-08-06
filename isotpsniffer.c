@@ -79,6 +79,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -f <format>  (1 = HEX, 2 = ASCII, 3 = HEX & ASCII - default: %d)\n", FORMAT_DEFAULT);
 	fprintf(stderr, "         -L           (set link layer options for CAN FD)\n");
 	fprintf(stderr, "         -h <len>     (head: print only first <len> bytes)\n");
+	fprintf(stderr, "         -q           (don't quit on read error, allows to receive malformed frames)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "\n");
 }
@@ -189,6 +190,7 @@ int main(int argc, char **argv)
 	int head = 0;
 	int timestamp = 0;
 	int format = FORMAT_DEFAULT;
+	int noquit = 0;
 	canid_t src = NO_CAN_ID;
 	canid_t dst = NO_CAN_ID;
 	extern int optind, opterr, optopt;
@@ -197,7 +199,7 @@ int main(int argc, char **argv)
 	unsigned char buffer[4096];
 	int nbytes;
 
-	while ((opt = getopt(argc, argv, "s:d:x:X:h:ct:f:L?")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:x:X:h:ct:f:L?q")) != -1) {
 		switch (opt) {
 		case 's':
 			src = strtoul(optarg, NULL, 16);
@@ -247,6 +249,10 @@ int main(int argc, char **argv)
 				       basename(argv[0]), optarg[0]);
 				timestamp = 0;
 			}
+			break;
+
+		case 'q':
+			noquit = 1;
 			break;
 
 		case '?':
@@ -371,14 +377,17 @@ int main(int argc, char **argv)
 			if (nbytes < 0) {
 				perror("read socket s");
 				r = 1;
-				goto out;
+				if(!noquit)
+					goto out;
 			}
 			if (nbytes > 4095) {
 				r = 1;
+				perror("read socket s too much data");
 				goto out;
 			}
-			printbuf(buffer, nbytes, color?2:0, timestamp, format,
-				 &tv, &last_tv, dst, s, if_name, head);
+			if(nbytes > 0)
+				printbuf(buffer, nbytes, color?2:0, timestamp, format,
+					 &tv, &last_tv, dst, s, if_name, head);
 		}
 
 		if (FD_ISSET(t, &rdfs)) {
@@ -386,14 +395,17 @@ int main(int argc, char **argv)
 			if (nbytes < 0) {
 				perror("read socket t");
 				r = 1;
-				goto out;
+				if(!noquit)
+					goto out;
 			}
 			if (nbytes > 4095) {
 				r = 1;
+				perror("read socket t too much data");
 				goto out;
 			}
-			printbuf(buffer, nbytes, color?1:0, timestamp, format,
-				 &tv, &last_tv, src, t, if_name, head);
+			if(nbytes > 0)
+				printbuf(buffer, nbytes, color?1:0, timestamp, format,
+					 &tv, &last_tv, src, t, if_name, head);
 		}
 	}
 
