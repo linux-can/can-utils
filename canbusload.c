@@ -251,6 +251,8 @@ int main(int argc, char **argv)
 	char *ptr, *nptr;
 	struct sockaddr_can addr;
 	struct canfd_frame frame;
+	struct iovec iov;
+	struct msghdr msg;
 	int nbytes, i;
 
 	int have_anydev = 0;
@@ -405,10 +407,14 @@ int main(int argc, char **argv)
 	if (redraw)
 		printf("%s", CLR_SCREEN);
 
-	while (running) {
-		socklen_t len = sizeof(addr);
-		int flags = 0;
+	/* these settings are static and can be held out of the hot path */
+	iov.iov_base = &frame;
+	msg.msg_name = &addr;
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	msg.msg_control = NULL;
 
+	while (running) {
 		FD_ZERO(&rdfs);
 		FD_SET(s, &rdfs);
 
@@ -417,8 +423,13 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		nbytes = recvfrom(s, &frame, sizeof(struct canfd_frame),
-				  flags, (struct sockaddr*)&addr, &len);
+		/* these settings may be modified by recvmsg() */
+		iov.iov_len = sizeof(frame);
+		msg.msg_namelen = sizeof(addr);
+		msg.msg_controllen = 0;
+		msg.msg_flags = 0;
+
+		nbytes = recvmsg(s, &msg, 0);
 
 		if (nbytes < 0) {
 			perror("read");
