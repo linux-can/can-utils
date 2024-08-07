@@ -309,7 +309,7 @@ int main(int argc, char **argv)
 		ptr = argv[optind + i];
 
 		nbytes = strlen(ptr);
-		if (nbytes >= (int)(IFNAMSIZ + sizeof("@1000000") + 1)) {
+		if (nbytes >= (int)(IFNAMSIZ + sizeof("@1000000,2000000") + 1)) {
 			printf("name of CAN device '%s' is too long!\n", ptr);
 			return 1;
 		}
