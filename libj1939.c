@@ -254,6 +254,31 @@ int libj1939_bind_socket(int sock, struct sockaddr_can *addr)
 }
 
 /**
+ * libj1939_connect_socket - Connects a socket to a CAN address.
+ * @sock: The socket file descriptor.
+ * @addr: The CAN address to connect to.
+ *
+ * This function attempts to establish a connection between the given socket
+ * and the specified CAN address. If the connection fails, it logs an error
+ * message with the error code and a description of the error.
+ *
+ * Return: 0 on success, or a negative error code on failure.
+ */
+int libj1939_connect_socket(int sock, struct sockaddr_can *addr)
+{
+	int ret;
+
+	ret = connect(sock, (void *)addr, sizeof(*addr));
+	if (ret < 0) {
+		ret = -errno;
+		pr_err("failed to connect socket: %d (%s)", ret, strerror(ret));
+		return ret;
+	}
+
+	return 0;
+}
+
+/**
  * libj1939_socket_prio - Set the priority of a J1939 socket
  * @sock: The file descriptor of the socket
  * @prio: The priority to set
