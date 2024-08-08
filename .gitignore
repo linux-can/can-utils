@@ -31,6 +31,8 @@ tags
 /j1939cat
 /j1939spy
 /j1939sr
+/j1939-timedate-cli
+/j1939-timedate-srv
 /log2asc
 /log2long
 /mcp251xfd-dump
