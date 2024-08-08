@@ -70,11 +70,13 @@
 
 #define PERCENTRES 5 /* resolution in percent for bargraph */
 #define NUMBAR (100 / PERCENTRES) /* number of bargraph elements */
+#define BRSTRLEN 20
 
 extern int optind, opterr, optopt;
 
 static struct {
 	char devname[IFNAMSIZ + 1];
+	char bitratestr[BRSTRLEN]; /* 100000/2000000 => 100k/2M */
 	char recv_direction;
 	int ifindex;
 	unsigned int bitrate;
@@ -88,7 +90,7 @@ static struct {
 static volatile int running = 1;
 static volatile sig_atomic_t signal_num;
 static int max_devname_len; /* to prevent frazzled device name output */
-static int max_bitrate_len;
+static int max_bitratestr_len;
 static int currmax;
 static unsigned char redraw;
 static unsigned char timestamp;
@@ -117,14 +119,13 @@ static void print_usage(char *prg)
 	fprintf(stderr, "calculate the bus load percentage based on the received CAN frames.\n");
 	fprintf(stderr, "Due to the bitstuffing estimation the calculated busload may exceed 100%%.\n");
 	fprintf(stderr, "For each given interface the data is presented in one line which contains:\n\n");
-	fprintf(stderr, "(interface) (received CAN frames) (used bits total) (used bits for payload)\n");
+	fprintf(stderr, "(interface) (received CAN frames) (bits total) (bits payload) (bits payload brs)\n");
 	fprintf(stderr, "\nExamples:\n");
-	fprintf(stderr, "\nuser$> canbusload can0@100000 can1@500000 can2@500000 can3@500000 -r -t -b -c\n\n");
-	fprintf(stderr, "%s 2014-02-01 21:13:16 (worst case bitstuffing)\n", prg);
-	fprintf(stderr, " can0@100000   805   74491  36656  74%% |XXXXXXXXXXXXXX......|\n");
-	fprintf(stderr, " can1@500000   796   75140  37728  15%% |XXX.................|\n");
-	fprintf(stderr, " can2@500000     0       0      0   0%% |....................|\n");
-	fprintf(stderr, " can3@500000    47    4633   2424   0%% |....................|\n");
+	fprintf(stderr, "\nuser$> canbusload can0@100000 can1@500000,2000000 can2@500000 -r -t -b -c\n\n");
+	fprintf(stderr, "%s 2024-08-08 16:30:05 (worst case bitstuffing)\n", prg);
+	fprintf(stderr, " can0@100k      192   21980    9136       0  21%% |TTTT................|\n");
+	fprintf(stderr, " can1@500k/2M  2651  475500  234448  131825  74%% |XXXXXXXXXXXXXX......|\n");
+	fprintf(stderr, " can2@500k      855  136777   62968   35219  27%% |RRRRR...............|\n");
 	fprintf(stderr, "\n");
 }
 
@@ -132,6 +133,32 @@ static void sigterm(int signo)
 {
 	running = 0;
 	signal_num = signo;
+}
+
+static int add_bitrate(char *brstr, unsigned int bitrate)
+{
+	if (bitrate % 1000000 == 0)
+		return sprintf(brstr, "%dM", bitrate / 1000000);
+
+	if (bitrate % 1000 == 0)
+		return sprintf(brstr, "%dk", bitrate / 1000);
+
+	return sprintf(brstr, "%d", bitrate);
+}
+
+static void create_bitrate_string(int stat_idx, int *max_bitratestr_len)
+{
+	int ptr;
+
+	ptr = add_bitrate(&stat[stat_idx].bitratestr[0], stat[stat_idx].bitrate);
+
+	if (stat[stat_idx].bitrate != stat[stat_idx].dbitrate) {
+		ptr += sprintf(&stat[stat_idx].bitratestr[ptr], "/");
+		ptr += add_bitrate(&stat[stat_idx].bitratestr[ptr], stat[stat_idx].dbitrate);
+	}
+
+	if (ptr > *max_bitratestr_len)
+		*max_bitratestr_len = ptr;
 }
 
 static void printstats(int signo)
@@ -198,9 +225,9 @@ static void printstats(int signo)
 		else
 			percent = 0;
 
-		printf(" %*s@%-*d %5d %7d %6d %6d %3d%%",
+		printf(" %*s@%-*s %5d %7d %7d %7d %3d%%",
 		       max_devname_len, stat[i].devname,
-		       max_bitrate_len, stat[i].bitrate,
+		       max_bitratestr_len, stat[i].bitratestr,
 		       stat[i].recv_frames,
 		       stat[i].recv_bits_total,
 		       stat[i].recv_bits_payload,
@@ -260,6 +287,7 @@ int main(int argc, char **argv)
 	int have_anydev = 0;
 	unsigned int anydev_bitrate = 0;
 	unsigned int anydev_dbitrate = 0;
+	char anydev_bitratestr[BRSTRLEN]; /* 100000/2000000 => 100k/2M */
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -358,15 +386,14 @@ int main(int argc, char **argv)
 		else
 			stat[i].dbitrate = stat[i].bitrate;
 
-		if (!stat[i].bitrate || stat[i].bitrate > 1000000) {
+		if (!stat[i].bitrate || stat[i].bitrate > 1000000 ||
+		    !stat[i].dbitrate || stat[i].dbitrate > 8000000) {
 			printf("invalid bitrate for CAN device '%s'!\n", ptr);
 			return 1;
 		}
 
-		/* length of entire (data)bitrate description */
-		nbytes = strlen(nptr + 1);
-		if (nbytes > max_bitrate_len)
-			max_bitrate_len = nbytes; /* for nice printing */
+		/* prepare bitrate string for hot path */
+		create_bitrate_string(i, &max_bitratestr_len);
 
 		stat[i].recv_direction = '.';
 
@@ -374,6 +401,7 @@ int main(int argc, char **argv)
 		if (have_anydev == 0 && strcmp(ANYDEV, stat[i].devname) == 0) {
 			anydev_bitrate = stat[i].bitrate;
 			anydev_dbitrate = stat[i].dbitrate;
+			memcpy(anydev_bitratestr, stat[i].bitratestr, BRSTRLEN);
 			/* no real interface: remove this command line entry */
 			have_anydev = 1;
 			currmax--;
@@ -466,6 +494,7 @@ int main(int argc, char **argv)
 			stat[i].ifindex = addr.can_ifindex;
 			stat[i].bitrate = anydev_bitrate;
 			stat[i].dbitrate = anydev_dbitrate;
+			memcpy(stat[i].bitratestr, anydev_bitratestr, BRSTRLEN);
 			stat[i].recv_direction = '.';
 			if_indextoname(addr.can_ifindex, stat[i].devname);
 			nbytes = strlen(stat[i].devname);
