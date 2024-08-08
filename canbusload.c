@@ -75,6 +75,7 @@ extern int optind, opterr, optopt;
 
 static struct {
 	char devname[IFNAMSIZ + 1];
+	char recv_direction;
 	int ifindex;
 	unsigned int bitrate;
 	unsigned int dbitrate;
@@ -215,7 +216,7 @@ static void printstats(int signo)
 
 			for (j = 0; j < NUMBAR; j++) {
 				if (j < percent / PERCENTRES)
-					printf("X");
+					printf("%c", stat[i].recv_direction);
 				else
 					printf(".");
 			}
@@ -233,6 +234,7 @@ static void printstats(int signo)
 		stat[i].recv_bits_total = 0;
 		stat[i].recv_bits_dbitrate = 0;
 		stat[i].recv_bits_payload = 0;
+		stat[i].recv_direction = '.';
 	}
 
 	if (!redraw)
@@ -366,6 +368,8 @@ int main(int argc, char **argv)
 		if (nbytes > max_bitrate_len)
 			max_bitrate_len = nbytes; /* for nice printing */
 
+		stat[i].recv_direction = '.';
+
 		/* handling for 'any' device */
 		if (have_anydev == 0 && strcmp(ANYDEV, stat[i].devname) == 0) {
 			anydev_bitrate = stat[i].bitrate;
@@ -462,11 +466,26 @@ int main(int argc, char **argv)
 			stat[i].ifindex = addr.can_ifindex;
 			stat[i].bitrate = anydev_bitrate;
 			stat[i].dbitrate = anydev_dbitrate;
+			stat[i].recv_direction = '.';
 			if_indextoname(addr.can_ifindex, stat[i].devname);
 			nbytes = strlen(stat[i].devname);
 			if (nbytes > max_devname_len)
 				max_devname_len = nbytes; /* for nice printing */
 			currmax++;
+		}
+
+		if (msg.msg_flags & MSG_DONTROUTE) {
+			/* TX direction */
+			if (stat[i].recv_direction == '.')
+				stat[i].recv_direction = 'T';
+			else if (stat[i].recv_direction == 'R')
+				stat[i].recv_direction = 'X';
+		} else {
+			/* RX direction */
+			if (stat[i].recv_direction == '.')
+				stat[i].recv_direction = 'R';
+			else if (stat[i].recv_direction == 'T')
+				stat[i].recv_direction = 'X';
 		}
 
 		stat[i].recv_frames++;
