@@ -1,0 +1,205 @@
+#!/bin/bash
+
+if [ -z "${CANPLAYER}" ]; then
+	CANPLAYER="canplayer"
+fi
+
+die() {
+	echo "$*" > /dev/stderr
+	exit 1
+}
+
+usage() {
+	echo "canplayer-bisect <start|stop|clean|good|yes|bad|no|again|where|undo> <logfile> <canplayer options>"
+}
+
+is_ready() {
+	if [ ! -d .canplayer-bisect ]; then
+		usage
+		exit 1
+	fi
+
+	return 0
+}
+
+setup() {
+	is_ready
+
+	LOGFILE=$(cat .canplayer-bisect/logfile |head -n 1)
+
+	SAVED_LEN="$(cat .canplayer-bisect/len|tail -n 1)"
+	LEN="$(wc -l ${LOGFILE} | awk '{ print $1 }')"
+
+	if [ "$LEN" != "$SAVED_LEN" ]; then
+		die "logfile has changed size. restart"
+	fi
+
+	CANPLAYER_ARGS=$(cat .canplayer-bisect/args |head -n 1)
+
+	HEAD="$(cat .canplayer-bisect/head |tail -n 1)"
+	TAIL="$(cat .canplayer-bisect/tail |tail -n 1)"
+}
+
+back() {
+	HEAD="$(cat .canplayer-bisect/head |tail -n 2 |head -n1)"
+	TAIL="$(cat .canplayer-bisect/tail |tail -n 2 |head -n1)"
+}
+
+do_undo() {
+	sed -i '$ d' .canplayer-bisect/head
+	sed -i '$ d' .canplayer-bisect/tail
+}
+
+teardown() {
+	mkdir -p .canplayer-bisect
+	echo $LEN > .canplayer-bisect/len
+	echo $LOGFILE > .canplayer-bisect/logfile
+	echo $CANPLAYER_ARGS > .canplayer-bisect/args
+
+	echo $HEAD >> .canplayer-bisect/head
+	echo $TAIL >> .canplayer-bisect/tail
+}
+
+show() {
+	cat $LOGFILE | sed -n ${HEAD},${TAIL}p
+}
+
+play() {
+	#we *could* pipe directly to canplayer, but then the user can't add -l i to CANPLAYER_ARGS to hunt for packets using looped playback
+	the_show="$(mktemp)"
+	trap "rm -rf \"${the_show}\"" EXIT
+
+	show > "${the_show}"
+	"${CANPLAYER}" ${CANPLAYER_ARGS} -I "${the_show}"
+}
+
+do_show() {
+	setup
+
+	show
+}
+
+check_heads_n_tails() {
+	if [ $HEAD -eq $TAIL ]; then
+		do_stop
+	fi
+}
+
+do_good() {
+	setup
+
+	check_heads_n_tails
+
+	if [ $(( $HEAD + 1 )) -eq $TAIL ]; then
+		TAIL=$HEAD
+	else
+		TAIL=$(( ( $TAIL - $HEAD ) / 2 + $HEAD - 1 ))
+	fi
+
+	teardown
+	play
+}
+
+do_bad() {
+	setup
+
+	check_heads_n_tails
+
+	back
+	if [ $(( $HEAD + 1 )) -eq $TAIL ]; then
+		HEAD=$TAIL
+	else
+		HEAD=$(( ( $TAIL - $HEAD ) / 2 + $HEAD ))
+	fi
+
+	teardown
+	play
+}
+
+do_again() {
+	setup
+	play
+}
+
+do_start() {
+	do_clean
+
+	LEN="$(wc -l ${LOGFILE} | awk '{ print $1 }')"
+
+	HEAD=1
+	TAIL=$LEN
+
+	echo "assuming logfile contains the packets you seek... bisecting to first half"
+
+	teardown
+	play
+}
+
+do_where() {
+	setup
+	echo "between $HEAD and $TAIL (+$(( $TAIL - $HEAD ))) of $LOGFILE"
+}
+
+do_stop() {
+	setup
+
+	if [ "$COMMAND" == "no" ]; then
+		echo "failed to find what you were looking for"
+		exit 1
+	else
+		echo "the packets you seek are:"
+		do_where
+		exit 0
+	fi
+}
+
+do_clean() {
+	rm -rf .canplayer-bisect
+}
+
+if [ -z "$1" ]; then
+	usage
+	exit 1
+fi
+COMMAND=$1
+
+if [ ! -d .canplayer-bisect ] && [ ! -z "$2" ] && [ ! -e "$2" ]; then
+	usage
+	exit 1
+fi
+LOGFILE="$2"
+
+shift
+shift
+CANPLAYER_ARGS="$*"
+
+case "$COMMAND" in
+	start)
+		do_start
+	;;
+	stop)
+		do_stop
+	;;
+	clean)
+		do_clean
+	;;
+	good|yes)
+		do_good
+	;;
+	bad|no)
+		do_bad
+	;;
+	again)
+		do_again
+	;;
+	where)
+		do_where
+	;;
+	undo)
+		do_undo
+	;;
+	show)
+		do_show
+	;;
+esac
+
