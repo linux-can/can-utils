@@ -59,12 +59,15 @@
 #include <linux/can.h>
 #include <linux/can/isotp.h>
 #include <linux/sockios.h>
+#include <errno.h>
 
 #define NO_CAN_ID 0xFFFFFFFFU
 
 #define FORMAT_HEX 1
 #define FORMAT_ASCII 2
 #define FORMAT_DEFAULT (FORMAT_ASCII | FORMAT_HEX)
+
+#define PDU_BUF_SIZE 4096
 
 void print_usage(char *prg)
 {
@@ -79,7 +82,7 @@ void print_usage(char *prg)
 	fprintf(stderr, "         -f <format>  (1 = HEX, 2 = ASCII, 3 = HEX & ASCII - default: %d)\n", FORMAT_DEFAULT);
 	fprintf(stderr, "         -L           (set link layer options for CAN FD)\n");
 	fprintf(stderr, "         -h <len>     (head: print only first <len> bytes)\n");
-	fprintf(stderr, "         -q           (don't quit on read error, allows to receive malformed frames)\n");
+	fprintf(stderr, "         -i           (ignore syscall errors to receive malformed PDUs)\n");
 	fprintf(stderr, "\nCAN IDs and addresses are given and expected in hexadecimal values.\n");
 	fprintf(stderr, "\n");
 }
@@ -190,16 +193,16 @@ int main(int argc, char **argv)
 	int head = 0;
 	int timestamp = 0;
 	int format = FORMAT_DEFAULT;
-	int noquit = 0;
+	int ignore_errors = 0;
 	canid_t src = NO_CAN_ID;
 	canid_t dst = NO_CAN_ID;
 	extern int optind, opterr, optopt;
 	static struct timeval tv, last_tv;
 
-	unsigned char buffer[4096];
+	unsigned char buffer[PDU_BUF_SIZE];
 	int nbytes;
 
-	while ((opt = getopt(argc, argv, "s:d:x:X:h:ct:f:L?q")) != -1) {
+	while ((opt = getopt(argc, argv, "s:d:x:X:h:ct:f:L?i")) != -1) {
 		switch (opt) {
 		case 's':
 			src = strtoul(optarg, NULL, 16);
@@ -251,8 +254,8 @@ int main(int argc, char **argv)
 			}
 			break;
 
-		case 'q':
-			noquit = 1;
+		case 'i':
+			ignore_errors = 1;
 			break;
 
 		case '?':
@@ -373,16 +376,16 @@ int main(int argc, char **argv)
 		}
 
 		if (FD_ISSET(s, &rdfs)) {
-			nbytes = read(s, buffer, 4096);
+			nbytes = read(s, buffer, PDU_BUF_SIZE);
 			if (nbytes < 0) {
 				perror("read socket s");
 				r = 1;
-				if(!noquit)
+				if(!ignore_errors)
 					goto out;
 			}
-			if (nbytes > 4095) {
+			if (nbytes > (PDU_BUF_SIZE - 1)) {
 				r = 1;
-				perror("read socket s too much data");
+				fprintf(stderr, "PDU length %d longer than PDU buffer: %s\n", nbytes, strerror(errno));
 				goto out;
 			}
 			if(nbytes > 0)
@@ -391,16 +394,16 @@ int main(int argc, char **argv)
 		}
 
 		if (FD_ISSET(t, &rdfs)) {
-			nbytes = read(t, buffer, 4096);
+			nbytes = read(t, buffer, PDU_BUF_SIZE);
 			if (nbytes < 0) {
 				perror("read socket t");
 				r = 1;
-				if(!noquit)
+				if(!ignore_errors)
 					goto out;
 			}
-			if (nbytes > 4095) {
+			if (nbytes > (PDU_BUF_SIZE - 1)) {
 				r = 1;
-				perror("read socket t too much data");
+				fprintf(stderr, "PDU length %d longer than PDU buffer: %s\n", nbytes, strerror(errno));
 				goto out;
 			}
 			if(nbytes > 0)
