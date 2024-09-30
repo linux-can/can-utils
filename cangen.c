@@ -837,7 +837,14 @@ int main(int argc, char **argv)
 	if (ret)
 		return 1;
 
+	int k[] = {1,2};
+	int j = 0;
 	while (running) {
+		ts_gap = double_to_timespec((k[j%2])/1000.0);
+		// printf("%lu, %lu\n", ts_gap.tv_sec, ts_gap.tv_nsec);
+		setsockopt_txtime(s);
+		setup_time();
+		j++;
 		/* clear values but preserve cu.fd.len */
 		cu.fd.flags = 0;
 		cu.fd.__res0 = 0;
