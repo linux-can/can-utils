@@ -72,7 +72,7 @@ static void print_usage(char *prg)
 }
 
 static void prframe(FILE *file, struct timeval *tv, int dev,
-		    struct canfd_frame *cf, char *extra_info)
+		    cu_t *cf, char *extra_info)
 {
 	static char abuf[BUFLEN];
 
@@ -83,19 +83,19 @@ static void prframe(FILE *file, struct timeval *tv, int dev,
 	else
 		fprintf(file, "canX ");
 
-	snprintf_canframe(abuf, sizeof(abuf), (cu_t *)cf, 0);
+	snprintf_canframe(abuf, sizeof(abuf), cf, 0);
 	fprintf(file, "%s%s", abuf, extra_info);
 }
 
-static void get_can_id(struct canfd_frame *cf, char *idstring, int base)
+static void get_can_id(canid_t *can_id, char *idstring, int base)
 {
 	if (idstring[strlen(idstring)-1] == 'x') {
-		cf->can_id = CAN_EFF_FLAG;
+		*can_id = CAN_EFF_FLAG;
 		idstring[strlen(idstring)-1] = 0;
 	} else
-		cf->can_id = 0;
+		*can_id = 0;
     
-	cf->can_id |= strtoul(idstring, NULL, base);
+	*can_id |= strtoul(idstring, NULL, base);
 }
 
 static void calc_tv(struct timeval *tv, struct timeval *read_tv,
@@ -162,7 +162,7 @@ static void eval_can(char* buf, struct timeval *date_tvp, char timestamps,
 			cf.len = CAN_ERR_DLC;
 
 			calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-			prframe(outfile, &tv, interface, &cf, "\n");
+			prframe(outfile, &tv, interface, (cu_t *)&cf, "\n");
 			fflush(outfile);
 			return;
 		}
@@ -205,9 +205,9 @@ static void eval_can(char* buf, struct timeval *date_tvp, char timestamps,
 
 		/* check for CAN ID with (hexa)decimal value */
 		if (base == 'h')
-			get_can_id(&cf, tmp1, 16);
+			get_can_id(&cf.can_id, tmp1, 16);
 		else
-			get_can_id(&cf, tmp1, 10);
+			get_can_id(&cf.can_id, tmp1, 10);
 
 		/* dlc > 8 => len == CAN_MAX_DLEN => fill len8_dlc value */
 		if (dlc > CAN_MAX_DLC)
@@ -236,7 +236,7 @@ static void eval_can(char* buf, struct timeval *date_tvp, char timestamps,
 				cf.data[i] = data[i] & 0xFFU;
 
 		calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-		prframe(outfile, &tv, interface, &cf, extra_info);
+		prframe(outfile, &tv, interface, (cu_t *)&cf, extra_info);
 		fflush(outfile);
 	}
 }
@@ -311,7 +311,7 @@ static void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps,
 	if (dlen != can_fd_dlc2len(can_fd_len2dlc(dlen)))
 		return;
 
-	get_can_id(&cf, tmp1, 16);
+	get_can_id(&cf.can_id, tmp1, 16);
 
 	/* now search for the beginning of the data[] content */
 	sprintf(tmp1, " %x %x %x %2d ", brs, esi, dlc, dlen);
@@ -377,7 +377,7 @@ static void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps,
 	}
 
 	calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-	prframe(outfile, &tv, interface, &cf, extra_info);
+	prframe(outfile, &tv, interface, (cu_t *)&cf, extra_info);
 	fflush(outfile);
 
 	/* No support for really strange CANFD ErrorFrames format m( */
