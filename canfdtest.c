@@ -157,7 +157,7 @@ static int compare_frame(const struct canfd_frame *exp, const struct canfd_frame
 	} else {
 		for (i = 0; i < rec->len; i++) {
 			if (rec->data[i] != (uint8_t)(exp->data[i] + inc)) {
-				printf("Databyte %x mismatch!\n", i);
+				printf("Databyte 0x%x mismatch!\n", i);
 				print_compare(expected_can_id, exp->data, exp->len,
 				              rec->can_id, rec->data, rec->len, inc);
 				running = 0;
