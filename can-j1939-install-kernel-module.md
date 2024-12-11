@@ -82,7 +82,7 @@ avra@vm-debian:/usr/src$ cd linux-source-5.8
 
 #### 2. Add can-j1939 module to kernel ####
 
-First we need some packages for **menuconfig** 
+First we need some packages for **menuconfig**
 
 ```
 sudo apt-get install libncurses5 libncurses5-dev
@@ -152,7 +152,7 @@ and if you get no error then you can enjoy **can-j1939**. If you get some error 
 sudo insmod /lib/modules/5.8.10/kernel/net/can/j1939/can-j1939.ko
 ```
 
-If it does then all you need to do is 
+If it does then all you need to do is
 
 ```
 sudo depmod -av
