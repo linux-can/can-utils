@@ -189,6 +189,7 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -A <mode>     (CAN XL AF generation mode - see below, no e/o mode)\n");
 	fprintf(stderr, "         -V <mode>     (CAN XL VCID generation mode - see below, no e/o mode)\n");
 	fprintf(stderr, "         -p <timeout>  (poll on -ENOBUFS to write frames with <timeout> ms)\n");
+	fprintf(stderr, "         -P <priority> (set socket priority using SO_PRIORITY)\n");
 	fprintf(stderr, "         -n <count>    (terminate after <count> CAN frames - default infinite)\n");
 	fprintf(stderr, "         -i            (ignore -ENOBUFS return values on write() syscalls)\n");
 	fprintf(stderr, "         -x            (disable local loopback of generated CAN frames)\n");
@@ -479,6 +480,7 @@ int main(int argc, char **argv)
 	uint64_t incdata = 0;
 	__u8 *data; /* base pointer for CC/FD or XL data */
 	int incdlc = 0;
+	int priority = -1;
 	unsigned long rnd;
 	unsigned char fixdata[CANFD_MAX_DLEN];
 	unsigned char rand_position[CANFD_MAX_DLEN] = { 0 };
@@ -512,7 +514,7 @@ int main(int argc, char **argv)
 		{ 0,		0,			0, 0 },
 	};
 
-	while ((opt = getopt_long(argc, argv, "g:atefbEXR8mI:L:D:F:S:A:V:p:n:ixc:vh?", long_options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "g:atefbEXR8mI:L:D:F:S:A:V:p:P:n:ixc:vh?", long_options, NULL)) != -1) {
 		switch (opt) {
 		case 'g':
 			gap = strtod(optarg, NULL);
@@ -682,6 +684,14 @@ int main(int argc, char **argv)
 			}
 			break;
 
+		case 'P':
+			priority = atoi(optarg);
+			if (priority < 0) {
+				printf("socket priority has to be >= 0\n");
+				exit(1);
+			}
+			break;
+
 		case 'i':
 			ignore_enobufs = true;
 			break;
@@ -749,6 +759,16 @@ int main(int argc, char **argv)
 	 * little (really a very little!) CPU usage.
 	 */
 	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
+
+	/*
+	 * user can use tc to configure the queuing discipline (e.g. mqprio),
+	 * together with SO_PRIORITY option to specify the message send from
+	 * this socket should go to which queue.
+	 */
+	if (priority >= 0 &&
+	    setsockopt(s, SOL_SOCKET, SO_PRIORITY, &priority, sizeof(priority))) {
+		printf("error setting SO_PRIORITY\n");
+	}
 
 	if (loopback_disable) {
 		const int loopback = 0;
