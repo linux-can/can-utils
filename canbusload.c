@@ -45,14 +45,17 @@
 #include <ctype.h>
 #include <libgen.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h>
 #include <time.h>
 #include <unistd.h>
 
 #include <net/if.h>
 #include <sys/ioctl.h>
+#include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -71,6 +74,25 @@
 #define PERCENTRES 5 /* resolution in percent for bargraph */
 #define NUMBAR (100 / PERCENTRES) /* number of bargraph elements */
 #define BRSTRLEN 20
+#define VISUAL_WINDOW 90 /* window width for visualization */
+
+/*
+ * Inspired from
+ * https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/
+ * include/linux/sched/loadavg.h
+ *
+ * Following are the fixed-point math constants and the exponential-damping
+ * factors for:
+ *  - 1 samples/s in 1 minute
+ *  - 1 samples/s in 5 minutes
+ *  - 1 samples/s in 15 minutes
+ * in fixed-point representation.
+ */
+#define FP_SHIFT 12              /* bits of precision */
+#define FP_ONE   (1 << FP_SHIFT) /* 1.0 fixed-point representation */
+#define EXP_1    4028            /* (1 / e ^ (1 /  60)) * FP_ONE */
+#define EXP_5    4082            /* (1 / e ^ (1 / 300)) * FP_ONE */
+#define EXP_15   4091            /* (1 / e ^ (1 / 900)) * FP_ONE */
 
 extern int optind, opterr, optopt;
 
@@ -85,19 +107,30 @@ static struct {
 	unsigned int recv_bits_total;
 	unsigned int recv_bits_payload;
 	unsigned int recv_bits_dbitrate;
+	unsigned int load_min;
+	unsigned int load_max;
+	unsigned int load_1m;
+	unsigned int load_5m;
+	unsigned int load_15m;
+	unsigned int loads[VISUAL_WINDOW];
+	unsigned int index;
 } stat[MAXDEVS + 1];
 
 static volatile int running = 1;
 static volatile sig_atomic_t signal_num;
 static int max_devname_len; /* to prevent frazzled device name output */
 static int max_bitratestr_len;
-static int currmax;
+static unsigned int currmax;
 static unsigned char redraw;
 static unsigned char timestamp;
 static unsigned char color;
 static unsigned char bargraph;
+static bool statistic;
+static bool reset;
+static bool visualize;
 static enum cfl_mode mode = CFL_WORSTCASE;
 static char *prg;
+static struct termios old;
 
 static void print_usage(char *prg)
 {
@@ -111,6 +144,8 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -r  (redraw the terminal - similar to top)\n");
 	fprintf(stderr, "         -i  (ignore bitstuffing in bandwidth calculation)\n");
 	fprintf(stderr, "         -e  (exact calculation of stuffed bits)\n");
+	fprintf(stderr, "         -s  (show statistics, press 'r' to reset)\n");
+	fprintf(stderr, "         -v  (show busload visualization)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with mandatory bitrate can be specified on the \n", MAXDEVS);
 	fprintf(stderr, "commandline in the form: <ifname>@<bitrate>[,<dbitrate>]\n");
@@ -161,9 +196,19 @@ static void create_bitrate_string(int stat_idx, int *max_bitratestr_len)
 		*max_bitratestr_len = ptr;
 }
 
+static unsigned int calc_load(unsigned int load_fp,
+                              unsigned int exp_fp,
+                              unsigned int sample)
+{
+	unsigned int sample_fp  = sample << FP_SHIFT;
+	unsigned int damped_sum = (load_fp * exp_fp) +
+	                          (sample_fp * (FP_ONE - exp_fp));
+	return damped_sum >> FP_SHIFT;
+}
+
 static void printstats(int signo)
 {
-	int i, j, percent;
+	unsigned int i, j, k, percent, index;
 
 	if (redraw)
 		printf("%s", CSR_HOME);
@@ -234,6 +279,30 @@ static void printstats(int signo)
 		       stat[i].recv_bits_dbitrate,
 		       percent);
 
+		if (statistic) {
+			if (reset) {
+				stat[i].load_min = UINT_MAX;
+				stat[i].load_max = 0;
+				stat[i].load_1m = 0;
+				stat[i].load_5m = 0;
+				stat[i].load_15m = 0;
+			}
+
+			stat[i].load_min = MIN(stat[i].load_min, percent);
+			stat[i].load_max = MAX(stat[i].load_max, percent);
+
+			stat[i].load_1m = calc_load(stat[i].load_1m, EXP_1, percent);
+			stat[i].load_5m = calc_load(stat[i].load_5m, EXP_5, percent);
+			stat[i].load_15m = calc_load(stat[i].load_15m, EXP_15, percent);
+
+			printf(" min:%3d%%, max:%3d%%, load:%3d%% %3d%% %3d%%",
+			       stat[i].load_min,
+			       stat[i].load_max,
+			       (stat[i].load_1m + (FP_ONE >> 1)) >> FP_SHIFT,
+			       (stat[i].load_5m + (FP_ONE >> 1)) >> FP_SHIFT,
+			       (stat[i].load_15m + (FP_ONE >> 1)) >> FP_SHIFT);
+		}
+
 		if (bargraph) {
 
 			printf(" |");
@@ -251,6 +320,28 @@ static void printstats(int signo)
 			printf("|");
 		}
 
+		if (visualize) {
+			stat[i].loads[stat[i].index] = percent;
+			stat[i].index = (stat[i].index + 1) % VISUAL_WINDOW;
+
+			printf("\n");
+			for (j = 0; j < NUMBAR; j++) {
+				printf("%3d%%|", (NUMBAR - j) * PERCENTRES);
+				index = stat[i].index;
+				for (k = 0; k < VISUAL_WINDOW; k++) {
+					percent = stat[i].loads[index];
+
+					if ((percent / PERCENTRES) >= (NUMBAR - j))
+						printf("X");
+					else
+						printf(".");
+
+					index = (index + 1) % VISUAL_WINDOW;
+				}
+				printf("\n");
+			}
+		}
+
 		if (color)
 			printf("%s", ATTRESET);
 
@@ -264,12 +355,19 @@ static void printstats(int signo)
 		stat[i].recv_direction = '.';
 	}
 
+	reset = false;
+
 	if (!redraw)
 		printf("\n");
 
 	fflush(stdout);
 
 	alarm(1);
+}
+
+void cleanup()
+{
+	tcsetattr(STDIN_FILENO, TCSANOW, &old);
 }
 
 int main(int argc, char **argv)
@@ -282,12 +380,20 @@ int main(int argc, char **argv)
 	struct canfd_frame frame;
 	struct iovec iov;
 	struct msghdr msg;
-	int nbytes, i;
+	unsigned int i;
+	int nbytes;
 
 	int have_anydev = 0;
 	unsigned int anydev_bitrate = 0;
 	unsigned int anydev_dbitrate = 0;
 	char anydev_bitratestr[BRSTRLEN]; /* 100000/2000000 => 100k/2M */
+	struct termios temp;
+
+	tcgetattr(STDIN_FILENO, &old);
+	atexit(cleanup);
+	temp = old;
+	temp.c_lflag &= ~(ICANON | ECHO);
+	tcsetattr(STDIN_FILENO, TCSANOW, &temp);
 
 	signal(SIGTERM, sigterm);
 	signal(SIGHUP, sigterm);
@@ -297,7 +403,7 @@ int main(int argc, char **argv)
 
 	prg = basename(argv[0]);
 
-	while ((opt = getopt(argc, argv, "rtbcieh?")) != -1) {
+	while ((opt = getopt(argc, argv, "rtbciesvh?")) != -1) {
 		switch (opt) {
 		case 'r':
 			redraw = 1;
@@ -321,6 +427,15 @@ int main(int argc, char **argv)
 
 		case 'e':
 			mode = CFL_EXACT;
+			break;
+
+		case 's':
+			statistic = true;
+			reset = true;
+			break;
+
+		case 'v':
+			visualize = true;
 			break;
 
 		default:
@@ -449,10 +564,17 @@ int main(int argc, char **argv)
 	while (running) {
 		FD_ZERO(&rdfs);
 		FD_SET(s, &rdfs);
+		FD_SET(STDIN_FILENO, &rdfs);
 
 		if (select(s + 1, &rdfs, NULL, NULL, NULL) < 0) {
 			//perror("pselect");
 			continue;
+		}
+
+		if (FD_ISSET(STDIN_FILENO, &rdfs)) {
+			if (getchar() == 'r') {
+				reset = true;
+			}
 		}
 
 		/* these settings may be modified by recvmsg() */
