@@ -843,7 +843,7 @@ static int get_date(struct timeval *tv, char *date)
 
 int main(int argc, char **argv)
 {
-	char buf[BUFLEN], tmp1[BUFLEN], tmp2[BUFLEN];
+	char buf[BUFLEN], tmp1[10], tmp2[10];
 
 	FILE *infile = stdin;
 	FILE *outfile = stdout;
@@ -897,7 +897,7 @@ int main(int argc, char **argv)
 
 			/* check for base and timestamp entries in the header */
 			if ((!base) &&
-			    (sscanf(buf, "base %s timestamps %s", tmp1, tmp2) == 2)) {
+			    (sscanf(buf, "base %9s timestamps %9s", tmp1, tmp2) == 2)) {
 				base = tmp1[0];
 				timestamps = tmp2[0];
 				if (verbose)
@@ -931,7 +931,7 @@ int main(int argc, char **argv)
 			}
 
 			/* check for decimal places length in valid CAN frames */
-			if (sscanf(buf, "%llu.%s %s ", &sec, tmp2,
+			if (sscanf(buf, "%llu.%9s %9s ", &sec, tmp2,
 				   tmp1) != 3)
 				continue; /* dplace remains zero until first found CAN frame */
 
@@ -952,7 +952,7 @@ int main(int argc, char **argv)
 		 */
 
 		/* check classic CAN format or the CANFD/CANXL tag which can take different types */
-		if (sscanf(buf, "%llu.%llu %s ", &sec,  &usec, tmp1) == 3){
+		if (sscanf(buf, "%llu.%llu %9s ", &sec,  &usec, tmp1) == 3) {
 			if (!strncmp(tmp1, "CANXL", 5))
 				eval_canxl(buf, &date_tv, timestamps, dplace, outfile);
 			else if (!strncmp(tmp1, "CANFD", 5))
