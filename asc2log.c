@@ -258,12 +258,16 @@ static void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps,
 	int i;
 	unsigned long long sec, usec;
 
-	/* The CANFD format is mainly in hex representation but <DataLength>
-	   and probably some content we skip anyway. Don't trust the docs! */
+	/*
+	 * The CANFD format is mainly in hex representation but <DataLength>
+	 * and probably some content we skip anyway. Don't trust the docs!
+	 */
 
-	/* 21.671796 CANFD   1 Tx         11  msgCanFdFr1                      1 0 a 16 \
-	   00 00 00 00 00 00 00 00 00 00 00 00 00 00 59 c0		\
-	   100000  214   223040 80000000 46500250 460a0250 20011736 20010205 */
+	/*
+	 * 21.671796 CANFD   1 Tx         11  msgCanFdFr1                      1 0 a 16 \
+	 * 00 00 00 00 00 00 00 00 00 00 00 00 00 00 59 c0		\
+	 * 100000  214   223040 80000000 46500250 460a0250 20011736 20010205
+	 */
 
 	/* check for valid line without symbolic name */
 	if (sscanf(buf, "%llu.%llu %*s %d %2s %s %hhx %hhx %x %d ",
@@ -393,9 +397,11 @@ static int get_date(struct timeval *tv, char *date)
 		}
 
 		if (!strptime(date, "%B %d %I:%M:%S %p %Y", &tms)) {
-			/* The string might contain a milliseconds value which strptime()
-			   does not support. So we read the ms value into the year variable
-			   before parsing the real year value (hack) */
+			/*
+			 * The string might contain a milliseconds value which strptime()
+			 * does not support. So we read the ms value into the year variable
+			 * before parsing the real year value (hack)
+			 */
 			if (!strptime(date, "%B %d %I:%M:%S.%Y %p %Y", &tms))
 				return 1;
 			sscanf(date, "%*s %*d %*d:%*d:%*d.%3u ", &msecs);
@@ -410,9 +416,11 @@ static int get_date(struct timeval *tv, char *date)
 		}
 
 		if (!strptime(date, "%B %d %H:%M:%S %Y", &tms)) {
-			/* The string might contain a milliseconds value which strptime()
-			   does not support. So we read the ms value into the year variable
-			   before parsing the real year value (hack) */
+			/*
+			 * The string might contain a milliseconds value which strptime()
+			 * does not support. So we read the ms value into the year variable
+			 * before parsing the real year value (hack)
+			 */
 			if (!strptime(date, "%B %d %H:%M:%S.%Y %Y", &tms))
 				return 1;
 			sscanf(date, "%*s %*d %*d:%*d:%*d.%3u ", &msecs);
@@ -537,8 +545,10 @@ int main(int argc, char **argv)
 			}
 		}
 
-		/* the representation of a valid CAN frame is known here */
-		/* so try to get CAN frames and ErrorFrames and convert them */
+		/*
+		 * The representation of a valid CAN frame is known here.
+		 * So try to get CAN frames and ErrorFrames and convert them.
+		 */
 
 		/* check classic CAN format or the CANFD tag which can take both types */
 		if (sscanf(buf, "%llu.%llu %s ", &sec,  &usec, tmp1) == 3){
