@@ -151,20 +151,20 @@ static void eval_can(char* buf, struct timeval *date_tvp, char timestamps,
 	int dlc = 0;
 	int len = 0;
 	int data[8];
-	char tmp1[BUFLEN];
+	char idstr[21];
 	char dir[5]; /* 'Rx'/'Tx'/'TxRq' plus terminating zero */
 	char *extra_info;
 	int i, items;
 	unsigned long long sec, usec;
 
 	/* check for ErrorFrames */
-	if (sscanf(buf, "%llu.%llu %d %s",
+	if (sscanf(buf, "%llu.%llu %d %20s",
 		   &sec, &usec,
-		   &interface, tmp1) == 4) {
+		   &interface, idstr) == 4) {
 		read_tv.tv_sec = sec;
 		read_tv.tv_usec = usec;
 
-		if (!strncmp(tmp1, "ErrorFrame", strlen("ErrorFrame"))) {
+		if (!strncmp(idstr, "ErrorFrame", strlen("ErrorFrame"))) {
 
 			/* do not know more than 'Error' */
 			cf.can_id = (CAN_ERR_FLAG | CAN_ERR_BUSERROR);
@@ -181,15 +181,15 @@ static void eval_can(char* buf, struct timeval *date_tvp, char timestamps,
 
 	/* check for CAN frames with (hexa)decimal values */
 	if (base == 'h')
-		items = sscanf(buf, "%llu.%llu %d %s %4s %c %x %x %x %x %x %x %x %x %x",
+		items = sscanf(buf, "%llu.%llu %d %20s %4s %c %x %x %x %x %x %x %x %x %x",
 			       &sec, &usec, &interface,
-			       tmp1, dir, &rtr, &dlc,
+			       idstr, dir, &rtr, &dlc,
 			       &data[0], &data[1], &data[2], &data[3],
 			       &data[4], &data[5], &data[6], &data[7]);
 	else
-		items = sscanf(buf, "%llu.%llu %d %s %4s %c %x %d %d %d %d %d %d %d %d",
+		items = sscanf(buf, "%llu.%llu %d %20s %4s %c %x %d %d %d %d %d %d %d %d",
 			       &sec, &usec, &interface,
-			       tmp1, dir, &rtr, &dlc,
+			       idstr, dir, &rtr, &dlc,
 			       &data[0], &data[1], &data[2], &data[3],
 			       &data[4], &data[5], &data[6], &data[7]);
 
@@ -214,9 +214,9 @@ static void eval_can(char* buf, struct timeval *date_tvp, char timestamps,
 
 		/* check for CAN ID with (hexa)decimal value */
 		if (base == 'h')
-			get_can_id(&cf.can_id, tmp1, 16);
+			get_can_id(&cf.can_id, idstr, 16);
 		else
-			get_can_id(&cf.can_id, tmp1, 10);
+			get_can_id(&cf.can_id, idstr, 10);
 
 		/* dlc > 8 => len == CAN_MAX_DLEN => fill len8_dlc value */
 		if (dlc > CAN_MAX_DLC)
@@ -260,7 +260,7 @@ static void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps,
 	unsigned char brs, esi, ctmp;
 	unsigned int flags;
 	int dlc, dlen = 0;
-	char tmp1[BUFLEN];
+	char idstr[21];
 	char dir[5]; /* 'Rx'/'Tx'/'TxRq' plus terminating zero */
 	char *extra_info;
 	char *ptr;
@@ -280,14 +280,14 @@ static void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps,
 	 */
 
 	/* check for valid line without symbolic name */
-	if (sscanf(buf, "%llu.%llu %*s %d %4s %s %hhx %hhx %x %d %n",
+	if (sscanf(buf, "%llu.%llu %*s %d %4s %20s %hhx %hhx %x %d %n",
 		   &sec, &usec, &interface,
-		   dir, tmp1, &brs, &esi, &dlc, &dlen, &n) != 9) {
+		   dir, idstr, &brs, &esi, &dlc, &dlen, &n) != 9) {
 
 		/* check for valid line with a symbolic name */
-		if (sscanf(buf, "%llu.%llu %*s %d %4s %s %*s %hhx %hhx %x %d %n",
+		if (sscanf(buf, "%llu.%llu %*s %d %4s %20s %*s %hhx %hhx %x %d %n",
 			   &sec, &usec, &interface,
-			   dir, tmp1, &brs, &esi, &dlc, &dlen, &n) != 9) {
+			   dir, idstr, &brs, &esi, &dlc, &dlen, &n) != 9) {
 
 			/* no valid CANFD format pattern */
 			return;
@@ -321,7 +321,7 @@ static void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps,
 	if (dlen != can_fd_dlc2len(can_fd_len2dlc(dlen)))
 		return;
 
-	get_can_id(&cf.can_id, tmp1, 16);
+	get_can_id(&cf.can_id, idstr, 16);
 
 	ptr = buf + n; /* start of ASCII hex frame data */
 
@@ -389,7 +389,7 @@ static void eval_canxl_cc(char* buf, struct timeval *date_tvp, char timestamps,
 	unsigned char ctmp;
 	unsigned int flags;
 	int dlc, dlen = 0;
-	char tmp1[BUFLEN];
+	char idstr[21];
 	char dir[5]; /* 'Rx'/'Tx'/'TxRq' plus terminating zero */
 	char *extra_info;
 	char *ptr;
@@ -407,18 +407,18 @@ static void eval_canxl_cc(char* buf, struct timeval *date_tvp, char timestamps,
 	/* check for valid line without symbolic name */
 	if (sscanf(buf,
 		   "%llu.%llu %*s %d %4s " /* time, CANXL, channel, direction */
-		   "%*s %*s %*s %s " /* frame format, msg dur, bit count, ID */
+		   "%*s %*s %*s %20s " /* frame format, msg dur, bit count, ID */
 		   "%x %d %n", /* DLC, Datalen */
 		   &sec, &usec, &interface, dir,
-		   tmp1,
+		   idstr,
 		   &dlc, &dlen, &n) != 7) {
 		/* check for valid line with a symbolic name */
 		if (sscanf(buf,
 			   "%llu.%llu %*s %d %4s " /* time, CANXL, channel, direction */
-			   "%*s %*s %*s %s " /* frame format, msg dur, bit count, ID */
+			   "%*s %*s %*s %20s " /* frame format, msg dur, bit count, ID */
 			   "%*s %x %d %n", /* sym name, DLC, Datalen */
 			   &sec, &usec, &interface, dir,
-			   tmp1,
+			   idstr,
 			   &dlc, &dlen, &n) != 7) {
 			/* no valid CAN CC format pattern */
 			return;
@@ -448,7 +448,7 @@ static void eval_canxl_cc(char* buf, struct timeval *date_tvp, char timestamps,
 	else
 		extra_info = " T\n";
 
-	get_can_id(&cf.can_id, tmp1, 16);
+	get_can_id(&cf.can_id, idstr, 16);
 
 	ptr = buf + n; /* start of ASCII hex frame data */
 
@@ -503,7 +503,7 @@ static void eval_canxl_fd(char* buf, struct timeval *date_tvp, char timestamps,
 	unsigned char ctmp;
 	unsigned int flags;
 	int dlc, dlen = 0;
-	char tmp1[BUFLEN];
+	char idstr[21];
 	char dir[5]; /* 'Rx'/'Tx'/'TxRq' plus terminating zero */
 	char *extra_info;
 	char *ptr;
@@ -521,18 +521,18 @@ static void eval_canxl_fd(char* buf, struct timeval *date_tvp, char timestamps,
 	/* check for valid line without symbolic name */
 	if (sscanf(buf,
 		   "%llu.%llu %*s %d %4s " /* time, CANXL, channel, direction */
-		   "%*s %*s %*s %s " /* frame format, msg dur, bit count, ID */
+		   "%*s %*s %*s %20s " /* frame format, msg dur, bit count, ID */
 		   "%x %d %n", /* DLC, Datalen */
 		   &sec, &usec, &interface, dir,
-		   tmp1,
+		   idstr,
 		   &dlc, &dlen, &n) != 7) {
 		/* check for valid line with a symbolic name */
 		if (sscanf(buf,
 			   "%llu.%llu %*s %d %4s " /* time, CANXL, channel, direction */
-			   "%*s %*s %*s %s " /* frame format, msg dur, bit count, ID */
+			   "%*s %*s %*s %20s " /* frame format, msg dur, bit count, ID */
 			   "%*s %x %d %n", /* sym name, DLC, Datalen */
 			   &sec, &usec, &interface, dir,
-			   tmp1,
+			   idstr,
 			   &dlc, &dlen, &n) != 7) {
 			/* no valid CAN CC format pattern */
 			return;
@@ -562,7 +562,7 @@ static void eval_canxl_fd(char* buf, struct timeval *date_tvp, char timestamps,
 	else
 		extra_info = " T\n";
 
-	get_can_id(&cf.can_id, tmp1, 16);
+	get_can_id(&cf.can_id, idstr, 16);
 
 	ptr = buf + n; /* start of ASCII hex frame data */
 
@@ -613,7 +613,7 @@ static void eval_canxl_xl(char* buf, struct timeval *date_tvp, char timestamps,
 	unsigned char sdt, vcid, secbit, ctmp;
 	unsigned int af, flags;
 	int dlc, dlen = 0;
-	char tmp1[BUFLEN];
+	char idstr[21];
 	char dir[5]; /* 'Rx'/'Tx'/'TxRq' plus terminating zero */
 	char *extra_info;
 	char *ptr;
@@ -632,21 +632,21 @@ static void eval_canxl_xl(char* buf, struct timeval *date_tvp, char timestamps,
 	/* check for valid line without symbolic name */
 	if (sscanf(buf,
 		   "%llu.%llu %*s %d %4s " /* time, CANXL, channel, direction */
-		   "%*s %*s %*s %s " /* frame format, msg dur, bit count, ID */
+		   "%*s %*s %*s %20s " /* frame format, msg dur, bit count, ID */
 		   "%hhx %hhx %x %d " /* SDT, SEC, DLC, Datalen */
 		   "%*s %*s %hhx %x %n", /* stuff bit count, crc, VCID, AF */
 		   &sec, &usec, &interface, dir,
-		   tmp1,
+		   idstr,
 		   &sdt, &secbit, &dlc, &dlen,
 		   &vcid, &af, &n) != 11) {
 		/* check for valid line with a symbolic name */
 		if (sscanf(buf,
 			   "%llu.%llu %*s %d %4s " /* time, CANXL, channel, direction */
-			   "%*s %*s %*s %s " /* frame format, msg dur, bit count, ID */
+			   "%*s %*s %*s %20s " /* frame format, msg dur, bit count, ID */
 			   "%*s %hhx %hhx %x %d " /* sym name, SDT, SEC, DLC, Datalen */
 			   "%*s %*s %hhx %x %n", /* stuff bit count, crc, VCID, AF */
 			   &sec, &usec, &interface, dir,
-			   tmp1,
+			   idstr,
 			   &sdt, &secbit, &dlc, &dlen,
 			   &vcid, &af, &n) != 11) {
 
@@ -685,7 +685,7 @@ static void eval_canxl_xl(char* buf, struct timeval *date_tvp, char timestamps,
 	if (dlen != dlc + 1)
 		return;
 
-	get_can_id(&cf.prio, tmp1, 16);
+	get_can_id(&cf.prio, idstr, 16);
 
 	if ((cf.prio & CANXL_PRIO_MASK) != cf.prio)
 		return;
