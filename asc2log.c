@@ -143,7 +143,7 @@ static void eval_can(char* buf, struct timeval *date_tvp, char timestamps,
 	int len = 0;
 	int data[8];
 	char tmp1[BUFLEN];
-	char dir[3]; /* 'Rx' or 'Tx' plus terminating zero */
+	char dir[5]; /* 'Rx'/'Tx'/'TxRq' plus terminating zero */
 	char *extra_info;
 	int i, items;
 	unsigned long long sec, usec;
@@ -172,13 +172,13 @@ static void eval_can(char* buf, struct timeval *date_tvp, char timestamps,
 
 	/* check for CAN frames with (hexa)decimal values */
 	if (base == 'h')
-		items = sscanf(buf, "%llu.%llu %d %s %2s %c %x %x %x %x %x %x %x %x %x",
+		items = sscanf(buf, "%llu.%llu %d %s %4s %c %x %x %x %x %x %x %x %x %x",
 			       &sec, &usec, &interface,
 			       tmp1, dir, &rtr, &dlc,
 			       &data[0], &data[1], &data[2], &data[3],
 			       &data[4], &data[5], &data[6], &data[7]);
 	else
-		items = sscanf(buf, "%llu.%llu %d %s %2s %c %x %d %d %d %d %d %d %d %d",
+		items = sscanf(buf, "%llu.%llu %d %s %4s %c %x %d %d %d %d %d %d %d %d",
 			       &sec, &usec, &interface,
 			       tmp1, dir, &rtr, &dlc,
 			       &data[0], &data[1], &data[2], &data[3],
@@ -252,7 +252,7 @@ static void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps,
 	unsigned int flags;
 	int dlc, dlen = 0;
 	char tmp1[BUFLEN];
-	char dir[3]; /* 'Rx' or 'Tx' plus terminating zero */
+	char dir[5]; /* 'Rx'/'Tx'/'TxRq' plus terminating zero */
 	char *extra_info;
 	char *ptr;
 	int i;
@@ -270,12 +270,12 @@ static void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps,
 	 */
 
 	/* check for valid line without symbolic name */
-	if (sscanf(buf, "%llu.%llu %*s %d %2s %s %hhx %hhx %x %d ",
+	if (sscanf(buf, "%llu.%llu %*s %d %4s %s %hhx %hhx %x %d ",
 		   &sec, &usec, &interface,
 		   dir, tmp1, &brs, &esi, &dlc, &dlen) != 9) {
 
 		/* check for valid line with a symbolic name */
-		if (sscanf(buf, "%llu.%llu %*s %d %2s %s %*s %hhx %hhx %x %d ",
+		if (sscanf(buf, "%llu.%llu %*s %d %4s %s %*s %hhx %hhx %x %d ",
 			   &sec, &usec, &interface,
 			   dir, tmp1, &brs, &esi, &dlc, &dlen) != 9) {
 
