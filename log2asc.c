@@ -54,6 +54,15 @@
 
 #include "lib.h"
 
+/* relevant flags in Flags field */
+#define ASC_F_RTR 0x00000010
+#define ASC_F_FDF 0x00001000
+#define ASC_F_BRS 0x00002000
+#define ASC_F_ESI 0x00004000
+#define ASC_F_XLF 0x00400000
+#define ASC_F_RES 0x00800000
+#define ASC_F_SEC 0x01000000
+
 extern int optind, opterr, optopt;
 
 static void print_usage(char *prg)
@@ -65,18 +74,17 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -O <outfile>  (default stdout)\n");
 	fprintf(stderr, "         -4  (reduce decimal place to 4 digits)\n");
 	fprintf(stderr, "         -n  (set newline to cr/lf - default lf)\n");
-	fprintf(stderr, "         -f  (use CANFD format also for Classic CAN)\n");
+	fprintf(stderr, "         -f  (use CANFD format also for CAN CC)\n");
+	fprintf(stderr, "         -x  (use CANXL format also for CAN CC/FD)\n");
 	fprintf(stderr, "         -r  (suppress dlc for RTR frames - pre v8.5 tools)\n");
 }
 
-static void can_asc(struct canfd_frame *cfd, int devno, int nortrdlc,
+static void can_asc(struct can_frame *cf, int devno, int nortrdlc,
 		    char *extra_info, FILE *outfile)
 {
-	int i;
+	unsigned int i, dlc;
 	char id[10];
 	char *dir = "Rx";
-	int dlc;
-	struct can_frame *cf = (struct can_frame *)cfd; /* for len8_dlc */
 
 	fprintf(outfile, "%-2d ", devno); /* channel number left aligned */
 
@@ -93,7 +101,7 @@ static void can_asc(struct canfd_frame *cfd, int devno, int nortrdlc,
 				dir = "Tx";
 		}
 
-		fprintf(outfile, "%-15s %s   ", id, dir);
+		fprintf(outfile, "%-15s %-4s ", id, dir);
 
 		if (cf->len == CAN_MAX_DLC &&
 		    cf->len8_dlc > CAN_MAX_DLC &&
@@ -120,18 +128,12 @@ static void can_asc(struct canfd_frame *cfd, int devno, int nortrdlc,
 static void canfd_asc(struct canfd_frame *cf, int devno, int mtu,
 		      char *extra_info, FILE *outfile)
 {
-	int i;
+	unsigned int i;
 	char id[10];
 	char *dir = "Rx";
 	unsigned int flags = 0;
 	unsigned int dlen = cf->len;
 	unsigned int dlc = can_fd_len2dlc(dlen);
-
-	/* relevant flags in Flags field */
-#define ASC_F_RTR 0x00000010
-#define ASC_F_FDF 0x00001000
-#define ASC_F_BRS 0x00002000
-#define ASC_F_ESI 0x00004000
 
 	/* check for extra info */
 	if (strlen(extra_info) > 0) {
@@ -140,7 +142,7 @@ static void canfd_asc(struct canfd_frame *cf, int devno, int mtu,
 			dir = "Tx";
 	}
 
-	fprintf(outfile, "CANFD %3d %s ", devno, dir); /* 3 column channel number right aligned */
+	fprintf(outfile, "CANFD %3d %-4s ", devno, dir); /* 3 column channel number right aligned */
 
 	sprintf(id, "%X%c", cf->can_id & CAN_EFF_MASK,
 		(cf->can_id & CAN_EFF_FLAG)?'x':' ');
@@ -174,11 +176,122 @@ static void canfd_asc(struct canfd_frame *cf, int devno, int mtu,
 
 	fprintf(outfile, "%2d", dlen);
 
-	for (i = 0; i < (int)dlen; i++) {
+	for (i = 0; i < dlen; i++) {
 		fprintf(outfile, " %02X", cf->data[i]);
 	}
 
 	fprintf(outfile, " %8d %4d %8X 0 0 0 0 0", 130000, 130, flags);
+}
+
+static void canxl_asc(cu_t *cu, int devno, int mtu,
+		      char *extra_info, FILE *outfile)
+{
+	char id[10];
+	char *dir = "Rx";
+	char *frametype;
+	unsigned char *dataptr;
+	unsigned int i, dlen, dlc, flags = 0;
+
+	/* check for extra info */
+	if (strlen(extra_info) > 0) {
+		/* only the first char is defined so far */
+		if (extra_info[0] == 'T')
+			dir = "Tx";
+	}
+
+	switch (mtu) {
+	case CANXL_MTU:
+		sprintf(id, "%X", cu->xl.prio & CANXL_PRIO_MASK);
+		frametype = "XLFF";
+
+		dataptr = &cu->xl.data[0];
+		dlen = cu->xl.len;
+		dlc = dlen - 1;
+		flags = (ASC_F_XLF | ASC_F_FDF | ASC_F_BRS);
+
+		if (cu->xl.flags & CANXL_SEC)
+			flags |= ASC_F_SEC;
+		if (cu->xl.flags & CANXL_RRS)
+			flags |= ASC_F_RES;
+		break;
+
+	case CANFD_MTU:
+		if (cu->fd.can_id & CAN_EFF_FLAG) {
+			sprintf(id, "%Xx", cu->fd.can_id & CAN_EFF_MASK);
+			frametype = "FEFF";
+		} else {
+			sprintf(id, "%X", cu->fd.can_id & CAN_SFF_MASK);
+			frametype = "FBFF";
+		}
+
+		dataptr = &cu->fd.data[0];
+		dlen = cu->fd.len;
+		dlc = can_fd_len2dlc(dlen);
+		flags = ASC_F_FDF;
+		if (cu->fd.flags & CANFD_BRS)
+			flags |= ASC_F_BRS;
+		if (cu->fd.flags & CANFD_ESI)
+			flags |= ASC_F_ESI;
+		break;
+
+	case CAN_MTU:
+		if (cu->cc.can_id & CAN_EFF_FLAG) {
+			sprintf(id, "%Xx", cu->cc.can_id & CAN_EFF_MASK);
+			frametype = "CEFF";
+		} else {
+			sprintf(id, "%X", cu->cc.can_id & CAN_SFF_MASK);
+			frametype = "CBFF";
+		}
+
+		dataptr = &cu->cc.data[0];
+		dlen = cu->cc.len;
+		dlc = dlen ;
+
+		/* check for extra DLC when having a Classic CAN with 8 bytes payload */
+		if ((dlen == CAN_MAX_DLEN) && (cu->cc.len8_dlc > CAN_MAX_DLEN) &&
+		    (cu->cc.len8_dlc <= CAN_MAX_RAW_DLC))
+			dlc = cu->cc.len8_dlc;
+
+		if (cu->cc.can_id & CAN_RTR_FLAG) {
+			/* no data length but dlc for RTR frames */
+			dlen = 0;
+			flags = ASC_F_RTR;
+		}
+		break;
+
+	default:
+		return;
+	}
+
+	fprintf(outfile, "CANXL %3d %-4s ", devno, dir); /* 3 column channel number and direction */
+
+	fprintf(outfile, "%s   984438   4656 ", frametype); /* frame type / msg duration / bit count */
+
+	fprintf(outfile, "%9s                                  ", id); /* ID / symbolic name (empty) */
+
+	if (mtu == CANXL_MTU) /* SDT, SEC bit for CAN XL only */
+		fprintf(outfile, "%02x %d ", cu->xl.sdt, (cu->xl.flags & CANXL_SEC)?1:0);
+
+	fprintf(outfile, "%x %d", dlc, dlen); /* DLC and data length */
+
+	if (mtu == CANXL_MTU) /* SBC / PCRC / VCID / AF */
+		fprintf(outfile, " 1 1f96 %02x %08x",
+			(unsigned char)((cu->xl.prio >> CANXL_VCID_OFFSET) & CANXL_VCID_VAL_MASK),
+			cu->xl.af);
+
+	for (i = 0; i < dlen; i++) {
+		fprintf(outfile, " %02x", dataptr[i]);
+	}
+
+	if (mtu == CANFD_MTU) /* stuff field */
+		fprintf(outfile, " 8");
+
+	fprintf(outfile, " 123123 %08x %08x", flags, 0); /* fcsc, msg flags, msg flags ext */
+
+	fprintf(outfile, /* bitrate settings for CC/FD/XL */
+		" 000000050005000e 0000000000a00010"
+		" 0000000a000a001d 0000000000a00002"
+		" 000000100010000f 0000000000a00001");
 }
 
 #define DEVSZ 22
@@ -205,11 +318,11 @@ int main(int argc, char **argv)
 	static struct timeval tv, start_tv;
 	FILE *infile = stdin;
 	FILE *outfile = stdout;
-	static int maxdev, devno, i, crlf, fdfmt, nortrdlc, d4, opt, mtu;
+	static int maxdev, devno, i, crlf, fdfmt, xlfmt, nortrdlc, d4, opt, mtu;
 	int print_banner = 1;
 	unsigned long long sec, usec;
 
-	while ((opt = getopt(argc, argv, "I:O:4nfr?")) != -1) {
+	while ((opt = getopt(argc, argv, "I:O:4nfxr?")) != -1) {
 		switch (opt) {
 		case 'I':
 			infile = fopen(optarg, "r");
@@ -233,6 +346,10 @@ int main(int argc, char **argv)
 
 		case 'f':
 			fdfmt = 1;
+			break;
+
+		case 'x':
+			xlfmt = 1;
 			break;
 
 		case 'r':
@@ -300,6 +417,9 @@ int main(int argc, char **argv)
 				(crlf)?"\r\n":"\n");
 			fprintf(outfile, "no internal events logged%s",
 				(crlf)?"\r\n":"\n");
+			fprintf(outfile, "// version 18.2.0%s", (crlf)?"\r\n":"\n");
+			fprintf(outfile, "// Measurement UUID: cc9c7b54-68ae-"
+				"46d2-a43a-6aa87df7dd74%s", (crlf)?"\r\n":"\n");
 		}
 
 		for (i = 0, devno = 0; i < maxdev; i++) {
@@ -313,14 +433,8 @@ int main(int argc, char **argv)
 
 			mtu = parse_canframe(afrbuf, &cu);
 
-			/* convert only CAN CC and CAN FD frames */
-			if ((mtu != CAN_MTU) && (mtu != CANFD_MTU)) {
-				printf("no valid CAN CC/FD frame\n");
-				return 1;
-			}
-
-			/* we don't support error message frames in CAN FD */
-			if ((mtu == CANFD_MTU) && (cu.cc.can_id & CAN_ERR_FLAG))
+			/* no error message frames in non CAN CC frames */
+			if ((mtu != CAN_MTU) && (cu.cc.can_id & CAN_ERR_FLAG))
 				continue;
 
 			tv.tv_sec  = tv.tv_sec - start_tv.tv_sec;
@@ -335,10 +449,12 @@ int main(int argc, char **argv)
 			else
 				fprintf(outfile, "%4llu.%06llu ", (unsigned long long)tv.tv_sec, (unsigned long long)tv.tv_usec);
 
-			if ((mtu == CAN_MTU) && (fdfmt == 0))
-				can_asc(&cu.fd, devno, nortrdlc, extra_info, outfile);
-			else
+			if ((mtu == CAN_MTU) && (fdfmt == 0) && (xlfmt == 0))
+				can_asc(&cu.cc, devno, nortrdlc, extra_info, outfile);
+			else if ((mtu != CANXL_MTU) && (xlfmt == 0))
 				canfd_asc(&cu.fd, devno, mtu, extra_info, outfile);
+			else
+				canxl_asc(&cu, devno, mtu, extra_info, outfile);
 
 			if (crlf)
 				fprintf(outfile, "\r");
