@@ -126,6 +126,7 @@ if(NOT ANDROID)
 
   set_target_properties(isobusfs PROPERTIES
     PUBLIC_HEADER "${PUBLIC_HEADER_ISOBUSFS}"
+    SOVERSION 0
   )
 
   install(TARGETS isobusfs
