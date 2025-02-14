@@ -17,6 +17,7 @@
 #include <linux/can/j1939.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <time.h>
 #include <sys/socket.h>
 
 #ifndef J1939_LIB_H
