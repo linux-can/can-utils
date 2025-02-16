@@ -30,7 +30,10 @@ jobs:
         podman run --name stable -di --userns=keep-id:uid=1000,gid=1000 -v "$PWD":/home -w /home ${{ matrix.release }} bash
         podman exec -i stable uname -a
         podman exec -i stable id
+        podman exec -i -u root stable dpkg --add-architecture arm64
+        podman exec -i -u root stable dpkg --add-architecture armhf
         podman exec -i -u root stable apt update
+        podman exec -e DEBIAN_FRONTEND='noninteractive' -i -u root stable apt upgrade -o APT::Install-Suggests=false -qy
         podman exec -e DEBIAN_FRONTEND='noninteractive' -i -u root stable apt install -o APT::Install-Suggests=false -qy ${release} \
                 clang \
                 cmake \
@@ -38,6 +41,9 @@ jobs:
                 gcc-aarch64-linux-gnu \
                 gcc-arm-linux-gnueabihf \
                 gcc-mips-linux-gnu \
+                libgps-dev \
+                libgps-dev:arm64 \
+                libgps-dev:armhf \
                 make
 
     - name: Configure & Build with gcc

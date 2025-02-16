@@ -67,6 +67,10 @@ set(PROGRAMS_J1939_TIMEDATE
   j1939-timedate-cli
 )
 
+set(PROGRAMS_J1939_VEHICLE_POSITION
+  j1939-vehicle-position-srv
+)
+
 set(PROGRAMS_ISOBUSFS
   isobusfs-srv
   isobusfs-cli
@@ -189,6 +193,22 @@ if(NOT ANDROID)
   install(TARGETS
     j1939-timedate-cli
     j1939-timedate-srv
+    DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+  set(PUBLIC_HEADER_J1939_VEHICLE_POSITION
+    j1939_vehicle_position/j1939_vehicle_position_cmn.h
+  )
+
+  add_executable(j1939-vehicle-position-srv
+    j1939_vehicle_position/j1939_vehicle_position_srv.c
+  )
+
+  target_link_libraries(j1939-vehicle-position-srv
+    PRIVATE can j1939 gps
+  )
+
+  install(TARGETS
+    j1939-vehicle-position-srv
     DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 endif()
