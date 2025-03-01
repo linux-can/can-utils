@@ -12,6 +12,10 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
+if(CMAKE_EXPORT_COMPILE_COMMANDS STREQUAL "")
+  set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "project default" FORCE)
+endif()
+
 # Add an option to enable treating warnings as errors
 option(ENABLE_WERROR "Treat all compiler warnings as errors" OFF)
 
