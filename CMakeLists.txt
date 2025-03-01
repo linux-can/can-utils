@@ -4,9 +4,9 @@ project(can-utils LANGUAGES C)
 
 message(STATUS "CMake version: ${CMAKE_VERSION}")
 
-include (CheckFunctionExists)
-include (CheckSymbolExists)
-include (GNUInstallDirs)
+include(CheckFunctionExists)
+include(CheckSymbolExists)
+include(GNUInstallDirs)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
@@ -32,8 +32,8 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DCLOCK_TAI=11")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSO_TXTIME=61")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSCM_TXTIME=SO_TXTIME")
 
-include_directories (.)
-include_directories (./include)
+include_directories(.)
+include_directories(./include)
 
 check_function_exists(fork HAVE_FORK)
 
