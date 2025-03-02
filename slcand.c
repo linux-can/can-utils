@@ -160,7 +160,7 @@ static int look_up_uart_speed(long int s)
 		return B3500000;
 #endif
 #ifdef B3710000
-	case 3710000
+	case 3710000:
 		return B3710000;
 #endif
 #ifdef B4000000
