@@ -43,6 +43,7 @@ void libj1939_init_sockaddr_can(struct sockaddr_can *sac, uint32_t pgn);
 
 int libj1939_open_socket(void);
 int libj1939_bind_socket(int sock, struct sockaddr_can *addr);
+int libj1939_connect_socket(int sock, struct sockaddr_can *addr);
 int libj1939_socket_prio(int sock, int prio);
 int libj1939_set_broadcast(int sock);
 int libj1939_add_socket_to_epoll(int epoll_fd, int sock, uint32_t events);
