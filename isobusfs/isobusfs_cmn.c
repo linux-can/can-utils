@@ -611,7 +611,7 @@ int isobusfs_cmn_connect_socket(int sock, struct sockaddr_can *addr)
 }
 
 /* FIXME: linger is currently not supported by the kernel J1939 stack
- * but it would be nice to have it. Especially if we wont to stop sending
+ * but it would be nice to have it. Especially if we won't to stop sending
  * messages on a socket when the connection is lost.
  */
 int isobusfs_cmn_set_linger(int sock)

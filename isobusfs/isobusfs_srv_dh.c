@@ -662,7 +662,7 @@ static int isobusfs_srv_dh_ccd_res(struct isobusfs_srv_priv *priv,
 	int ret;
 
 	/*
-	 * We assime, the relative path stored in res->name is not longer
+	 * We assume, the relative path stored in res->name is not longer
 	 * than absolue path
 	 */
 	if (req->name_len > ISOBUSFS_SRV_MAX_PATH_LEN) {

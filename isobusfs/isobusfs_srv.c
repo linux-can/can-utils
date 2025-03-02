@@ -70,7 +70,7 @@ static int isobusfs_srv_rx_fs(struct isobusfs_srv_priv *priv,
 		      cg);
 
 		/* ISO 11783-13:2021 - Annex C.1.1 Overview:
-		 * If a client sends a command, which is not defined withing this
+		 * If a client sends a command, which is not defined within this
 		 * documentation, the file server shall respond with a
 		 * NACK (ISO 11783-3:2018 Chapter 5.4.5)
 		 */
@@ -279,7 +279,7 @@ static int isobusfs_srv_sock_fss_prepare(struct isobusfs_srv_priv *priv)
 		return ret;
 
 	/* keep address and name and overwrite PGN */
-	/* TOOD: actually, this is PGN input filter. Should we use different
+	/* TODO: actually, this is PGN input filter. Should we use different
 	 * PGN?
 	 */
 	addr.can_addr.j1939.pgn = ISOBUSFS_PGN_CL_TO_FS;
@@ -720,7 +720,7 @@ static int isobusfs_srv_parse_args(struct isobusfs_srv_priv *priv, int argc,
 	}
 
 	if (!local_name_set)
-		pr_warn("local name is not set. Wont be able to generate proper manufacturer-specific directory name. Falling mack to MCMC0000");
+		pr_warn("local name is not set. Won't be able to generate proper manufacturer-specific directory name. Falling mack to MCMC0000");
 	isobusfs_srv_generate_mfs_dir_name(priv);
 
 	pr_debug("Server configuration:");
