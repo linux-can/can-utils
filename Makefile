@@ -110,6 +110,7 @@ PROGRAMS := \
 	can-calc-bit-timing \
 	canbusload \
 	candump \
+	canerrsim \
 	canfdtest \
 	cangen \
 	cansequence \
