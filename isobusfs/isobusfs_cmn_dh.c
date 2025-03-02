@@ -23,7 +23,7 @@ int isobusfs_cmn_dh_validate_dir_path(const char *path, bool writable)
 	ret = access(path, mode);
 	if (ret == -1) {
 		ret = -errno;
-		pr_err("failed to acces path %s, for read %s. %s", path,
+		pr_err("failed to access path %s, for read %s. %s", path,
 		       writable ? "and write" : "", strerror(ret));
 		return ret;
 	}

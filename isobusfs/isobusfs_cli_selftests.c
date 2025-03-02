@@ -211,7 +211,7 @@ static struct isobusfs_cli_test_dir_path test_dir_patterns[] = {
 	{ "~tilde_dir", true },
 	/* expected result \\vol1\dir1\~\ */
 	{ "\\\\vol1\\dir1\\~", true },
-	/* expected result \\vol1\~\ not clear if it is manufacture speficic dir */
+	/* expected result \\vol1\~\ not clear if it is manufacture specific dir */
 	{ "\\~\\", true },
 	/* expected result \\~\ */
 	{ "\\\\~\\", false },

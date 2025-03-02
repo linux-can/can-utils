@@ -686,7 +686,7 @@ send_response:
 		goto free_res;
 	}
 
-	pr_debug("> tx: Read File Response. Error code: %d (%s), readed size: %d",
+	pr_debug("> tx: Read File Response. Error code: %d (%s), read size: %d",
 		 error_code, isobusfs_error_to_str(error_code), readed_size);
 
 free_res:

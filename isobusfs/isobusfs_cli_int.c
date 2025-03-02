@@ -1077,7 +1077,7 @@ int isobusfs_cli_interactive(struct isobusfs_priv *priv)
 			}
 		}
 
-		pr_int("unknown comand\n");
+		pr_int("unknown command\n");
 		isobusfs_cli_promt(priv);
 	} else {
 		if (errno != EAGAIN && errno != EWOULDBLOCK)
