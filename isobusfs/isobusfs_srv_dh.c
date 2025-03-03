@@ -663,7 +663,7 @@ static int isobusfs_srv_dh_ccd_res(struct isobusfs_srv_priv *priv,
 
 	/*
 	 * We assume, the relative path stored in res->name is not longer
-	 * than absolue path
+	 * than absolute path
 	 */
 	if (req->name_len > ISOBUSFS_SRV_MAX_PATH_LEN) {
 		pr_warn("path too long");
@@ -697,7 +697,7 @@ static int isobusfs_srv_dh_ccd_res(struct isobusfs_srv_priv *priv,
 process_error:
 	if (ret < 0) {
 		/* linux_error_to_isobusfs_error() can't distinguish between
-		 * -EINVAL vor SRC and DST, so we have to do it manually.
+		 * -EINVAL for SRC and DST, so we have to do it manually.
 		 */
 		if (ret == -EINVAL)
 			error_code = ISOBUSFS_ERR_INVALID_DST_NAME;
