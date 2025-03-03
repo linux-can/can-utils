@@ -16,6 +16,7 @@ tags
 /can-calc-bit-timing
 /canbusload
 /candump
+/canerrsim
 /canfdtest
 /cangen
 /cangw
@@ -39,6 +40,7 @@ tags
 /j1939sr
 /j1939-timedate-cli
 /j1939-timedate-srv
+/j1939-vehicle-position-srv
 /log2asc
 /log2long
 /mcp251xfd-dump
