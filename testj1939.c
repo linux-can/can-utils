@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "- while (1)\n");
 	while (todo_echo || todo_recv) {
 		/*
-		 * re-use peername for storing the sender's peername of
+		 * reuse peername for storing the sender's peername of
 		 * received packets
 		 */
 		if (verbose)
