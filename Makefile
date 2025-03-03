@@ -193,7 +193,7 @@ j1939-timedate-cli:	lib.o \
 j1939-vehicle-position-srv: \
 			lib.o \
 			libj1939.o \
-			j1939_vehicle_position/j1939_vehicle_position_srv.o \
+			j1939_vehicle_position/j1939_vehicle_position_srv.o
 		$(CC) $(LDFLAGS) $^ $(LDLIBS) -lgps -o $@
 
 isobusfs-srv:	lib.o \
