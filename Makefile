@@ -46,6 +46,7 @@ MAKEFLAGS := -k
 CFLAGS := -O2 -Wall -Wno-parentheses -Wsign-compare
 
 HAVE_FORK := $(shell ./check_cc.sh "$(CC)" fork_test.c)
+HAVE_LIBGPS := $(shell test -x "`which pkg-config`" && pkg-config --exists libgps && echo 1 || echo 0)
 
 CPPFLAGS += \
 	-I. \
@@ -67,8 +68,10 @@ PROGRAMS_J1939_TIMEDATE := \
 	j1939-timedate-srv \
 	j1939-timedate-cli
 
+ifeq ($(HAVE_LIBGPS),1)
 PROGRAMS_J1939_VEHICLE_POSITION := \
 	j1939-vehicle-position-srv
+endif
 
 PROGRAMS_ISOBUSFS := \
 	isobusfs-srv \
@@ -194,7 +197,7 @@ j1939-vehicle-position-srv: \
 			lib.o \
 			libj1939.o \
 			j1939_vehicle_position/j1939_vehicle_position_srv.o
-		$(CC) $(LDFLAGS) $^ $(LDLIBS) -lgps -o $@
+		$(CC) $(LDFLAGS) $^ $(LDLIBS) $(shell pkg-config --libs libgps) -o $@
 
 isobusfs-srv:	lib.o \
 		libj1939.o \
