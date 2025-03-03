@@ -29,6 +29,7 @@ subsystem (aka SocketCAN):
 * canbusload : calculate and display the CAN busload
 * can-calc-bit-timing : userspace version of in-kernel bitrate calculation
 * canfdtest : Full-duplex test program (DUT and host part)
+* canerrsim : CAN error message simulator
 
 #### ISO-TP tools [ISO15765-2:2016 for Linux](https://github.com/hartkopp/can-isotp)
 * isotpsend : send a single ISO-TP PDU
@@ -75,4 +76,4 @@ Follow the link to see examples on how this tools can be used:
 *   [SocketCAN Documentation (Linux Kernel)](https://www.kernel.org/doc/html/latest/networking/can.html)
 *   [Elinux.org CAN Bus Page](http://elinux.org/CAN_Bus)
 *   [Debian Package Description](https://packages.debian.org/sid/can-utils)
-
+*   [J1939 kernel module installation on Debian](can-j1939-install-kernel-module.md)
