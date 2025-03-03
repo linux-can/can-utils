@@ -146,6 +146,20 @@ jobs:
         podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=cmake/${toolchain}.cmake -DENABLE_WERROR=ON -B build-${toolchain}
         podman exec -i stable cmake --build build-${toolchain}
 
+    - name: Configure & Build with gcc (Makefile)
+      env:
+        CC: gcc
+      run: |
+        podman exec -i stable make
+        podman exec -i stable make clean
+
+    - name: Configure & Build with clang (Makefile)
+      env:
+        CC: clang
+      run: |
+        podman exec -i stable make
+        podman exec -i stable make clean
+
     - name: Show logs
       if: ${{ failure() }}
       run: |
