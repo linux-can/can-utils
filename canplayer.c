@@ -48,6 +48,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
@@ -89,6 +90,12 @@ const int canfx_on = 1;
 
 extern int optind, opterr, optopt;
 
+struct sleep {
+	struct timeval *sleep_vector;
+	size_t idx;
+	size_t size;
+};
+
 static void print_usage(char *prg)
 {
 	fprintf(stderr, "%s - replay a compact CAN frame logfile to CAN devices.\n", prg);
@@ -117,6 +124,8 @@ static void print_usage(char *prg)
 			"loopback of sent CAN frames)\n");
 	fprintf(stderr, "         -v           (verbose: print "
 			"sent CAN frames)\n");
+	fprintf(stderr, "         -r           (real-time: send "
+			"CAN frames in real-time)\n");
 	fprintf(stderr, "         -h           (show "
 			"this help message)\n\n");
 	fprintf(stderr, "Interface assignment:\n");
@@ -280,8 +289,11 @@ int main(int argc, char **argv)
 	int eof, txmtu, i, j;
 	char *fret;
 	unsigned long long sec, usec;
+	bool gap_from_file = false;
+	struct sleep timestamps;
+	struct timeval send_time, act_time, init_trace, init_time;
 
-	while ((opt = getopt(argc, argv, "I:l:tin:g:s:xvh")) != -1) {
+	while ((opt = getopt(argc, argv, "I:l:tin:g:s:xvrh")) != -1) {
 		switch (opt) {
 		case 'I':
 			infile = fopen(optarg, "r");
@@ -336,6 +348,17 @@ int main(int argc, char **argv)
 			verbose++;
 			break;
 
+		case 'r':
+			if (isatty(fileno(infile))) {
+				fprintf(stderr, "Specify an input file for option -r !\n");
+				exit(EXIT_FAILURE);
+			}
+			gap_from_file = true; /* using time delta from file */
+			init_trace.tv_sec = 0;
+			init_trace.tv_usec = 0;
+			timestamps.idx = 0; /*to avoid warning accessing idx variable*/
+			break;
+
 		case 'h':
 			print_usage(basename(argv[0]));
 			exit(EXIT_SUCCESS);
@@ -368,8 +391,10 @@ int main(int argc, char **argv)
 		printf("interactive mode: press ENTER to process next CAN frame ...\n");
 	}
 
-	sleep_ts.tv_sec = gap / 1000;
-	sleep_ts.tv_nsec = (gap % 1000) * 1000000;
+	if (!gap_from_file) {
+		sleep_ts.tv_sec = gap / 1000;
+		sleep_ts.tv_nsec = (gap % 1000) * 1000000;
+	}
 
 	/* open socket */
 	if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
@@ -548,6 +573,26 @@ int main(int argc, char **argv)
 				log_tv.tv_sec = sec;
 				log_tv.tv_usec = usec;
 
+				if (gap_from_file){
+					if (timestamps.idx == 0){
+						gettimeofday(&init_time, NULL);
+						if (log_tv.tv_sec > 0 || log_tv.tv_usec > 0)
+							init_trace = log_tv;
+					}
+					timersub(&log_tv, &init_trace, &send_time);
+
+					if (timestamps.idx > 0){
+						gettimeofday(&act_time, NULL);
+						timersub(&act_time, &init_time, &act_time);
+
+						while (timercmp(&act_time, &send_time, <)){
+							gettimeofday(&act_time, NULL);
+							timersub(&act_time, &init_time, &act_time);
+						}
+					}
+					timestamps.idx++;
+				}
+
 				/*
 				 * ensure the fractions of seconds are 6 decimal places long to catch
 				 * 3rd party or handcrafted logfiles that treat the timestamp as float
@@ -570,7 +615,7 @@ int main(int argc, char **argv)
 
 			} /* while frames_to_send ... */
 
-			if (nanosleep(&sleep_ts, NULL))
+			if (!gap_from_file && nanosleep(&sleep_ts, NULL))
 				return 1;
 
 			delay_loops++; /* private statistics */
