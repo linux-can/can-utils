@@ -407,7 +407,22 @@ int main(int argc, char **argv)
 			}
 		}
 		tv.tv_sec = sec;
-		tv.tv_usec = usec;
+
+		/*
+		 * ensure the fractions of seconds are 6 or 9 decimal places long to catch
+		 * 3rd party or handcrafted logfiles that treat the timestamp as float
+		 */
+		switch (strchr(buf, ')') - strchr(buf, '.')) {
+		case 7: //6
+			tv.tv_usec = usec;
+			break;
+		case 10: //9
+			tv.tv_usec = usec / 1000;
+			break;
+		default:
+			fprintf(stderr, "timestamp format in logfile requires 6 or 9 decimal places\n");
+			return 1;
+		}
 
 		if (print_banner) { /* print banner */
 			print_banner = 0;

@@ -51,7 +51,7 @@
 #include "lib.h"
 
 #define DEVSZ 22
-#define TIMESZ 22 /* sizeof("(1345212884.318850)   ") */
+#define TIMESZ 25 /* sizeof("(1345212884.318850123)   ") */
 #define BUFSZ (DEVSZ + AFRSZ + TIMESZ)
 
 /* adapt sscanf() functions below on error */
@@ -61,7 +61,7 @@
 #if (DEVSZ != 22)
 #error "DEVSZ value does not fit sscanf restrictions!"
 #endif
-#if (TIMESZ != 22)
+#if (TIMESZ != 25)
 #error "TIMESZ value does not fit sscanf restrictions!"
 #endif
 
@@ -78,7 +78,7 @@ int main(void)
 			return 1;
 		}
 
-		if (sscanf(buf, "%21s %21s %6299s", timestamp, device, afrbuf) != 3)
+		if (sscanf(buf, "%24s %21s %6299s", timestamp, device, afrbuf) != 3)
 			return 1;
 
 		mtu = parse_canframe(afrbuf, &cu);

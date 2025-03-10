@@ -452,14 +452,20 @@ int main(int argc, char **argv)
 			return 1;
 		}
 		log_tv.tv_sec = sec;
-		log_tv.tv_usec = usec;
 
 		/*
-		 * ensure the fractions of seconds are 6 decimal places long to catch
+		 * ensure the fractions of seconds are 6 or 9 decimal places long to catch
 		 * 3rd party or handcrafted logfiles that treat the timestamp as float
 		 */
-		if (strchr(buf, ')') - strchr(buf, '.') != 7) {
-			fprintf(stderr, "timestamp format in logfile requires 6 decimal places\n");
+		switch (strchr(buf, ')') - strchr(buf, '.')) {
+		case 7: //6
+			log_tv.tv_usec = usec;
+			break;
+		case 10: //9
+			log_tv.tv_usec = usec / 1000;
+			break;
+		default:
+			fprintf(stderr, "timestamp format in logfile requires 6 or 9 decimal places\n");
 			return 1;
 		}
 
@@ -541,19 +547,25 @@ int main(int argc, char **argv)
 					break;
 				}
 
-				if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec, device, afrbuf) != 4) {
+				if (sscanf(buf, "(%llu.%llu) %21s %6299s", &sec, &usec, device, afrbuf) != 4) {
 					fprintf(stderr, "incorrect line format in logfile\n");
 					return 1;
 				}
 				log_tv.tv_sec = sec;
-				log_tv.tv_usec = usec;
 
 				/*
-				 * ensure the fractions of seconds are 6 decimal places long to catch
+				 * ensure the fractions of seconds are 6 or 9 decimal places long to catch
 				 * 3rd party or handcrafted logfiles that treat the timestamp as float
 				 */
-				if (strchr(buf, ')') - strchr(buf, '.') != 7) {
-					fprintf(stderr, "timestamp format in logfile requires 6 decimal places\n");
+				switch (strchr(buf, ')') - strchr(buf, '.')) {
+				case 7: //6
+					log_tv.tv_usec = usec;
+					break;
+				case 10: //9
+					log_tv.tv_usec = usec / 1000;
+					break;
+				default:
+					fprintf(stderr, "timestamp format in logfile requires 6 or 9 decimal places\n");
 					return 1;
 				}
 
