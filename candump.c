@@ -221,15 +221,15 @@ static int idx2dindex(int ifidx, int socket)
 }
 
 static int sprint_timestamp(char *ts_buffer, const char timestamp,
-			    const struct timeval *tv, struct timeval *const last_tv)
+			    const struct timespec *ts, struct timespec *const last_ts)
 {
 	int numchars = 0;
 
 	switch (timestamp) {
 	case 'a': /* absolute with timestamp */
-		numchars = sprintf(ts_buffer, "(%010llu.%06llu) ",
-				   (unsigned long long)tv->tv_sec,
-				   (unsigned long long)tv->tv_usec);
+		numchars = sprintf(ts_buffer, "(%010llu.%09llu) ",
+				   (unsigned long long)ts->tv_sec,
+				   (unsigned long long)ts->tv_nsec);
 		break;
 
 	case 'A': /* absolute with date */
@@ -237,32 +237,32 @@ static int sprint_timestamp(char *ts_buffer, const char timestamp,
 		struct tm tm;
 		char timestring[25];
 
-		tm = *localtime(&tv->tv_sec);
+		tm = *localtime(&ts->tv_sec);
 		strftime(timestring, 24, "%Y-%m-%d %H:%M:%S", &tm);
-		numchars = sprintf(ts_buffer, "(%s.%06llu) ", timestring,
-				   (unsigned long long)tv->tv_usec);
+		numchars = sprintf(ts_buffer, "(%s.%09llu) ", timestring,
+				   (unsigned long long)ts->tv_nsec);
 	}
 	break;
 
 	case 'd': /* delta */
 	case 'z': /* starting with zero */
 	{
-		struct timeval diff;
+		struct timespec diff;
 
-		if (last_tv->tv_sec == 0) /* first init */
-			*last_tv = *tv;
-		diff.tv_sec = tv->tv_sec - last_tv->tv_sec;
-		diff.tv_usec = tv->tv_usec - last_tv->tv_usec;
-		if (diff.tv_usec < 0)
-			diff.tv_sec--, diff.tv_usec += 1000000;
+		if (last_ts->tv_sec == 0) /* first init */
+			*last_ts = *ts;
+		diff.tv_sec = ts->tv_sec - last_ts->tv_sec;
+		diff.tv_nsec = ts->tv_nsec - last_ts->tv_nsec;
+		if (diff.tv_nsec < 0)
+			diff.tv_sec--, diff.tv_nsec += 1000000000;
 		if (diff.tv_sec < 0)
-			diff.tv_sec = diff.tv_usec = 0;
-		numchars = sprintf(ts_buffer, "(%03llu.%06llu) ",
+			diff.tv_sec = diff.tv_nsec = 0;
+		numchars = sprintf(ts_buffer, "(%03llu.%09llu) ",
 				   (unsigned long long)diff.tv_sec,
-				   (unsigned long long)diff.tv_usec);
+				   (unsigned long long)diff.tv_nsec);
 
 		if (timestamp == 'd')
-			*last_tv = *tv; /* update for delta calculation */
+			*last_ts = *ts; /* update for delta calculation */
 	}
 	break;
 
@@ -322,7 +322,7 @@ int main(int argc, char **argv)
 	static cu_t cu; /* union for CAN CC/FD/XL frames */
 	int nbytes, i;
 	struct ifreq ifr;
-	struct timeval tv, last_tv;
+	struct timespec ts, last_ts;
 	int timeout_ms = -1; /* default to no timeout */
 	FILE *logfile = NULL;
 	char fname[83]; /* suggested by -Wformat-overflow= */
@@ -334,8 +334,8 @@ int main(int argc, char **argv)
 	signal(SIGHUP, sigterm);
 	signal(SIGINT, sigterm);
 
-	last_tv.tv_sec = 0;
-	last_tv.tv_usec = 0;
+	last_ts.tv_sec = 0;
+	last_ts.tv_nsec = 0;
 
 	progname = basename(argv[0]);
 
@@ -784,7 +784,11 @@ int main(int argc, char **argv)
 			     cmsg && (cmsg->cmsg_level == SOL_SOCKET);
 			     cmsg = CMSG_NXTHDR(&msg,cmsg)) {
 				if (cmsg->cmsg_type == SO_TIMESTAMP) {
+					struct timeval tv;
 					memcpy(&tv, CMSG_DATA(cmsg), sizeof(tv));
+					ts.tv_sec = tv.tv_sec;
+					ts.tv_nsec = tv.tv_usec;
+					ts.tv_nsec *= 1000;
 				} else if (cmsg->cmsg_type == SO_TIMESTAMPING) {
 					struct timespec *stamp = (struct timespec *)CMSG_DATA(cmsg);
 
@@ -795,8 +799,7 @@ int main(int argc, char **argv)
 					 * See chapter 2.1.2 Receive timestamps in
 					 * linux/Documentation/networking/timestamping.txt
 					 */
-					tv.tv_sec = stamp[2].tv_sec;
-					tv.tv_usec = stamp[2].tv_nsec / 1000;
+					ts = stamp[2];
 				} else if (cmsg->cmsg_type == SO_RXQ_OVFL) {
 					memcpy(&obj->dropcnt, CMSG_DATA(cmsg), sizeof(__u32));
 				}
@@ -832,7 +835,7 @@ int main(int argc, char **argv)
 			if ((log) || ((logfrmt) && (silent == SILENT_OFF))) {
 
 				alen = sprint_timestamp(afrbuf, logtimestamp,
-							  &tv, &last_tv);
+							  &ts, &last_ts);
 
 				alen += sprintf(afrbuf + alen, "%*s ",
 						  max_devname_len, devname[idx]);
@@ -861,7 +864,7 @@ int main(int argc, char **argv)
 
 			/* print (colored) long CAN frame style to stdout */
 			alen = sprintf(afrbuf, " %s", (color > 2) ? col_on[idx % MAXCOL] : "");
-			alen += sprint_timestamp(afrbuf + alen, timestamp, &tv, &last_tv);
+			alen += sprint_timestamp(afrbuf + alen, timestamp, &ts, &last_ts);
 			alen += sprintf(afrbuf + alen, " %s%*s",
 					  (color && (color < 3)) ? col_on[idx % MAXCOL] : "",
 					  max_devname_len, devname[idx]);
