@@ -128,6 +128,7 @@ static void print_usage(void)
 	fprintf(stderr, "Options:\n");
 	fprintf(stderr, "         -t <type>   (timestamp: (a)bsolute/(d)elta/(z)ero/(A)bsolute w date)\n");
 	fprintf(stderr, "         -H          (read hardware timestamps instead of system timestamps)\n");
+	fprintf(stderr, "         -N          (log nanosecond timestamps instead of microseconds)\n");
 	fprintf(stderr, "         -c          (increment color mode level)\n");
 	fprintf(stderr, "         -i          (binary output - may exceed 80 chars/line)\n");
 	fprintf(stderr, "         -a          (enable additional ASCII output)\n");
@@ -220,16 +221,22 @@ static int idx2dindex(int ifidx, int socket)
 	return i;
 }
 
-static int sprint_timestamp(char *ts_buffer, const char timestamp,
+static int sprint_timestamp(char *ts_buffer, const char timestamp, unsigned char use_ns,
 			    const struct timespec *ts, struct timespec *const last_ts)
 {
 	int numchars = 0;
 
 	switch (timestamp) {
 	case 'a': /* absolute with timestamp */
-		numchars = sprintf(ts_buffer, "(%010llu.%09llu) ",
-				   (unsigned long long)ts->tv_sec,
-				   (unsigned long long)ts->tv_nsec);
+		if (use_ns) {
+			numchars = sprintf(ts_buffer, "(%010llu.%09llu) ",
+					   (unsigned long long)ts->tv_sec,
+					   (unsigned long long)ts->tv_nsec);
+		} else {
+			numchars = sprintf(ts_buffer, "(%010llu.%06llu) ",
+					   (unsigned long long)ts->tv_sec,
+					   (unsigned long long)ts->tv_nsec / 1000);
+		}
 		break;
 
 	case 'A': /* absolute with date */
@@ -239,8 +246,13 @@ static int sprint_timestamp(char *ts_buffer, const char timestamp,
 
 		tm = *localtime(&ts->tv_sec);
 		strftime(timestring, 24, "%Y-%m-%d %H:%M:%S", &tm);
-		numchars = sprintf(ts_buffer, "(%s.%09llu) ", timestring,
-				   (unsigned long long)ts->tv_nsec);
+		if (use_ns) {
+			numchars = sprintf(ts_buffer, "(%s.%09llu) ", timestring,
+					   (unsigned long long)ts->tv_nsec);
+		} else {
+			numchars = sprintf(ts_buffer, "(%s.%06llu) ", timestring,
+					   (unsigned long long)ts->tv_nsec / 1000);
+		}
 	}
 	break;
 
@@ -257,9 +269,15 @@ static int sprint_timestamp(char *ts_buffer, const char timestamp,
 			diff.tv_sec--, diff.tv_nsec += 1000000000;
 		if (diff.tv_sec < 0)
 			diff.tv_sec = diff.tv_nsec = 0;
-		numchars = sprintf(ts_buffer, "(%03llu.%09llu) ",
-				   (unsigned long long)diff.tv_sec,
-				   (unsigned long long)diff.tv_nsec);
+		if (use_ns) {
+			numchars = sprintf(ts_buffer, "(%03llu.%09llu) ",
+					   (unsigned long long)diff.tv_sec,
+					   (unsigned long long)diff.tv_nsec);
+		} else {
+			numchars = sprintf(ts_buffer, "(%03llu.%06llu) ",
+					   (unsigned long long)diff.tv_sec,
+					   (unsigned long long)diff.tv_nsec / 1000);
+		}
 
 		if (timestamp == 'd')
 			*last_ts = *ts; /* update for delta calculation */
@@ -288,6 +306,7 @@ int main(int argc, char **argv)
 	unsigned char timestamp = 0;
 	unsigned char logtimestamp = 'a';
 	unsigned char hwtimestamp = 0;
+	unsigned char use_ns = 0;
 	unsigned char down_causes_exit = 1;
 	unsigned char dropmonitor = 0;
 	unsigned char extra_msg_info = 0;
@@ -339,7 +358,7 @@ int main(int argc, char **argv)
 
 	progname = basename(argv[0]);
 
-	while ((opt = getopt(argc, argv, "t:HciaSs:lf:Ln:r:Dde8xT:h?")) != -1) {
+	while ((opt = getopt(argc, argv, "t:HNciaSs:lf:Ln:r:Dde8xT:h?")) != -1) {
 		switch (opt) {
 		case 't':
 			timestamp = optarg[0];
@@ -357,6 +376,10 @@ int main(int argc, char **argv)
 
 		case 'H':
 			hwtimestamp = 1;
+			break;
+
+		case 'N':
+			use_ns = 1;
 			break;
 
 		case 'c':
@@ -834,7 +857,7 @@ int main(int argc, char **argv)
 			/* build common log format output */
 			if ((log) || ((logfrmt) && (silent == SILENT_OFF))) {
 
-				alen = sprint_timestamp(afrbuf, logtimestamp,
+				alen = sprint_timestamp(afrbuf, logtimestamp, use_ns,
 							  &ts, &last_ts);
 
 				alen += sprintf(afrbuf + alen, "%*s ",
@@ -864,7 +887,7 @@ int main(int argc, char **argv)
 
 			/* print (colored) long CAN frame style to stdout */
 			alen = sprintf(afrbuf, " %s", (color > 2) ? col_on[idx % MAXCOL] : "");
-			alen += sprint_timestamp(afrbuf + alen, timestamp, &ts, &last_ts);
+			alen += sprint_timestamp(afrbuf + alen, timestamp, use_ns, &ts, &last_ts);
 			alen += sprintf(afrbuf + alen, " %s%*s",
 					  (color && (color < 3)) ? col_on[idx % MAXCOL] : "",
 					  max_devname_len, devname[idx]);
