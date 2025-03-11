@@ -19,6 +19,7 @@ endif()
 # Add an option to enable treating warnings as errors
 option(ENABLE_WERROR "Treat all compiler warnings as errors" OFF)
 option(ENABLE_GPS "Enable GPS support" OFF)
+option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 find_package(PkgConfig REQUIRED)
 if(ENABLE_GPS)
@@ -129,7 +130,7 @@ if(NOT ANDROID)
     PRIVATE can
   )
 
-  add_library(isobusfs SHARED
+  add_library(isobusfs
     isobusfs/isobusfs_cmn.c
     isobusfs/isobusfs_cmn_dh.c
   )
