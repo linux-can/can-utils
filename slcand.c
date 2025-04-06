@@ -370,8 +370,13 @@ int main(int argc, char *argv[])
 	
 	/* retrieve the name of the created CAN netdevice */
 	if (ioctl(fd, SIOCGIFNAME, ifr.ifr_name) < 0) {
-		perror("ioctl SIOCGIFNAME");
-		exit(EXIT_FAILURE);
+		if (name) {
+			perror("ioctl SIOCGIFNAME");
+			exit(EXIT_FAILURE);
+		} else {
+			/* Graceful degradation: we only needed the name for display. */
+			snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "<unknown>");
+		}
 	}
 
 	syslogger(LOG_NOTICE, "attached TTY %s to netdevice %s\n", ttypath, ifr.ifr_name);
