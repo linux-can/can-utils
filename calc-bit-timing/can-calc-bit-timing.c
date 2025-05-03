@@ -1121,6 +1121,11 @@ static const unsigned int common_data_bitrates[] = {
 	4000000,
 	2000000,
 	1000000,
+	800000,
+	500000,
+	250000,
+	125000,
+	100000,
 	0
 };
 
