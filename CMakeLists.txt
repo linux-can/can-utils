@@ -53,6 +53,7 @@ set(PROGRAMS_CANLIB
   canbusload
   candump
   cangen
+  canperformance
   canplayer
   cansend
   cansequence

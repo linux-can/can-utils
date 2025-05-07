@@ -123,7 +123,8 @@ PROGRAMS := \
 	log2asc \
 	log2long \
 	mcp251xfd-dump \
-	slcanpty
+	slcanpty \
+	canperformance
 
 ifeq ($(HAVE_FORK),1)
 PROGRAMS += \
@@ -227,4 +228,7 @@ can-calc-bit-timing: calc-bit-timing/can-calc-bit-timing.o
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 mcp251xfd-dump: mcp251xfd/mcp251xfd-dev-coredump.o mcp251xfd/mcp251xfd-dump.o mcp251xfd/mcp251xfd-main.o mcp251xfd/mcp251xfd-regmap.o
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+canperformance: canperformance.o
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
