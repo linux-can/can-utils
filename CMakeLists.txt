@@ -87,7 +87,7 @@ if(ENABLE_BASIC_TOOLS)
 endif()
 
 if(ENABLE_IP_SERVER AND HAVE_FORK)
-  list(APPEND PROGRAMS        bcmserver)
+  list(APPEND PROGRAMS bcmserver)
   list(APPEND PROGRAMS_CANLIB canlogserver)
 endif()
 
