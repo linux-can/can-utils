@@ -987,12 +987,12 @@ int main(int argc, char **argv)
 			rnd = random();
 
 			if (xl_flags_mode == MODE_RANDOM) {
-				cu.xl.flags = rnd & CANXL_SEC;
+				cu.xl.flags = rnd & (CANXL_SEC | CANXL_RRS);
 			} else if (xl_flags_mode == MODE_FIX) {
 				cu.xl.flags = xl_flags;
 			} else if (xl_flags_mode == MODE_INCREMENT) {
-				xl_flags ^= CANXL_SEC;
-				cu.xl.flags = (xl_flags & CANXL_SEC);
+				xl_flags++;
+				cu.xl.flags = (xl_flags & (CANXL_SEC | CANXL_RRS));
 			}
 
 			/* mark CAN XL frame */
