@@ -547,7 +547,7 @@ int main(int argc, char **argv)
 					break;
 				}
 
-				if (sscanf(buf, "(%llu.%llu) %21s %6299s", &sec, &usec, device, afrbuf) != 4) {
+				if (sscanf(buf, "(%llu.%llu) %s %s", &sec, &usec, device, afrbuf) != 4) {
 					fprintf(stderr, "incorrect line format in logfile\n");
 					return 1;
 				}
