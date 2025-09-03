@@ -296,7 +296,7 @@ static void canxl_asc(cu_t *cu, int devno, int mtu,
 
 #define DEVSZ 22
 #define EXTRASZ 20
-#define TIMESZ sizeof("(1345212884.318850)   ")
+#define TIMESZ sizeof("(1345212884.318850123)   ")
 #define BUFSZ (DEVSZ + AFRSZ + EXTRASZ + TIMESZ)
 
 /* adapt sscanf() functions below on error */

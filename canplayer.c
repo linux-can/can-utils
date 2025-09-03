@@ -68,7 +68,7 @@
 #endif
 
 #define DEVSZ 22 /* IFNAMSZ + 6 */
-#define TIMESZ sizeof("(1345212884.318850)   ")
+#define TIMESZ sizeof("(1345212884.318850123)   ")
 #define BUFSZ (TIMESZ + DEVSZ + AFRSZ)
 
 /* adapt sscanf() functions below on error */
