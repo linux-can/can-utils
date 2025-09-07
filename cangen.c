@@ -180,7 +180,7 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -X            (generate CAN XL CAN frames)\n");
 	fprintf(stderr, "         -R            (generate RTR frames)\n");
 	fprintf(stderr, "         -8            (allow DLC values greater then 8 for Classic CAN frames)\n");
-	fprintf(stderr, "         -m            (mix -e -f -b -E -R -X frames)\n");
+	fprintf(stderr, "         -m            (mix -e -R frames and -f -b -E if FD capable and -X if XL capable)\n");
 	fprintf(stderr, "         -I <mode>     (CAN ID generation mode - see below)\n");
 	fprintf(stderr, "         -L <mode>     (CAN data length code (dlc) generation mode - see below)\n");
 	fprintf(stderr, "         -D <mode>     (CAN data (payload) generation mode - see below)\n");
@@ -574,7 +574,6 @@ int main(int argc, char **argv)
 
 		case 'm':
 			mix = 1;
-			canfd = 1; /* to switch the socket into CAN FD mode */
 			view |= CANLIB_VIEW_INDENT_SFF;
 			break;
 
@@ -777,7 +776,7 @@ int main(int argc, char **argv)
 			   &loopback, sizeof(loopback));
 	}
 
-	if (canfd || canxl) {
+	if (mix || canfd || canxl) {
 
 		/* check if the frame fits into the CAN netdevice */
 		if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {
@@ -1084,10 +1083,13 @@ int main(int argc, char **argv)
 		if (mix) {
 			i = random();
 			extended = i & 1;
-			canfd = i & 2;
-			if (canfd) {
-				brs = i & 4;
-				esi = i & 8;
+			/* generate CAN FD traffic if the interface is capable */
+			if (ifr.ifr_mtu >= (int)CANFD_MTU) {
+				canfd = i & 2;
+				if (canfd) {
+					brs = i & 4;
+					esi = i & 8;
+				}
 			}
 			/* generate CAN XL traffic if the interface is capable */
 			if (ifr.ifr_mtu >= (int)CANXL_MIN_MTU)
