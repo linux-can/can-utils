@@ -180,7 +180,7 @@ static void print_usage(char *prg)
 	fprintf(stderr, "         -X            (generate CAN XL CAN frames)\n");
 	fprintf(stderr, "         -R            (generate RTR frames)\n");
 	fprintf(stderr, "         -8            (allow DLC values greater then 8 for Classic CAN frames)\n");
-	fprintf(stderr, "         -m            (mix -e -f -b -E -R -X frames)\n");
+	fprintf(stderr, "         -m            (mix CC [-e -R] FD [-f -b -E] XL [-X] on capable devices)\n");
 	fprintf(stderr, "         -I <mode>     (CAN ID generation mode - see below)\n");
 	fprintf(stderr, "         -L <mode>     (CAN data length code (dlc) generation mode - see below)\n");
 	fprintf(stderr, "         -D <mode>     (CAN data (payload) generation mode - see below)\n");
@@ -455,6 +455,9 @@ int main(int argc, char **argv)
 	unsigned char extended = 0;
 	unsigned char canfd = 0;
 	unsigned char canxl = 0;
+	unsigned char mixcc = 1; /* mix default */
+	unsigned char mixfd = 1; /* mix default */
+	unsigned char mixxl = 1; /* mix default */
 	unsigned char brs = 0;
 	unsigned char esi = 0;
 	unsigned char mix = 0;
@@ -574,7 +577,6 @@ int main(int argc, char **argv)
 
 		case 'm':
 			mix = 1;
-			canfd = 1; /* to switch the socket into CAN FD mode */
 			view |= CANLIB_VIEW_INDENT_SFF;
 			break;
 
@@ -777,14 +779,58 @@ int main(int argc, char **argv)
 			   &loopback, sizeof(loopback));
 	}
 
-	if (canfd || canxl) {
+	/* get CAN netdevice MTU for frame type capabilities */
+	if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {
+		perror("SIOCGIFMTU");
+		return 1;
+	}
 
-		/* check if the frame fits into the CAN netdevice */
-		if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {
-			perror("SIOCGIFMTU");
+	/* check CAN XL support */
+	if (ifr.ifr_mtu < (int)CANXL_MIN_MTU) {
+		mixxl = 0;
+		if (canxl) {
+			printf("CAN interface not CAN XL capable - sorry.\n");
 			return 1;
 		}
+	}
 
+	/* check CAN FD support */
+	if (ifr.ifr_mtu < (int)CANFD_MTU) {
+		mixfd = 0;
+		if (canfd) {
+			printf("CAN interface not CAN FD capable - sorry.\n");
+			return 1;
+		}
+	}
+
+	/* enable CAN FD on the socket */
+	if (mixfd) {
+		/* interface is ok - try to switch the socket into CAN FD mode */
+		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES,
+			       &enable_canfx, sizeof(enable_canfx))){
+			printf("error when enabling CAN FD support\n");
+			return 1;
+		}
+	}
+
+	/* enable CAN XL on the socket */
+	if (mixxl) {
+		/* interface is ok - try to switch the socket into CAN XL mode */
+		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_XL_FRAMES,
+			       &enable_canfx, sizeof(enable_canfx))){
+			printf("error when enabling CAN XL support\n");
+			return 1;
+		}
+		/* try to enable the CAN XL VCID pass through mode */
+		if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_XL_VCID_OPTS,
+			       &vcid_opts, sizeof(vcid_opts))) {
+			printf("error when enabling CAN XL VCID pass through\n");
+			return 1;
+		}
+	}
+
+	/* sanitize given values */
+	if (canfd || canxl) {
 		if (canfd) {
 			/* ensure discrete CAN FD length values 0..8, 12, 16, 20, 24, 32, 64 */
 			cu.fd.len = can_fd_dlc2len(can_fd_len2dlc(cu.fd.len));
@@ -793,41 +839,6 @@ int main(int argc, char **argv)
 			if (cu.fd.len > CANFD_MAX_DLEN)
 				cu.fd.len = CANFD_MAX_DLEN;
 		}
-
-		if (canxl && (ifr.ifr_mtu < (int)CANXL_MIN_MTU)) {
-			printf("CAN interface not CAN XL capable - sorry.\n");
-			return 1;
-		}
-
-		if (canfd && (ifr.ifr_mtu < (int)CANFD_MTU)) {
-			printf("CAN interface not CAN FD capable - sorry.\n");
-			return 1;
-		}
-
-		if (ifr.ifr_mtu == (int)CANFD_MTU) {
-			/* interface is ok - try to switch the socket into CAN FD mode */
-			if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES,
-				       &enable_canfx, sizeof(enable_canfx))){
-				printf("error when enabling CAN FD support\n");
-				return 1;
-			}
-		}
-
-		if (ifr.ifr_mtu >= (int)CANXL_MIN_MTU) {
-			/* interface is ok - try to switch the socket into CAN XL mode */
-			if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_XL_FRAMES,
-				       &enable_canfx, sizeof(enable_canfx))){
-				printf("error when enabling CAN XL support\n");
-				return 1;
-			}
-			/* try to enable the CAN XL VCID pass through mode */
-			if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_XL_VCID_OPTS,
-				       &vcid_opts, sizeof(vcid_opts))) {
-				printf("error when enabling CAN XL VCID pass through\n");
-				return 1;
-			}
-		}
-
 	} else {
 		/* sanitize Classical CAN 2.0 frame length */
 		if (len8_dlc) {
@@ -1084,16 +1095,21 @@ int main(int argc, char **argv)
 		if (mix) {
 			i = random();
 			extended = i & 1;
-			canfd = i & 2;
-			if (canfd) {
-				brs = i & 4;
-				esi = i & 8;
+			if (mixfd) {
+				canfd = i & 2;
+				if (canfd) {
+					brs = i & 4;
+					esi = i & 8;
+				}
 			}
-			/* generate CAN XL traffic if the interface is capable */
-			if (ifr.ifr_mtu >= (int)CANXL_MIN_MTU)
-				canxl = ((i & 96) == 96);
-
-			rtr_frame = ((i & 24) == 24); /* reduce RTR frames to 1/4 */
+			if (mixxl) {
+				if (mixfd)
+					canxl = ((i & 96) == 96); /* 1/4 */
+				else
+					canxl = ((i & 32) == 32); /* 1/2 */
+			}
+			if (mixcc)
+				rtr_frame = ((i & 24) == 24); /* reduce RTR to 1/4 */
 		}
 	}
 
