@@ -80,7 +80,10 @@ static void print_usage(char *prg)
 		"_{dlc}:\n"
 		" an optional 9..F data length code value when payload length is 8\n"
 		"<flags>:\n"
-		" a single ASCII Hex value (0 .. F) which defines canfd_frame.flags\n"
+		" a single ASCII Hex value (0 .. F) which defines canfd_frame.flags:\n"
+		" %x CANFD_BRS\n"
+		" %x CANFD_ESI\n"
+		" %x CANFD_FEF\n"
 		"\n"
 		"<vcid>:\n"
 		" 2 hex chars - virtual CAN network identifier (00 .. FF)\n"
@@ -100,7 +103,8 @@ static void print_usage(char *prg)
 		"  1F334455#1122334455667788_B / 123#R / 00000123#R3 / 333#R8_E /\n"
 		"  45123#81:00:12345678#11223344.556677 / 00242#81:07:40000123#112233\n"
 		"\n",
-		prg, prg);
+		prg, prg,
+		CANFD_BRS, CANFD_ESI, CANFD_FDF);
 }
 
 int main(int argc, char **argv)
