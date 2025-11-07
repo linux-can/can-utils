@@ -83,7 +83,7 @@ static void print_usage(char *prg)
 		" a single ASCII Hex value (0 .. F) which defines canfd_frame.flags:\n"
 		" %x CANFD_BRS\n"
 		" %x CANFD_ESI\n"
-		" %x CANFD_FEF\n"
+		" %x CANFD_FDF\n"
 		"\n"
 		"<vcid>:\n"
 		" 2 hex chars - virtual CAN network identifier (00 .. FF)\n"
