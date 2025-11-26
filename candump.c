@@ -113,7 +113,8 @@ static const int canfx_on = 1;
 
 #define MAXANI 4
 static const char anichar[MAXANI] = { '|', '/', '-', '\\' };
-static const char extra_m_info[4][4] = { "- -", "B -", "- E", "B E" };
+static const char extra_fd_info[4][4] = { "- -", "B -", "- E", "B E" };
+static const char extra_xl_info[4][4] = { "- -", "S -", "- R", "S R" };
 
 extern int optind, opterr, optopt;
 
@@ -143,7 +144,7 @@ static void print_usage(void)
 	fprintf(stderr, "         -d          (monitor dropped CAN frames)\n");
 	fprintf(stderr, "         -e          (dump CAN error frames in human-readable format)\n");
 	fprintf(stderr, "         -8          (display raw DLC values in {} for Classical CAN)\n");
-	fprintf(stderr, "         -x          (print extra message infos, rx/tx brs esi)\n");
+	fprintf(stderr, "         -x          (print extra message infos, rx/tx [brs esi|sec rrs])\n");
 	fprintf(stderr, "         -T <msecs>  (terminate after <msecs> if no frames were received)\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Up to %d CAN interfaces with optional filter sets can be specified\n", MAXSOCK);
@@ -892,11 +893,16 @@ int main(int argc, char **argv)
 
 			if (extra_msg_info) {
 				if (msg.msg_flags & MSG_DONTROUTE)
-					alen += sprintf(afrbuf + alen, "  TX %s",
-							  extra_m_info[cu.fd.flags & 3]);
+					alen += sprintf(afrbuf + alen, "  TX");
 				else
-					alen += sprintf(afrbuf + alen, "  RX %s",
-							  extra_m_info[cu.fd.flags & 3]);
+					alen += sprintf(afrbuf + alen, "  RX");
+
+				if (cu.xl.flags & CANXL_XLF)
+					alen += sprintf(afrbuf + alen, " %s",
+							extra_xl_info[cu.xl.flags & 3]);
+				else
+					alen += sprintf(afrbuf + alen, " %s",
+							extra_fd_info[cu.fd.flags & 3]);
 			}
 
 			alen += sprintf(afrbuf + alen, "%s  ", (color == 1) ? col_off : "");
