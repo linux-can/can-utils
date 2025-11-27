@@ -339,10 +339,9 @@ resend:
 	nbytes = sendmsg(fd, &msg, 0);
 	if (nbytes < 0) {
 		ret = -errno;
-		if (ret != -ENOBUFS) {
-			perror("write");
+		if (ret != -ENOBUFS)
 			return ret;
-		}
+
 		if (!ignore_enobufs && !timeout) {
 			perror("write");
 			return ret;
@@ -1051,8 +1050,31 @@ int main(int argc, char **argv)
 		}
 
 		ret = do_send_one(s, &cu, mtu, polltimeout);
-		if (ret)
+		if ((ret == -EINVAL) && mix) {
+			/* mix mode: disable unsupported CAN frame type */
+			switch (mtu) {
+			case CAN_MTU:
+				mixcc = 0;
+				break;
+			case CANFD_MTU:
+				mixfd = 0;
+				break;
+			case CANXL_MTU:
+				mixxl = 0;
+				break;
+			default:
+				printf ("mix mode: unknown MTU");
+				return 1;
+			}
+			if (!mixcc && !mixfd && !mixxl) {
+				printf ("mix mode: no valid CAN frame types\n");
+				return 1;
+			}
+		} else if (ret) {
+			/* other error than -ENOBUFS and -EINVAL */
+			perror("write");
 			return 1;
+		}
 
 		if (burst_sent_count >= burst_count)
 			burst_sent_count = 0;
@@ -1093,6 +1115,8 @@ int main(int argc, char **argv)
 		}
 
 		if (mix) {
+			canfd = 0;
+			canxl = 0;
 			i = random();
 			extended = i & 1;
 			if (mixfd) {
@@ -1108,8 +1132,24 @@ int main(int argc, char **argv)
 				else
 					canxl = ((i & 32) == 32); /* 1/2 */
 			}
-			if (mixcc)
+			if (mixcc) {
 				rtr_frame = ((i & 24) == 24); /* reduce RTR to 1/4 */
+			} else {
+				/* no CC frames allowed - CAN XL-only mode? */
+				if (!canxl && !canfd) {
+					/* force XL or FD frames */
+					if (mixxl)
+						canxl = 1;
+					else if (mixfd) {
+						canfd = 1;
+						brs = i & 4;
+						esi = i & 8;
+					} else {
+						printf ("mix mode: no valid CAN frame types\n");
+						return 1;
+					}
+				}
+			}
 		}
 	}
 
