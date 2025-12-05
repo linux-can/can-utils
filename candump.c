@@ -72,6 +72,9 @@
 #ifndef SO_TIMESTAMPING
 #define SO_TIMESTAMPING 37
 #endif
+#ifndef SCM_TIMESTAMPING
+#define SCM_TIMESTAMPING SO_TIMESTAMPING
+#endif
 
 #define TIMESTAMPSZ 50 /* string 'absolute with date' requires max 49 bytes */
 
@@ -807,13 +810,13 @@ int main(int argc, char **argv)
 			for (cmsg = CMSG_FIRSTHDR(&msg);
 			     cmsg && (cmsg->cmsg_level == SOL_SOCKET);
 			     cmsg = CMSG_NXTHDR(&msg,cmsg)) {
-				if (cmsg->cmsg_type == SO_TIMESTAMP) {
+				if (cmsg->cmsg_type == SCM_TIMESTAMP) {
 					struct timeval tv;
 					memcpy(&tv, CMSG_DATA(cmsg), sizeof(tv));
 					ts.tv_sec = tv.tv_sec;
 					ts.tv_nsec = tv.tv_usec;
 					ts.tv_nsec *= 1000;
-				} else if (cmsg->cmsg_type == SO_TIMESTAMPING) {
+				} else if (cmsg->cmsg_type == SCM_TIMESTAMPING) {
 					struct timespec *stamp = (struct timespec *)CMSG_DATA(cmsg);
 
 					/*
