@@ -83,8 +83,8 @@ static inline void _put_id(char *buf, int end_offset, canid_t id)
 
 /* CAN DLC to real data length conversion helpers */
 
-static const unsigned char dlc2len[] = {0, 1, 2, 3, 4, 5, 6, 7,
-					8, 12, 16, 20, 24, 32, 48, 64};
+static const unsigned char dlc2len[] = {
+	0, 1, 2, 3, 4, 5, 6, 7,	8, 12, 16, 20, 24, 32, 48, 64};
 
 /* get data length from raw data length code (DLC) */
 unsigned char can_fd_dlc2len(unsigned char dlc)
@@ -92,16 +92,17 @@ unsigned char can_fd_dlc2len(unsigned char dlc)
 	return dlc2len[dlc & 0x0F];
 }
 
-static const unsigned char len2dlc[] = {0, 1, 2, 3, 4, 5, 6, 7, 8,		/* 0 - 8 */
-					9, 9, 9, 9,				/* 9 - 12 */
-					10, 10, 10, 10,				/* 13 - 16 */
-					11, 11, 11, 11,				/* 17 - 20 */
-					12, 12, 12, 12,				/* 21 - 24 */
-					13, 13, 13, 13, 13, 13, 13, 13,		/* 25 - 32 */
-					14, 14, 14, 14, 14, 14, 14, 14,		/* 33 - 40 */
-					14, 14, 14, 14, 14, 14, 14, 14,		/* 41 - 48 */
-					15, 15, 15, 15, 15, 15, 15, 15,		/* 49 - 56 */
-					15, 15, 15, 15, 15, 15, 15, 15};	/* 57 - 64 */
+static const unsigned char len2dlc[] = {
+	0, 1, 2, 3, 4, 5, 6, 7, 8,		/* 0 - 8 */
+	9, 9, 9, 9,				/* 9 - 12 */
+	10, 10, 10, 10,				/* 13 - 16 */
+	11, 11, 11, 11,				/* 17 - 20 */
+	12, 12, 12, 12,				/* 21 - 24 */
+	13, 13, 13, 13, 13, 13, 13, 13,		/* 25 - 32 */
+	14, 14, 14, 14, 14, 14, 14, 14,		/* 33 - 40 */
+	14, 14, 14, 14, 14, 14, 14, 14,		/* 41 - 48 */
+	15, 15, 15, 15, 15, 15, 15, 15,		/* 49 - 56 */
+	15, 15, 15, 15, 15, 15, 15, 15};	/* 57 - 64 */
 
 /* map the sanitized data length to an appropriate data length code */
 unsigned char can_fd_len2dlc(unsigned char len)
@@ -777,8 +778,8 @@ static int snprintf_error_ctrl(char *buf, size_t len, const struct canfd_frame *
 
 	n += snprintf(buf + n, len - n, "{");
 	n += snprintf_error_data(buf + n, len - n, cf->data[1],
-				controller_problems,
-				ARRAY_SIZE(controller_problems));
+				 controller_problems,
+				 ARRAY_SIZE(controller_problems));
 	n += snprintf(buf + n, len - n, "}");
 
 	return n;
@@ -793,8 +794,8 @@ static int snprintf_error_prot(char *buf, size_t len, const struct canfd_frame *
 
 	n += snprintf(buf + n, len - n, "{{");
 	n += snprintf_error_data(buf + n, len - n, cf->data[2],
-				protocol_violation_types,
-				ARRAY_SIZE(protocol_violation_types));
+				 protocol_violation_types,
+				 ARRAY_SIZE(protocol_violation_types));
 	n += snprintf(buf + n, len - n, "}{");
 	if (cf->data[3] > 0 &&
 	    cf->data[3] < ARRAY_SIZE(protocol_violation_locations))
@@ -819,7 +820,7 @@ static int snprintf_error_cnt(char *buf, size_t len, const struct canfd_frame *c
 }
 
 int snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *cf,
-                  const char* sep)
+			     const char* sep)
 {
 	canid_t class, mask;
 	int i, n = 0, classes = 0;
@@ -858,7 +859,7 @@ int snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *cf
 			n += tmp_n;
 			if (mask == CAN_ERR_LOSTARB)
 				n += snprintf_error_lostarb(buf + n, len - n,
-							   cf);
+							    cf);
 			if (mask == CAN_ERR_CRTL)
 				n += snprintf_error_ctrl(buf + n, len - n, cf);
 			if (mask == CAN_ERR_PROT)
@@ -878,7 +879,7 @@ int snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *cf
 }
 
 int64_t timespec_diff_ms(struct timespec *ts1,
-					  struct timespec *ts2)
+			 struct timespec *ts2)
 {
 	int64_t diff = (ts1->tv_sec - ts2->tv_sec) * 1000;
 

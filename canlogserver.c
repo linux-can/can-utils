@@ -317,8 +317,8 @@ int main(int argc, char **argv)
 	for (i=0; i<currmax; i++) {
 
 		pr_debug("open %d '%s' m%08X v%08X i%d e%d.\n",
-		      i, argv[optind+i], mask[i], value[i],
-		      inv_filter[i], err_mask[i]);
+			 i, argv[optind+i], mask[i], value[i],
+			 inv_filter[i], err_mask[i]);
 
 		if ((s[i] = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
 			perror("socket");

@@ -76,7 +76,7 @@ static struct {
 static const int ival_1 = 1;
 
 static char ctrlmsg[
-	  CMSG_SPACE(sizeof(struct timeval))
+	CMSG_SPACE(sizeof(struct timeval))
 	+ CMSG_SPACE(sizeof(uint8_t)) /* dest addr */
 	+ CMSG_SPACE(sizeof(uint64_t)) /* dest name */
 	+ CMSG_SPACE(sizeof(uint8_t)) /* priority */
@@ -264,9 +264,9 @@ abs_time:
 				struct tm tm;
 				tm = *localtime(&tdut.tv_sec);
 				printf("(%04u%02u%02uT%02u%02u%02u.%04llu)",
-					tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-					tm.tm_hour, tm.tm_min, tm.tm_sec,
-					(unsigned long long)tdut.tv_usec/100);
+				       tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+				       tm.tm_hour, tm.tm_min, tm.tm_sec,
+				       (unsigned long long)tdut.tv_usec/100);
 			}
 		}
 		printf(" %s ", libj1939_addr2str(&src));

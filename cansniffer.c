@@ -161,15 +161,15 @@ void switchvdl(char *delim)
 
 int comp(const void *elem1, const void *elem2)
 {
-    unsigned long f = ((struct snif*)elem1)->current.can_id;
-    unsigned long s = ((struct snif*)elem2)->current.can_id;
+	unsigned long f = ((struct snif*)elem1)->current.can_id;
+	unsigned long s = ((struct snif*)elem2)->current.can_id;
 
-    if (f > s)
-	    return  1;
-    if (f < s)
-	    return -1;
+	if (f > s)
+		return  1;
+	if (f < s)
+		return -1;
 
-    return 0;
+	return 0;
 }
 
 void print_usage(char *prg)
@@ -741,10 +741,10 @@ int handle_timeo(long currcms)
 							do_clr(i, UPDATE);
 						}
 						else  if ((sniftab[i].hold) && (sniftab[i].hold < currcms)) {
-								memset(&sniftab[i].marker.data, 0, max_dlen);
-								print_snifline(i);
-								sniftab[i].hold = 0; /* disable update by hold */
-							}
+							memset(&sniftab[i].marker.data, 0, max_dlen);
+							print_snifline(i);
+							sniftab[i].hold = 0; /* disable update by hold */
+						}
 						else
 							printf("%s", CSR_DOWN); /* skip my line */
 

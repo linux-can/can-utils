@@ -243,177 +243,177 @@ int main(int argc, char **argv)
 				continue;
 		}
 
+		/* check extended address if provided */
+		if (ext && extaddr != frame.data[0])
+			continue;
+
+		/* only get flow control information from dst CAN ID */
+		if (frame.can_id == dst) {
 			/* check extended address if provided */
-			if (ext && extaddr != frame.data[0])
+			if (rx_ext && frame.data[0] != rx_extaddr)
 				continue;
 
-			/* only get flow control information from dst CAN ID */
-			if (frame.can_id == dst) {
-				/* check extended address if provided */
-				if (rx_ext && frame.data[0] != rx_extaddr)
-					continue;
+			n_pci = frame.data[rx_ext];
+			/* check flow control PCI only */
+			if ((n_pci & 0xF0) != 0x30)
+				continue;
 
-				n_pci = frame.data[rx_ext];
-				/* check flow control PCI only */
-				if ((n_pci & 0xF0) != 0x30)
-					continue;
+			bs = frame.data[rx_ext + 1];
+			stmin = frame.data[rx_ext + 2];
+		}
 
-				bs = frame.data[rx_ext + 1];
-				stmin = frame.data[rx_ext + 2];
+		/* data content starts and index datidx */
+		datidx = 0;
+
+		n_pci = frame.data[ext];
+		switch (n_pci & 0xF0) {
+
+		case 0x00:
+			/* SF */
+			if (n_pci & 0xF) {
+				fflen = rcvlen = n_pci & 0xF;
+				datidx = ext+1;
+			} else {
+				fflen = rcvlen = frame.data[ext + 1];
+				datidx = ext+2;
 			}
 
-			/* data content starts and index datidx */
-			datidx = 0;
-
-			n_pci = frame.data[ext];
-			switch (n_pci & 0xF0) {
-
-			case 0x00:
-				/* SF */
-				if (n_pci & 0xF) {
-					fflen = rcvlen = n_pci & 0xF;
-					datidx = ext+1;
-				} else {
-					fflen = rcvlen = frame.data[ext + 1];
-					datidx = ext+2;
-				}
-
-				/* ignore incorrect SF PDUs */
-				if (frame.len < rcvlen + datidx)
-					fflen = rcvlen = 0;
-
-				/* get number of digits for printing */
-				fflen_digits = getdigits(fflen);
-
-				/* get CAN FD bitrate & LL_DL setting information */
-				brs = frame.flags & CANFD_BRS;
-				ll_dl = frame.len;
-				if (ll_dl < 8)
-					ll_dl = 8;
-
-				ioctl(s, SIOCGSTAMP, &start_tv);
-
-				/* determine CAN frame mode for this PDU */
-				if (nbytes == CAN_MTU)
-					canfd_on = 0;
-				else
-					canfd_on = 1;
-
-				break;
-
-			case 0x10:
-				/* FF */
-				fflen = ((n_pci & 0x0F)<<8) + frame.data[ext+1];
-				if (fflen)
-					datidx = ext+2;
-				else {
-					fflen = (frame.data[ext+2]<<24) +
-						(frame.data[ext+3]<<16) +
-						(frame.data[ext+4]<<8) +
-						frame.data[ext+5];
-					datidx = ext+6;
-				}
-
-				/* to increase the time resolution we multiply fflen with 1000 later */
-				if (fflen >= (UINT32_MAX / 1000)) {
-					printf("fflen %lu is more than ~4.2 MB - ignoring PDU\n", fflen);
-					fflush(stdout);
-					fflen = rcvlen = 0;
-					continue;
-				}
-				rcvlen = frame.len - datidx;
-				last_sn = 0;
-
-				/* get number of digits for printing */
-				fflen_digits = getdigits(fflen);
-
-				/* get CAN FD bitrate & LL_DL setting information */
-				brs = frame.flags & CANFD_BRS;
-				ll_dl = frame.len;
-
-				ioctl(s, SIOCGSTAMP, &start_tv);
-
-				/* determine CAN frame mode for this PDU */
-				if (nbytes == CAN_MTU)
-					canfd_on = 0;
-				else
-					canfd_on = 1;
-
-				break;
-
-			case 0x20:
-				/* CF */
-				if (rcvlen) {
-					sn = n_pci & 0x0F;
-					if (sn == ((last_sn + 1) & 0xF)) {
-						last_sn = sn;
-						datidx = ext+1;
-						rcvlen += frame.len - datidx;
-					}
-				}
-				break;
-
-			default:
-				break;
-			}
-
-			/* PDU reception in process */
-			if (rcvlen) {
-				if (rcvlen > fflen)
-					rcvlen = fflen;
-
-				percent = (rcvlen * 100 / fflen);
-				printf("\r %3lu%% ", percent);
-
-				printf("|");
-
-				if (percent > 100)
-					percent = 100;
-
-				for (i=0; i < NUMBAR; i++){
-					if (i < (int)(percent/PERCENTRES))
-						printf("X");
-					else
-						printf(".");
-				}
-				printf("| %*lu/%lu ", fflen_digits, rcvlen, fflen);
-			}
-
-			/* PDU complete */
-			if (rcvlen && rcvlen >= fflen) {
-
-				printf("\r%s %02d%c (BS:%2hhu # ", canfd_on?"CAN-FD":"CAN2.0", ll_dl, brs?'*':' ', bs);
-				if (stmin < 0x80)
-					printf("STmin:%3hhu msec)", stmin);
-				else if (stmin > 0xF0 && stmin < 0xFA)
-					printf("STmin:%3u usec)", (stmin & 0xF) * 100);
-				else
-					printf("STmin: invalid   )");
-
-				printf(" : %lu byte in ", fflen);
-
-				/* calculate time */
-				ioctl(s, SIOCGSTAMP, &end_tv);
-				diff_tv.tv_sec  = end_tv.tv_sec  - start_tv.tv_sec;
-				diff_tv.tv_usec = end_tv.tv_usec - start_tv.tv_usec;
-				if (diff_tv.tv_usec < 0)
-					diff_tv.tv_sec--, diff_tv.tv_usec += 1000000;
-				if (diff_tv.tv_sec < 0)
-					diff_tv.tv_sec = diff_tv.tv_usec = 0;
-
-				/* check devisor to be not zero */
-				if (diff_tv.tv_sec * 1000 + diff_tv.tv_usec / 1000){
-					printf("%llu.%06llus ", (unsigned long long)diff_tv.tv_sec, (unsigned long long)diff_tv.tv_usec);
-					printf("=> %lu byte/s", (fflen * 1000) /
-					       (unsigned long)(diff_tv.tv_sec * 1000 + diff_tv.tv_usec / 1000));
-				} else
-					printf("(no time available)     ");
-
-				printf("\n");
-				/* wait for next PDU */
+			/* ignore incorrect SF PDUs */
+			if (frame.len < rcvlen + datidx)
 				fflen = rcvlen = 0;
+
+			/* get number of digits for printing */
+			fflen_digits = getdigits(fflen);
+
+			/* get CAN FD bitrate & LL_DL setting information */
+			brs = frame.flags & CANFD_BRS;
+			ll_dl = frame.len;
+			if (ll_dl < 8)
+				ll_dl = 8;
+
+			ioctl(s, SIOCGSTAMP, &start_tv);
+
+			/* determine CAN frame mode for this PDU */
+			if (nbytes == CAN_MTU)
+				canfd_on = 0;
+			else
+				canfd_on = 1;
+
+			break;
+
+		case 0x10:
+			/* FF */
+			fflen = ((n_pci & 0x0F)<<8) + frame.data[ext+1];
+			if (fflen)
+				datidx = ext+2;
+			else {
+				fflen = (frame.data[ext+2]<<24) +
+					(frame.data[ext+3]<<16) +
+					(frame.data[ext+4]<<8) +
+					frame.data[ext+5];
+				datidx = ext+6;
 			}
-			fflush(stdout);
+
+			/* to increase the time resolution we multiply fflen with 1000 later */
+			if (fflen >= (UINT32_MAX / 1000)) {
+				printf("fflen %lu is more than ~4.2 MB - ignoring PDU\n", fflen);
+				fflush(stdout);
+				fflen = rcvlen = 0;
+				continue;
+			}
+			rcvlen = frame.len - datidx;
+			last_sn = 0;
+
+			/* get number of digits for printing */
+			fflen_digits = getdigits(fflen);
+
+			/* get CAN FD bitrate & LL_DL setting information */
+			brs = frame.flags & CANFD_BRS;
+			ll_dl = frame.len;
+
+			ioctl(s, SIOCGSTAMP, &start_tv);
+
+			/* determine CAN frame mode for this PDU */
+			if (nbytes == CAN_MTU)
+				canfd_on = 0;
+			else
+				canfd_on = 1;
+
+			break;
+
+		case 0x20:
+			/* CF */
+			if (rcvlen) {
+				sn = n_pci & 0x0F;
+				if (sn == ((last_sn + 1) & 0xF)) {
+					last_sn = sn;
+					datidx = ext+1;
+					rcvlen += frame.len - datidx;
+				}
+			}
+			break;
+
+		default:
+			break;
+		}
+
+		/* PDU reception in process */
+		if (rcvlen) {
+			if (rcvlen > fflen)
+				rcvlen = fflen;
+
+			percent = (rcvlen * 100 / fflen);
+			printf("\r %3lu%% ", percent);
+
+			printf("|");
+
+			if (percent > 100)
+				percent = 100;
+
+			for (i=0; i < NUMBAR; i++){
+				if (i < (int)(percent/PERCENTRES))
+					printf("X");
+				else
+					printf(".");
+			}
+			printf("| %*lu/%lu ", fflen_digits, rcvlen, fflen);
+		}
+
+		/* PDU complete */
+		if (rcvlen && rcvlen >= fflen) {
+
+			printf("\r%s %02d%c (BS:%2hhu # ", canfd_on?"CAN-FD":"CAN2.0", ll_dl, brs?'*':' ', bs);
+			if (stmin < 0x80)
+				printf("STmin:%3hhu msec)", stmin);
+			else if (stmin > 0xF0 && stmin < 0xFA)
+				printf("STmin:%3u usec)", (stmin & 0xF) * 100);
+			else
+				printf("STmin: invalid   )");
+
+			printf(" : %lu byte in ", fflen);
+
+			/* calculate time */
+			ioctl(s, SIOCGSTAMP, &end_tv);
+			diff_tv.tv_sec  = end_tv.tv_sec  - start_tv.tv_sec;
+			diff_tv.tv_usec = end_tv.tv_usec - start_tv.tv_usec;
+			if (diff_tv.tv_usec < 0)
+				diff_tv.tv_sec--, diff_tv.tv_usec += 1000000;
+			if (diff_tv.tv_sec < 0)
+				diff_tv.tv_sec = diff_tv.tv_usec = 0;
+
+			/* check devisor to be not zero */
+			if (diff_tv.tv_sec * 1000 + diff_tv.tv_usec / 1000){
+				printf("%llu.%06llus ", (unsigned long long)diff_tv.tv_sec, (unsigned long long)diff_tv.tv_usec);
+				printf("=> %lu byte/s", (fflen * 1000) /
+				       (unsigned long)(diff_tv.tv_sec * 1000 + diff_tv.tv_usec / 1000));
+			} else
+				printf("(no time available)     ");
+
+			printf("\n");
+			/* wait for next PDU */
+			fflen = rcvlen = 0;
+		}
+		fflush(stdout);
 	}
 
 	close(s);

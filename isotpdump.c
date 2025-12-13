@@ -426,112 +426,112 @@ int main(int argc, char **argv)
 			}
 		}
 
-			if (frame.can_id & CAN_EFF_FLAG)
-				printf(" %s  %8X", argv[optind], frame.can_id & CAN_EFF_MASK);
-			else
-				printf(" %s  %3X", argv[optind], frame.can_id & CAN_SFF_MASK);
+		if (frame.can_id & CAN_EFF_FLAG)
+			printf(" %s  %8X", argv[optind], frame.can_id & CAN_EFF_MASK);
+		else
+			printf(" %s  %3X", argv[optind], frame.can_id & CAN_SFF_MASK);
 
-			if (ext)
-				printf("{%02X}", frame.data[0]);
+		if (ext)
+			printf("{%02X}", frame.data[0]);
 
-			if (nbytes == CAN_MTU)
-				printf("  [%d]  ", frame.len);
-			else
-				printf(" [%02d]  ", frame.len);
+		if (nbytes == CAN_MTU)
+			printf("  [%d]  ", frame.len);
+		else
+			printf(" [%02d]  ", frame.len);
 
-			datidx = 0;
-			n_pci = frame.data[ext];
+		datidx = 0;
+		n_pci = frame.data[ext];
 
-			switch (n_pci & 0xF0) {
-			case 0x00:
-			        is_ff = 1;
-				if (n_pci & 0xF) {
-					printf("[SF] ln: %-4d data:", n_pci & 0xF);
-					datidx = ext+1;
-				} else {
-					printf("[SF] ln: %-4d data:", frame.data[ext + 1]);
-					datidx = ext+2;
-				}
-				break;
-
-			case 0x10:
-			        is_ff = 1;
-				fflen = ((n_pci & 0x0F)<<8) + frame.data[ext+1];
-				if (fflen)
-					datidx = ext+2;
-				else {
-					fflen = (frame.data[ext+2]<<24) +
-						(frame.data[ext+3]<<16) +
-						(frame.data[ext+4]<<8) +
-						frame.data[ext+5];
-					datidx = ext+6;
-				}
-				printf("[FF] ln: %-4lu data:", fflen);
-				break;
-
-			case 0x20:
-				printf("[CF] sn: %X    data:", n_pci & 0x0F);
+		switch (n_pci & 0xF0) {
+		case 0x00:
+			is_ff = 1;
+			if (n_pci & 0xF) {
+				printf("[SF] ln: %-4d data:", n_pci & 0xF);
 				datidx = ext+1;
-				break;
+			} else {
+				printf("[SF] ln: %-4d data:", frame.data[ext + 1]);
+				datidx = ext+2;
+			}
+			break;
 
-			case 0x30:
-				n_pci &= 0x0F;
-				printf("[FC] FC: %d ", n_pci);
+		case 0x10:
+			is_ff = 1;
+			fflen = ((n_pci & 0x0F)<<8) + frame.data[ext+1];
+			if (fflen)
+				datidx = ext+2;
+			else {
+				fflen = (frame.data[ext+2]<<24) +
+					(frame.data[ext+3]<<16) +
+					(frame.data[ext+4]<<8) +
+					frame.data[ext+5];
+				datidx = ext+6;
+			}
+			printf("[FF] ln: %-4lu data:", fflen);
+			break;
 
-				if (n_pci > 3)
-					n_pci = 3;
+		case 0x20:
+			printf("[CF] sn: %X    data:", n_pci & 0x0F);
+			datidx = ext+1;
+			break;
 
-				printf("= %s # ", fc_info[n_pci]);
+		case 0x30:
+			n_pci &= 0x0F;
+			printf("[FC] FC: %d ", n_pci);
 
-				printf("BS: %d %s# ", frame.data[ext+1],
-				       (frame.data[ext+1])? "":"= off ");
+			if (n_pci > 3)
+				n_pci = 3;
 
-				i = frame.data[ext+2];
-				printf("STmin: 0x%02X = ", i);
+			printf("= %s # ", fc_info[n_pci]);
 
-				if (i < 0x80)
-					printf("%d ms", i);
-				else if (i > 0xF0 && i < 0xFA)
-					printf("%d us", (i & 0x0F) * 100);
-				else
-					printf("reserved");
-				break;
+			printf("BS: %d %s# ", frame.data[ext+1],
+			       (frame.data[ext+1])? "":"= off ");
 
-			default:
-				printf("[??]");
+			i = frame.data[ext+2];
+			printf("STmin: 0x%02X = ", i);
+
+			if (i < 0x80)
+				printf("%d ms", i);
+			else if (i > 0xF0 && i < 0xFA)
+				printf("%d us", (i & 0x0F) * 100);
+			else
+				printf("reserved");
+			break;
+
+		default:
+			printf("[??]");
+		}
+
+		if (datidx && frame.len > datidx) {
+			printf(" ");
+			for (i = datidx; i < frame.len; i++) {
+				printf("%02X ", frame.data[i]);
 			}
 
-			if (datidx && frame.len > datidx) {
-				printf(" ");
+			if (asc) {
+				printf("%*s", ((7-ext) - (frame.len-datidx))*3 + 5 ,
+				       "-  '");
 				for (i = datidx; i < frame.len; i++) {
-					printf("%02X ", frame.data[i]);
+					printf("%c",((frame.data[i] > 0x1F) &&
+						     (frame.data[i] < 0x7F))?
+					       frame.data[i] : '.');
 				}
-
-				if (asc) {
-					printf("%*s", ((7-ext) - (frame.len-datidx))*3 + 5 ,
-					       "-  '");
-					for (i = datidx; i < frame.len; i++) {
-						printf("%c",((frame.data[i] > 0x1F) &&
-							     (frame.data[i] < 0x7F))?
-						       frame.data[i] : '.');
-					}
-					printf("'");
-				}
-				if (uds_output && is_ff) {
-					int offset = 3;
-					if (asc)
-						offset = 1;
-					printf("%*s", ((7-ext) - (frame.len-datidx))*offset + 3,
-					       " - ");
-					print_uds_message(frame.data[datidx], frame.data[datidx+2]);
-					is_ff = 0;
-				}
+				printf("'");
 			}
+			if (uds_output && is_ff) {
+				int offset = 3;
+				if (asc)
+					offset = 1;
+				printf("%*s", ((7-ext) - (frame.len-datidx))*offset + 3,
+				       " - ");
+				print_uds_message(frame.data[datidx], frame.data[datidx+2]);
+				is_ff = 0;
+			}
+		}
 
-			if (color)
-				printf("%s", ATTRESET);
-			printf("\n");
-			fflush(stdout);
+		if (color)
+			printf("%s", ATTRESET);
+		printf("\n");
+		fflush(stdout);
 	}
 
 	close(s);

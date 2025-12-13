@@ -82,183 +82,183 @@ void print_usage(char *prg)
 
 int main(int argc, char **argv)
 {
-    int s;
-    struct sockaddr_can addr;
-    static struct can_isotp_options opts;
-    static struct can_isotp_fc_options fcopts;
-    static struct can_isotp_ll_options llopts;
-    int opt, i;
-    extern int optind, opterr, optopt;
-    __u32 force_rx_stmin = 0;
-    int loop = 0;
+	int s;
+	struct sockaddr_can addr;
+	static struct can_isotp_options opts;
+	static struct can_isotp_fc_options fcopts;
+	static struct can_isotp_ll_options llopts;
+	int opt, i;
+	extern int optind, opterr, optopt;
+	__u32 force_rx_stmin = 0;
+	int loop = 0;
 
-    unsigned char msg[BUFSIZE];
-    int nbytes;
+	unsigned char msg[BUFSIZE];
+	int nbytes;
 
-    addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
+	addr.can_addr.tp.tx_id = addr.can_addr.tp.rx_id = NO_CAN_ID;
 
-    while ((opt = getopt(argc, argv, "s:d:x:p:P:b:m:w:f:lFL:?")) != -1) {
-	    switch (opt) {
-	    case 's':
-		    addr.can_addr.tp.tx_id = strtoul(optarg, NULL, 16);
-		    if (strlen(optarg) > 7)
-			    addr.can_addr.tp.tx_id |= CAN_EFF_FLAG;
-		    break;
+	while ((opt = getopt(argc, argv, "s:d:x:p:P:b:m:w:f:lFL:?")) != -1) {
+		switch (opt) {
+		case 's':
+			addr.can_addr.tp.tx_id = strtoul(optarg, NULL, 16);
+			if (strlen(optarg) > 7)
+				addr.can_addr.tp.tx_id |= CAN_EFF_FLAG;
+			break;
 
-	    case 'd':
-		    addr.can_addr.tp.rx_id = strtoul(optarg, NULL, 16);
-		    if (strlen(optarg) > 7)
-			    addr.can_addr.tp.rx_id |= CAN_EFF_FLAG;
-		    break;
+		case 'd':
+			addr.can_addr.tp.rx_id = strtoul(optarg, NULL, 16);
+			if (strlen(optarg) > 7)
+				addr.can_addr.tp.rx_id |= CAN_EFF_FLAG;
+			break;
 
-	    case 'x':
-	    {
-		    int elements = sscanf(optarg, "%hhx:%hhx",
-					  &opts.ext_address,
-					  &opts.rx_ext_address);
+		case 'x':
+		{
+			int elements = sscanf(optarg, "%hhx:%hhx",
+					      &opts.ext_address,
+					      &opts.rx_ext_address);
 
-		    if (elements == 1)
-			    opts.flags |= CAN_ISOTP_EXTEND_ADDR;
-		    else if (elements == 2)
-			    opts.flags |= (CAN_ISOTP_EXTEND_ADDR | CAN_ISOTP_RX_EXT_ADDR);
-		    else {
-			    printf("incorrect extended addr values '%s'.\n", optarg);
-			    print_usage(basename(argv[0]));
-			    exit(0);
-		    }
-		    break;
-	    }
+			if (elements == 1)
+				opts.flags |= CAN_ISOTP_EXTEND_ADDR;
+			else if (elements == 2)
+				opts.flags |= (CAN_ISOTP_EXTEND_ADDR | CAN_ISOTP_RX_EXT_ADDR);
+			else {
+				printf("incorrect extended addr values '%s'.\n", optarg);
+				print_usage(basename(argv[0]));
+				exit(0);
+			}
+			break;
+		}
 
-	    case 'p':
-	    {
-		    int elements = sscanf(optarg, "%hhx:%hhx",
-					  &opts.txpad_content,
-					  &opts.rxpad_content);
+		case 'p':
+		{
+			int elements = sscanf(optarg, "%hhx:%hhx",
+					      &opts.txpad_content,
+					      &opts.rxpad_content);
 
-		    if (elements == 1)
-			    opts.flags |= CAN_ISOTP_TX_PADDING;
-		    else if (elements == 2)
-			    opts.flags |= (CAN_ISOTP_TX_PADDING | CAN_ISOTP_RX_PADDING);
-		    else if (sscanf(optarg, ":%hhx", &opts.rxpad_content) == 1)
-			    opts.flags |= CAN_ISOTP_RX_PADDING;
-		    else {
-			    printf("incorrect padding values '%s'.\n", optarg);
-			    print_usage(basename(argv[0]));
-			    exit(0);
-		    }
-		    break;
-	    }
+			if (elements == 1)
+				opts.flags |= CAN_ISOTP_TX_PADDING;
+			else if (elements == 2)
+				opts.flags |= (CAN_ISOTP_TX_PADDING | CAN_ISOTP_RX_PADDING);
+			else if (sscanf(optarg, ":%hhx", &opts.rxpad_content) == 1)
+				opts.flags |= CAN_ISOTP_RX_PADDING;
+			else {
+				printf("incorrect padding values '%s'.\n", optarg);
+				print_usage(basename(argv[0]));
+				exit(0);
+			}
+			break;
+		}
 
-	    case 'P':
-		    if (optarg[0] == 'l')
-			    opts.flags |= CAN_ISOTP_CHK_PAD_LEN;
-		    else if (optarg[0] == 'c')
-			    opts.flags |= CAN_ISOTP_CHK_PAD_DATA;
-		    else if (optarg[0] == 'a')
-			    opts.flags |= (CAN_ISOTP_CHK_PAD_LEN | CAN_ISOTP_CHK_PAD_DATA);
-		    else {
-			    printf("unknown padding check option '%c'.\n", optarg[0]);
-			    print_usage(basename(argv[0]));
-			    exit(0);
-		    }
-		    break;
+		case 'P':
+			if (optarg[0] == 'l')
+				opts.flags |= CAN_ISOTP_CHK_PAD_LEN;
+			else if (optarg[0] == 'c')
+				opts.flags |= CAN_ISOTP_CHK_PAD_DATA;
+			else if (optarg[0] == 'a')
+				opts.flags |= (CAN_ISOTP_CHK_PAD_LEN | CAN_ISOTP_CHK_PAD_DATA);
+			else {
+				printf("unknown padding check option '%c'.\n", optarg[0]);
+				print_usage(basename(argv[0]));
+				exit(0);
+			}
+			break;
 
-	    case 'b':
-		    fcopts.bs = strtoul(optarg, NULL, 16) & 0xFF;
-		    break;
+		case 'b':
+			fcopts.bs = strtoul(optarg, NULL, 16) & 0xFF;
+			break;
 
-	    case 'm':
-		    fcopts.stmin = strtoul(optarg, NULL, 16) & 0xFF;
-		    break;
+		case 'm':
+			fcopts.stmin = strtoul(optarg, NULL, 16) & 0xFF;
+			break;
 
-	    case 'w':
-		    fcopts.wftmax = strtoul(optarg, NULL, 16) & 0xFF;
-		    break;
+		case 'w':
+			fcopts.wftmax = strtoul(optarg, NULL, 16) & 0xFF;
+			break;
 
-	    case 'f':
-		    opts.flags |= CAN_ISOTP_FORCE_RXSTMIN;
-		    force_rx_stmin = strtoul(optarg, NULL, 10);
-		    break;
+		case 'f':
+			opts.flags |= CAN_ISOTP_FORCE_RXSTMIN;
+			force_rx_stmin = strtoul(optarg, NULL, 10);
+			break;
 
-	    case 'l':
-		    loop = 1;
-		    break;
+		case 'l':
+			loop = 1;
+			break;
 
-	    case 'F':
-		    opts.flags |= CAN_ISOTP_DYN_FC_PARMS;
-		    break;
+		case 'F':
+			opts.flags |= CAN_ISOTP_DYN_FC_PARMS;
+			break;
 
-	    case 'L':
-		    if (sscanf(optarg, "%hhu:%hhu:%hhu",
-			       &llopts.mtu,
-			       &llopts.tx_dl,
-			       &llopts.tx_flags) != 3) {
-			    printf("unknown link layer options '%s'.\n", optarg);
-			    print_usage(basename(argv[0]));
-			    exit(0);
-		    }
-		    break;
+		case 'L':
+			if (sscanf(optarg, "%hhu:%hhu:%hhu",
+				   &llopts.mtu,
+				   &llopts.tx_dl,
+				   &llopts.tx_flags) != 3) {
+				printf("unknown link layer options '%s'.\n", optarg);
+				print_usage(basename(argv[0]));
+				exit(0);
+			}
+			break;
 
-	    case '?':
-		    print_usage(basename(argv[0]));
-		    exit(0);
-		    break;
+		case '?':
+			print_usage(basename(argv[0]));
+			exit(0);
+			break;
 
-	    default:
-		    fprintf(stderr, "Unknown option %c\n", opt);
-		    print_usage(basename(argv[0]));
-		    exit(1);
-		    break;
-	    }
-    }
-
-    if ((argc - optind != 1) ||
-	(addr.can_addr.tp.tx_id == NO_CAN_ID) ||
-	(addr.can_addr.tp.rx_id == NO_CAN_ID)) {
-	    print_usage(basename(argv[0]));
-	    exit(1);
-    }
-  
-    if ((s = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP)) < 0) {
-	perror("socket");
-	exit(1);
-    }
-
-    setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
-    setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_RECV_FC, &fcopts, sizeof(fcopts));
-
-    if (llopts.tx_dl) {
-	if (setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &llopts, sizeof(llopts)) < 0) {
-	    perror("link layer sockopt");
-	    exit(1);
+		default:
+			fprintf(stderr, "Unknown option %c\n", opt);
+			print_usage(basename(argv[0]));
+			exit(1);
+			break;
+		}
 	}
-    }
 
-    if (opts.flags & CAN_ISOTP_FORCE_RXSTMIN)
-	    setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_RX_STMIN, &force_rx_stmin, sizeof(force_rx_stmin));
+	if ((argc - optind != 1) ||
+	    (addr.can_addr.tp.tx_id == NO_CAN_ID) ||
+	    (addr.can_addr.tp.rx_id == NO_CAN_ID)) {
+		print_usage(basename(argv[0]));
+		exit(1);
+	}
+  
+	if ((s = socket(PF_CAN, SOCK_DGRAM, CAN_ISOTP)) < 0) {
+		perror("socket");
+		exit(1);
+	}
 
-    addr.can_family = AF_CAN;
-    addr.can_ifindex = if_nametoindex(argv[optind]);
-    if (!addr.can_ifindex) {
-	perror("if_nametoindex");
-	exit(1);
-    }
+	setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_OPTS, &opts, sizeof(opts));
+	setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_RECV_FC, &fcopts, sizeof(fcopts));
 
-    if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-	perror("bind");
+	if (llopts.tx_dl) {
+		if (setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_LL_OPTS, &llopts, sizeof(llopts)) < 0) {
+			perror("link layer sockopt");
+			exit(1);
+		}
+	}
+
+	if (opts.flags & CAN_ISOTP_FORCE_RXSTMIN)
+		setsockopt(s, SOL_CAN_ISOTP, CAN_ISOTP_RX_STMIN, &force_rx_stmin, sizeof(force_rx_stmin));
+
+	addr.can_family = AF_CAN;
+	addr.can_ifindex = if_nametoindex(argv[optind]);
+	if (!addr.can_ifindex) {
+		perror("if_nametoindex");
+		exit(1);
+	}
+
+	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+		perror("bind");
+		close(s);
+		exit(1);
+	}
+
+	do {
+		nbytes = read(s, msg, BUFSIZE);
+		if (nbytes > 0 && nbytes < BUFSIZE)
+			for (i=0; i < nbytes; i++)
+				printf("%02X ", msg[i]);
+		printf("\n");
+	} while (loop);
+
 	close(s);
-	exit(1);
-    }
 
-    do {
-	    nbytes = read(s, msg, BUFSIZE);
-	    if (nbytes > 0 && nbytes < BUFSIZE)
-		    for (i=0; i < nbytes; i++)
-			    printf("%02X ", msg[i]);
-	    printf("\n");
-    } while (loop);
-
-    close(s);
-
-    return 0;
+	return 0;
 }

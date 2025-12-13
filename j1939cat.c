@@ -31,11 +31,11 @@
  * strict type-checking.. See the
  * "unnecessary" pointer comparison.
  */
-#define min(x, y) ({				\
-	typeof(x) _min1 = (x);			\
-	typeof(y) _min2 = (y);			\
-	(void) (&_min1 == &_min2);		\
-	_min1 < _min2 ? _min1 : _min2; })
+#define min(x, y) ({						\
+			typeof(x) _min1 = (x);			\
+			typeof(y) _min2 = (y);			\
+			(void) (&_min1 == &_min2);		\
+			_min1 < _min2 ? _min1 : _min2; })
 
 
 struct j1939cat_stats {
@@ -98,7 +98,7 @@ static const char help_msg[] =
 static const char optstring[] = "?hi:vs:rp:P:R:B";
 
 static ssize_t j1939cat_send_one(struct j1939cat_priv *priv, int out_fd,
-			     const void *buf, size_t buf_size)
+				 const void *buf, size_t buf_size)
 {
 	ssize_t num_sent;
 	int flags = 0;
@@ -132,7 +132,7 @@ static ssize_t j1939cat_send_one(struct j1939cat_priv *priv, int out_fd,
 }
 
 static void j1939cat_print_timestamp(struct j1939cat_priv *priv, const char *name,
-			      struct timespec *cur)
+				     struct timespec *cur)
 {
 	struct j1939cat_stats *stats = &priv->stats;
 
@@ -140,8 +140,8 @@ static void j1939cat_print_timestamp(struct j1939cat_priv *priv, const char *nam
 		return;
 
 	fprintf(stderr, "  %s: %llu s %llu us (seq=%03u, send=%07u)",
-			name, (unsigned long long)cur->tv_sec, (unsigned long long)cur->tv_nsec / 1000,
-			stats->tskey, stats->send);
+		name, (unsigned long long)cur->tv_sec, (unsigned long long)cur->tv_nsec / 1000,
+		stats->tskey, stats->send);
 
 	fprintf(stderr, "\n");
 }
@@ -226,7 +226,7 @@ static int j1939cat_extract_serr(struct j1939cat_priv *priv)
 		stats->tskey = serr->ee_data;
 
 		j1939cat_print_timestamp(priv, j1939cat_tstype_to_str(serr->ee_info),
-				     &tss->ts[0]);
+					 &tss->ts[0]);
 
 		if (serr->ee_info == SCM_TSTAMP_SCHED)
 			return -EINTR;
@@ -338,7 +338,7 @@ static int j1939cat_recv_err(struct j1939cat_priv *priv)
 }
 
 static int j1939cat_send_loop(struct j1939cat_priv *priv, int out_fd, char *buf,
-			  size_t buf_size)
+			      size_t buf_size)
 {
 	struct j1939cat_stats *stats = &priv->stats;
 	ssize_t count;
@@ -411,7 +411,7 @@ static int j1939cat_send_loop(struct j1939cat_priv *priv, int out_fd, char *buf,
 }
 
 static int j1939cat_sendfile(struct j1939cat_priv *priv, int out_fd, int in_fd,
-			 off_t *offset, size_t count)
+			     off_t *offset, size_t count)
 {
 	int ret = EXIT_SUCCESS;
 	off_t orig = 0;
@@ -617,7 +617,7 @@ static int j1939cat_sock_prepare(struct j1939cat_priv *priv)
 
 	if (priv->todo_prio >= 0) {
 		ret = setsockopt(priv->sock, SOL_CAN_J1939, SO_J1939_SEND_PRIO,
-				&priv->todo_prio, sizeof(priv->todo_prio));
+				 &priv->todo_prio, sizeof(priv->todo_prio));
 		if (ret < 0) {
 			warn("set priority %i", priv->todo_prio);
 			return EXIT_FAILURE;
@@ -633,11 +633,11 @@ static int j1939cat_sock_prepare(struct j1939cat_priv *priv)
 	}
 
 	sock_opt = SOF_TIMESTAMPING_SOFTWARE |
-		   SOF_TIMESTAMPING_OPT_CMSG |
-		   SOF_TIMESTAMPING_TX_ACK |
-		   SOF_TIMESTAMPING_TX_SCHED |
-		   SOF_TIMESTAMPING_OPT_STATS | SOF_TIMESTAMPING_OPT_TSONLY |
-		   SOF_TIMESTAMPING_OPT_ID | SOF_TIMESTAMPING_RX_SOFTWARE;
+		SOF_TIMESTAMPING_OPT_CMSG |
+		SOF_TIMESTAMPING_TX_ACK |
+		SOF_TIMESTAMPING_TX_SCHED |
+		SOF_TIMESTAMPING_OPT_STATS | SOF_TIMESTAMPING_OPT_TSONLY |
+		SOF_TIMESTAMPING_OPT_ID | SOF_TIMESTAMPING_RX_SOFTWARE;
 
 	if (setsockopt(priv->sock, SOL_SOCKET, SO_TIMESTAMPING,
 		       (char *) &sock_opt, sizeof(sock_opt)))

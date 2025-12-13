@@ -68,9 +68,9 @@ static struct {
 	int pkt_len;
 	int priority;
 	int defined;
-	#define DEF_SRC		1
-	#define DEF_DST		2
-	#define DEF_PRIO	4
+#define DEF_SRC 1
+#define DEF_DST 2
+#define DEF_PRIO 4
 	struct sockaddr_can src, dst;
 } s = {
 	.priority = 6,

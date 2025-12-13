@@ -584,7 +584,7 @@ static void eval_canxl_fd(char* buf, struct timeval *date_tvp, char timestamps,
 		return;
 
 	if (!(flags & ASC_F_FDF))
-	    return;
+		return;
 
 	cf.flags = CANFD_FDF;
 

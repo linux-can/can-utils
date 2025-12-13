@@ -715,12 +715,12 @@ int main(int argc, char **argv)
 			localtime_r(&currtime, &now);
 
 			snprintf(fname, sizeof(fname), "candump-%04d-%02d-%02d_%02d%02d%02d.log",
-				now.tm_year + 1900,
-				now.tm_mon + 1,
-				now.tm_mday,
-				now.tm_hour,
-				now.tm_min,
-				now.tm_sec);
+				 now.tm_year + 1900,
+				 now.tm_mon + 1,
+				 now.tm_mday,
+				 now.tm_hour,
+				 now.tm_min,
+				 now.tm_sec);
 
 			logname = fname;
 		}
@@ -891,8 +891,8 @@ int main(int argc, char **argv)
 			alen = sprintf(afrbuf, " %s", (color > 2) ? col_on[idx % MAXCOL] : "");
 			alen += sprint_timestamp(afrbuf + alen, timestamp, use_ns, &ts, &last_ts);
 			alen += sprintf(afrbuf + alen, " %s%*s",
-					  (color && (color < 3)) ? col_on[idx % MAXCOL] : "",
-					  max_devname_len, devname[idx]);
+					(color && (color < 3)) ? col_on[idx % MAXCOL] : "",
+					max_devname_len, devname[idx]);
 
 			if (extra_msg_info) {
 				if (msg.msg_flags & MSG_DONTROUTE)

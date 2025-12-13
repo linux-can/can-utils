@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
 		if (verbose)
 			fprintf(stderr, "- setsockopt(, SOL_CAN_J1939, SO_J1939_SEND_PRIO, &%i);\n", todo_prio);
 		ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_SEND_PRIO,
-				&todo_prio, sizeof(todo_prio));
+				 &todo_prio, sizeof(todo_prio));
 		if (ret < 0)
 			err(1, "set priority %i", todo_prio);
 	}
@@ -246,7 +246,7 @@ int main(int argc, char *argv[])
 			if (verbose)
 				fprintf(stderr, "- sendto(, <dat>, %i, 0, %s, %zi);\n", todo_send, libj1939_addr2str(&peername), sizeof(peername));
 			ret = sendto(sock, dat, todo_send, 0,
-					(void *)&peername, sizeof(peername));
+				     (void *)&peername, sizeof(peername));
 		} else {
 			/*
 			 * we may do sendto(sock, dat, todo_send, 0, NULL, 0)
@@ -273,7 +273,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "- recvfrom(, <dat>, %zi, 0, &<peername>, %zi);\n", sizeof(peername), sizeof(peername));
 		peernamelen = sizeof(peername);
 		ret = recvfrom(sock, dat, sizeof(dat), 0,
-				(void *)&peername, &peernamelen);
+			       (void *)&peername, &peernamelen);
 		if (ret < 0) {
 			if (EINTR == errno) {
 				if (verbose)
@@ -287,7 +287,7 @@ int main(int argc, char *argv[])
 			if (verbose)
 				fprintf(stderr, "- sendto(, <dat>, %i, 0, %s, %i);\n", ret, libj1939_addr2str(&peername), peernamelen);
 			ret = sendto(sock, dat, ret, 0,
-					(void *)&peername, peernamelen);
+				     (void *)&peername, peernamelen);
 			if (ret < 0)
 				err(1, "sendto");
 		}
@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
 			if (todo_names && peername.can_addr.j1939.name)
 				printf("%016llx ", peername.can_addr.j1939.name);
 			printf("%02x %05x:", peername.can_addr.j1939.addr,
-					peername.can_addr.j1939.pgn);
+			       peername.can_addr.j1939.pgn);
 			for (i = 0, j = 0; i < ret; ++i, j++) {
 				if (j == 8) {
 					printf("\n%05x    ", i);

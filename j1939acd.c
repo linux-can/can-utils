@@ -112,10 +112,10 @@ static struct {
 	int sig_alrm;
 	int sig_usr1;
 	int state;
-		#define STATE_INITIAL 0
-		#define STATE_REQ_SENT 1
-		#define STATE_REQ_PENDING 2 /* wait 1250 msec for first claim */
-		#define STATE_OPERATIONAL 3
+#define STATE_INITIAL 0
+#define STATE_REQ_SENT 1
+#define STATE_REQ_PENDING 2 /* wait 1250 msec for first claim */
+#define STATE_OPERATIONAL 3
 } s = {
 	.intf = default_intf,
 	.ranges = default_range,
@@ -126,8 +126,8 @@ static struct {
 struct {
 	uint64_t name;
 	int flags;
-		#define F_USE	0x01
-		#define F_SEEN	0x02
+#define F_USE 0x01
+#define F_SEEN 0x02
 } addr[J1939_IDLE_ADDR /* =254 */];
 
 /* lookup by name */
@@ -209,7 +209,7 @@ static int open_socket(const char *device, uint64_t name)
 	if (s.verbose)
 		fprintf(stderr, "- setsockopt(, SOL_CAN_J1939, SO_J1939_FILTER, <filter>, %zd);\n", sizeof(filt));
 	ret = setsockopt(sock, SOL_CAN_J1939, SO_J1939_FILTER,
-			&filt, sizeof(filt));
+			 &filt, sizeof(filt));
 	if (ret < 0)
 		err(1, "setsockopt filter");
 
@@ -217,7 +217,7 @@ static int open_socket(const char *device, uint64_t name)
 	if (s.verbose)
 		fprintf(stderr, "- setsockopt(, SOL_SOCKET, SO_BROADCAST, %d, %zd);\n", value, sizeof(value));
 	ret = setsockopt(sock, SOL_SOCKET, SO_BROADCAST,
-			&value, sizeof(value));
+			 &value, sizeof(value));
 	if (ret < 0)
 		err(1, "setsockopt set broadcast");
 
