@@ -68,7 +68,7 @@
 int main(void)
 {
 	static char buf[BUFSZ], timestamp[TIMESZ], device[DEVSZ], afrbuf[AFRSZ];
-	static cu_t cu;
+	static union cfu cu;
 	int mtu;
 
 	while (fgets(buf, BUFSZ-1, stdin)) {

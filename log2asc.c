@@ -183,7 +183,7 @@ static void canfd_asc(struct canfd_frame *cf, int devno, int mtu,
 	fprintf(outfile, " %8d %4d %8X 0 0 0 0 0", 130000, 130, flags);
 }
 
-static void canxl_asc(cu_t *cu, int devno, int mtu,
+static void canxl_asc(union cfu *cu, int devno, int mtu,
 		      char *extra_info, FILE *outfile)
 {
 	char id[10];
@@ -314,7 +314,7 @@ int main(int argc, char **argv)
 {
 	static char buf[BUFSZ], device[DEVSZ], afrbuf[AFRSZ], extra_info[EXTRASZ];
 
-	static cu_t cu;
+	static union cfu cu;
 	static struct timeval tv, start_tv;
 	FILE *infile = stdin;
 	FILE *outfile = stdout;

@@ -342,7 +342,7 @@ int main(int argc, char **argv)
 	struct cmsghdr *cmsg;
 	struct can_filter *rfilter;
 	can_err_mask_t err_mask;
-	static cu_t cu; /* union for CAN CC/FD/XL frames */
+	static union cfu cu; /* union for CAN CC/FD/XL frames */
 	int nbytes, i;
 	struct ifreq ifr;
 	struct timespec ts, last_ts;

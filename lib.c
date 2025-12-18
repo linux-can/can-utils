@@ -155,7 +155,7 @@ int hexstring2data(char *arg, unsigned char *data, int maxdlen)
 	return 0;
 }
 
-int parse_canframe(char *cs, cu_t *cu)
+int parse_canframe(char *cs, union cfu *cu)
 {
 	/* documentation see lib.h */
 
@@ -309,7 +309,7 @@ int parse_canframe(char *cs, cu_t *cu)
 	return mtu;
 }
 
-int snprintf_canframe(char *buf, size_t size, cu_t *cu, int sep)
+int snprintf_canframe(char *buf, size_t size, union cfu *cu, int sep)
 {
 	/* documentation see lib.h */
 
@@ -433,7 +433,7 @@ int snprintf_canframe(char *buf, size_t size, cu_t *cu, int sep)
 	return offset;
 }
 
-int snprintf_long_canframe(char *buf, size_t size, cu_t *cu, int view)
+int snprintf_long_canframe(char *buf, size_t size, union cfu *cu, int view)
 {
 	/* documentation see lib.h */
 
