@@ -299,7 +299,7 @@ static int setsockopt_txtime(int fd)
 	return 0;
 }
 
-static int do_send_one(int fd, cu_t *cu, size_t len, int timeout)
+static int do_send_one(int fd, union cfu *cu, size_t len, int timeout)
 {
 	uint8_t control[CMSG_SPACE(sizeof(uint64_t))] = { 0 };
 	struct iovec iov = {
@@ -494,7 +494,7 @@ int main(int argc, char **argv)
 	struct can_raw_vcid_options vcid_opts = {
 		.flags = CAN_RAW_XL_VCID_TX_PASS,
 	};
-	static cu_t cu;
+	static union cfu cu;
 	int i;
 	struct ifreq ifr = { 0 };
 	const int enable_canfx = 1;

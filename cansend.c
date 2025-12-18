@@ -117,7 +117,7 @@ int main(int argc, char **argv)
 	struct can_raw_vcid_options vcid_opts = {
 		.flags = CAN_RAW_XL_VCID_TX_PASS,
 	};
-	static cu_t cu;
+	static union cfu cu;
 	struct ifreq ifr;
 
 	/* check command line options */

@@ -191,7 +191,7 @@ int main(int argc, char **argv)
 		.rx_vcid_mask = 0,
 	};
 	struct can_filter rfilter;
-	static cu_t cu; /* union for CAN CC/FD/XL frames */
+	static union cfu cu; /* union for CAN CC/FD/XL frames */
 	const int canfx_on = 1;
 	int nbytes, i, j;
 	struct ifreq ifr;

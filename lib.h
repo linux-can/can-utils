@@ -59,11 +59,11 @@ static inline int pr_debug(const char* fmt, ...) {return 0;}
 #endif
 
 /* CAN CC/FD/XL frame union */
-typedef union {
+union cfu {
 	struct can_frame cc;
 	struct canfd_frame fd;
 	struct canxl_frame xl;
-} cu_t;
+};
 
 /*
  * The buffer size for ASCII CAN frame string representations
@@ -110,7 +110,7 @@ int hexstring2data(char *arg, unsigned char *data, int maxdlen);
  *
  */
 
-int parse_canframe(char *cs, cu_t *cu);
+int parse_canframe(char *cs, union cfu *cu);
 /*
  * Transfers a valid ASCII string describing a CAN frame into the CAN union
  * containing CAN CC/FD/XL structs.
@@ -180,7 +180,7 @@ int parse_canframe(char *cs, cu_t *cu);
  * - CAN FD frames do not have a RTR bit
  */
 
-int snprintf_canframe(char *buf, size_t size, cu_t *cu, int sep);
+int snprintf_canframe(char *buf, size_t size, union cfu *cu, int sep);
 /*
  * Creates a CAN frame hexadecimal output in compact format.
  * The CAN data[] is separated by '.' when sep != 0.
@@ -213,7 +213,7 @@ int snprintf_canframe(char *buf, size_t size, cu_t *cu, int sep);
 
 #define SWAP_DELIMITER '`'
 
-int snprintf_long_canframe(char *buf, size_t size, cu_t *cu, int view);
+int snprintf_long_canframe(char *buf, size_t size, union cfu *cu, int view);
 /*
  * Creates a CAN frame hexadecimal output in user readable format.
  *

@@ -84,7 +84,7 @@ static void print_usage(char *prg)
 }
 
 static void prframe(FILE *file, struct timeval *tv, int dev,
-		    cu_t *cf, char dir)
+		    union cfu *cf, char dir)
 {
 	static char abuf[BUFLEN];
 
@@ -177,7 +177,7 @@ static void eval_can(char* buf, struct timeval *date_tvp, char timestamps,
 			cf.len = CAN_ERR_DLC;
 
 			calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-			prframe(outfile, &tv, interface, (cu_t *)&cf, NO_DIR);
+			prframe(outfile, &tv, interface, (union cfu *)&cf, NO_DIR);
 			fflush(outfile);
 			return;
 		}
@@ -249,7 +249,7 @@ static void eval_can(char* buf, struct timeval *date_tvp, char timestamps,
 				cf.data[i] = data[i] & 0xFFU;
 
 		calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-		prframe(outfile, &tv, interface, (cu_t *)&cf, dir[0]);
+		prframe(outfile, &tv, interface, (union cfu *)&cf, dir[0]);
 		fflush(outfile);
 	}
 }
@@ -374,7 +374,7 @@ static void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps,
 	}
 
 	calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-	prframe(outfile, &tv, interface, (cu_t *)&cf, dir[0]);
+	prframe(outfile, &tv, interface, (union cfu *)&cf, dir[0]);
 	fflush(outfile);
 
 	/* No support for really strange CANFD ErrorFrames format m( */
@@ -487,7 +487,7 @@ static void eval_canxl_cc(char* buf, struct timeval *date_tvp, char timestamps,
 		cf.len8_dlc = dlc;
 
 	calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-	prframe(outfile, &tv, interface, (cu_t *)&cf, dir[0]);
+	prframe(outfile, &tv, interface, (union cfu *)&cf, dir[0]);
 	fflush(outfile);
 }
 
@@ -594,7 +594,7 @@ static void eval_canxl_fd(char* buf, struct timeval *date_tvp, char timestamps,
 		cf.flags |= CANFD_ESI;
 
 	calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-	prframe(outfile, &tv, interface, (cu_t *)&cf, dir[0]);
+	prframe(outfile, &tv, interface, (union cfu *)&cf, dir[0]);
 	fflush(outfile);
 }
 
@@ -723,7 +723,7 @@ static void eval_canxl_xl(char* buf, struct timeval *date_tvp, char timestamps,
 		cf.flags |= CANXL_RRS;
 
 	calc_tv(&tv, &read_tv, date_tvp, timestamps, dplace);
-	prframe(outfile, &tv, interface, (cu_t *)&cf, dir[0]);
+	prframe(outfile, &tv, interface, (union cfu *)&cf, dir[0]);
 	fflush(outfile);
 
 	/* No support for CAN XL ErrorFrames */
