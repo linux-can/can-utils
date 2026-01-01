@@ -177,7 +177,8 @@ int main(int argc, char **argv)
 	sigset_t sigset;
 	fd_set rdfs;
 	int s[MAXDEV];
-	int socki, accsocket;
+	int socki;
+	int accsocket = -1;
 	canid_t mask[MAXDEV] = {0};
 	canid_t value[MAXDEV] = {0};
 	int inv_filter[MAXDEV] = {0};
@@ -286,7 +287,7 @@ int main(int argc, char **argv)
 	inaddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	inaddr.sin_port = htons(port);
 
-	while(bind(socki, (struct sockaddr*)&inaddr, sizeof(inaddr)) < 0) {
+	while(running && bind(socki, (struct sockaddr*)&inaddr, sizeof(inaddr)) < 0) {
 		struct timespec f = {
 			.tv_nsec = 100 * 1000 * 1000,
 		};
@@ -295,23 +296,44 @@ int main(int argc, char **argv)
 		nanosleep(&f, NULL);
 	}
 
+	/*
+	 * Check if loop exited due to signal (during nanosleep) rather than
+	 * successful bind.
+	 */
+	if (!running) {
+		close(socki);
+		return 128 + signal_num;
+	}
+
 	if (listen(socki, 3) != 0) {
 		perror("listen");
 		exit(1);
 	}
 
-	while(1) {
+	while(running) {
 		accsocket = accept(socki, (struct sockaddr*)&clientaddr, &sin_size);
 		if (accsocket > 0) {
 			//printf("accepted\n");
 			if (!fork())
 				break;
 			close(accsocket);
+			accsocket = -1;
 		}
 		else if (errno != EINTR) {
 			perror("accept");
 			exit(1);
 		}
+	}
+
+	/*
+	 * Check if loop exited due to signal (accept returned EINTR) rather
+	 * than successful fork
+	 */
+	if (!running) {
+		if (accsocket > 0)
+			close(accsocket);
+		close(socki);
+		return 128 + signal_num;
 	}
 
 	for (i=0; i<currmax; i++) {
