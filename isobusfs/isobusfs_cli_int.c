@@ -66,8 +66,8 @@ static int cmd_help(struct isobusfs_priv *priv, const char *options)
 static int cmd_exit(struct isobusfs_priv *priv, const char *options)
 {
 	pr_int("exit interactive mode\n");
-	/* Return -EINTR to indicate the program should exit */
-	return -EINTR;
+
+	return ISOBUSFS_CLI_RET_EXIT;
 }
 
 static int cmd_dmesg(struct isobusfs_priv *priv, const char *options)
