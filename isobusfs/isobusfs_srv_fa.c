@@ -495,15 +495,119 @@ static int check_access_with_base(const char *base_dir,
 	return access(full_path, mode);
 }
 
+/*
+ * ISO 11783-13:2021 B.21 and B.15:
+ * Filters directory entries that can be returned in a Read File response
+ * for directory handles while collecting the attributes and name length.
+ */
+/**
+ * isobusfs_srv_dir_entry_visible() - Filter visible directory entries.
+ * @handle: Directory handle for access checks.
+ * @entry: Directory entry to inspect.
+ * @file_stat: Stat buffer to fill for the entry.
+ * @entry_name_len: Returns entry name length on success.
+ * @attributes: Returns computed attributes on success.
+ *
+ * ISO 11783-13:2021 B.21 and B.15 define the directory entry layout and
+ * attributes. This helper skips entries that are not readable or too long
+ * and returns attributes for the entry that will be serialized.
+ *
+ * Return: true when the entry should be emitted, false otherwise.
+ */
+static bool isobusfs_srv_dir_entry_visible(struct isobusfs_srv_handles *handle,
+					   const struct dirent *entry,
+					   struct stat *file_stat,
+					   size_t *entry_name_len,
+					   uint8_t *attributes)
+{
+	if (check_access_with_base(handle->path, entry->d_name, R_OK) != 0)
+		return false;
+
+	if (fstatat(handle->fd, entry->d_name, file_stat, 0) < 0)
+		return false;
+
+	*entry_name_len = strlen(entry->d_name);
+	if (*entry_name_len > ISOBUSFS_MAX_DIR_ENTRY_NAME_LENGTH)
+		return false;
+
+	if (S_ISDIR(file_stat->st_mode))
+		*attributes |= ISOBUSFS_ATTR_DIRECTORY;
+	if (check_access_with_base(handle->path, entry->d_name, W_OK) != 0)
+		*attributes |= ISOBUSFS_ATTR_READ_ONLY;
+
+	return true;
+}
+
+/*
+ * ISO 11783-13:2021 C.3.4.2 and C.3.5.2:
+ * Directory offsets/counts are in entries, so advance the directory stream
+ * by visible entries only and report EOF if the entry offset is past the end.
+ */
+/**
+ * isobusfs_srv_dir_skip_entries() - Advance directory stream by entries.
+ * @handle: Directory handle to reposition.
+ * @offset: Entry offset to seek to.
+ *
+ * ISO 11783-13:2021 C.3.4.2 and C.3.5.2 state directory offsets/counts are in
+ * entries. This helper advances by visible entries only.
+ *
+ * Return: ISOBUSFS_ERR_SUCCESS or a protocol error code.
+ */
+static int isobusfs_srv_dir_skip_entries(struct isobusfs_srv_handles *handle,
+					 int32_t offset)
+{
+	struct dirent *entry;
+	int32_t skipped = 0;
+
+	rewinddir(handle->dir);
+
+	while (skipped < offset && (entry = readdir(handle->dir)) != NULL) {
+		struct stat file_stat;
+		size_t entry_name_len = 0;
+		uint8_t attributes = 0;
+
+		if (!isobusfs_srv_dir_entry_visible(handle, entry, &file_stat,
+						    &entry_name_len,
+						    &attributes))
+			continue;
+
+		skipped++;
+	}
+
+	if (offset > 0 && skipped < offset)
+		return ISOBUSFS_ERR_END_OF_FILE;
+
+	return ISOBUSFS_ERR_SUCCESS;
+}
+
+/**
+ * isobusfs_srv_read_directory() - Read directory entries into a response buffer.
+ * @handle: Directory handle to read.
+ * @buffer: Output buffer for directory entries.
+ * @max_bytes: Maximum payload bytes allowed in the response.
+ * @max_entries: Maximum number of entries to return.
+ * @readed_size: Returns payload size in bytes.
+ * @entries_read: Returns number of entries serialized.
+ *
+ * ISO 11783-13:2021 C.3.5.2: directory Count is entry based. This function
+ * encodes up to @max_entries entries while respecting @max_bytes.
+ *
+ * Return: ISOBUSFS_ERR_SUCCESS or a protocol error code.
+ */
 static int isobusfs_srv_read_directory(struct isobusfs_srv_handles *handle,
-				       uint8_t *buffer, size_t count,
-				       ssize_t *readed_size)
+				       uint8_t *buffer, size_t max_bytes,
+				       uint16_t max_entries,
+				       ssize_t *readed_size,
+				       uint16_t *entries_read)
 {
 	DIR *dir = handle->dir;
 	struct dirent *entry;
 	size_t pos = 0;
+	int ret;
 
 	/*
+	 * ISO 11783-13:2021 C.3.5.2:
+	 * Directory offsets are entry indices, not byte positions.
 	 * Position the directory stream to the previously stored offset (handle->dir_pos).
 	 *
 	 * Handling Changes in Directory Contents:
@@ -519,13 +623,12 @@ static int isobusfs_srv_read_directory(struct isobusfs_srv_handles *handle,
 	 *   either returning an error or restarting from the beginning of the directory, depending
 	 *   on the application's requirements.
 	 */
-	for (int i = 0; i < handle->dir_pos &&
-	     (entry = readdir(dir)) != NULL; i++) {
-		/* Iterating to the desired position */
-	}
+	ret = isobusfs_srv_dir_skip_entries(handle, handle->dir_pos);
+	if (ret != ISOBUSFS_ERR_SUCCESS)
+		return ret;
 
 	/*
-	 * Directory Entry Layout:
+	 * Directory Entry Layout (ISO 11783-13:2021 B.21):
 	 * This loop reads directory entries and encodes them into a buffer.
 	 * Each entry in the buffer follows the format specified in ISO 11783-13:2021.
 	 *
@@ -550,26 +653,23 @@ static int isobusfs_srv_read_directory(struct isobusfs_srv_handles *handle,
 	 * The handle->dir_pos is incremented after processing each entry, marking
 	 * the current position in the directory stream for subsequent reads.
 	 */
-	while ((entry = readdir(dir)) != NULL) {
+	*entries_read = 0;
+	while ((entry = readdir(dir)) != NULL &&
+	       (*entries_read) < max_entries) {
 		size_t entry_name_len, entry_total_len;
 		__le16 file_date, file_time;
-		uint8_t attributes = 0;
 		struct stat file_stat;
+		uint8_t attributes = 0;
 		__le32 size;
 
-		if (check_access_with_base(handle->path, entry->d_name, R_OK) != 0)
-			continue; /* Skip this entry if it's not readable */
-
-		if (fstatat(handle->fd, entry->d_name, &file_stat, 0) < 0)
-			continue; /* Skip this entry on error */
-
-		entry_name_len = strlen(entry->d_name);
-		if (entry_name_len > ISOBUSFS_MAX_DIR_ENTRY_NAME_LENGTH)
+		if (!isobusfs_srv_dir_entry_visible(handle, entry, &file_stat,
+						    &entry_name_len,
+						    &attributes))
 			continue;
 
 		entry_total_len = 1 + entry_name_len + 1 + 2 + 2 + 4;
 
-		if (pos + entry_total_len > count)
+		if (pos + entry_total_len > max_bytes)
 			break;
 
 		buffer[pos++] = (uint8_t)entry_name_len;
@@ -577,10 +677,6 @@ static int isobusfs_srv_read_directory(struct isobusfs_srv_handles *handle,
 		memcpy(buffer + pos, entry->d_name, entry_name_len);
 		pos += entry_name_len;
 
-		if (S_ISDIR(file_stat.st_mode))
-			attributes |= ISOBUSFS_ATTR_DIRECTORY;
-		if (check_access_with_base(handle->path, entry->d_name, W_OK) != 0)
-			attributes |= ISOBUSFS_ATTR_READ_ONLY;
 		buffer[pos++] = attributes;
 
 		file_date = htole16(convert_to_file_date(file_stat.st_mtime));
@@ -594,9 +690,11 @@ static int isobusfs_srv_read_directory(struct isobusfs_srv_handles *handle,
 		size = htole32(file_stat.st_size);
 		memcpy(buffer + pos, &size, sizeof(size));
 		pos += sizeof(size);
+		(*entries_read)++;
 	}
 
 	*readed_size = pos;
+	handle->dir_pos += *entries_read;
 	return 0;
 }
 
@@ -609,13 +707,18 @@ static int isobusfs_srv_fa_rf_req(struct isobusfs_srv_priv *priv,
 	struct isobusfs_srv_client *client;
 	struct isobusfs_fa_readf_req *req;
 	ssize_t readed_size = 0;
+	uint16_t entries_read = 0;
 	uint8_t error_code = 0;
 	ssize_t send_size;
+	bool res_allocated = false;
+	size_t max_bytes = 0;
+	uint16_t count = 0;
 	int ret = 0;
-	int count;
+	bool is_dir = false;
 
 	req = (struct isobusfs_fa_readf_req *)msg->buf;
 	count = le16toh(req->count);
+	res = (struct isobusfs_read_file_response *)&res_fail[0];
 
 	pr_debug("< rx: Read File Request. tan: %d, handle: %d, count: %d",
 		 req->tan, req->handle, count);
@@ -627,17 +730,6 @@ static int isobusfs_srv_fa_rf_req(struct isobusfs_srv_priv *priv,
 	 * TODO: currently we are not able to detect support transport mode,
 	 * so ETP is assumed.
 	 */
-	if (count > ISOBUSFS_MAX_DATA_LENGH)
-		count = ISOBUSFS_MAX_DATA_LENGH;
-
-	res = malloc(sizeof(*res) + count);
-	if (!res) {
-		pr_warn("failed to allocate memory");
-		res = (struct isobusfs_read_file_response *)&res_fail[0];
-		error_code = ISOBUSFS_ERR_OUT_OF_MEM;
-		goto send_response;
-	}
-
 	client = isobusfs_srv_get_client_by_msg(priv, msg);
 	if (!client) {
 		pr_warn("client not found");
@@ -649,12 +741,33 @@ static int isobusfs_srv_fa_rf_req(struct isobusfs_srv_priv *priv,
 	if (!handle) {
 		pr_warn("failed to find file with handle: %x", req->handle);
 		error_code = ISOBUSFS_ERR_FILE_ORPATH_NOT_FOUND;
+		goto send_response;
 	}
 
 	/* Determine whether to read a file or a directory */
 	if (handle->dir) {
-		ret = isobusfs_srv_read_directory(handle, res->data, count,
-						  &readed_size);
+		/* ISO 11783-13:2021 C.3.5.2: count is entry count for directories. */
+		is_dir = true;
+		max_bytes = ISOBUSFS_MAX_DATA_LENGH;
+	} else {
+		if (count > ISOBUSFS_MAX_DATA_LENGH)
+			count = ISOBUSFS_MAX_DATA_LENGH;
+		max_bytes = count;
+	}
+
+	res = malloc(sizeof(*res) + max_bytes);
+	if (!res) {
+		pr_warn("failed to allocate memory");
+		res = (struct isobusfs_read_file_response *)&res_fail[0];
+		error_code = ISOBUSFS_ERR_OUT_OF_MEM;
+		goto send_response;
+	}
+	res_allocated = true;
+
+	if (is_dir) {
+		ret = isobusfs_srv_read_directory(handle, res->data, max_bytes,
+						  count, &readed_size,
+						  &entries_read);
 	} else {
 		ret = isobusfs_srv_read_file(handle, res->data, count,
 					     &readed_size);
@@ -663,7 +776,10 @@ static int isobusfs_srv_fa_rf_req(struct isobusfs_srv_priv *priv,
 	if (ret < 0) {
 		error_code = ret;
 		readed_size = 0;
-	} else if (count != 0 && readed_size == 0) {
+		entries_read = 0;
+	} else if (count != 0 &&
+		   ((is_dir && entries_read == 0) ||
+		    (!is_dir && readed_size == 0))) {
 		error_code = ISOBUSFS_ERR_END_OF_FILE;
 	}
 
@@ -673,7 +789,10 @@ send_response:
 					    ISOBUSFS_FA_F_READ_FILE_RES);
 	res->tan = req->tan;
 	res->error_code = error_code;
-	res->count = htole16(readed_size);
+	if (is_dir)
+		res->count = htole16(entries_read);
+	else
+		res->count = htole16(readed_size);
 
 	send_size = sizeof(*res) + readed_size;
 	if (send_size < ISOBUSFS_MIN_TRANSFER_LENGH)
@@ -690,7 +809,8 @@ send_response:
 		 error_code, isobusfs_error_to_str(error_code), readed_size);
 
 free_res:
-	free(res);
+	if (res_allocated)
+		free(res);
 	return ret;
 }
 
@@ -754,19 +874,33 @@ static int isobusfs_srv_seek(struct isobusfs_srv_priv *priv,
 	return ISOBUSFS_ERR_SUCCESS;
 }
 
+/**
+ * isobusfs_srv_seek_directory() - Seek a directory by entry index.
+ * @handle: Directory handle to seek.
+ * @offset: Entry index to seek to.
+ *
+ * ISO 11783-13:2021 C.3.4.2 defines directory offsets as entry indices.
+ *
+ * Return: ISOBUSFS_ERR_SUCCESS or a protocol error code.
+ */
 static int isobusfs_srv_seek_directory(struct isobusfs_srv_handles *handle,
 				       int32_t offset)
 {
-	DIR *dir = fdopendir(handle->fd);
+	int32_t current_pos = handle->dir_pos;
+	int ret;
 
-	if (!dir)
+	if (!handle->dir)
 		return ISOBUSFS_ERR_OTHER;
 
-	rewinddir(dir);
-
-	for (int32_t i = 0; i < offset; i++) {
-		if (readdir(dir) == NULL)
-			return ISOBUSFS_ERR_END_OF_FILE;
+	/*
+	 * ISO 11783-13:2021 C.3.4.2:
+	 * Directory offsets are entry indices. If we fail to seek, restore
+	 * the previous entry position since the position shall not change on error.
+	 */
+	ret = isobusfs_srv_dir_skip_entries(handle, offset);
+	if (ret != ISOBUSFS_ERR_SUCCESS) {
+		isobusfs_srv_dir_skip_entries(handle, current_pos);
+		return ret;
 	}
 
 	handle->dir_pos = offset;

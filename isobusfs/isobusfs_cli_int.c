@@ -16,6 +16,12 @@
 #define MAX_COMMAND_LENGTH 256
 
 #define MAX_DISPLAY_FILENAME_LENGTH 100
+/*
+ * ISO 11783-13:2021 B.21 minimal directory entry payload size in bytes:
+ * 1 (name length) + 1 (min name byte) + 1 (attributes) +
+ * 2 (date) + 2 (time) + 4 (size).
+ */
+#define ISOBUSFS_MIN_DIR_ENTRY_SIZE (1 + 1 + 1 + 2 + 2 + 4)
 
 struct command_mapping {
 	const char *command;
@@ -510,8 +516,12 @@ isobusfs_cli_ls_handle_open_dir_sent(struct isobusfs_priv *priv,
 
 	ctx->handle = res->handle;
 
+	ctx->offset = 0;
+	ctx->entry_count = 0;
+
 	ret = isobusfs_cli_send_and_register_fa_sf_event(priv, ctx->handle,
-							 0, ctx->entry_count,
+							 ISOBUSFS_FA_SEEK_SET,
+							 ctx->offset,
 							 cb, ctx);
 	if (ret)
 		pr_int("Failed to send seek file request: %i\n", ret);
@@ -530,7 +540,7 @@ isobusfs_cli_ls_handle_seek_dir_sent(struct isobusfs_priv *priv,
 {
 	isobusfs_event_callback cb = isobusfs_cli_ls_event_callback;
 	struct isobusfs_fa_seekf_res *res =
-		(struct isobusfs_fa_seekf_res *)msg;
+		(struct isobusfs_fa_seekf_res *)msg->buf;
 	uint16_t count;
 	int ret;
 
@@ -543,8 +553,10 @@ isobusfs_cli_ls_handle_seek_dir_sent(struct isobusfs_priv *priv,
 		goto error;
 	}
 
-	/* set max possible number fitting in to 16bits */
-	count = UINT16_MAX;
+	/* ISO 11783-13:2021 C.3.5.2: count is number of directory entries. */
+	count = ISOBUSFS_MAX_DATA_LENGH / ISOBUSFS_MIN_DIR_ENTRY_SIZE;
+	if (!count)
+		count = 1;
 	ctx->request_count = count;
 
 	ret = isobusfs_cli_send_and_register_fa_rf_event(priv, ctx->handle,
@@ -616,8 +628,8 @@ static bool isobusfs_cli_extract_directory_entry(const uint8_t *buffer,
 						 uint16_t *file_time,
 						 uint32_t *file_size)
 {
+	size_t entry_total_len, copy_len;
 	uint8_t filename_length;
-	size_t entry_total_len;
 
 	if (*pos + 2 > buffer_length) {
 		pr_int("Error: Incomplete data in buffer\n");
@@ -633,7 +645,13 @@ static bool isobusfs_cli_extract_directory_entry(const uint8_t *buffer,
 	}
 
 	(*pos)++;
-	strncpy(filename, (const char *)buffer + *pos, filename_length);
+
+	if (filename_length > ISOBUSFS_MAX_DIR_ENTRY_NAME_LENGTH)
+		copy_len = ISOBUSFS_MAX_DIR_ENTRY_NAME_LENGTH;
+	else
+		copy_len = filename_length;
+
+	strncpy(filename, (const char *)buffer + *pos, copy_len);
 	filename[filename_length] = '\0';
 	*pos += filename_length;
 	if (filename_length > MAX_DISPLAY_FILENAME_LENGTH) {
@@ -688,15 +706,17 @@ isobusfs_cli_print_directory_entry(struct isobusfs_cli_ls_context *ctx,
 static void
 isobusfs_cli_print_directory_entries(struct isobusfs_cli_ls_context *ctx,
 				     const uint8_t *buffer,
-				     size_t buffer_length)
+				     size_t buffer_length,
+				     uint16_t max_entries)
 {
 	char filename[ISOBUSFS_MAX_DIR_ENTRY_NAME_LENGTH + 1];
 	uint16_t file_date, file_time;
 	uint32_t file_size;
 	uint8_t attributes;
 	size_t pos = 0;
+	uint16_t entries = 0;
 
-	while (pos < buffer_length) {
+	while (pos < buffer_length && entries < max_entries) {
 		if (!isobusfs_cli_extract_directory_entry(buffer, buffer_length,
 							  &pos, filename,
 							  &attributes,
@@ -709,6 +729,7 @@ isobusfs_cli_print_directory_entries(struct isobusfs_cli_ls_context *ctx,
 						   file_date, file_time,
 						   file_size);
 		ctx->entry_count++;
+		entries++;
 	}
 }
 
@@ -721,26 +742,35 @@ isobusfs_cli_ls_handle_read_dir_sent(struct isobusfs_priv *priv,
 		(struct isobusfs_read_file_response *)msg->buf;
 	size_t buffer_length = msg->len - sizeof(*res);
 	isobusfs_event_callback cb;
+	size_t entries_before;
+	size_t entries_in_message;
 	uint16_t count;
 	int ret;
 
 	pr_debug("< rx: Read File Response. Error code: %i", res->error_code);
+
 	if (isobusfs_cli_int_is_error(priv, 0, res->error_code, res->tan))
 		goto error;
 
 	count = le16toh(res->count);
-	if (count && count != buffer_length) {
-		pr_int("Buffer length mismatch: %u != %zu\n", count,
-		       buffer_length);
+	if (count && buffer_length) {
+		entries_before = ctx->entry_count;
+		isobusfs_cli_print_directory_entries(ctx, res->data,
+						     buffer_length, count);
+		entries_in_message = ctx->entry_count - entries_before;
+	} else {
+		entries_in_message = 0;
+	}
+
+	if (count != entries_in_message) {
+		pr_int("Directory entry count mismatch: %u != %zu\n", count,
+		       entries_in_message);
 		goto error;
 	}
 
-	if (count)
-		isobusfs_cli_print_directory_entries(ctx, res->data,
-						     buffer_length);
-
 	cb = isobusfs_cli_ls_event_callback;
-	if (count) {
+
+	if (res->error_code == ISOBUSFS_ERR_END_OF_FILE) {
 		ret = isobusfs_cli_send_and_register_fa_cf_event(priv,
 								 ctx->handle,
 								 cb, ctx);
@@ -750,21 +780,31 @@ isobusfs_cli_ls_handle_read_dir_sent(struct isobusfs_priv *priv,
 		}
 
 		ctx->state = ISOBUSFS_CLI_LS_STATE_CLOSE_DIR_SENT;
-	} else {
-		ctx->offset = ctx->entry_count;
-		ret = isobusfs_cli_send_and_register_fa_sf_event(priv,
-								 ctx->handle, 0,
-								 ctx->offset,
-								 cb, ctx);
-		if (ret)
-			pr_int("Failed to send seek file request: %i\n", ret);
-
-		ctx->state = ISOBUSFS_CLI_LS_STATE_SEEK_DIR_SENT;
+		return;
 	}
+
+	if (!count) {
+		pr_int("Error: zero-length read without EOF\n");
+		goto error;
+	}
+
+	/*
+	 * Directory seek offset is entry index, not byte offset.
+	 * Server side seek rewinds and skips "offset" entries.
+	 */
+	ctx->offset = ctx->entry_count;
+
+	ret = isobusfs_cli_send_and_register_fa_sf_event(priv,
+							 ctx->handle, 0,
+							 ctx->offset,
+							 cb, ctx);
+	if (ret)
+		pr_int("Failed to send seek file request: %i\n", ret);
+
+	ctx->state = ISOBUSFS_CLI_LS_STATE_SEEK_DIR_SENT;
 
 	return;
 error:
-
 	ctx->state = ISOBUSFS_CLI_LS_STATE_ERROR;
 }
 
