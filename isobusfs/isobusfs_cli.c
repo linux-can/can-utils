@@ -671,6 +671,10 @@ int main(int argc, char *argv[])
 
 	while (1) {
 		ret = isobusfs_cli_process_events_and_tasks(priv);
+		if (ret == ISOBUSFS_CLI_RET_EXIT) {
+			ret = 0;
+			break;
+		}
 		if (ret)
 			break;
 	}
