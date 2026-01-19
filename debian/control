@@ -1,0 +1,23 @@
+Source: can-utils
+Section: net
+Priority: optional
+Maintainer: GitHub Actions <actions@github.com>
+Build-Depends: debhelper-compat (= 13), cmake
+Standards-Version: 4.6.2
+Homepage: https://github.com/linux-can/can-utils
+
+Package: can-utils
+Architecture: linux-any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: SocketCAN userspace utilities and tools
+ This package contains some userspace utilities for Linux SocketCAN subsystem.
+
+ Basic tools to display, record, generate and replay CAN traffic:
+ candump, canplayer, cansend, cangen, cansniffer, cansequence.
+ CAN access via IP sockets: canlogserver, bcmserver.
+ CAN in-kernel gateway configuration: cangw.
+ CAN bus measurement and testing: canbusload, can-calc-bit-timing, canfdtest, canerrsim.
+ ISO-TP tools: isotpsend, isotprecv, isotpsniffer, isotpdump, isotpserver, isotptun.
+ CAN log file converters: asc2log, log2asc, log2long.
+ Serial Line Discipline configuration: slcan_attach, slcand, slcanpty.
+ J1939 tools: j1939acd, j1939cat, j1939spy, j1939sr, testj1939.

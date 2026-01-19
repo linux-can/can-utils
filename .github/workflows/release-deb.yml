@@ -1,0 +1,57 @@
+name: Build Deb Package
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v6
+      with:
+        path: can-utils
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential devscripts debhelper cmake equivs
+
+        cd can-utils
+        # Install build dependencies defined in debian/control
+        sudo mk-build-deps -i -r -t "apt-get -y" debian/control
+
+    - name: Update changelog
+      run: |
+        cd can-utils
+        # Get version from tag, strip 'v' prefix if present
+        VERSION=${{ github.event.release.tag_name }}
+        VERSION=${VERSION#v}
+
+        # Add new entry to changelog
+        # Use the codename of the current OS (jammy or noble)
+        CODENAME=$(lsb_release -cs)
+
+        dch --create -v "${VERSION}-1~${CODENAME}" --package can-utils --distribution ${CODENAME} "New upstream release ${VERSION}"
+        dch -r ""
+
+    - name: Build package
+      run: |
+        cd can-utils
+        # Build binary packages only, unsigned
+        dpkg-buildpackage -us -uc -b
+
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          *.deb
