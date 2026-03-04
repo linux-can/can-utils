@@ -72,8 +72,7 @@ int mcp251xfd_regmap_read(struct mcp251xfd_priv *priv,
 		return 0;
 
 	/* maybe it's something like "spi0.0" */
-	tmp = strchr(file_path, '/');
-	if (tmp)
+	if (strchr(file_path, '/'))
 		return -ENOENT;
 
 	/* first try literally */
