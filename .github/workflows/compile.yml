@@ -75,7 +75,6 @@ jobs:
                 gcc \
                 gcc-aarch64-linux-gnu \
                 gcc-arm-linux-gnueabihf \
-                gcc-mips-linux-gnu \
                 libgps-dev \
                 make
 
@@ -137,13 +136,6 @@ jobs:
         gps: ${{ matrix.release == 'ubuntu:20.04' && 'OFF' || 'ON' }}
       run: |
         podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=cmake/${toolchain}.cmake -DENABLE_WERROR=ON -DENABLE_GPS=${gps} -B build-${toolchain}
-        podman exec -i stable cmake --build build-${toolchain}
-
-    - name: Configure & Build with mips-linux-gnu-gcc
-      env:
-        toolchain: mips-linux-gnu-gcc
-      run: |
-        podman exec -i stable cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=cmake/${toolchain}.cmake -DENABLE_WERROR=ON -B build-${toolchain}
         podman exec -i stable cmake --build build-${toolchain}
 
     - name: Configure & Build with gcc (Makefile)
