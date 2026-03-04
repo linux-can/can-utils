@@ -580,10 +580,10 @@ int main(int argc, char **argv)
 					last_log_tv = log_tv;
 				}
 
-			} /* while frames_to_send ... */
+				if (nanosleep(&sleep_ts, NULL))
+					return 1;
 
-			if (nanosleep(&sleep_ts, NULL))
-				return 1;
+			} /* while frames_to_send ... */
 
 			delay_loops++; /* private statistics */
 			gettimeofday(&today_tv, NULL);
