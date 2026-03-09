@@ -234,7 +234,7 @@ int main(void)
 	}
 
 	while (1) {
-
+again:
 		FD_ZERO(&readfds);
 		FD_SET(sc, &readfds);
 		FD_SET(sa, &readfds);
@@ -242,6 +242,8 @@ int main(void)
 		select((sc > sa)?sc+1:sa+1, &readfds, NULL, NULL, NULL);
 
 		if (FD_ISSET(sc, &readfds)) {
+			size_t size = sizeof(rxmsg);
+			int len = 0, res;
 
 			recvfrom(sc, &msg, sizeof(msg), 0,
 				 (struct sockaddr*)&caddr, &caddrlen);
@@ -249,17 +251,35 @@ int main(void)
 			ifr.ifr_ifindex = caddr.can_ifindex;
 			ioctl(sc, SIOCGIFNAME, &ifr);
 
-			sprintf(rxmsg, "< %s %03X %d ", ifr.ifr_name,
-				msg.msg_head.can_id, msg.frame.can_dlc);
+			res = snprintf(rxmsg, size, "< %s %03X %d ", ifr.ifr_name,
+				       msg.msg_head.can_id, msg.frame.can_dlc);
+			if (res < 0 || (size_t)res >= size) {
+				printf("Error: rxmsg buffer (size %zu) too small for data.\n", size);
+				continue;
+			}
 
-			for ( i = 0; i < msg.frame.can_dlc; i++)
-				sprintf(rxmsg + strlen(rxmsg), "%02X ",
-					msg.frame.data[i]);
+			len += res;
+
+			for (i = 0; i < msg.frame.can_dlc; i++) {
+				res = snprintf(rxmsg + len, size - len, "%02X ", msg.frame.data[i]);
+				if (res < 0 || (size_t)res >= (size - len)) {
+					printf("Error: rxmsg buffer (size %zu) too small for data.\n", size);
+					goto again;
+				}
+
+				len += res;
+			}
 
 			/* delimiter '\0' for Adobe(TM) Flash(TM) XML sockets */
-			strcat(rxmsg, ">\0");
+			res = snprintf(rxmsg + len, size - len, ">");
+			if (res < 0 || (size_t)res >= (size - len)) {
+				printf("Error: rxmsg buffer (size %zu) too small for data.\n", size);
+				continue;
+			}
 
-			send(sa, rxmsg, strlen(rxmsg) + 1, 0);
+			len += res;
+
+			send(sa, rxmsg, len + 1, 0);
 		}
 
 
