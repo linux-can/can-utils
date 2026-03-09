@@ -25,6 +25,7 @@
 #include <linux/can/error.h>
 #include <linux/can/raw.h>
 #include <net/if.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -122,9 +123,14 @@ void show_help_and_exit()
 	exit(EXIT_SUCCESS);
 }
 
-void err_exit(const char *msg)
+void __attribute__((format (printf, 1, 2))) err_exit(const char *format, ...)
 {
-	printf("%s", msg);
+	va_list ap;
+
+	va_start(ap, format);
+	vfprintf(stdout, format, ap);
+	va_end(ap);
+
 	exit(EXIT_FAILURE);
 }
 
@@ -132,7 +138,7 @@ void show_custom_format_and_exit(const char *param, const char *format)
 {
 	char str_buf[80];
 	sprintf(str_buf, format, param);
-	err_exit(str_buf);
+	err_exit("%s", str_buf);
 }
 
 void show_invalid_option(const char *option)
