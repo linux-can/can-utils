@@ -25,6 +25,7 @@
 #include <linux/can/error.h>
 #include <linux/can/raw.h>
 #include <net/if.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -122,27 +123,25 @@ void show_help_and_exit()
 	exit(EXIT_SUCCESS);
 }
 
-void err_exit(const char *msg)
+void __attribute__((format (printf, 1, 2))) err_exit(const char *format, ...)
 {
-	printf("%s", msg);
-	exit(EXIT_FAILURE);
-}
+	va_list ap;
 
-void show_custom_format_and_exit(const char *param, const char *format)
-{
-	char str_buf[80];
-	sprintf(str_buf, format, param);
-	err_exit(str_buf);
+	va_start(ap, format);
+	vfprintf(stdout, format, ap);
+	va_end(ap);
+
+	exit(EXIT_FAILURE);
 }
 
 void show_invalid_option(const char *option)
 {
-	show_custom_format_and_exit(option, "Error: Invalid option %s\n");
+	err_exit("Error: Invalid option %s\n", option);
 }
 
 void show_err_and_exit(const char *err_type)
 {
-	show_custom_format_and_exit(err_type, "Error: You can only have one %s parameter!\n");
+	err_exit("Error: You can only have one %s parameter!\n", err_type);
 }
 
 void show_loc_err_and_exit()
@@ -176,7 +175,6 @@ int main(int argc, char *argv[])
 	struct ifreq ifr;
 	struct can_frame frame;
 	bool show_bits = false, location_processed = false, transceiver_processed = false, arbitration_processed = false;
-	char tmp_str[256];
 
 	printf("CAN Sockets Error Messages Simulator\n");
 	if (argc < 3)
@@ -537,24 +535,25 @@ int main(int argc, char *argv[])
 
 	// create socket
 	if ((sock = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
-		err_exit("Error while opening socket");
+		err_exit("Error while opening socket\n");
 
 	// set interface name
+	if (strlen(argv[1]) >= IFNAMSIZ)
+		err_exit("Name of CAN device '%s' is too long!\n\n", argv[1]);
+
 	strcpy(ifr.ifr_name, argv[1]); // can0, vcan0...
-	if (ioctl(sock, SIOCGIFINDEX, &ifr) < 0) {
-		sprintf(tmp_str, "Error setting CAN interface name %s", argv[1]);
-		err_exit(tmp_str);
-	}
+	if (ioctl(sock, SIOCGIFINDEX, &ifr) < 0)
+		err_exit("Error setting CAN interface name %s\n", argv[1]);
 
 	// bind socket to the CAN interface
 	addr.can_family = AF_CAN;
 	addr.can_ifindex = ifr.ifr_ifindex;
 	if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-		err_exit("Error in socket bind");
+		err_exit("Error in socket bind\n");
 
 	// Send CAN error frame
 	if (write(sock, &frame, sizeof(frame)) < 0)
-		err_exit("Error writing to socket");
+		err_exit("Error writing to socket\n");
 	else
 		printf("CAN error frame sent\n");
 
