@@ -153,7 +153,7 @@ int main(void)
 
 	char buf[MAXLEN];
 	char format[FORMATSZ];
-	char rxmsg[50];
+	char rxmsg[64];
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"
