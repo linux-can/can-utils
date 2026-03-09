@@ -535,7 +535,7 @@ int main(int argc, char *argv[])
 
 	// create socket
 	if ((sock = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
-		err_exit("Error while opening socket");
+		err_exit("Error while opening socket\n");
 
 	// set interface name
 	strcpy(ifr.ifr_name, argv[1]); // can0, vcan0...
@@ -546,11 +546,11 @@ int main(int argc, char *argv[])
 	addr.can_family = AF_CAN;
 	addr.can_ifindex = ifr.ifr_ifindex;
 	if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-		err_exit("Error in socket bind");
+		err_exit("Error in socket bind\n");
 
 	// Send CAN error frame
 	if (write(sock, &frame, sizeof(frame)) < 0)
-		err_exit("Error writing to socket");
+		err_exit("Error writing to socket\n");
 	else
 		printf("CAN error frame sent\n");
 
