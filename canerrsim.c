@@ -538,6 +538,9 @@ int main(int argc, char *argv[])
 		err_exit("Error while opening socket\n");
 
 	// set interface name
+	if (strlen(argv[1]) >= IFNAMSIZ)
+		err_exit("Name of CAN device '%s' is too long!\n\n", argv[1]);
+
 	strcpy(ifr.ifr_name, argv[1]); // can0, vcan0...
 	if (ioctl(sock, SIOCGIFINDEX, &ifr) < 0)
 		err_exit("Error setting CAN interface name %s\n", argv[1]);
