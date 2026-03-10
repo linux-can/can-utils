@@ -603,23 +603,24 @@ struct isobusfs_cli_test_rf_path {
 	uint8_t flags;
 	uint32_t offset;
 	uint32_t read_size;
+	uint32_t expected_size;
 	bool expect_pass;
 };
 
 static struct isobusfs_cli_test_rf_path test_rf_patterns[] = {
 	/* expected result \\vol1\dir1\dir2\ */
-	{ "\\\\vol1\\dir1\\dir2\\file1k", 0, 0, 0, true },
-	{ "\\\\vol1\\dir1\\dir2\\file1k", 0, 0, 1, true },
-	{ "\\\\vol1\\dir1\\dir2\\file1k", 0, 1, 1, true },
-	{ "\\\\vol1\\dir1\\dir2\\file1k", 0, 2, 1, true },
-	{ "\\\\vol1\\dir1\\dir2\\file1k", 0, 3, 1, true },
-	{ "\\\\vol1\\dir1\\dir2\\file1m", 0, 0, 8, true },
-	{ "\\\\vol1\\dir1\\dir2\\file1m", 0, 0, 8 * 100, true },
-	{ "\\\\vol1\\dir1\\dir2\\file1m", 0, 100, 8 * 100, true },
-	{ "\\\\vol1\\dir1\\dir2\\file1m", 0, 0, ISOBUSFS_MAX_DATA_LENGH, true },
-	{ "\\\\vol1\\dir1\\dir2\\file1m", 0, 0, (ISOBUSFS_MAX_DATA_LENGH & ~3) + 16, true },
-	{ "\\\\vol1\\dir1\\dir2\\file1m", 0, 0, ISOBUSFS_MAX_DATA_LENGH + 1, true },
-	{ "\\\\vol1\\dir1\\dir2\\file1m", 0, 0, -1, true },
+	{ "\\\\vol1\\dir1\\dir2\\file1k", 0, 0, 0, 0, true },
+	{ "\\\\vol1\\dir1\\dir2\\file1k", 0, 0, 1, 1, true },
+	{ "\\\\vol1\\dir1\\dir2\\file1k", 0, 1, 1, 1, true },
+	{ "\\\\vol1\\dir1\\dir2\\file1k", 0, 2, 1, 1, true },
+	{ "\\\\vol1\\dir1\\dir2\\file1k", 0, 3, 1, 1, true },
+	{ "\\\\vol1\\dir1\\dir2\\file1m", 0, 0, 8, 8, true },
+	{ "\\\\vol1\\dir1\\dir2\\file1m", 0, 0, 8 * 100, 8 * 100, true },
+	{ "\\\\vol1\\dir1\\dir2\\file1m", 0, 100, 8 * 100, 8 * 100, true },
+	{ "\\\\vol1\\dir1\\dir2\\file1m", 0, 0, ISOBUSFS_MAX_DATA_LENGH, ISOBUSFS_MAX_DATA_LENGH, true },
+	{ "\\\\vol1\\dir1\\dir2\\file1m", 0, 0, (ISOBUSFS_MAX_DATA_LENGH & ~3) + 16, (ISOBUSFS_MAX_DATA_LENGH & ~3) + 16, true },
+	{ "\\\\vol1\\dir1\\dir2\\file1m", 0, 0, ISOBUSFS_MAX_DATA_LENGH + 1, ISOBUSFS_MAX_DATA_LENGH + 1, true },
+	{ "\\\\vol1\\dir1\\dir2\\file1m", 0, 0, UINT32_MAX, 1024 * 1024, true },
 };
 
 size_t current_rf_pattern_test;
@@ -825,11 +826,20 @@ static int isobusfs_cli_test_rf_req(struct isobusfs_priv *priv, bool *complete)
 				goto test_fail;
 			test_start_time = current_time;
 			break;
-		} else if (remaining_size > 0 && priv->read_data_len == 0 && tp->expect_pass) {
-			pr_err("read test failed: %s. Read size is zero, but expected more data: %zd",
-			       tp->path_name, remaining_size);
-			ret = -EINVAL;
-			goto test_fail;
+		} else if (remaining_size > 0 && priv->read_data_len == 0) {
+			if (tp->read_size > tp->expected_size &&
+			    tp->read_size - remaining_size == tp->expected_size) {
+				/* this is acceptable case when read size
+				 * is larger than actual file size
+				 */
+				pr_info("read test passed: %s. Reached end of file as expected.",
+					tp->path_name);
+			} else if (tp->expect_pass) {
+				pr_err("read test failed: %s. Read size is too small, but expected more data: %zd",
+				       tp->path_name, remaining_size);
+				ret = -EINVAL;
+				goto test_fail;
+			}
 		}
 
 		/* fall troth */

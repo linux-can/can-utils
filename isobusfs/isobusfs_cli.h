@@ -13,6 +13,9 @@
 #define ISOBUSFS_CLI_MAX_EPOLL_EVENTS		10
 #define ISOBUSFS_CLI_DEFAULT_WAIT_TIMEOUT_MS	1000 /* ms */
 
+/* internel return codes, not errno values */
+#define ISOBUSFS_CLI_RET_EXIT			1
+
 enum isobusfs_cli_state {
 	ISOBUSFS_CLI_STATE_CONNECTING,
 	ISOBUSFS_CLI_STATE_IDLE,
