@@ -63,8 +63,8 @@ struct j1939_vp_err_msg {
  *           - Data Length: 4 bytes
  *           - Resolution: 10^-7 deg/bit
  *           - Offset: -210 degrees
- *           - Range: -210 to +211.1008122 degrees
- *           - Operating Range: -210 degrees (SOUTH) to +211.108122 degrees
+ *           - Range: -210 to +211.10081215 degrees
+ *           - Operating Range: -210 degrees (SOUTH) to +211.1081215 degrees
  *             (NORTH)
  *
  * @longitude: Raw longitude position of the vehicle
@@ -72,8 +72,8 @@ struct j1939_vp_err_msg {
  *           - Data Length: 4 bytes
  *           - Resolution: 10^-7 deg/bit
  *           - Offset: -210 degrees
- *           - Range: -210 to +211.1008122 degrees
- *           - Operating Range: -210 degrees (WEST) to +211.108122 degrees
+ *           - Range: -210 to +211.10081215 degrees
+ *           - Operating Range: -210 degrees (WEST) to +211.1081215 degrees
  *             (EAST)
  *
  * This structure defines each component of the Vehicle Position as described in
