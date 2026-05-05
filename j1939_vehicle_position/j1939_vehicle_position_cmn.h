@@ -51,7 +51,7 @@ struct j1939_vp_err_msg {
 #define J1939_VP1_PRIO_DEFAULT				6
 #define J1939_VP1_MAX_TRANSFER_LENGH \
 	sizeof(struct j1939_vp1_packet)
-#define J1939_VP1_REPETITION_RATE_MS			5000
+#define J1939_VP1_REPETITION_RATE_MS			1000
 #define J1939_VP1_JITTER_MS				500
 
 /**
