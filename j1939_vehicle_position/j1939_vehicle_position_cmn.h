@@ -51,7 +51,7 @@ struct j1939_vp_err_msg {
 #define J1939_VP1_PRIO_DEFAULT				6
 #define J1939_VP1_MAX_TRANSFER_LENGH \
 	sizeof(struct j1939_vp1_packet)
-#define J1939_VP1_REPETITION_RATE_MS			5000
+#define J1939_VP1_REPETITION_RATE_MS			1000
 #define J1939_VP1_JITTER_MS				500
 
 /**
@@ -63,8 +63,8 @@ struct j1939_vp_err_msg {
  *           - Data Length: 4 bytes
  *           - Resolution: 10^-7 deg/bit
  *           - Offset: -210 degrees
- *           - Range: -210 to +211.1008122 degrees
- *           - Operating Range: -210 degrees (SOUTH) to +211.108122 degrees
+ *           - Range: -210 to +211.10081215 degrees
+ *           - Operating Range: -210 degrees (SOUTH) to +211.1081215 degrees
  *             (NORTH)
  *
  * @longitude: Raw longitude position of the vehicle
@@ -72,8 +72,8 @@ struct j1939_vp_err_msg {
  *           - Data Length: 4 bytes
  *           - Resolution: 10^-7 deg/bit
  *           - Offset: -210 degrees
- *           - Range: -210 to +211.1008122 degrees
- *           - Operating Range: -210 degrees (WEST) to +211.108122 degrees
+ *           - Range: -210 to +211.10081215 degrees
+ *           - Operating Range: -210 degrees (WEST) to +211.1081215 degrees
  *             (EAST)
  *
  * This structure defines each component of the Vehicle Position as described in
@@ -142,42 +142,48 @@ j1939_vp1_set_longitude(struct j1939_vp1_packet *packet, int32_t longitude)
 /**
  * struct j1939_vp2_packet - Represents the PGN 64502 Vehicle
  *                                         Position 2 packet
- * FIXME: current packet layout is guessed based on limited information:
- * https://www.isobus.net/isobus/pGNAndSPN/10801?type=PGN
  *
  * @total_satellites: Total number of satellites in view
  *           - SPN: 8128
  *           - Data Length: 1 byte
+ *           - Range: 0 to 250
  *
  * @hdop: Horizontal dilution of precision
  *           - SPN: 8129
  *           - Data Length: 1 byte
  *           - Resolution: 0.1
+ *           - Range: 0.0 to 25.0
  *
  * @vdop: Vertical dilution of precision
  *           - SPN: 8130
  *           - Data Length: 1 byte
  *           - Resolution: 0.1
+ *           - Range: 0.0 to 25.0
  *
  * @pdop: Position dilution of precision
  *           - SPN: 8131
  *           - Data Length: 1 byte
  *           - Resolution: 0.1
+ *           - Range: 0.0 to 25.0
  *
  * @tdop: Time dilution of precision
  *           - SPN: 8132
  *           - Data Length: 1 byte
  *           - Resolution: 0.1
+ *           - Range: 0.0 to 25.0
  *
  * This structure defines each component of the Vehicle Position 2 as described
  * in PGN 64502.
  */
 struct j1939_vp2_packet {
 	uint8_t total_satellites; /* SPN 8128 */
-	uint8_t hdop;			  /* SPN 8129 */
-	uint8_t vdop;			  /* SPN 8130 */
-	uint8_t pdop;			  /* SPN 8131 */
-	uint8_t tdop;			  /* SPN 8132 */
+	uint8_t hdop;             /* SPN 8129 */
+	uint8_t vdop;             /* SPN 8130 */
+	uint8_t pdop;             /* SPN 8131 */
+	uint8_t tdop;             /* SPN 8132 */
+	uint8_t unused5;          /* Always 0xFF */
+	uint8_t unused6;          /* Always 0xFF */
+	uint8_t unused7;          /* Always 0xFF */
 } __attribute__((__packed__));
 
 /**
