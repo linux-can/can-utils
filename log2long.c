@@ -81,7 +81,7 @@ int main(void)
 		if (sscanf(buf, "%24s %21s %6299s", timestamp, device, afrbuf) != 3)
 			return 1;
 
-		mtu = parse_canframe(afrbuf, &cu);
+		mtu = parse_canframe(afrbuf, sizeof(afrbuf), &cu);
 
 		/* mark dual-use struct canfd_frame - no CAN_XL support */
 		if (mtu == CAN_MTU)

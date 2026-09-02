@@ -446,7 +446,7 @@ int main(int argc, char **argv)
 
 		if (devno) { /* only convert for selected CAN devices */
 
-			mtu = parse_canframe(afrbuf, &cu);
+			mtu = parse_canframe(afrbuf, sizeof(afrbuf), &cu);
 
 			/* no error message frames in non CAN CC frames */
 			if ((mtu != CAN_MTU) && (cu.cc.can_id & CAN_ERR_FLAG))

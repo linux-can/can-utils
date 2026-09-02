@@ -127,7 +127,7 @@ int main(int argc, char **argv)
 	}
 
 	/* parse CAN frame */
-	required_mtu = parse_canframe(argv[2], &cu);
+	required_mtu = parse_canframe(argv[2], strlen(argv[2]) + 1, &cu);
 	if (!required_mtu) {
 		fprintf(stderr, "\nWrong CAN-frame format!\n\n");
 		print_usage(argv[0]);

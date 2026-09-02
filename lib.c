@@ -155,20 +155,26 @@ int hexstring2data(char *arg, unsigned char *data, int maxdlen)
 	return 0;
 }
 
-int parse_canframe(char *cs, union cfu *cu)
+int parse_canframe(char *cs, size_t cs_size, union cfu *cu)
 {
 	/* documentation see lib.h */
 
-	int i, idx, dlen, len;
+	int i, idx, dlen;
+	size_t len;
 	int maxdlen = CAN_MAX_DLEN;
 	int mtu = CAN_MTU;
 	__u8 *data = cu->fd.data; /* fill CAN CC/FD data by default */
 	canid_t tmp;
-
-	len = strlen(cs);
-	//printf("'%s' len %d\n", cs, len);
+	char *end;
 
 	memset(cu, 0, sizeof(*cu)); /* init CAN CC/FD/XL frame, e.g. LEN = 0 */
+
+	end = memchr(cs, 0, cs_size);
+	if (!end)
+		return 0;
+
+	len = end - cs;
+	//printf("'%s' len %zu\n", cs, len);
 
 	if (len < 4)
 		return 0;
@@ -281,7 +287,7 @@ int parse_canframe(char *cs, union cfu *cu)
 		if (cs[idx] == DATA_SEPERATOR) /* skip (optional) separator */
 			idx++;
 
-		if (idx >= len) /* end of string => end of data */
+		if ((size_t)idx >= len) /* end of string => end of data */
 			break;
 
 		if ((tmp = asc2nibble(cs[idx++])) > 0x0F)

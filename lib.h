@@ -110,10 +110,11 @@ int hexstring2data(char *arg, unsigned char *data, int maxdlen);
  *
  */
 
-int parse_canframe(char *cs, union cfu *cu);
+int parse_canframe(char *cs, size_t cs_size, union cfu *cu);
 /*
- * Transfers a valid ASCII string describing a CAN frame into the CAN union
- * containing CAN CC/FD/XL structs.
+ * Transfers a valid, null-terminated ASCII string describing a CAN frame into
+ * the CAN union containing CAN CC/FD/XL structs. The null terminator must be
+ * within cs_size bytes.
  *
  * CAN CC frames (aka Classical CAN, CAN 2.0B)
  * - string layout <can_id>#{R{len}|data}{_len8_dlc}

@@ -506,7 +506,7 @@ int main(int argc, char **argv)
 
 				} else if (txidx > 0) { /* only send to valid CAN devices */
 
-					txmtu = parse_canframe(afrbuf, &cu); /* dual-use frame */
+					txmtu = parse_canframe(afrbuf, sizeof(afrbuf), &cu); /* dual-use frame */
 					if (!txmtu) {
 						fprintf(stderr, "wrong CAN frame format: '%s'!", afrbuf);
 						return 1;
