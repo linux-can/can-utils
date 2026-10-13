@@ -42,6 +42,7 @@
  *
  */
 
+#include <ctype.h>
 #include <libgen.h>
 #include <locale.h>
 #include <stdio.h>
@@ -112,6 +113,42 @@ static void get_can_id(canid_t *can_id, char *idstring, int base)
 		*can_id = 0;
     
 	*can_id |= strtoul(idstring, NULL, base);
+}
+
+/*
+ * Read 'len' ASCII hex bytes separated by single whitespace characters.
+ * Returns a pointer to the content behind the data or NULL on error.
+ */
+static char *get_hex_data(char *ptr, unsigned char *data, int len)
+{
+	unsigned char ctmp;
+	int i;
+
+	for (i = 0; i < len; i++) {
+		ctmp = asc2nibble(ptr[0]);
+		if (ctmp > 0x0F)
+			return NULL;
+
+		data[i] = (ctmp << 4);
+
+		ctmp = asc2nibble(ptr[1]);
+		if (ctmp > 0x0F)
+			return NULL;
+
+		data[i] |= ctmp;
+
+		/*
+		 * The hex byte has to be followed by a separator (space/tab)
+		 * or an EOL char ('\n', '\r'). This also ensures that we do
+		 * not skip the string termination with ptr += 3 below.
+		 */
+		if (!isspace((unsigned char)ptr[2]))
+			return NULL;
+
+		ptr += 3; /* start of next ASCII hex byte */
+	}
+
+	return ptr;
 }
 
 static void calc_tv(struct timeval *tv, struct timeval *read_tv,
@@ -261,13 +298,12 @@ static void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps,
 	static struct timeval tv; /* current frame timestamp */
 	static struct timeval read_tv; /* frame timestamp from ASC file */
 	struct canfd_frame cf = { 0 };
-	unsigned char brs, esi, ctmp;
+	unsigned char brs, esi;
 	unsigned int flags;
 	int dlc, dlen = 0;
 	char idstr[21];
 	char dir[5]; /* 'Rx'/'Tx'/'TxRq' plus terminating zero */
 	char *ptr;
-	int i;
 	int n = 0; /* sscanf consumed characters */
 	unsigned long long sec, usec;
 
@@ -328,21 +364,9 @@ static void eval_canfd(char* buf, struct timeval *date_tvp, char timestamps,
 
 	cf.len = dlen;
 
-	for (i = 0; i < dlen; i++) {
-		ctmp = asc2nibble(ptr[0]);
-		if (ctmp > 0x0F)
-			return;
-
-		cf.data[i] = (ctmp << 4);
-
-		ctmp = asc2nibble(ptr[1]);
-		if (ctmp > 0x0F)
-			return;
-
-		cf.data[i] |= ctmp;
-
-		ptr += 3; /* start of next ASCII hex byte */
-	}
+	ptr = get_hex_data(ptr, cf.data, dlen);
+	if (!ptr)
+		return;
 
 	/* skip MessageDuration and MessageLength to get Flags value */
 	if (sscanf(ptr, "   %*x %*x %x ", &flags) != 1)
@@ -387,13 +411,11 @@ static void eval_canxl_cc(char* buf, struct timeval *date_tvp, char timestamps,
 	static struct timeval tv; /* current frame timestamp */
 	static struct timeval read_tv; /* frame timestamp from ASC file */
 	struct can_frame cf = { 0 };
-	unsigned char ctmp;
 	unsigned int flags;
 	int dlc, dlen = 0;
 	char idstr[21];
 	char dir[5]; /* 'Rx'/'Tx'/'TxRq' plus terminating zero */
 	char *ptr;
-	int i;
 	int n = 0; /* sscanf consumed characters */
 	unsigned long long sec, usec;
 
@@ -452,21 +474,9 @@ static void eval_canxl_cc(char* buf, struct timeval *date_tvp, char timestamps,
 
 	cf.len = dlen;
 
-	for (i = 0; i < dlen; i++) {
-		ctmp = asc2nibble(ptr[0]);
-		if (ctmp > 0x0F)
-			return;
-
-		cf.data[i] = (ctmp << 4);
-
-		ctmp = asc2nibble(ptr[1]);
-		if (ctmp > 0x0F)
-			return;
-
-		cf.data[i] |= ctmp;
-
-		ptr += 3; /* start of next ASCII hex byte */
-	}
+	ptr = get_hex_data(ptr, cf.data, dlen);
+	if (!ptr)
+		return;
 
 	/* skip FCRC to get Flags value */
 	if (sscanf(ptr, "%*x %x ", &flags) != 1)
@@ -498,13 +508,11 @@ static void eval_canxl_fd(char* buf, struct timeval *date_tvp, char timestamps,
 	static struct timeval tv; /* current frame timestamp */
 	static struct timeval read_tv; /* frame timestamp from ASC file */
 	struct canfd_frame cf = { 0 };
-	unsigned char ctmp;
 	unsigned int flags;
 	int dlc, dlen = 0;
 	char idstr[21];
 	char dir[5]; /* 'Rx'/'Tx'/'TxRq' plus terminating zero */
 	char *ptr;
-	int i;
 	int n = 0; /* sscanf consumed characters */
 	unsigned long long sec, usec;
 
@@ -563,21 +571,9 @@ static void eval_canxl_fd(char* buf, struct timeval *date_tvp, char timestamps,
 
 	cf.len = dlen;
 
-	for (i = 0; i < dlen; i++) {
-		ctmp = asc2nibble(ptr[0]);
-		if (ctmp > 0x0F)
-			return;
-
-		cf.data[i] = (ctmp << 4);
-
-		ctmp = asc2nibble(ptr[1]);
-		if (ctmp > 0x0F)
-			return;
-
-		cf.data[i] |= ctmp;
-
-		ptr += 3; /* start of next ASCII hex byte */
-	}
+	ptr = get_hex_data(ptr, cf.data, dlen);
+	if (!ptr)
+		return;
 
 	/* skip stuff field and FCRC to get Flags value */
 	if (sscanf(ptr, "%*s %*s %x ", &flags) != 1)
@@ -605,13 +601,12 @@ static void eval_canxl_xl(char* buf, struct timeval *date_tvp, char timestamps,
 	static struct timeval tv; /* current frame timestamp */
 	static struct timeval read_tv; /* frame timestamp from ASC file */
 	struct canxl_frame cf = { 0 };
-	unsigned char sdt, vcid, secbit, ctmp;
+	unsigned char sdt, vcid, secbit;
 	unsigned int af, flags;
 	int dlc, dlen = 0;
 	char idstr[21];
 	char dir[5]; /* 'Rx'/'Tx'/'TxRq' plus terminating zero */
 	char *ptr;
-	int i;
 	int n = 0; /* sscanf consumed characters */
 	unsigned long long sec, usec;
 
@@ -689,21 +684,9 @@ static void eval_canxl_xl(char* buf, struct timeval *date_tvp, char timestamps,
 
 	cf.len = dlen;
 
-	for (i = 0; i < dlen; i++) {
-		ctmp = asc2nibble(ptr[0]);
-		if (ctmp > 0x0F)
-			return;
-
-		cf.data[i] = (ctmp << 4);
-
-		ctmp = asc2nibble(ptr[1]);
-		if (ctmp > 0x0F)
-			return;
-
-		cf.data[i] |= ctmp;
-
-		ptr += 3; /* start of next ASCII hex byte */
-	}
+	ptr = get_hex_data(ptr, cf.data, dlen);
+	if (!ptr)
+		return;
 
 	/* skip FCRC to get Flags value */
 	if (sscanf(ptr, "%*x %x ", &flags) != 1)
