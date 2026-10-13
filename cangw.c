@@ -338,7 +338,7 @@ static int parse_mod(char *optarg, struct modattr *modmsg)
 	ptr = optarg;
 	nptr = strchr(ptr, ':');
 
-	if ((nptr - ptr > 3) || (nptr - ptr == 0))
+	if (!nptr || (nptr - ptr > 3) || (nptr - ptr == 0))
 		return 1;
 
 	if (!strncmp(ptr, "AND", 3))
@@ -355,7 +355,7 @@ static int parse_mod(char *optarg, struct modattr *modmsg)
 	ptr = nptr+1;
 	nptr = strchr(ptr, ':');
 
-	if ((nptr - ptr > 3) || (nptr - ptr == 0))
+	if (!nptr || (nptr - ptr > 3) || (nptr - ptr == 0))
 		return 3;
 
 	modmsg->modtype = 0;
@@ -406,7 +406,7 @@ static int parse_fdmod(char *optarg, struct fdmodattr *modmsg)
 	ptr = optarg;
 	nptr = strchr(ptr, ':');
 
-	if ((nptr - ptr > 3) || (nptr - ptr == 0))
+	if (!nptr || (nptr - ptr > 3) || (nptr - ptr == 0))
 		return 1;
 
 	if (!strncmp(ptr, "AND", 3))
@@ -423,7 +423,7 @@ static int parse_fdmod(char *optarg, struct fdmodattr *modmsg)
 	ptr = nptr+1;
 	nptr = strchr(ptr, ':');
 
-	if ((nptr - ptr > 4) || (nptr - ptr == 0))
+	if (!nptr || (nptr - ptr > 4) || (nptr - ptr == 0))
 		return 3;
 
 	modmsg->modtype = 0;
