@@ -238,11 +238,30 @@ int snprintf_long_canframe(char *buf, size_t size, union cfu *cu, int view);
  * data bytes is limited to 64 to fit terminal output use-cases.
  */
 
-int snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *cf,
-			     const char *sep);
 /*
  * Creates a CAN error frame output in user readable format.
+ *
+ * buf: buffer for the output string
+ * len: size of the provided buffer buf in bytes (incl. string termination)
+ * sep: separator string between the error classes (NULL => default ",")
+ *
+ * The buffer size len needs to be at least CANERR_BUFFSZ bytes - otherwise
+ * an empty string is returned.
+ *
+ * Calculation of the required buffer size:
+ * The longest error frame content (all error classes and details set) has
+ * 465 characters plus the string termination = 466 bytes. Additionally up
+ * to 9 separators are inserted which results in 466 + 9 * strlen(sep) bytes,
+ * e.g. 466 + 9 * 2 = 484 bytes for "\n\t" (as used in candump).
+ * With CANERR_BUFFSZ = 800 the separator must not exceed 37 characters.
+ *
+ * When the error frame content (the strings in lib.c) is changed, the current
+ * values have to be re-calculated and CANERR_BUFFSZ has to be adapted if needed.
  */
+#define CANERR_BUFFSZ 800
+
+int snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *cf,
+			     const char *sep);
 
 /**
  * timespec_diff_ms - calculate timespec difference in milliseconds
