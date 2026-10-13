@@ -58,6 +58,7 @@ static int pty2can(int pty, int socket, struct can_filter *fi,
 	static char buf[200];
 	char replybuf[10]; /* for answers to received commands */
 	unsigned int ptr;
+	unsigned int msglen; /* length of the current SLCAN message w/o '\r' */
 	struct can_frame frame;
 	int ret, i;
 	static unsigned int rxoffset = 0; /* points to the end of an received incomplete SLCAN message */
@@ -102,6 +103,7 @@ rx_restart:
 		return 0;
 	}
 
+	msglen = tmp;
 	cmd = buf[0];
 	buf[nbytes] = 0;
 
@@ -112,10 +114,11 @@ rx_restart:
 			pr_debug("%c", buf[tmp]);
 	pr_debug("\n");
 
+	/* terminate the current SLCAN message to not read the following content */
+	buf[msglen] = 0;
+
 	/* check for filter configuration commands */
 	if (cmd == 'm' || cmd == 'M') {
-		buf[9] = 0; /* terminate filter string */
-		ptr = 9;
 #if 0
 		/* the filter is no SocketCAN filter :-( */
 
@@ -140,14 +143,12 @@ rx_restart:
 	/* check for timestamp on/off command */
 	if (cmd == 'Z') {
 		*tstamp = buf[1] & 0x01;
-		ptr = 2;
 		goto rx_out_ack;
 	}
 
 	/* check for 'O'pen command */
 	if (cmd == 'O') {
 		setsockopt(socket, SOL_CAN_RAW, CAN_RAW_FILTER, fi, sizeof(struct can_filter));
-		ptr = 1;
 		*is_open = 1;
 		goto rx_out_ack;
 	}
@@ -155,7 +156,6 @@ rx_restart:
 	/* check for 'C'lose command */
 	if (cmd == 'C') {
 		setsockopt(socket, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
-		ptr = 1;
 		*is_open = 0;
 		goto rx_out_ack;
 	}
@@ -164,14 +164,12 @@ rx_restart:
 	if (cmd == 'V') {
 		sprintf(replybuf, "V1013\r");
 		tmp = strlen(replybuf);
-		ptr = 1;
 		goto rx_out;
 	}
 	/* check for 'v'ersion command */
 	if (cmd == 'v') {
 		sprintf(replybuf, "v1014\r");
 		tmp = strlen(replybuf);
-		ptr = 1;
 		goto rx_out;
 	}
 
@@ -179,7 +177,6 @@ rx_restart:
 	if (cmd == 'N') {
 		sprintf(replybuf, "N4242\r");
 		tmp = strlen(replybuf);
-		ptr = 1;
 		goto rx_out;
 	}
 
@@ -187,29 +184,23 @@ rx_restart:
 	if (cmd == 'F') {
 		sprintf(replybuf, "F00\r");
 		tmp = strlen(replybuf);
-		ptr = 1;
 		goto rx_out;
 	}
 
 	/* correctly answer unsupported commands */
 	if (cmd == 'U') {
-		ptr = 2;
 		goto rx_out_ack;
 	}
 	if (cmd == 'S') {
-		ptr = 2;
 		goto rx_out_ack;
 	}
 	if (cmd == 's') {
-		ptr = 5;
 		goto rx_out_ack;
 	}
 	if (cmd == 'P' || cmd == 'A') {
-		ptr = 1;
 		goto rx_out_nack;
 	}
 	if (cmd == 'X') {
-		ptr = 2;
 		if (buf[1] & 0x01)
 			goto rx_out_ack;
 		else
@@ -217,15 +208,17 @@ rx_restart:
 	}
 
 	/* catch unknown commands */
-	if ((cmd != 't') && (cmd != 'T') && (cmd != 'r') && (cmd != 'R')) {
-		ptr = nbytes - 1;
+	if ((cmd != 't') && (cmd != 'T') && (cmd != 'r') && (cmd != 'R'))
 		goto rx_out_nack;
-	}
 
 	if (cmd & 0x20) /* tiny chars 'r' 't' => SFF */
 		ptr = 4; /* dlc position tiiid */
 	else
 		ptr = 9; /* dlc position Tiiiiiiiid */
+
+	/* the CAN ID has to fit into the current SLCAN message */
+	if (ptr > msglen)
+		goto rx_out_nack;
 
 	memset(&frame.data, 0, 8); /* clear data[] */
 
@@ -249,7 +242,6 @@ rx_restart:
 
 		buf[ptr] = frame.can_dlc; /* restore following byte */
 		frame.can_dlc = 0;
-		ptr--; /* we have no dlc component in the violation case */
 
 	} else {
 		if (!(buf[ptr] >= '0' && buf[ptr] < '9'))
@@ -277,9 +269,6 @@ rx_restart:
 				goto rx_out_nack;
 			frame.data[i] |= tmp;
 		}
-		/* point to last real data */
-		if (frame.can_dlc)
-			ptr--;
 	}
 
 	ret = write(socket, &frame, sizeof(frame));
@@ -303,8 +292,8 @@ rx_out:
 	}
 
 	/* check if there is another command in this buffer */
-	if (nbytes > ptr + 1) {
-		for (tmp = 0, ptr++; ptr + tmp < nbytes; tmp++)
+	if (nbytes > msglen + 1) {
+		for (tmp = 0, ptr = msglen + 1; ptr + tmp < nbytes; tmp++)
 			buf[tmp] = buf[ptr + tmp];
 		nbytes = tmp;
 		goto rx_restart;
