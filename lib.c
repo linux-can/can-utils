@@ -664,6 +664,7 @@ int snprintf_long_canframe(char *buf, size_t size, union cfu *cu, int view)
 	return offset;
 }
 
+/* check CANERR_BUFFSZ in lib.h when changing the error frame strings */
 static const char *error_classes[] = {
 	"tx-timeout",
 	"lost-arbitration",
@@ -843,6 +844,13 @@ int snprintf_can_error_frame(char *buf, size_t len, const struct canfd_frame *cf
 
 	if (!sep)
 		sep = defsep;
+
+	/* the size of the provided buffer has to fit CANERR_BUFFSZ (see lib.h) */
+	if (len < CANERR_BUFFSZ) {
+		if (len)
+			buf[0] = 0; /* empty terminated string */
+		return 0;
+	}
 
 	for (i = 0; i < (int)ARRAY_SIZE(error_classes); i++) {
 		mask = 1 << i;
