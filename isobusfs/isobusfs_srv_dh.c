@@ -132,7 +132,7 @@ int isobusfs_check_current_dir_access(struct isobusfs_srv_priv *priv,
 		return ret;
 
 	pr_debug("convert ISOBUS FS path to linux path: %.*s -> %s",
-		 path_size, path, linux_path);
+		 (int)path_size, path, linux_path);
 
 	ret = isobusfs_cmn_dh_validate_dir_path(linux_path, false);
 	if (ret < 0)

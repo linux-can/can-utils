@@ -286,7 +286,7 @@ int isobusfs_cli_fa_of_req(struct isobusfs_priv *priv, const char *name,
 	int ret;
 
 	if (name_len > ISOBUSFS_MAX_PATH_NAME_LENGTH) {
-		pr_warn("path name too long: %i, max is %i", name_len,
+		pr_warn("path name too long: %zu, max is %i", name_len,
 			ISOBUSFS_MAX_PATH_NAME_LENGTH);
 		return -EINVAL;
 	}

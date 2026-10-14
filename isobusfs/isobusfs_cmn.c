@@ -443,8 +443,8 @@ void isobusfs_dump_tx_data(const struct isobusfs_buf_log *buffer)
 		for (j = 0; j < ISOBUSFS_MIN_TRANSFER_LENGH; ++j)
 			snprintf(data_str + j * 3, 4, "%02X ", entry->data[j]);
 
-		pr_debug("Entry %u: %s Timestamp: %ld.%09ld\n", i, data_str,
-			 entry->ts.tv_sec, entry->ts.tv_nsec);
+		pr_debug("Entry %u: %s Timestamp: %lld.%09ld\n", i, data_str,
+			 (long long)entry->ts.tv_sec, entry->ts.tv_nsec);
 	}
 }
 

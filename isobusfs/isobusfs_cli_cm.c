@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2023 Oleksij Rempel <linux@rempel-privat.de>
 
 #include <errno.h>
+#include <inttypes.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -95,7 +96,7 @@ int isobusfs_cli_ccm_send(struct isobusfs_priv *priv)
 	}
 
 	if (time_diff < -ISOBUSFS_CM_F_FS_STATUS_RATE_JITTER) {
-		pr_warn("too late to send next fs status message: %ld ms",
+		pr_warn("too late to send next fs status message: %" PRId64 " ms",
 			time_diff);
 	}
 
@@ -152,7 +153,7 @@ static int isobusfs_cli_rx_fs_status(struct isobusfs_priv *priv,
 	int ret = 0;
 
 	if (msg->len != sizeof(*fs_status)) {
-		pr_warn("wrong message length: %d", msg->len);
+		pr_warn("wrong message length: %zd", msg->len);
 		return -EINVAL;
 	}
 
@@ -178,7 +179,7 @@ static int isobusfs_cli_rx_fs_property_res(struct isobusfs_priv *priv,
 	}
 
 	if (msg->len != sizeof(*fs_prop)) {
-		pr_warn("wrong message length: %d", msg->len);
+		pr_warn("wrong message length: %zd", msg->len);
 		return -EINVAL;
 	}
 

@@ -547,9 +547,9 @@ isobusfs_cli_ls_handle_seek_dir_sent(struct isobusfs_priv *priv,
 	if (isobusfs_cli_int_is_error(priv, 0, res->error_code, res->tan))
 		goto error;
 
-	if (res->position != ctx->offset) {
-		pr_int("Failed to seek to position %zu, got %zu\n",
-		       ctx->offset, res->position);
+	if (le32toh(res->position) != ctx->offset) {
+		pr_int("Failed to seek to position %zu, got %u\n",
+		       ctx->offset, le32toh(res->position));
 		goto error;
 	}
 
@@ -868,7 +868,7 @@ static void isobusfs_cli_process_ls_command(struct isobusfs_priv *priv,
 					      ctx->handle, NULL, NULL);
 		}
 
-		pr_int("Entries found: %i\n", ctx->entry_count);
+		pr_int("Entries found: %zu\n", ctx->entry_count);
 		priv->int_busy = false;
 		isobusfs_cli_ls_free_ctx(ctx);
 		isobusfs_cli_promt(priv);

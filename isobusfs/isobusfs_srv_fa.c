@@ -287,7 +287,7 @@ static int isobusfs_srv_fa_open_file(struct isobusfs_srv_priv *priv,
 		return ret;
 
 	pr_debug("convert ISOBUS FS path to linux path: %.*s -> %s",
-		 path_len, path, linux_path);
+		 (int)path_len, path, linux_path);
 
 	/* Determine open flags based on the requested access type */
 	switch (flags & ISOBUSFS_FA_OPEN_MASK) {
@@ -847,7 +847,7 @@ send_response:
 		goto free_res;
 	}
 
-	pr_debug("> tx: Read File Response. Error code: %d (%s), read size: %d",
+	pr_debug("> tx: Read File Response. Error code: %d (%s), read size: %zd",
 		 error_code, isobusfs_error_to_str(error_code), readed_size);
 
 free_res:
