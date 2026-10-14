@@ -32,7 +32,7 @@ struct isobusfs_move_file_request {
 	/* Variable length data follows */
 	/* uint8_t src_path[]; */
 	/* uint8_t dst_path[]; */
-};
+} __attribute__((__packed__));
 
 /**
  * C.4.2.3 Move File Response
@@ -64,7 +64,7 @@ struct isobusfs_move_file_response {
 	uint8_t tan;
 	uint8_t error_code;
 	uint8_t reserved[5];
-};
+} __attribute__((__packed__));
 
 /**
  * C.4.3.1 Delete File Request
@@ -87,7 +87,7 @@ struct isobusfs_delete_file_request {
 	uint8_t mode;
 	__le16 path_len;
 	uint8_t path[];
-};
+} __attribute__((__packed__));
 
 
 /**
@@ -118,7 +118,7 @@ struct isobusfs_delete_file_response {
 	uint8_t tan;
 	uint8_t error_code;
 	uint8_t reserved[5];
-};
+} __attribute__((__packed__));
 
 /**
  * C.4.4.2 Get File Attributes Request
@@ -139,7 +139,7 @@ struct isobusfs_get_file_attributes_request {
 	uint8_t tan;
 	__le16 pathname_len;
 	uint8_t pathname[];
-};
+} __attribute__((__packed__));
 
 /**
  * C.4.4.3 Get File Attributes Response
@@ -171,7 +171,7 @@ struct isobusfs_get_file_attributes_response {
 	uint8_t error_code;
 	uint8_t attributes;
 	__le32 file_size;
-};
+} __attribute__((__packed__));
 
 /**
  * C.4.5.2 Set File Attributes Request
@@ -194,7 +194,7 @@ struct isobusfs_set_file_attributes_request {
 	uint8_t attributes;
 	__le16 name_length;
 	uint8_t name[]; /* Variable length */
-};
+} __attribute__((__packed__));
 
 /**
  * C.4.5.3 Set File Attributes Response
@@ -225,7 +225,7 @@ struct isobusfs_set_file_attributes_response {
 	uint8_t tan;
 	uint8_t error_code;
 	uint8_t reserved[5];
-};
+} __attribute__((__packed__));
 
 /**
  * C.4.6.2 Get File Date & Time Request
@@ -246,7 +246,7 @@ struct isobusfs_get_file_date_time_request {
 	uint8_t tan;
 	__le16 name_length;
 	uint8_t name[]; /* Variable length */
-};
+} __attribute__((__packed__));
 
 /**
  * C.4.6.2 Get File Date & Time Response
@@ -278,6 +278,6 @@ struct isobusfs_get_file_date_time_response {
 	uint8_t error_code;
 	__le16 date;
 	__le16 time;
-};
+} __attribute__((__packed__));
 
 #endif /* _LINUX_ISOBUS_FS_H */

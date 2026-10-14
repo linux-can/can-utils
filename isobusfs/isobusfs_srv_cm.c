@@ -20,6 +20,7 @@
  */
 
 #include <errno.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -473,8 +474,14 @@ static int isobusfs_srv_process_volume_status_request(struct isobusfs_srv_priv *
 
 	req_name_len = le16toh(req->name_len);
 
-	pr_debug("< rx volume status request. mode: %x, length: %d, name: %s",
-		 req->volume_mode, req_name_len, req->name);
+	/* the volume name has to fit into the received message */
+	if (req_name_len > msg->len - offsetof(struct isobusfs_cm_vol_stat_req, name)) {
+		pr_warn("volume name length exceeds message length");
+		return ISOBUSFS_ERR_MALFORMED_REQUEST;
+	}
+
+	pr_debug("< rx volume status request. mode: %x, length: %zu, name: %.*s",
+		 req->volume_mode, req_name_len, (int)req_name_len, req->name);
 
 	client = isobusfs_srv_get_client_by_msg(priv, msg);
 	if (!client) {

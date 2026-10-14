@@ -170,10 +170,13 @@ static int isobusfs_srv_dh_current_dir_res(struct isobusfs_srv_priv *priv,
 		switch (ret) {
 		case -ENOENT:
 			error_code = ISOBUSFS_ERR_FILE_ORPATH_NOT_FOUND;
+			break;
 		case -ENOMEDIUM:
 			error_code = ISOBUSFS_ERR_VOLUME_NOT_INITIALIZED;
+			break;
 		case -ENOMEM:
 			error_code = ISOBUSFS_ERR_OUT_OF_MEM;
+			break;
 		default:
 			error_code = ISOBUSFS_ERR_OTHER;
 		}
@@ -657,15 +660,22 @@ static int isobusfs_srv_dh_ccd_res(struct isobusfs_srv_priv *priv,
 	uint8_t error_code = ISOBUSFS_ERR_SUCCESS;
 	struct isobusfs_srv_client *client;
 	struct isobusfs_dh_ccd_res res;
+	uint16_t name_len = le16toh(req->name_len);
 	size_t abs_path_len;
 	char *abs_path;
 	int ret;
+
+	/* the path name has to fit into the received message */
+	if (name_len > msg->len - sizeof(*req)) {
+		pr_warn("path name length exceeds message length");
+		return -EINVAL;
+	}
 
 	/*
 	 * We assume, the relative path stored in res->name is not longer
 	 * than absolute path
 	 */
-	if (req->name_len > ISOBUSFS_SRV_MAX_PATH_LEN) {
+	if (name_len > ISOBUSFS_SRV_MAX_PATH_LEN) {
 		pr_warn("path too long");
 		return -EINVAL;
 	}
@@ -684,10 +694,10 @@ static int isobusfs_srv_dh_ccd_res(struct isobusfs_srv_priv *priv,
 	}
 
 	pr_debug("< rx change current directory request from client 0x%2x: %.*s. Current directory: %s",
-		 client->addr, req->name_len, req->name, client->current_dir);
+		 client->addr, name_len, req->name, client->current_dir);
 	/* Normalize provided string and convert it to absolute ISOBUS FS path */
 	ret = isobusfs_convert_relative_to_absolute(priv, client->current_dir,
-						    (char *)req->name, req->name_len,
+						    (char *)req->name, name_len,
 						    abs_path, abs_path_len);
 	if (ret < 0)
 		goto process_error;

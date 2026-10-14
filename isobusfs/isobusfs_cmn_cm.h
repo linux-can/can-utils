@@ -39,7 +39,7 @@ struct isobusfs_cm_fss {
 	uint8_t status;
 	uint8_t num_open_files;
 	uint8_t reserved[5];
-};
+} __attribute__((__packed__));
 
 /**
  * C.1.3 Client Connection Maintenance
@@ -58,7 +58,7 @@ struct isobusfs_cm_ccm {
 	uint8_t fs_function;
 	uint8_t version;
 	uint8_t reserved[6];
-};
+} __attribute__((__packed__));
 
 /**
  * C.1.4 Get File Server Properties
@@ -75,7 +75,7 @@ struct isobusfs_cm_ccm {
 struct isobusfs_cm_get_fs_props_req {
 	uint8_t fs_function;
 	uint8_t reserved[7];
-};
+} __attribute__((__packed__));
 
 /* File Server Capabilities */
 /* server support removable volumes */
@@ -104,7 +104,7 @@ struct isobusfs_cm_get_fs_props_resp {
 	uint8_t max_open_files;
 	uint8_t fs_capabilities;
 	uint8_t reserved[4];
-};
+} __attribute__((__packed__));
 
 #define ISOBUSFS_VOL_MODE_PREP_TO_REMOVE	BIT(1)
 #define ISOBUSFS_VOL_MODE_USED_BY_CLIENT	BIT(0)
@@ -130,7 +130,7 @@ struct isobusfs_cm_vol_stat_req {
 	uint8_t volume_mode;
 	__le16 name_len;
 	char name[ISOBUSFS_MAX_VOLUME_NAME_LENGTH];
-};
+} __attribute__((__packed__));
 
 
 enum isobusfs_vol_status {
@@ -169,7 +169,7 @@ struct isobusfs_cm_vol_stat_res {
 	uint8_t error_code;
 	__le16 name_len;
 	char name[ISOBUSFS_MAX_VOLUME_NAME_LENGTH];
-};
+} __attribute__((__packed__));
 
 
 #endif /* ISOBUSFS_CMN_CM_H */

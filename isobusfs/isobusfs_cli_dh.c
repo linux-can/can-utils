@@ -43,7 +43,7 @@ int isobusfs_cli_ccd_req(struct isobusfs_priv *priv, const char *name,
 	req->tan = isobusfs_cli_get_next_tan(priv);
 
 	memcpy(&req->name[0], name, name_len);
-	req->name_len = name_len;
+	req->name_len = htole16(name_len);
 
 	if (padding_size) {
 		/* Fill the rest of the res structure with 0xff */

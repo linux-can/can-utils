@@ -29,7 +29,7 @@ struct isobusfs_va_init_vol_req {
 	uint8_t volume_flags;
 	__le16 name_len;
 	uint8_t name[];
-};
+} __attribute__((__packed__));
 
 /**
  * C.5.2.3 Initialize Volume Response
@@ -62,6 +62,6 @@ struct isobusfs_va_init_vol_res {
 	uint8_t tan;
 	uint8_t error_code;
 	uint8_t reserved[4];
-};
+} __attribute__((__packed__));
 
 #endif /* _ISOBUSFS_CMN_VA_H */
