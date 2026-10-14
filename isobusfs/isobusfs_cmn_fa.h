@@ -105,7 +105,7 @@ struct isobusfs_fa_openf_req {
 	uint8_t flags;
 	__le16 name_len;
 	uint8_t name[];
-};
+} __attribute__((__packed__));
 
 /**
  * C.3.3.3 Open File Response
@@ -141,7 +141,7 @@ struct isobusfs_fa_openf_res {
 	uint8_t handle;
 	uint8_t attributes;
 	uint8_t reserved[3];
-};
+} __attribute__((__packed__));
 
 /* B.17 Position mode */
 /* From the beginning of the file */
@@ -168,7 +168,7 @@ struct isobusfs_fa_seekf_req {
 	uint8_t handle;
 	uint8_t position_mode;
 	__le32 offset;
-};
+} __attribute__((__packed__));
 
 /**
  * C.3.4.2 Seek File Response
@@ -195,7 +195,7 @@ struct isobusfs_fa_seekf_res {
 	uint8_t error_code;
 	uint8_t reserved;
 	__le32 position;
-};
+} __attribute__((__packed__));
 
 /**
  * C.3.5.2 Read File Request
@@ -220,7 +220,7 @@ struct isobusfs_fa_readf_req {
 	uint8_t handle;
 	__le16 count;
 	uint8_t reserved[3];
-};
+} __attribute__((__packed__));
 
 /**
  * C.3.5.3 Read File Response (Handle-referenced file)
@@ -250,7 +250,7 @@ struct isobusfs_read_file_response {
 	uint8_t error_code;
 	__le16 count;
 	uint8_t data[];
-};
+} __attribute__((__packed__));
 
 /**
  * C.3.5.4 Read Directory Response (Handle-referenced directory)
@@ -280,7 +280,7 @@ struct isobusfs_read_dir_response {
 	uint8_t error_code;
 	__le16 count;
 	uint8_t data[];
-};
+} __attribute__((__packed__));
 
 /**
  * C.3.6.2 Write File Request
@@ -303,7 +303,7 @@ struct isobusfs_write_file_request {
 	uint8_t handle;
 	__le16 count;
 	uint8_t data[];
-};
+} __attribute__((__packed__));
 
 /**
  * C.3.6.3 Write File Response
@@ -333,7 +333,7 @@ struct isobusfs_write_file_response {
 	uint8_t error_code;
 	__le16 count;
 	uint8_t reserved[3];
-};
+} __attribute__((__packed__));
 
 /**
  * C.3.7.1 Close File Request
@@ -354,7 +354,7 @@ struct isobusfs_close_file_request {
 	uint8_t tan;
 	uint8_t handle;
 	uint8_t reserved[5];
-};
+} __attribute__((__packed__));
 
 /**
  * C.3.7.2 Close File Response
@@ -378,7 +378,7 @@ struct isobusfs_close_file_res {
 	uint8_t tan;
 	uint8_t error_code;
 	uint8_t reserved[6];
-};
+} __attribute__((__packed__));
 
 
 #endif /* _LINUX_ISOBUS_FS_H */

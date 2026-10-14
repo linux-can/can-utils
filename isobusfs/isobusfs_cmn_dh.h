@@ -23,7 +23,7 @@ struct isobusfs_dh_get_cd_req {
 	uint8_t fs_function;
 	uint8_t tan;
 	uint8_t reserved[6];
-};
+} __attribute__((__packed__));
 
 /**
  * C.2.2.3 Get Current Directory Response
@@ -50,7 +50,7 @@ struct isobusfs_dh_get_cd_res {
 	__le32 free_space;
 	__le16 name_len;
 	uint8_t name[];
-};
+} __attribute__((__packed__));
 
 /**
  * C.2.3.2 Change Current Directory Request
@@ -71,7 +71,7 @@ struct isobusfs_dh_ccd_req {
 	uint8_t tan;
 	__le16 name_len;
 	uint8_t name[];
-};
+} __attribute__((__packed__));
 
 /**
  * C.2.3.3 Change Current Directory Response
@@ -101,7 +101,7 @@ struct isobusfs_dh_ccd_res {
 	uint8_t tan;
 	uint8_t error_code;
 	uint8_t reserved[5];
-};
+} __attribute__((__packed__));
 
 
 #endif /* _ISOBUSFS_CMN_DH_H */
