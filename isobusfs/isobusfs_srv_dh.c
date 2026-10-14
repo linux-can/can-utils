@@ -170,10 +170,13 @@ static int isobusfs_srv_dh_current_dir_res(struct isobusfs_srv_priv *priv,
 		switch (ret) {
 		case -ENOENT:
 			error_code = ISOBUSFS_ERR_FILE_ORPATH_NOT_FOUND;
+			break;
 		case -ENOMEDIUM:
 			error_code = ISOBUSFS_ERR_VOLUME_NOT_INITIALIZED;
+			break;
 		case -ENOMEM:
 			error_code = ISOBUSFS_ERR_OUT_OF_MEM;
+			break;
 		default:
 			error_code = ISOBUSFS_ERR_OTHER;
 		}
