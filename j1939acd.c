@@ -618,6 +618,12 @@ int main(int argc, char *argv[])
 			}
 			break;
 		case J1939_PGN_ADDRESS_COMMANDED:
+			/* 8 bytes NAME + 1 byte new source address */
+			if (ret < 9)
+				break;
+			/* only accept valid unicast addresses */
+			if (dat[8] > J1939_MAX_UNICAST_ADDR)
+				break;
 			if (!host_is_little_endian())
 				bswap(dat, 8);
 			memcpy(&cmd_name, dat, 8);
