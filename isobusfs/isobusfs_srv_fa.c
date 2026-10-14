@@ -739,6 +739,7 @@ static int isobusfs_srv_fa_rf_req(struct isobusfs_srv_priv *priv,
 	uint8_t error_code = 0;
 	ssize_t send_size;
 	bool res_allocated = false;
+	size_t alloc_size;
 	size_t max_bytes = 0;
 	uint16_t count = 0;
 	int ret = 0;
@@ -783,7 +784,12 @@ static int isobusfs_srv_fa_rf_req(struct isobusfs_srv_priv *priv,
 		max_bytes = count;
 	}
 
-	res = malloc(sizeof(*res) + max_bytes);
+	/* the response is padded to ISOBUSFS_MIN_TRANSFER_LENGH (see below) */
+	alloc_size = sizeof(*res) + max_bytes;
+	if (alloc_size < ISOBUSFS_MIN_TRANSFER_LENGH)
+		alloc_size = ISOBUSFS_MIN_TRANSFER_LENGH;
+
+	res = malloc(alloc_size);
 	if (!res) {
 		pr_warn("failed to allocate memory");
 		res = (struct isobusfs_read_file_response *)&res_fail[0];
@@ -823,8 +829,12 @@ send_response:
 		res->count = htole16(readed_size);
 
 	send_size = sizeof(*res) + readed_size;
-	if (send_size < ISOBUSFS_MIN_TRANSFER_LENGH)
+	if (send_size < ISOBUSFS_MIN_TRANSFER_LENGH) {
+		/* fill the unused bytes with 0xff */
+		memset((uint8_t *)res + send_size, 0xff,
+		       ISOBUSFS_MIN_TRANSFER_LENGH - send_size);
 		send_size = ISOBUSFS_MIN_TRANSFER_LENGH;
+	}
 
 	/* send to socket */
 	ret = isobusfs_srv_sendto(priv, msg, res, send_size);
