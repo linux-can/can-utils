@@ -159,6 +159,7 @@ static int isobusfs_srv_release_handle(struct isobusfs_srv_priv *priv,
 					closedir(hdl->dir);
 				else
 					close(hdl->fd);
+				free(hdl->path);
 				memset(hdl, 0, sizeof(*hdl));
 				priv->handles_count--;
 			}
