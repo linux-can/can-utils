@@ -97,7 +97,7 @@ int isobusfs_srv_fss_send(struct isobusfs_srv_priv *priv)
 	}
 
 	if (time_diff < -ISOBUSFS_CM_F_FS_STATUS_RATE_JITTER) {
-		pr_warn("too late to send next fs status message: %ld ms",
+		pr_warn("too late to send next fs status message: %" PRId64 " ms",
 			time_diff);
 	}
 

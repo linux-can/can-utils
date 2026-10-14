@@ -322,7 +322,8 @@ typedef enum {
 } log_level_t;
 
 void isobusfs_log_level_set(log_level_t level);
-void isobusfs_log(log_level_t level, const char *fmt, ...);
+void isobusfs_log(log_level_t level, const char *fmt, ...)
+	__attribute__((format(printf, 2, 3)));
 void isobusfs_set_interactive(bool interactive);
 void isobusfs_print_log_buffer(void);
 
