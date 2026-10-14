@@ -108,6 +108,28 @@ isobusfs_srv_get_handle(struct isobusfs_srv_priv *priv, int handle)
 	return &priv->handles[handle];
 }
 
+/*
+ * Return the handle only when it is in use and has been opened by the
+ * requesting client. Otherwise return NULL.
+ */
+static struct isobusfs_srv_handles *
+isobusfs_srv_get_client_handle(struct isobusfs_srv_priv *priv,
+			       struct isobusfs_srv_client *client, int handle)
+{
+	struct isobusfs_srv_handles *hdl = isobusfs_srv_get_handle(priv, handle);
+	unsigned int i;
+
+	if (!hdl || !hdl->path)
+		return NULL;
+
+	for (i = 0; i < ARRAY_SIZE(hdl->clients); i++) {
+		if (hdl->clients[i] == client)
+			return hdl;
+	}
+
+	return NULL;
+}
+
 static int isobusfs_srv_release_handle(struct isobusfs_srv_priv *priv,
 				       struct isobusfs_srv_client *client,
 				       int handle)
@@ -743,7 +765,7 @@ static int isobusfs_srv_fa_rf_req(struct isobusfs_srv_priv *priv,
 		goto send_response;
 	}
 
-	handle = isobusfs_srv_get_handle(priv, req->handle);
+	handle = isobusfs_srv_get_client_handle(priv, client, req->handle);
 	if (!handle) {
 		pr_warn("failed to find file with handle: %x", req->handle);
 		error_code = ISOBUSFS_ERR_FILE_ORPATH_NOT_FOUND;
@@ -959,7 +981,7 @@ static int isobusfs_srv_fa_sf_req(struct isobusfs_srv_priv *priv,
 		goto send_response;
 	}
 
-	handle = isobusfs_srv_get_handle(priv, req->handle);
+	handle = isobusfs_srv_get_client_handle(priv, client, req->handle);
 	if (!handle) {
 		pr_warn("failed to find handle: %x", req->handle);
 		error_code = ISOBUSFS_ERR_INVALID_HANDLE;
