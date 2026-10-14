@@ -45,6 +45,9 @@ static int isobusfs_srv_add_file(struct isobusfs_srv_priv *priv,
 	}
 
 	priv->handles[j].path = strdup(path);
+	if (!priv->handles[j].path)
+		return -ENOMEM;
+
 	priv->handles[j].fd = fd;
 	priv->handles[j].dir = dir;
 
